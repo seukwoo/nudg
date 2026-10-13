@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.1
+
+- The `nudg` command is installed again: npm dropped the `bin` entry from 0.1.0 because of its `./` prefix.
+
+## 0.1.0
 
 First release of the format and its reference implementation.
 

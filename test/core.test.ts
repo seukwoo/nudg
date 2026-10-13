@@ -84,3 +84,14 @@ test("cli validate and simulate speak JSON", () => {
   const simulated = JSON.parse(run("simulate", `${root}examples/like.nudg.json`, "--send", "heart.tap@100ms", "--json"));
   assert.ok(simulated.summary["heart.scale"].max > 1.1);
 });
+
+test("plot draws a labeled graph with overshoot and settle marks", async () => {
+  const { plot } = await import("../src/core/plot.ts");
+  const { program } = compilePath(`${root}examples/like.nudg.json`);
+  const { svg, width, height } = plot(program!, { events: [{ t: 0.1, event: "heart.tap" }], title: "like" });
+  assert.ok(svg.startsWith("<svg") && width > 0 && height > 0);
+  assert.match(svg, /max 1\.209/);
+  assert.match(svg, /at rest 0\.\d+s/);
+  assert.match(svg, />liked</);
+  assert.match(svg, /<desc>Events: heart\.tap @ 0\.1s\. heart\.scale: final/);
+});

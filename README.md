@@ -247,7 +247,7 @@ An unknown key without a prefix is a validator error with a "did you mean" hint,
 | [`spec/nudg-0.1.schema.json`](spec/nudg-0.1.schema.json) | JSON Schema, for editors and LLM structured output. The validator checks more (references, base values, motion names). |
 | [`spec/conformance/`](spec/conformance/) | Language-neutral behavior and validation cases. Expected values come from an independent derivation. |
 | [`src/core/`](src/core/) | Reference runtime in TypeScript: compiler and validator, motion math, state machine, simulation. No platform APIs. |
-| [`src/cli.ts`](src/cli.ts) | `nudg validate` and `nudg simulate`, with `--json` for agents. |
+| [`src/cli.ts`](src/cli.ts) | `nudg validate`, `nudg simulate` and `nudg plot`, with `--json` for agents. |
 | [`src/dom/`](src/dom/) | DOM adapter: `play(program, root)` and `compileUrl(url)`. |
 | [`examples/`](examples/) | Toggle, toggle with press, like button, brand motion library. |
 | [`demo/`](demo/) | The examples running in a browser, plus a playground that recompiles as you type. |
@@ -258,6 +258,7 @@ Node 23.6 or later runs the TypeScript directly:
 npm install
 node src/cli.ts validate examples/*.json
 node src/cli.ts simulate examples/toggle.nudg.json --send track.tap@0.1
+node src/cli.ts plot examples/like.nudg.json --send heart.tap@0.1 --out like.png
 npm test            # conformance suite, schema, core
 npm run typecheck   # also checks that src/core uses no platform APIs
 npm run demo        # then open http://localhost:8787/demo/

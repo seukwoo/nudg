@@ -18,6 +18,15 @@ Meanwhile, more and more UI is written by people working with AI coding tools, m
 
 nudg is meant to slip into that workflow instead of asking you to leave it.
 
+## How it works
+
+nudg doesn't contain an AI. The AI coding tool you already use turns your words into edits; nudg makes those edits small, checkable, and safe.
+
+1. **Your app imports the nudg runtime.** The interaction lives in a file next to the component, for example `toggle.nudg.json`. The component plays it and marks its parts by name (`data-nudg="knob"`).
+2. **You ask for a change in plain words.** "Make the toggle a little bouncier." Your AI edits one field in the nudg file (`"bounce": 0.25` → `0.4`) and leaves the component code alone. The vocabulary is chosen so that everyday words map to single fields: bouncier is `bounce`, faster is `duration`.
+3. **Your AI checks its own work** through the nudg CLI or MCP server: `validate` explains what's wrong and how to fix it, `simulate` sends events and reports values over time ("the knob now overshoots to 22.8"), and `render` draws any moment as an image.
+4. **The runtime plays the file** in your app: the core computes values every frame, and a thin adapter applies them to your views.
+
 ## Principles
 
 ### AI-native
@@ -104,14 +113,14 @@ These are expensive to change later, so they are fixed early:
 
 ## Grammar (draft, v0.1)
 
-Worked out by expressing a toggle. See [`examples/toggle.nudg.json`](examples/toggle.nudg.json) and, with a parallel press region, [`examples/toggle-press.nudg.json`](examples/toggle-press.nudg.json).
+Worked out by expressing a toggle and a like button. See [`examples/`](examples/).
 
 ```json
 {
   "nudg": "0.1",
   "targets": ["knob", "track"],
   "values": { "knob.x": 0, "track.color": "#D1D5DB" },
-  "motion": {
+  "animate": {
     "knob.x": { "spring": { "duration": 0.35, "bounce": 0.25 } },
     "track.color": { "tween": { "duration": 0.2, "ease": "out" } }
   },
@@ -132,39 +141,95 @@ A nudg file is strict JSON with the extension `.nudg.json`. Every platform alrea
 
 JSON has no comments. Instead, any object may carry a `note` string. Runtimes ignore it. Unlike a comment, a note survives tools rewriting the file, and an AI can read it as part of the data.
 
-### Motion model: states say where, motion says how
+### Motion model
 
-States only declare target values. `motion` declares how each property travels to its target. When the target changes mid-flight (for example, a second tap while the knob is still moving), the value retargets from where it is and keeps its velocity. Interruption is correct by default instead of a special case.
+- **States say where.** A state only declares target values.
+- **`animate` says how.** It maps each property to the motion that carries it to its target. When the target changes mid-flight (a second tap while the knob is still moving), the value retargets from where it is. A spring also keeps its velocity, so interruption is correct by default instead of a special case.
+- **`enter` adds a moment.** Some feedback is transient: a heart that pops and settles back, a field that shakes. The target doesn't change, so `enter` plays a *kick* when a state is entered (see below).
 
-A transition can override motion for itself:
+A transition can override `animate` for itself:
 
 ```json
-"track.tap": { "to": "off", "motion": { "knob.x": { "spring": { "duration": 0.3, "bounce": 0 } } } }
+"track.tap": { "to": "off", "animate": { "knob.x": { "spring": { "duration": 0.3, "bounce": 0 } } } }
 ```
+
+### Defining your own motion
+
+Platform motion is not special in nudg. Motion is defined in three layers, and the same format is used at every layer:
+
+1. **Primitives** (in the core, defined by the spec and checked by the conformance suite): `spring`, `tween`, and `kick`. The core stays small.
+2. **Named motions:** a file's `motions` defines motions by name, and anywhere a motion is expected, a name can be used instead. `import` brings in the named motions of other files, so a design system keeps its signature motion in one library and every component follows it. "Make the whole app snappier" is a one-line diff in that library.
+3. **Schemes:** a motion library the host chooses. Apple-like and Material-like feels ship as nudg libraries written in this same format, not as runtime code, so a team's own signature motion is a peer of the platform ones.
+
+Identical motion on every platform is the default: explicit parameters and named motions mean the same values everywhere. A scheme is an explicit input, so the same events with the same scheme still produce the same values, and the conformance suite can test each scheme.
+
+A library file has `motions` and no machine:
+
+```json
+{
+  "nudg": "0.1",
+  "motions": {
+    "snappy": { "spring": { "duration": 0.3, "bounce": 0.15 } },
+    "pop": { "kick": 6, "spring": { "duration": 0.4, "bounce": 0.5 } }
+  }
+}
+```
+
+A component imports it:
+
+```json
+{
+  "nudg": "0.1",
+  "import": ["./motion/brand.nudg.json"],
+  "targets": ["heart"],
+  "values": { "heart.scale": 1 },
+  "animate": { "heart.scale": "snappy" },
+  "initial": "idle",
+  "states": {
+    "idle": { "when": { "heart.tap": "liked" } },
+    "liked": { "enter": { "heart.scale": "pop" }, "when": { "heart.tap": "idle" } }
+  }
+}
+```
+
+- `import` paths are relative to the importing file. Imports may chain; a cycle is an error. In v0.1 only `motions` are imported.
+- A name defined twice (locally and in an import, or in two imports) is an error that names both sources. Use a new name instead of shadowing.
 
 ### Structure
 
-- **Top level:** `nudg` (format version), `targets`, `values`, `motion`, and a machine.
+- **Top level:** `nudg` (format version), `import`, `targets`, `values`, `motions`, `animate`, and a machine. A file without a machine is a library.
 - **Machine:** either `initial` + `states` (one active state at a time) or `regions` (named machines that all run in parallel).
-- **State:** `set` (values while active), `when` (transitions), and optionally a nested machine. Machines and states share this shape at every depth, which covers composition (decision 2).
-- **Transition:** `"event": "target-state"` or `"event": { "to": ..., "motion": ..., "note": ... }`. In v0.1 a transition targets a sibling state.
+- **State:** `set` (values while active), `enter` (kicks played on entry), `when` (transitions), and optionally a nested machine. Machines and states share this shape at every depth, which covers composition (decision 2).
+- **Transition:** `"event": "target-state"` or `"event": { "to": ..., "animate": ..., "note": ... }`. In v0.1 a transition targets a sibling state.
 
 ### Paths and events
 
-- One dotted form everywhere: `target.property` for values (`knob.x`), `target.event` for events (`track.tap`). The same string appears in `values`, `set`, `motion`, and `when`, so it can be found and edited directly.
-- Stage 0 pointer events: `down`, `up`, `cancel`, `tap`.
+- One dotted form everywhere: `target.property` for values (`knob.x`), `target.event` for events (`track.tap`). The same string appears in `values`, `set`, `animate`, `enter`, and `when`, so it can be found and edited directly.
+- Stage 0 pointer events: `down`, `up`, `cancel`, `tap`. The host sends each as a separate event; a click is `down`, `up`, `tap`, in that order.
+- Events are processed one at a time, in the order sent. Each event is offered to every active region, in the order the regions appear in the file.
 - Transitions live under `when`, not `on`, so they never collide with a state named `on`.
 
 ### Value resolution
 
-1. Start from `values` (the base).
+1. Start from `values` (the base). Every property used anywhere must have a base value.
 2. Apply `set` from every active state; a deeper state overrides its ancestors.
 3. If two parallel regions set the same property, the validator reports an error.
 
 ### Motion primitives
 
-- **`spring`:** `duration` (seconds, perceptual) and `bounce` (0 = no overshoot, toward 1 = more bounce; v0.1 range is 0 to <1). With mass 1, stiffness = (2π / duration)² and damping ratio = 1 − bounce. `stiffness` / `damping` / `mass` are accepted as an alternative form. The spec defines springs by their closed-form solution, so results are deterministic (decision 3).
-- **`tween`:** `duration` and `ease`.
+- **`spring`:** platforms offer many spring APIs, but they describe one physical model (mass, stiffness, damping) in different forms. nudg has one spring primitive and accepts the common forms:
+  - `duration` + `bounce` (the default form). `duration` is perceptual, in seconds. `bounce` is 0 for no overshoot, toward 1 for more bounce, and negative for overdamped; it must be below 1. With mass 1, stiffness = (2π / duration)² and damping ratio = 1 − bounce.
+  - `response` + `dampingFraction`, where response = duration and dampingFraction = 1 − bounce.
+  - `stiffness` + `dampingRatio`, with mass 1.
+  - `stiffness` + `damping` + `mass`.
+
+  Every form converts exactly to stiffness, damping, and mass, which is what the spec computes with. A spring uses exactly one form; mixing them is a validator error. Fit-to-duration springs (a fixed total time plus a damping value) are not supported, because they don't map to a single physical spring. The spec defines springs by their closed-form solution, so results are deterministic (decision 3).
+- **`tween`:** `duration` and `ease`. `ease` is `linear`, `in`, `out`, `in-out`, or a cubic Bézier `[x1, y1, x2, y2]`; the default is `in-out`. On retarget, a tween restarts from the current value with its full duration.
+- **`kick`:** adds velocity (units per second) to a numeric property without changing its target, then lets the motion's `spring` carry it back. A kick always comes with a `spring`. A positive kick on `scale` is a pop; a negative kick on `x` with a high bounce is a shake.
+
+### Colors
+
+Colors are hex strings (`#RGB`, `#RRGGBB`, `#RRGGBBAA`) and interpolate in OKLab, which keeps midpoints from going muddy. A color can be tweened or sprung; a kick on a color is an error.
 
 ### Units
 
@@ -177,11 +242,13 @@ An unknown key without a prefix is a validator error with a "did you mean" hint,
 
 ## Open questions
 
-- Color interpolation space (likely OKLab).
-- Exact easing vocabulary for `tween` (named curves, cubic Bézier).
 - Transitions that cross machine levels (to a parent's sibling, into a nested state).
 - Host-driven input: a controlled toggle whose state is set by the app (`checked` from props), and how app data events are named.
 - Keyboard and accessibility events (`space`, `enter`, focus).
 - Follow-style values: the knob tracking a drag, then springing to a state on release.
-- Event ordering when one pointer gesture produces several events (`up` then `tap`).
+- Decay (fling, inertia) as a second physics primitive alongside spring, needed for swipe and scroll-like motion at stage 1.
+- More primitives and combinators: `keyframes`, `sequence`, `delay`, `stagger` (stage 1).
+- Gesture-linked motion: rubber-band overscroll, springs that inherit a gesture's release velocity (stage 1).
+- Tweaking a named motion at the point of use, for example `{ "use": "snappy", "duration": 0.5 }`.
+- Schemes: which names a scheme may supply or override, how the host passes one in, and how the validator still catches misspelled names. The built-in Apple-like and Material-like libraries.
 - License.

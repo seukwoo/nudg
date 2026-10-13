@@ -1,0 +1,19 @@
+{
+  "nudg": "0.1",
+  "note": "A like button whose heart pops when liked.",
+  "import": ["./motion/brand.nudg.json"],
+  "targets": ["heart"],
+  "values": { "heart.scale": 1, "heart.color": "#9CA3AF" },
+  "animate": { "heart.scale": "snappy", "heart.color": "fade" },
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "when": { "heart.tap": "liked" }
+    },
+    "liked": {
+      "set": { "heart.color": "#F43F5E" },
+      "enter": { "heart.scale": "pop" },
+      "when": { "heart.tap": "idle" }
+    }
+  }
+}

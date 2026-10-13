@@ -6,7 +6,7 @@
     "knob.x": 0,
     "track.color": "#D1D5DB"
   },
-  "motion": {
+  "animate": {
     "knob.x": { "spring": { "duration": 0.35, "bounce": 0.25 } },
     "track.color": { "tween": { "duration": 0.2, "ease": "out" } }
   },

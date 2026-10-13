@@ -7,7 +7,7 @@
     "knob.scale": 1,
     "track.color": "#D1D5DB"
   },
-  "motion": {
+  "animate": {
     "knob.x": { "spring": { "duration": 0.35, "bounce": 0.25 } },
     "knob.scale": { "spring": { "duration": 0.2, "bounce": 0 } },
     "track.color": { "tween": { "duration": 0.2, "ease": "out" } }
@@ -24,7 +24,7 @@
           "when": {
             "track.tap": {
               "to": "off",
-              "motion": { "knob.x": { "spring": { "duration": 0.3, "bounce": 0 } } },
+              "animate": { "knob.x": { "spring": { "duration": 0.3, "bounce": 0 } } },
               "note": "Settle back without overshoot."
             }
           }

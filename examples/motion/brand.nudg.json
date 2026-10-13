@@ -1,0 +1,10 @@
+{
+  "nudg": "0.1",
+  "note": "Brand motion library. Components import it, so changing a value here changes every component that uses it.",
+  "motions": {
+    "snappy": { "spring": { "duration": 0.3, "bounce": 0.15 } },
+    "fade": { "tween": { "duration": 0.2, "ease": "out" } },
+    "pop": { "kick": 6, "spring": { "duration": 0.4, "bounce": 0.5 } },
+    "shake": { "kick": -400, "spring": { "duration": 0.25, "bounce": 0.7 } }
+  }
+}

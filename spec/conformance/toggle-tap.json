@@ -1,0 +1,136 @@
+{
+  "conformance": "0.1",
+  "name": "Toggle: a tap springs the knob to on and tweens the color",
+  "doc": {
+    "nudg": "0.1",
+    "targets": [
+      "knob",
+      "track"
+    ],
+    "values": {
+      "knob.x": 0,
+      "track.color": "#D1D5DB"
+    },
+    "animate": {
+      "knob.x": {
+        "spring": {
+          "duration": 0.35,
+          "bounce": 0.25
+        }
+      },
+      "track.color": {
+        "tween": {
+          "duration": 0.2,
+          "ease": "out"
+        }
+      }
+    },
+    "initial": "off",
+    "states": {
+      "off": {
+        "when": {
+          "track.tap": "on"
+        }
+      },
+      "on": {
+        "set": {
+          "knob.x": 20,
+          "track.color": "#4ADE80"
+        },
+        "when": {
+          "track.tap": "off"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "off"
+        ],
+        "values": {
+          "knob.x": 0,
+          "track.color": "#d1d5db"
+        }
+      }
+    },
+    {
+      "t": 0.1,
+      "send": "track.tap"
+    },
+    {
+      "t": 0.1,
+      "expect": {
+        "state": [
+          "on"
+        ],
+        "values": {
+          "knob.x": 0.0,
+          "track.color": "#d1d5db"
+        }
+      }
+    },
+    {
+      "t": 0.15,
+      "expect": {
+        "state": [
+          "on"
+        ],
+        "values": {
+          "knob.x": 5.073032547,
+          "track.color": "#a9daba"
+        }
+      }
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "state": [
+          "on"
+        ],
+        "values": {
+          "knob.x": 12.581656424,
+          "track.color": "#82dc9f"
+        }
+      }
+    },
+    {
+      "t": 0.3,
+      "expect": {
+        "state": [
+          "on"
+        ],
+        "values": {
+          "knob.x": 19.909892984,
+          "track.color": "#4ade80"
+        }
+      }
+    },
+    {
+      "t": 0.45,
+      "expect": {
+        "state": [
+          "on"
+        ],
+        "values": {
+          "knob.x": 20.267882613,
+          "track.color": "#4ade80"
+        }
+      }
+    },
+    {
+      "t": 0.7,
+      "expect": {
+        "state": [
+          "on"
+        ],
+        "values": {
+          "knob.x": 19.990621473,
+          "track.color": "#4ade80"
+        }
+      }
+    }
+  ]
+}

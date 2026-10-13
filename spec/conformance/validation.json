@@ -1,0 +1,347 @@
+{
+  "conformance": "0.1",
+  "name": "Validator: each document produces exactly these errors (code and JSON pointer)",
+  "documents": [
+    {
+      "name": "unknown-key",
+      "doc": {
+        "nudg": "0.1",
+        "targets": [
+          "knob",
+          "track"
+        ],
+        "values": {
+          "knob.x": 0
+        },
+        "initial": "off",
+        "states": {
+          "off": {
+            "when": {
+              "track.tap": "off"
+            },
+            "sett": {}
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-key",
+          "path": "/states/off/sett"
+        }
+      ]
+    },
+    {
+      "name": "unknown-property",
+      "doc": {
+        "nudg": "0.1",
+        "targets": [
+          "knob",
+          "track"
+        ],
+        "values": {
+          "knob.x": 0,
+          "knob.translateX": 0
+        },
+        "initial": "off",
+        "states": {
+          "off": {
+            "when": {
+              "track.tap": "off"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-property",
+          "path": "/values/knob.translateX"
+        }
+      ]
+    },
+    {
+      "name": "unknown-event",
+      "doc": {
+        "nudg": "0.1",
+        "targets": [
+          "knob",
+          "track"
+        ],
+        "values": {
+          "knob.x": 0
+        },
+        "initial": "off",
+        "states": {
+          "off": {
+            "when": {
+              "track.click": "off"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-event",
+          "path": "/states/off/when/track.click"
+        }
+      ]
+    },
+    {
+      "name": "unknown-state",
+      "doc": {
+        "nudg": "0.1",
+        "targets": [
+          "knob",
+          "track"
+        ],
+        "values": {
+          "knob.x": 0
+        },
+        "initial": "off",
+        "states": {
+          "off": {
+            "when": {
+              "track.tap": "onn"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-state",
+          "path": "/states/off/when/track.tap"
+        }
+      ]
+    },
+    {
+      "name": "missing-base-value",
+      "doc": {
+        "nudg": "0.1",
+        "targets": [
+          "knob",
+          "track"
+        ],
+        "values": {
+          "knob.x": 0
+        },
+        "initial": "off",
+        "states": {
+          "off": {
+            "when": {
+              "track.tap": "off"
+            },
+            "set": {
+              "knob.y": 3
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "missing-base-value",
+          "path": "/states/off/set/knob.y"
+        }
+      ]
+    },
+    {
+      "name": "spring-mixed-forms",
+      "doc": {
+        "nudg": "0.1",
+        "targets": [
+          "knob",
+          "track"
+        ],
+        "values": {
+          "knob.x": 0
+        },
+        "initial": "off",
+        "states": {
+          "off": {
+            "when": {
+              "track.tap": "off"
+            }
+          }
+        },
+        "animate": {
+          "knob.x": {
+            "spring": {
+              "duration": 0.3,
+              "dampingRatio": 0.5
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "spring-mixed-forms",
+          "path": "/animate/knob.x/spring"
+        }
+      ]
+    },
+    {
+      "name": "kick-outside-enter",
+      "doc": {
+        "nudg": "0.1",
+        "targets": [
+          "knob",
+          "track"
+        ],
+        "values": {
+          "knob.x": 0
+        },
+        "initial": "off",
+        "states": {
+          "off": {
+            "when": {
+              "track.tap": "off"
+            }
+          }
+        },
+        "animate": {
+          "knob.x": {
+            "kick": 5,
+            "spring": {
+              "duration": 0.3
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "kick-outside-enter",
+          "path": "/animate/knob.x"
+        }
+      ]
+    },
+    {
+      "name": "enter-without-kick",
+      "doc": {
+        "nudg": "0.1",
+        "targets": [
+          "knob",
+          "track"
+        ],
+        "values": {
+          "knob.x": 0
+        },
+        "initial": "off",
+        "states": {
+          "off": {
+            "when": {
+              "track.tap": "off"
+            },
+            "enter": {
+              "knob.x": {
+                "spring": {
+                  "duration": 0.3
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "enter-without-kick",
+          "path": "/states/off/enter/knob.x"
+        }
+      ]
+    },
+    {
+      "name": "unknown-motion",
+      "doc": {
+        "nudg": "0.1",
+        "targets": [
+          "knob",
+          "track"
+        ],
+        "values": {
+          "knob.x": 0
+        },
+        "initial": "off",
+        "states": {
+          "off": {
+            "when": {
+              "track.tap": "off"
+            }
+          }
+        },
+        "animate": {
+          "knob.x": "snapy"
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-motion",
+          "path": "/animate/knob.x"
+        }
+      ]
+    },
+    {
+      "name": "unsupported-version",
+      "doc": {
+        "nudg": 0.1,
+        "targets": [
+          "knob",
+          "track"
+        ],
+        "values": {
+          "knob.x": 0
+        },
+        "initial": "off",
+        "states": {
+          "off": {
+            "when": {
+              "track.tap": "off"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unsupported-version",
+          "path": "/nudg"
+        }
+      ]
+    },
+    {
+      "name": "region-conflict",
+      "doc": {
+        "nudg": "0.1",
+        "targets": [
+          "knob"
+        ],
+        "values": {
+          "knob.x": 0
+        },
+        "regions": {
+          "a": {
+            "initial": "s",
+            "states": {
+              "s": {
+                "set": {
+                  "knob.x": 1
+                }
+              }
+            }
+          },
+          "b": {
+            "initial": "s",
+            "states": {
+              "s": {
+                "set": {
+                  "knob.x": 2
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "region-conflict",
+          "path": "/regions/b"
+        }
+      ]
+    }
+  ]
+}

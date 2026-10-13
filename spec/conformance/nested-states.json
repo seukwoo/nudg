@@ -1,0 +1,117 @@
+{
+  "conformance": "0.1",
+  "name": "Machine: nested states override their parent; a kick on an instant property; leaving exits children",
+  "doc": {
+    "nudg": "0.1",
+    "targets": [
+      "panel"
+    ],
+    "values": {
+      "panel.opacity": 0,
+      "panel.y": 0
+    },
+    "initial": "closed",
+    "states": {
+      "closed": {
+        "when": {
+          "panel.tap": "open"
+        }
+      },
+      "open": {
+        "set": {
+          "panel.opacity": 1,
+          "panel.y": 10
+        },
+        "enter": {
+          "panel.y": {
+            "kick": 50,
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.3
+            }
+          }
+        },
+        "when": {
+          "panel.tap": "closed"
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "panel.down": "pressed"
+            }
+          },
+          "pressed": {
+            "set": {
+              "panel.y": 12
+            },
+            "when": {
+              "panel.up": "idle"
+            }
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "closed"
+        ],
+        "values": {
+          "panel.opacity": 0,
+          "panel.y": 0
+        }
+      }
+    },
+    {
+      "t": 0.1,
+      "send": "panel.tap"
+    },
+    {
+      "t": 0.15,
+      "expect": {
+        "state": [
+          "open/idle"
+        ],
+        "values": {
+          "panel.opacity": 1,
+          "panel.y": 11.092247356
+        }
+      }
+    },
+    {
+      "t": 0.2,
+      "send": "panel.down"
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "state": [
+          "open/pressed"
+        ],
+        "values": {
+          "panel.y": 12
+        }
+      }
+    },
+    {
+      "t": 0.3,
+      "send": "panel.tap"
+    },
+    {
+      "t": 0.3,
+      "expect": {
+        "state": [
+          "closed"
+        ],
+        "values": {
+          "panel.opacity": 0,
+          "panel.y": 0
+        }
+      }
+    }
+  ]
+}

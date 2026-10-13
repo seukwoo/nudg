@@ -12,4 +12,11 @@ Read README.md first. It holds the vision, principles, scope, and the design dec
 
 ## Next step
 
-The v0.1 grammar draft is in the README (plain JSON, "states say where, motion says how"), with examples in `examples/`. Next: write the JSON Schema for v0.1 and the first conformance case for the toggle (events and timestamps in, expected states and values out). Settle open questions only when a case forces them.
+The v0.1 grammar is in the README, with a JSON Schema, a conformance suite, and a TypeScript reference core plus CLI (`validate`, `simulate`). Next, in order: the DOM adapter and a demo page (stage 0 end to end), frame rendering (`nudg render`), then the MCP server. Settle open questions only when a case forces them.
+
+## Working rules for the code
+
+- `src/core/` must not use Node or DOM APIs. Platform code goes in `src/node/`, `src/dom/`, and so on.
+- Behavior changes start in `spec/conformance/derive.py`; regenerate the cases, then make the runtime pass.
+- Every validator error has a stable code, a JSON pointer, and a hint that says how to fix it.
+- Node runs the TypeScript directly, so use erasable syntax only (no enums, namespaces, or parameter properties) and `.ts` import paths.

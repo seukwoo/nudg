@@ -1,0 +1,156 @@
+{
+  "conformance": "0.1",
+  "name": "Machine: parallel regions, instant properties, per-transition animate, unhandled events",
+  "doc": {
+    "nudg": "0.1",
+    "targets": [
+      "knob",
+      "track"
+    ],
+    "values": {
+      "knob.x": 0,
+      "knob.scale": 1
+    },
+    "animate": {
+      "knob.scale": {
+        "spring": {
+          "duration": 0.2,
+          "bounce": 0
+        }
+      }
+    },
+    "regions": {
+      "checked": {
+        "initial": "off",
+        "states": {
+          "off": {
+            "when": {
+              "track.tap": "on"
+            }
+          },
+          "on": {
+            "set": {
+              "knob.x": 20
+            },
+            "when": {
+              "track.tap": {
+                "to": "off",
+                "animate": {
+                  "knob.x": {
+                    "spring": {
+                      "duration": 0.3,
+                      "bounce": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "press": {
+        "initial": "up",
+        "states": {
+          "up": {
+            "when": {
+              "track.down": "down"
+            }
+          },
+          "down": {
+            "set": {
+              "knob.scale": 0.9
+            },
+            "when": {
+              "track.up": "up",
+              "track.cancel": "up"
+            }
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "checked/off",
+          "press/up"
+        ]
+      }
+    },
+    {
+      "t": 0.0,
+      "send": "track.down"
+    },
+    {
+      "t": 0.05,
+      "expect": {
+        "state": [
+          "checked/off",
+          "press/down"
+        ],
+        "values": {
+          "knob.scale": 0.953441605,
+          "knob.x": 0
+        }
+      }
+    },
+    {
+      "t": 0.08,
+      "send": "track.up"
+    },
+    {
+      "t": 0.08,
+      "send": "track.tap"
+    },
+    {
+      "t": 0.1,
+      "expect": {
+        "state": [
+          "checked/on",
+          "press/up"
+        ],
+        "values": {
+          "knob.scale": 0.93102859,
+          "knob.x": 20
+        }
+      }
+    },
+    {
+      "t": 0.2,
+      "send": "track.tap"
+    },
+    {
+      "t": 0.25,
+      "expect": {
+        "state": [
+          "checked/off",
+          "press/up"
+        ],
+        "values": {
+          "knob.scale": 0.997304944,
+          "knob.x": 14.368043398
+        }
+      }
+    },
+    {
+      "t": 0.35,
+      "expect": {
+        "state": [
+          "checked/off",
+          "press/up"
+        ],
+        "values": {
+          "knob.scale": 0.999823743,
+          "knob.x": 3.579488928
+        }
+      }
+    },
+    {
+      "t": 0.4,
+      "send": "track.cancel",
+      "handled": false
+    }
+  ]
+}

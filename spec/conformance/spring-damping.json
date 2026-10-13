@@ -1,0 +1,94 @@
+{
+  "conformance": "0.1",
+  "name": "Spring: critically damped and overdamped springs never overshoot",
+  "doc": {
+    "nudg": "0.1",
+    "targets": [
+      "crit",
+      "over"
+    ],
+    "values": {
+      "crit.x": 0,
+      "over.x": 0
+    },
+    "animate": {
+      "crit.x": {
+        "spring": {
+          "duration": 0.3,
+          "bounce": 0
+        }
+      },
+      "over.x": {
+        "spring": {
+          "duration": 0.3,
+          "bounce": -0.5
+        }
+      }
+    },
+    "initial": "rest",
+    "states": {
+      "rest": {
+        "when": {
+          "crit.tap": "moved"
+        }
+      },
+      "moved": {
+        "set": {
+          "crit.x": 50,
+          "over.x": 50
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "send": "crit.tap"
+    },
+    {
+      "t": 0.02,
+      "expect": {
+        "values": {
+          "crit.x": 3.334220521,
+          "over.x": 2.967140012
+        }
+      }
+    },
+    {
+      "t": 0.05,
+      "expect": {
+        "values": {
+          "crit.x": 14.079891504,
+          "over.x": 11.309156103
+        }
+      }
+    },
+    {
+      "t": 0.1,
+      "expect": {
+        "values": {
+          "crit.x": 30.947080459,
+          "over.x": 23.730998513
+        }
+      }
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "values": {
+          "crit.x": 46.065698449,
+          "over.x": 38.180629761
+        }
+      }
+    },
+    {
+      "t": 0.4,
+      "expect": {
+        "values": {
+          "crit.x": 49.89217391,
+          "over.x": 47.613622024
+        }
+      }
+    }
+  ]
+}

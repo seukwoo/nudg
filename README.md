@@ -145,7 +145,7 @@ JSON has no comments. Instead, any object may carry a `note` string. Runtimes ig
 
 - **States say where.** A state only declares target values.
 - **`animate` says how.** It maps each property to the motion that carries it to its target. When the target changes mid-flight (a second tap while the knob is still moving), the value retargets from where it is. A spring also keeps its velocity, so interruption is correct by default instead of a special case.
-- **`enter` adds a moment.** Some feedback is transient: a heart that pops and settles back, a field that shakes. The target doesn't change, so `enter` plays a *kick* when a state is entered (see below).
+- **`enter` adds a moment.** Some feedback is transient: a heart that pops and settles back, a field that shakes. The target doesn't change, so `enter` plays a *kick* when a state is entered through a transition (see below). Loading a file enters its initial states without kicks.
 
 A transition can override `animate` for itself:
 
@@ -223,8 +223,8 @@ A component imports it:
   - `stiffness` + `dampingRatio`, with mass 1.
   - `stiffness` + `damping` + `mass`.
 
-  Every form converts exactly to stiffness, damping, and mass, which is what the spec computes with. A spring uses exactly one form; mixing them is a validator error. Fit-to-duration springs (a fixed total time plus a damping value) are not supported, because they don't map to a single physical spring. The spec defines springs by their closed-form solution, so results are deterministic (decision 3).
-- **`tween`:** `duration` and `ease`. `ease` is `linear`, `in`, `out`, `in-out`, or a cubic Bézier `[x1, y1, x2, y2]`; the default is `in-out`. On retarget, a tween restarts from the current value with its full duration.
+  Every form converts exactly to stiffness, damping, and mass, which is what the spec computes with. A spring uses exactly one form; mixing them is a validator error. `tension` / `friction` are rejected with a hint, because tools disagree on what they mean. Fit-to-duration springs (a fixed total time plus a damping value) are not supported, because they don't map to a single physical spring. The spec defines springs by their closed-form solution, so results are deterministic (decision 3).
+- **`tween`:** `duration` and `ease`. `ease` is `linear`, `in`, `out`, `in-out`, one of the classic curve families (`in-`, `out-` or `in-out-` followed by `sine`, `quad`, `cubic`, `quart`, `quint`, `expo`, `circ` or `back`, e.g. `out-cubic`), or a cubic Bézier `[x1, y1, x2, y2]`; the default is `in-out`. Bounce and elastic aren't curves: use a spring. On retarget, a tween restarts from the current value with its full duration.
 - **`kick`:** adds velocity (units per second) to a numeric property without changing its target, then lets the motion's `spring` carry it back. A kick always comes with a `spring`. A positive kick on `scale` is a pop; a negative kick on `x` with a high bounce is a shake.
 
 ### Colors
@@ -239,6 +239,26 @@ Colors are hex strings (`#RGB`, `#RRGGBB`, `#RRGGBBAA`) and interpolate in OKLab
 ### Unknown fields and extensions
 
 An unknown key without a prefix is a validator error with a "did you mean" hint, so typos are caught instead of silently ignored. Keys starting with `x-` are extensions; runtimes that don't understand them ignore them.
+
+## Repository
+
+| Path | What it is |
+|---|---|
+| [`spec/nudg-0.1.schema.json`](spec/nudg-0.1.schema.json) | JSON Schema, for editors and LLM structured output. The validator checks more (references, base values, motion names). |
+| [`spec/conformance/`](spec/conformance/) | Language-neutral behavior and validation cases. Expected values come from an independent derivation. |
+| [`src/core/`](src/core/) | Reference runtime in TypeScript: compiler and validator, motion math, state machine, simulation. No platform APIs. |
+| [`src/cli.ts`](src/cli.ts) | `nudg validate` and `nudg simulate`, with `--json` for agents. |
+| [`examples/`](examples/) | Toggle, toggle with press, like button, brand motion library. |
+
+Node 23.6 or later runs the TypeScript directly:
+
+```sh
+npm install
+node src/cli.ts validate examples/*.json
+node src/cli.ts simulate examples/toggle.nudg.json --send track.tap@0.1
+npm test            # conformance suite, schema, core
+npm run typecheck
+```
 
 ## Open questions
 

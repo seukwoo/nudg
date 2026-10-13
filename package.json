@@ -1,0 +1,26 @@
+{
+  "name": "nudg",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The interaction format your AI can nudge.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "nudg": "./src/cli.ts"
+  },
+  "engines": {
+    "node": ">=23.6"
+  },
+  "scripts": {
+    "test": "node --test",
+    "typecheck": "tsc",
+    "nudg": "node src/cli.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "ajv": "^8.20.0",
+    "typescript": "^7.0.2"
+  }
+}

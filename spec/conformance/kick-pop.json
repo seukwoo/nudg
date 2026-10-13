@@ -1,0 +1,178 @@
+{
+  "conformance": "0.1",
+  "name": "Kick: entering a state adds velocity without changing the target; imported named motions",
+  "doc": {
+    "nudg": "0.1",
+    "import": [
+      "./motion/brand.nudg.json"
+    ],
+    "targets": [
+      "heart"
+    ],
+    "values": {
+      "heart.scale": 1,
+      "heart.y": 0
+    },
+    "animate": {
+      "heart.scale": "snappy",
+      "heart.y": "snappy"
+    },
+    "initial": "idle",
+    "states": {
+      "idle": {
+        "when": {
+          "heart.tap": "liked"
+        }
+      },
+      "liked": {
+        "set": {
+          "heart.y": -4
+        },
+        "enter": {
+          "heart.scale": "pop"
+        },
+        "when": {
+          "heart.tap": "idle"
+        }
+      }
+    }
+  },
+  "files": {
+    "motion/brand.nudg.json": {
+      "nudg": "0.1",
+      "motions": {
+        "snappy": {
+          "spring": {
+            "duration": 0.3,
+            "bounce": 0.15
+          }
+        },
+        "pop": {
+          "kick": 6,
+          "spring": {
+            "duration": 0.4,
+            "bounce": 0.5
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "heart.scale": 1,
+          "heart.y": 0
+        }
+      }
+    },
+    {
+      "t": 0.1,
+      "send": "heart.tap"
+    },
+    {
+      "t": 0.12,
+      "expect": {
+        "state": [
+          "liked"
+        ],
+        "values": {
+          "heart.scale": 1.101295757,
+          "heart.y": -0.276691631
+        }
+      }
+    },
+    {
+      "t": 0.15,
+      "expect": {
+        "state": [
+          "liked"
+        ],
+        "values": {
+          "heart.scale": 1.187307536,
+          "heart.y": -1.212276067
+        }
+      }
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "state": [
+          "liked"
+        ],
+        "values": {
+          "heart.scale": 1.196660814,
+          "heart.y": -2.724663972
+        }
+      }
+    },
+    {
+      "t": 0.3,
+      "expect": {
+        "state": [
+          "liked"
+        ],
+        "values": {
+          "heart.scale": 1.037461543,
+          "heart.y": -3.919899927
+        }
+      }
+    },
+    {
+      "t": 0.5,
+      "expect": {
+        "state": [
+          "liked"
+        ],
+        "values": {
+          "heart.scale": 0.985784339,
+          "heart.y": -4.005936082
+        }
+      }
+    },
+    {
+      "t": 0.9,
+      "expect": {
+        "state": [
+          "liked"
+        ],
+        "values": {
+          "heart.scale": 0.999181572,
+          "heart.y": -3.999999784
+        }
+      }
+    },
+    {
+      "t": 1.0,
+      "send": "heart.tap"
+    },
+    {
+      "t": 1.05,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "heart.scale": 1.000088604,
+          "heart.y": -2.787724276
+        }
+      }
+    },
+    {
+      "t": 1.2,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "heart.scale": 1.000052876,
+          "heart.y": -0.08010007
+        }
+      }
+    }
+  ]
+}

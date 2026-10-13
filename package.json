@@ -43,7 +43,7 @@
   },
   "types": "./dist/index.d.ts",
   "bin": {
-    "nudg": "./dist/cli.js"
+    "nudg": "dist/cli.js"
   },
   "engines": {
     "node": ">=22.4"

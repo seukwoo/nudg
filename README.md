@@ -102,9 +102,86 @@ These are expensive to change later, so they are fixed early:
 7. **Units: all supported, with a default.** A bare number is a *logical unit*. On every major platform this is already the same size: a CSS `px`, an iOS `pt`, and an Android `dp` are all density-independent logical units. `px`, `pt`, and `dp` are accepted as aliases for it. `%` is relative. Other units can arrive through the extension rule.
 8. **Targets are bound by name.** A nudg file refers to targets by name (`knob`, `track`) and never knows what they are on a given platform. The host registers which of its views each name means, for example `bind("knob", element)`. On the web, `data-nudg="knob"` attributes bind automatically. The validator and runtime report names that are used but never bound, and the reverse.
 
+## Grammar (draft, v0.1)
+
+Worked out by expressing a toggle. See [`examples/toggle.nudg.json`](examples/toggle.nudg.json) and, with a parallel press region, [`examples/toggle-press.nudg.json`](examples/toggle-press.nudg.json).
+
+```json
+{
+  "nudg": "0.1",
+  "targets": ["knob", "track"],
+  "values": { "knob.x": 0, "track.color": "#D1D5DB" },
+  "motion": {
+    "knob.x": { "spring": { "duration": 0.35, "bounce": 0.25 } },
+    "track.color": { "tween": { "duration": 0.2, "ease": "out" } }
+  },
+  "initial": "off",
+  "states": {
+    "off": { "when": { "track.tap": "on" } },
+    "on": {
+      "set": { "knob.x": 20, "track.color": "#4ADE80" },
+      "when": { "track.tap": "off" }
+    }
+  }
+}
+```
+
+### Syntax: plain JSON
+
+A nudg file is strict JSON with the extension `.nudg.json`. Every platform already parses it, JSON Schema describes it, and LLMs write it reliably, so there is no parser to maintain and nothing new to learn. A friendlier syntax can be added later as sugar that compiles to the same model, but JSON stays the source of truth.
+
+JSON has no comments. Instead, any object may carry a `note` string. Runtimes ignore it. Unlike a comment, a note survives tools rewriting the file, and an AI can read it as part of the data.
+
+### Motion model: states say where, motion says how
+
+States only declare target values. `motion` declares how each property travels to its target. When the target changes mid-flight (for example, a second tap while the knob is still moving), the value retargets from where it is and keeps its velocity. Interruption is correct by default instead of a special case.
+
+A transition can override motion for itself:
+
+```json
+"track.tap": { "to": "off", "motion": { "knob.x": { "spring": { "duration": 0.3, "bounce": 0 } } } }
+```
+
+### Structure
+
+- **Top level:** `nudg` (format version), `targets`, `values`, `motion`, and a machine.
+- **Machine:** either `initial` + `states` (one active state at a time) or `regions` (named machines that all run in parallel).
+- **State:** `set` (values while active), `when` (transitions), and optionally a nested machine. Machines and states share this shape at every depth, which covers composition (decision 2).
+- **Transition:** `"event": "target-state"` or `"event": { "to": ..., "motion": ..., "note": ... }`. In v0.1 a transition targets a sibling state.
+
+### Paths and events
+
+- One dotted form everywhere: `target.property` for values (`knob.x`), `target.event` for events (`track.tap`). The same string appears in `values`, `set`, `motion`, and `when`, so it can be found and edited directly.
+- Stage 0 pointer events: `down`, `up`, `cancel`, `tap`.
+- Transitions live under `when`, not `on`, so they never collide with a state named `on`.
+
+### Value resolution
+
+1. Start from `values` (the base).
+2. Apply `set` from every active state; a deeper state overrides its ancestors.
+3. If two parallel regions set the same property, the validator reports an error.
+
+### Motion primitives
+
+- **`spring`:** `duration` (seconds, perceptual) and `bounce` (0 = no overshoot, toward 1 = more bounce; v0.1 range is 0 to <1). With mass 1, stiffness = (2π / duration)² and damping ratio = 1 − bounce. `stiffness` / `damping` / `mass` are accepted as an alternative form. The spec defines springs by their closed-form solution, so results are deterministic (decision 3).
+- **`tween`:** `duration` and `ease`.
+
+### Units
+
+- Time: a bare number is seconds; `"350ms"` is also accepted.
+- Length: a bare number is a logical unit (decision 7).
+
+### Unknown fields and extensions
+
+An unknown key without a prefix is a validator error with a "did you mean" hint, so typos are caught instead of silently ignored. Keys starting with `x-` are extensions; runtimes that don't understand them ignore them.
+
 ## Open questions
 
-- Syntax: JSON, a JSON superset, or a small DSL?
-- Minimal core: what is the smallest set of concepts that expresses a toggle well? Likely states, transitions, and continuous values.
-- Continuous motion: how springs and follow-style values are declared alongside discrete states.
+- Color interpolation space (likely OKLab).
+- Exact easing vocabulary for `tween` (named curves, cubic Bézier).
+- Transitions that cross machine levels (to a parent's sibling, into a nested state).
+- Host-driven input: a controlled toggle whose state is set by the app (`checked` from props), and how app data events are named.
+- Keyboard and accessibility events (`space`, `enter`, focus).
+- Follow-style values: the knob tracking a drag, then springing to a state on release.
+- Event ordering when one pointer gesture produces several events (`up` then `tap`).
 - License.

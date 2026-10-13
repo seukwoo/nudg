@@ -12,4 +12,4 @@ Read README.md first. It holds the vision, principles, scope, and the design dec
 
 ## Next step
 
-Design the minimal grammar by expressing one toggle (states, transitions, a spring-driven value). Use the eight design decisions in the README as the checklist. Settle syntax (JSON / JSON superset / small DSL) as part of this.
+The v0.1 grammar draft is in the README (plain JSON, "states say where, motion says how"), with examples in `examples/`. Next: write the JSON Schema for v0.1 and the first conformance case for the toggle (events and timestamps in, expected states and values out). Settle open questions only when a case forces them.

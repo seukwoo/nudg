@@ -1,0 +1,47 @@
+{
+  "nudg": "0.1",
+  "note": "The toggle, plus a knob that shrinks slightly while the track is pressed. Two regions run in parallel.",
+  "targets": ["knob", "track"],
+  "values": {
+    "knob.x": 0,
+    "knob.scale": 1,
+    "track.color": "#D1D5DB"
+  },
+  "motion": {
+    "knob.x": { "spring": { "duration": 0.35, "bounce": 0.25 } },
+    "knob.scale": { "spring": { "duration": 0.2, "bounce": 0 } },
+    "track.color": { "tween": { "duration": 0.2, "ease": "out" } }
+  },
+  "regions": {
+    "checked": {
+      "initial": "off",
+      "states": {
+        "off": {
+          "when": { "track.tap": "on" }
+        },
+        "on": {
+          "set": { "knob.x": 20, "track.color": "#4ADE80" },
+          "when": {
+            "track.tap": {
+              "to": "off",
+              "motion": { "knob.x": { "spring": { "duration": 0.3, "bounce": 0 } } },
+              "note": "Settle back without overshoot."
+            }
+          }
+        }
+      }
+    },
+    "press": {
+      "initial": "up",
+      "states": {
+        "up": {
+          "when": { "track.down": "down" }
+        },
+        "down": {
+          "set": { "knob.scale": 0.9 },
+          "when": { "track.up": "up", "track.cancel": "up" }
+        }
+      }
+    }
+  }
+}

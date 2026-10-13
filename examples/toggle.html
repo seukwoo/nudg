@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Toggle</title>
+  <style>
+    .stage { display: grid; place-items: center; width: 120px; height: 72px; }
+    .toggle { position: relative; width: 52px; height: 32px; padding: 0; border: 0; border-radius: 16px; background: #d1d5db; cursor: pointer; }
+    .knob { position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 0.25); pointer-events: none; }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <button class="toggle" data-nudg="track" aria-label="Toggle"><span class="knob" data-nudg="knob"></span></button>
+  </div>
+  <!-- Host markup for toggle.nudg.json and toggle-press.nudg.json. Serve the repo and build first to try it live. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./toggle.nudg.json");
+    play(program, document.body);
+  </script>
+</body>
+</html>

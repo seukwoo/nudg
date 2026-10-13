@@ -247,9 +247,10 @@ An unknown key without a prefix is a validator error with a "did you mean" hint,
 | [`spec/nudg-0.1.schema.json`](spec/nudg-0.1.schema.json) | JSON Schema, for editors and LLM structured output. The validator checks more (references, base values, motion names). |
 | [`spec/conformance/`](spec/conformance/) | Language-neutral behavior and validation cases. Expected values come from an independent derivation. |
 | [`src/core/`](src/core/) | Reference runtime in TypeScript: compiler and validator, motion math, state machine, simulation. No platform APIs. |
-| [`src/cli.ts`](src/cli.ts) | `nudg validate`, `nudg simulate` and `nudg plot`, with `--json` for agents. |
+| [`src/cli.ts`](src/cli.ts) | `nudg validate`, `simulate`, `plot` and `render`, with `--json` for agents. |
+| [`src/node/`](src/node/) | Node helpers: file loading, Chrome discovery, frame rendering over the DevTools protocol. |
 | [`src/dom/`](src/dom/) | DOM adapter: `play(program, root)` and `compileUrl(url)`. |
-| [`examples/`](examples/) | Toggle, toggle with press, like button, brand motion library. |
+| [`examples/`](examples/) | Toggle, toggle with press, like button, brand motion library, and host pages (`toggle.html`, `like.html`) with their markup. |
 | [`demo/`](demo/) | The examples running in a browser, plus a playground that recompiles as you type. |
 
 Node 23.6 or later runs the TypeScript directly:
@@ -259,10 +260,18 @@ npm install
 node src/cli.ts validate examples/*.json
 node src/cli.ts simulate examples/toggle.nudg.json --send track.tap@0.1
 node src/cli.ts plot examples/like.nudg.json --send heart.tap@0.1 --out like.png
+node src/cli.ts render examples/like.nudg.json --html examples/like.html --send heart.tap@0 --out frames.png
 npm test            # conformance suite, schema, core
 npm run typecheck   # also checks that src/core uses no platform APIs
 npm run demo        # then open http://localhost:8787/demo/
 ```
+
+### Seeing motion
+
+Two ways to look at an interaction, for people and for multimodal models:
+
+- **`nudg plot`** draws a motion graph: each property over time, with state bands, events, the target, overshoot and settle times. It needs nothing but the file (PNG output uses a local Chrome; SVG doesn't).
+- **`nudg render`** draws real frames of the component as one filmstrip PNG. It takes the host page's markup and styles (`--html`), plays the file on a manual clock in headless Chrome, and captures each `--at` time (or `--frames` evenly spaced ones). The page's own scripts don't run. Set `NUDG_CHROME` if Chrome isn't found.
 
 ### DOM adapter
 

@@ -12,7 +12,7 @@ Read README.md first. It holds the vision, principles, scope, and the design dec
 
 ## Next step
 
-The v0.1 grammar is in the README, with a JSON Schema, a conformance suite, a TypeScript reference core, a CLI (`validate`, `simulate`), and a DOM adapter with a demo. The DOM adapter and demo run stage 0 end to end. Next, in order: frame rendering (`nudg render`), then the MCP server. Settle open questions only when a case forces them.
+The v0.1 grammar is in the README, with a JSON Schema, a conformance suite, a TypeScript reference core, a CLI (`validate`, `simulate`, `plot`, `render`), and a DOM adapter with a demo. The DOM adapter and demo run stage 0 end to end, and `nudg plot` / `nudg render` show motion as graphs and real frames. Next: the MCP server, exposing validate, simulate, plot and render as tools. Settle open questions only when a case forces them.
 
 ## Working rules for the code
 

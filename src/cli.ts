@@ -8,6 +8,7 @@ import { simulate, type SimulateOptions } from "./core/simulate.ts";
 import type { Diagnostic, Program } from "./core/types.ts";
 import { CHROME_HINT, findChrome, svgToPng } from "./node/chrome.ts";
 import { compilePath } from "./node/load.ts";
+import { renderFrames } from "./node/render.ts";
 
 const USAGE = `nudg <command> [options]
 
@@ -23,9 +24,18 @@ simulate and plot options
   --every <seconds>         Sample interval (simulate only). Default: 0.05.
   --props <a,b,...>         Properties to report. Default: all.
 
+  render <file>             Draw real frames of the component with headless Chrome, as one
+                            filmstrip PNG. Uses the page's markup and styles; its scripts don't run.
+
 plot options
   --out <file.svg|file.png> Where to write. PNG needs Chrome (or NUDG_CHROME). Default: SVG to stdout.
   --title <text>            Graph title. Default: the file name.
+
+render options
+  --html <page.html>        Page with the component's markup (data-nudg names) and styles. Required.
+  --at <seconds>            A frame time. Repeatable. Default: evenly spaced frames until at rest.
+  --frames <n>              Number of evenly spaced frames when --at is not given. Default: 6.
+  --out <file.png>          Where to write. Required.
 
 Common options
   --json                    Machine-readable output.
@@ -198,6 +208,41 @@ function runPlot(args: Args, json: boolean): number {
   return 0;
 }
 
+async function runRender(args: Args, json: boolean): Promise<number> {
+  const { program } = loadProgram("render", args, json);
+  if (!program) return 1;
+  const file = args.positional[0];
+  const html = args.flags.get("html")?.at(-1);
+  if (!html) fail("render needs --html <page.html> with the component's markup. For a graph without markup, use nudg plot.");
+  if (!existsSync(html)) fail(`File not found: ${html}`);
+  const out = args.flags.get("out")?.at(-1);
+  if (!out || extname(out).toLowerCase() !== ".png") fail("render needs --out <file.png>.");
+  const chrome = findChrome();
+  if (!chrome) fail(`render needs a browser. ${CHROME_HINT}`);
+
+  const options = simulationOptions(args, program);
+  let times = (args.flags.get("at") ?? []).map((raw) => parseSeconds(raw, "--at"));
+  if (times.length === 0) {
+    const frames = Number(args.flags.get("frames")?.at(-1) ?? 6);
+    if (!Number.isInteger(frames) || frames < 1 || frames > 60) fail("--frames must be a whole number from 1 to 60.");
+    const samples = simulate(program, { ...options, every: 0.01 }).samples;
+    const until = options.until ?? samples[samples.length - 1].t;
+    times = Array.from({ length: frames }, (_, i) => (frames === 1 ? until : Number(((until * i) / (frames - 1)).toFixed(3))));
+  }
+  times.sort((a, b) => a - b);
+
+  const result = await renderFrames({ file, html, events: options.events, times, out, chrome });
+  if (json) {
+    process.stdout.write(JSON.stringify({ ok: true, ...result }, null, 2) + "\n");
+  } else {
+    process.stdout.write(`wrote ${out}\n`);
+    for (const f of result.frames) process.stdout.write(`  ${f.t.toFixed(3)}s  ${f.state.join("  ")}\n`);
+    if (result.unbound.length) process.stdout.write(`no element for: ${result.unbound.join(", ")} (add data-nudg="${result.unbound[0]}" to the page)\n`);
+    if (result.unknown.length) process.stdout.write(`not targets in the file: ${result.unknown.join(", ")}\n`);
+  }
+  return 0;
+}
+
 const args = parseArgs(process.argv.slice(2));
 const json = args.flags.has("json");
 const command = args.positional.shift();
@@ -208,4 +253,5 @@ if (!command || args.flags.has("help") || command === "help") {
 if (command === "validate") process.exit(validate(args, json));
 if (command === "simulate") process.exit(runSimulate(args, json));
 if (command === "plot") process.exit(runPlot(args, json));
-fail(`Unknown command "${command}". Commands: validate, simulate, plot.`);
+if (command === "render") process.exit(await runRender(args, json));
+fail(`Unknown command "${command}". Commands: validate, simulate, plot, render.`);

@@ -297,11 +297,32 @@ An unknown key without a prefix is a validator error with a "did you mean" hint,
 | [`spec/nudg-0.1.schema.json`](spec/nudg-0.1.schema.json) | JSON Schema, for editors and LLM structured output. The validator checks more (references, base values, motion names). |
 | [`spec/conformance/`](spec/conformance/) | Language-neutral behavior and validation cases. Expected values come from an independent derivation. |
 | [`src/core/`](src/core/) | Reference runtime in TypeScript: compiler and validator, motion math, state machine, simulation. No platform APIs. |
-| [`src/cli.ts`](src/cli.ts) | `nudg validate`, `simulate`, `plot` and `render`, with `--json` for agents. |
-| [`src/node/`](src/node/) | Node helpers: file loading, Chrome discovery, frame rendering over the DevTools protocol. |
+| [`src/cli.ts`](src/cli.ts) | `nudg validate`, `simulate`, `plot`, `render` and `mcp`, with `--json` for agents. |
+| [`src/node/`](src/node/) | Node helpers: file loading, Chrome discovery, frame rendering over the DevTools protocol, the MCP server. |
+| [`spec/guide.md`](spec/guide.md) | The format on one page, written for AI agents (served by the `nudg_guide` tool). |
 | [`src/dom/`](src/dom/) | DOM adapter: `play(program, root)` and `compileUrl(url)`. |
 | [`examples/`](examples/) | Toggle, toggle with press, like button, brand motion library, and host pages (`toggle.html`, `like.html`) with their markup. |
 | [`demo/`](demo/) | The examples running in a browser, plus a playground that recompiles as you type. |
+
+### MCP server
+
+`nudg mcp` serves the same capabilities as tools over stdio, with no dependencies:
+
+| Tool | What it does |
+|---|---|
+| `nudg_guide` | The format on one page, including which field to change for "bouncier", "snappier", and so on. |
+| `nudg_validate` | Diagnostics with codes, JSON pointers and fix hints. Takes a `file`, or `source` to check text before writing it. |
+| `nudg_simulate` | States and values over time for a list of events, with a per-property summary. |
+| `nudg_plot` | A motion graph image. |
+| `nudg_render` | Real frames of the component as a filmstrip image, from the host page (needs Chrome). |
+
+To use it from Claude Code (paths relative to the project the agent works in):
+
+```sh
+claude mcp add nudg -- node /path/to/nudg/src/cli.ts mcp
+```
+
+Other clients take the same command: `{ "command": "node", "args": ["/path/to/nudg/src/cli.ts", "mcp"] }`.
 
 ### Seeing motion
 

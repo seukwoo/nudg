@@ -7,8 +7,10 @@ import { plot } from "./core/plot.ts";
 import { simulate, type SimulateOptions } from "./core/simulate.ts";
 import type { Diagnostic, Program } from "./core/types.ts";
 import { CHROME_HINT, findChrome, svgToPng } from "./node/chrome.ts";
+import { formatDiagnostic, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
 import { compilePath } from "./node/load.ts";
-import { renderFrames } from "./node/render.ts";
+import { serveMcp } from "./node/mcp.ts";
+import { frameTimes, renderFrames } from "./node/render.ts";
 
 const USAGE = `nudg <command> [options]
 
@@ -24,6 +26,8 @@ simulate and plot options
   --every <seconds>         Sample interval (simulate only). Default: 0.05.
   --props <a,b,...>         Properties to report. Default: all.
 
+  mcp                       Run the MCP server on stdio (tools: nudg_guide, nudg_validate,
+                            nudg_simulate, nudg_plot, nudg_render).
   render <file>             Draw real frames of the component with headless Chrome, as one
                             filmstrip PNG. Uses the page's markup and styles; its scripts don't run.
 
@@ -75,11 +79,6 @@ function parseSeconds(raw: string, what: string): number {
   return m[2] === "ms" ? Number(m[1]) / 1000 : Number(m[1]);
 }
 
-function formatDiagnostic(d: Diagnostic): string {
-  const where = `${d.file ? `${d.file} ` : ""}${d.path || "/"}`;
-  return [`  ${d.severity} ${d.code} at ${where}`, `    ${d.message}`, ...(d.hint ? [`    hint: ${d.hint}`] : [])].join("\n");
-}
-
 function load(file: string) {
   if (!existsSync(file)) fail(`File not found: ${file}`);
   return compilePath(file);
@@ -93,10 +92,7 @@ function validate(args: Args, json: boolean): number {
     process.stdout.write(JSON.stringify({ ok: !failed, results }, null, 2) + "\n");
   } else {
     for (const { file, diagnostics } of results) {
-      const errors = diagnostics.filter((d) => d.severity === "error").length;
-      const warnings = diagnostics.length - errors;
-      const status = errors ? `${errors} error${errors > 1 ? "s" : ""}` : "ok";
-      process.stdout.write(`${file}: ${status}${warnings ? `, ${warnings} warning${warnings > 1 ? "s" : ""}` : ""}\n`);
+      process.stdout.write(`${file}: ${formatStatus(diagnostics)}\n`);
       for (const d of diagnostics) process.stdout.write(formatDiagnostic(d) + "\n");
     }
   }
@@ -152,23 +148,7 @@ function runSimulate(args: Args, json: boolean): number {
   }
 
   const keys = properties ?? [...program.properties.keys()];
-  const fmt = (v: unknown) => (typeof v === "number" ? v.toFixed(3) : String(v));
-  const rows = result.samples.map((s) => [s.t.toFixed(3), s.state.join(" "), ...keys.map((k) => fmt(s.values[k]))]);
-  const header = ["t", "state", ...keys];
-  const widths = header.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i].length)));
-  const line = (cells: string[]) => cells.map((c, i) => c.padEnd(widths[i])).join("  ").trimEnd();
-  process.stdout.write([line(header), ...rows.map(line)].join("\n") + "\n\nsummary\n");
-  const keyWidth = Math.max(...keys.map((k) => k.length));
-  for (const key of keys) {
-    const s = result.summary[key];
-    const parts = [`final ${fmt(s.final)}`];
-    if (s.min !== undefined && s.max !== undefined) parts.push(`min ${fmt(s.min)}`, `max ${fmt(s.max)}`);
-    parts.push(s.settledAt === undefined ? "still moving" : `at rest from ${s.settledAt.toFixed(3)}s`);
-    process.stdout.write(`  ${key.padEnd(keyWidth)}  ${parts.join("  ")}\n`);
-  }
-  if (result.unhandled.length) {
-    process.stdout.write(`\nunhandled: ${result.unhandled.map((e) => `${e.event}@${e.t}`).join(", ")}\n`);
-  }
+  process.stdout.write(`${formatSamples(result, keys)}\n\nsummary\n${formatSummary(result, keys)}\n`);
   for (const d of diagnostics) process.stdout.write(formatDiagnostic(d) + "\n");
   return 0;
 }
@@ -225,9 +205,7 @@ async function runRender(args: Args, json: boolean): Promise<number> {
   if (times.length === 0) {
     const frames = Number(args.flags.get("frames")?.at(-1) ?? 6);
     if (!Number.isInteger(frames) || frames < 1 || frames > 60) fail("--frames must be a whole number from 1 to 60.");
-    const samples = simulate(program, { ...options, every: 0.01 }).samples;
-    const until = options.until ?? samples[samples.length - 1].t;
-    times = Array.from({ length: frames }, (_, i) => (frames === 1 ? until : Number(((until * i) / (frames - 1)).toFixed(3))));
+    times = frameTimes(program, options, frames);
   }
   times.sort((a, b) => a - b);
 
@@ -254,4 +232,8 @@ if (command === "validate") process.exit(validate(args, json));
 if (command === "simulate") process.exit(runSimulate(args, json));
 if (command === "plot") process.exit(runPlot(args, json));
 if (command === "render") process.exit(await runRender(args, json));
-fail(`Unknown command "${command}". Commands: validate, simulate, plot, render.`);
+if (command === "mcp") {
+  await serveMcp();
+  process.exit(0);
+}
+fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, mcp.`);

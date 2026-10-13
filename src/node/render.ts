@@ -6,7 +6,8 @@ import { createServer, type Server } from "node:http";
 import * as nodeModule from "node:module";
 import { dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { TimedEvent } from "../core/simulate.ts";
+import { simulate, type SimulateOptions, type TimedEvent } from "../core/simulate.ts";
+import type { Program } from "../core/types.ts";
 import { launchBrowser, waitFor } from "./cdp.ts";
 
 export interface RenderOptions {
@@ -56,6 +57,14 @@ const TYPES: Record<string, string> = {
 // stripped on the fly, no build step) or the compiled dist.
 const SRC = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const EXT = import.meta.url.endsWith(".ts") ? ".ts" : ".js";
+
+/** Evenly spaced frame times from 0 until everything is at rest (or `options.until`). */
+export function frameTimes(program: Program, options: SimulateOptions, frames = 6): number[] {
+  const samples = simulate(program, { ...options, every: 0.01 }).samples;
+  const until = options.until ?? samples[samples.length - 1].t;
+  if (frames === 1) return [until];
+  return Array.from({ length: frames }, (_, i) => Number(((until * i) / (frames - 1)).toFixed(3)));
+}
 
 export async function renderFrames(options: RenderOptions): Promise<RenderResult> {
   const file = resolve(options.file);

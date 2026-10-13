@@ -19,4 +19,5 @@ The v0.1 grammar is in the README, with a JSON Schema, a conformance suite, a Ty
 - `src/core/` must not use Node or DOM APIs. Platform code goes in `src/node/`, `src/dom/`, and so on.
 - Behavior changes start in `spec/conformance/derive.py`; regenerate the cases, then make the runtime pass.
 - Every validator error has a stable code, a JSON pointer, and a hint that says how to fix it.
+- Record notable problems (design dead ends, bugs, tooling or release issues) in `docs/devlog.md` as they happen: problem, cause, resolution, lesson.
 - Node runs the TypeScript directly, so use erasable syntax only (no enums, namespaces, or parameter properties) and `.ts` import paths.

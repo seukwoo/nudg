@@ -26,6 +26,7 @@ npm run build       # compiles to dist/, which is what the npm package ships
 - **Behavior changes start in `spec/conformance/derive.py`.** Edit it, regenerate the cases with `python3 spec/conformance/derive.py`, then make the runtime pass. Never edit the case JSON by hand.
 - **`src/core/` is headless.** No Node or DOM APIs there; platform code goes in `src/node/`, `src/dom/`, and so on.
 - **Validator errors are part of the spec.** Every error has a stable code, a JSON pointer, and a hint that says how to fix it.
+- **Write down what you learn.** Notable problems and how they were solved go in [`docs/devlog.md`](docs/devlog.md).
 - **Erasable TypeScript only.** Node runs the sources without a build, so no enums, namespaces, or parameter properties, and imports use `.ts` paths.
 
 ## Pull requests

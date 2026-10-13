@@ -167,6 +167,7 @@ These are expensive to change later, so they are fixed early:
 6. **Core and renderers are separate.** The headless core is pure logic; drawing is always an adapter's job.
 7. **Units: all supported, with a default.** A bare number is a *logical unit*. On every major platform this is already the same size: a CSS `px`, an iOS `pt`, and an Android `dp` are all density-independent logical units. `px`, `pt`, and `dp` are accepted as aliases for it. `%` is relative. Other units can arrive through the extension rule.
 8. **Targets are bound by name.** A nudg file refers to targets by name (`knob`, `track`) and never knows what they are on a given platform. The host registers which of its views each name means, for example `bind("knob", element)`. On the web, `data-nudg="knob"` attributes bind automatically. The validator and runtime report names that are used but never bound, and the reverse.
+9. **Strings are never code.** A string is always a name (a state, a motion, a target path) or a value (`"#4ADE80"`, `"300ms"`); the only free text is `note`. Computation is always an object with one operator key (`map`, `follow`, `nearest`, ...), from a small closed set that grows only when a real interaction needs it. There is no expression language, so a reader (or an AI) never has to guess whether a string is a formula or a sentence, and the validator can check every operator precisely.
 
 ## Grammar (draft, v0.1)
 
@@ -299,6 +300,90 @@ Colors are hex strings (`#RGB`, `#RRGGBB`, `#RRGGBBAA`) and interpolate in OKLab
 
 An unknown key without a prefix is a validator error with a "did you mean" hint, so typos are caught instead of silently ignored. Keys starting with `x-` are extensions; runtimes that don't understand them ignore them.
 
+## Grammar additions (draft, v0.2)
+
+Stage 1 is about continuous interaction: a value follows a finger, and on release it settles somewhere sensible. Worked out by expressing a draggable toggle and a swipe-to-reveal row. A file that uses any of this declares `"nudg": "0.2"`; a 0.2 runtime also reads 0.1 files.
+
+```json
+{
+  "nudg": "0.2",
+  "targets": ["knob", "track"],
+  "values": {
+    "knob.x": 0,
+    "track.color": { "map": "knob.x", "from": [0, 20], "to": ["#D1D5DB", "#4ADE80"] }
+  },
+  "animate": { "knob.x": { "spring": { "duration": 0.35, "bounce": 0.25 } } },
+  "initial": "off",
+  "states": {
+    "off": { "when": { "track.tap": "on", "knob.dragstart": "dragging" } },
+    "on": { "set": { "knob.x": 20 }, "when": { "track.tap": "off", "knob.dragstart": "dragging" } },
+    "dragging": {
+      "follow": { "knob.x": { "input": "knob.drag.x", "range": [0, 20], "overdrag": 0.3 } },
+      "when": { "knob.dragend": { "nearest": ["off", "on"], "by": "knob.x" } }
+    }
+  }
+}
+```
+
+### Drag events and inputs
+
+- **Events:** `dragstart` once the pointer has moved more than 4 logical units since `down`; `dragend` when it's released or cancelled after that. A release after a drag sends `up` (or `cancel`) and then `dragend`, and no `tap`.
+- **Inputs** are continuous values the host supplies over time. `target.drag.x` and `target.drag.y` are the pointer's travel since the drag began, in logical units.
+- **Velocity** is computed by the runtime, never by the host, so every platform agrees: the least-squares slope of an input's samples over the 0.1 s before the moment it's needed, or 0 with fewer than two samples in that window.
+
+### `follow`: a value that tracks an input
+
+In a state's `follow`, a property tracks an input directly, with no motion:
+
+```json
+"follow": { "knob.x": { "input": "knob.drag.x", "range": [0, 20], "overdrag": 0.3 } }
+```
+
+- The value is the property's value when the state was entered, plus how far the input has moved since then. Starting from the current value means no jump, even mid-animation.
+- `range` (optional) bounds it. Past the range, the value moves `overdrag` times as far as the input (0 to 1; default 0, a hard stop), which feels like a rubber band.
+- `"follow": { "knob.x": "knob.drag.x" }` is the short form, with no range.
+- When the state is left, the property springs (or tweens) to its new target from where it is, and a spring starts with the input's velocity: the finger's speed carries into the motion.
+- A followed property must be numeric, can't also be in that state's `set`, and two parallel regions can't follow the same property.
+
+### `nearest`: settle where the throw was heading
+
+A transition can choose its target on the spot:
+
+```json
+"knob.dragend": { "nearest": ["off", "on"], "by": "knob.x" }
+```
+
+- The runtime projects where `by` was heading: its value plus its velocity times `momentum` seconds (default 0.5; 0 means position only). A quick flick crosses over even from a short distance.
+- It goes to the listed sibling state whose target for `by` is closest to that point; on a tie, the first listed.
+- Like any transition, it may also carry `animate` to override motion.
+
+### `map`: a value derived from another
+
+In `values`, a property can be computed from another property instead of having its own base value:
+
+```json
+"action.opacity": { "map": "content.x", "from": [0, -80], "to": [0, 1] }
+```
+
+- `from` lists points on the source property; `to` lists the derived values at those points (numbers, or colors interpolated in OKLab). Between points it's linear; outside, it holds the end value.
+- At least two points; `from` must be strictly increasing or strictly decreasing.
+- The source must be a numeric property with its own base value (no chains of maps in v0.2).
+- A mapped property follows its source at every moment, during springs and drags alike, so it can't be set, animated, followed or kicked itself.
+
+### Transitions from any state
+
+A machine can list `when` next to `states` (or inside a region). It applies when no active state in that machine handles the event, so N tabs need N entries instead of N².
+
+### More events
+
+- `hoverstart` and `hoverend`: a hovering pointer (mouse or pen) enters or leaves the target.
+- `focus` and `blur`: the target gains or loses keyboard focus.
+- `host.<name>`: an event the app sends, for example `host.check` when a controlled toggle's `checked` prop turns true. `host` is reserved and can't be a target name.
+
+### Starting state
+
+The runtime can start in states other than `initial` (for a controlled component that mounts already on), without animating: `createRuntime(program, { state: ["on"] })`. Paths are the ones `state()` reports; regions not listed start at their `initial`.
+
 ## Repository
 
 | Path | What it is |
@@ -308,6 +393,7 @@ An unknown key without a prefix is a validator error with a "did you mean" hint,
 | [`src/core/`](src/core/) | Reference runtime in TypeScript: compiler and validator, motion math, state machine, simulation. No platform APIs. |
 | [`src/cli.ts`](src/cli.ts) | `nudg validate`, `simulate`, `plot`, `render` and `mcp`, with `--json` for agents. |
 | [`src/node/`](src/node/) | Node helpers: file loading, Chrome discovery, frame rendering over the DevTools protocol, the MCP server. |
+| [`docs/devlog.md`](docs/devlog.md) | Development log: problems met while building nudg, their causes, and how they were resolved. |
 | [`spec/guide.md`](spec/guide.md) | The format on one page, written for AI agents (served by the `nudg_guide` tool). |
 | [`src/dom/`](src/dom/) | DOM adapter: `play(program, root)` and `compileUrl(url)`. |
 | [`examples/`](examples/) | Toggle, toggle with press, like button, brand motion library, and host pages (`toggle.html`, `like.html`) with their markup. |
@@ -357,12 +443,12 @@ const player = play(program, document.querySelector(".settings"));
 ## Open questions
 
 - Transitions that cross machine levels (to a parent's sibling, into a nested state).
-- Host-driven input: a controlled toggle whose state is set by the app (`checked` from props), and how app data events are named.
-- Keyboard and accessibility events (`space`, `enter`, focus).
-- Follow-style values: the knob tracking a drag, then springing to a state on release.
-- Decay (fling, inertia) as a second physics primitive alongside spring, needed for swipe and scroll-like motion at stage 1.
-- More primitives and combinators: `keyframes`, `sequence`, `delay`, `stagger` (stage 1).
-- Gesture-linked motion: rubber-band overscroll, springs that inherit a gesture's release velocity (stage 1).
+- Keyboard events beyond focus (`space`, `enter`, arrow keys), and whether `click` covering keyboard activation is enough.
+- Layout (v0.3): measured positions and sizes (`{ "measure": "tab2.x" }` for a tab indicator), a natural size (`"auto"`) to collapse a row from, and `%` units.
+- Decay (fling, inertia) as a motion of its own, for scroll-like content without snap points (v0.3). Snapping is covered by `nearest`.
+- Nonlinear rubber banding that depends on the view's size, instead of the linear `overdrag` factor.
+- Pinch, rotate and other multi-pointer gestures.
+- More primitives and combinators: `keyframes`, `sequence`, `delay`, `stagger`.
 - Tweaking a named motion at the point of use, for example `{ "use": "snappy", "duration": 0.5 }`.
 - Schemes: which names a scheme may supply or override, how the host passes one in, and how the validator still catches misspelled names. The built-in Apple-like and Material-like libraries.
 

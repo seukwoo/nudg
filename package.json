@@ -1,5 +1,5 @@
 {
-  "name": "nudg",
+  "name": "@nudg/core",
   "version": "0.1.0",
   "description": "The interaction format your AI can nudge.",
   "keywords": [
@@ -65,5 +65,8 @@
     "@types/node": "^26.6.5",
     "ajv": "^8.20.0",
     "typescript": "^7.0.2"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

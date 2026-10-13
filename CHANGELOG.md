@@ -8,5 +8,5 @@ First release of the format and its reference implementation.
 - **Validator:** every problem has a stable code, a JSON pointer and a fix hint, with aliases for names AI tools commonly reach for.
 - **Runtime:** headless and deterministic. Springs are solved in closed form, retargeting keeps velocity, and colors interpolate in OKLab.
 - **Tools:** `nudg validate`, `simulate`, `plot` (motion graphs), `render` (real frames through headless Chrome) and `mcp` (the same as MCP tools, plus a format guide for agents).
-- **Adapters:** DOM (`nudg/dom`).
-- **Spec:** JSON Schema (`nudg/schema.json`) and a language-neutral conformance suite whose expected values come from an independent derivation.
+- **Adapters:** DOM (`@nudg/core/dom`).
+- **Spec:** JSON Schema (`@nudg/core/schema.json`) and a language-neutral conformance suite whose expected values come from an independent derivation.

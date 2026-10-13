@@ -71,6 +71,6 @@ test("schema rejects structural mistakes", () => {
   noted.note = "ok";
   noted.values.note = "base values";
   noted.states.off["x-vendor"] = { anything: true };
-  noted.$schema = "https://unpkg.com/nudg@0.1/spec/nudg-0.1.schema.json";
+  noted.$schema = "https://unpkg.com/@nudg/core@0.1/spec/nudg-0.1.schema.json";
   assert.ok(valid(noted), `notes and x- extensions: ${JSON.stringify(validate.errors, null, 2)}`);
 });

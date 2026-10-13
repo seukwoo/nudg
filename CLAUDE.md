@@ -12,7 +12,7 @@ Read README.md first. It holds the vision, principles, scope, and the design dec
 
 ## Next step
 
-The v0.1 grammar is in the README, with a JSON Schema, a conformance suite, a TypeScript reference core, a CLI (`validate`, `simulate`, `plot`, `render`, `mcp`), and a DOM adapter with a demo. Stage 0 tooling is complete: DOM adapter and demo, `nudg plot` / `nudg render`, and the MCP server (`nudg mcp`). The project is MIT-licensed and packaged for npm as `nudg` 0.1.0 (exports point at the built `dist`; `npm publish` is done by the user, who owns the npm account). Next, to agree with the user first: stage 1 design (gestures and follow-style values, decay, React adapter). Settle open questions only when a case forces them.
+The v0.1 grammar is in the README, with a JSON Schema, a conformance suite, a TypeScript reference core, a CLI (`validate`, `simulate`, `plot`, `render`, `mcp`), and a DOM adapter with a demo. Stage 0 tooling is complete: DOM adapter and demo, `nudg plot` / `nudg render`, and the MCP server (`nudg mcp`). The project is MIT-licensed and packaged for npm as `@nudg/core` 0.1.0 (the bare name `nudg` is blocked by npm's similar-name filter; the CLI command is still `nudg`) (exports point at the built `dist`; `npm publish` is done by the user, who owns the npm account). Next, to agree with the user first: stage 1 design (gestures and follow-style values, decay, React adapter). Settle open questions only when a case forces them.
 
 ## Working rules for the code
 

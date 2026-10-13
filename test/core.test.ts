@@ -46,7 +46,7 @@ test("imports report missing files, cycles and duplicate names", () => {
 
 test("$schema is allowed at the top level and must be a string", () => {
   const codes = (doc: unknown) => compile({ path: "main.nudg.json", text: JSON.stringify(doc) }).diagnostics.map((d) => d.code);
-  assert.deepEqual(codes({ $schema: "https://unpkg.com/nudg@0.1/spec/nudg-0.1.schema.json", nudg: "0.1", motions: {} }), []);
+  assert.deepEqual(codes({ $schema: "https://unpkg.com/@nudg/core@0.1/spec/nudg-0.1.schema.json", nudg: "0.1", motions: {} }), []);
   assert.deepEqual(codes({ $schema: 1, nudg: "0.1", motions: {} }), ["invalid-type"]);
 });
 

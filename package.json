@@ -1,7 +1,6 @@
 {
   "name": "nudg",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "The interaction format your AI can nudge.",
   "keywords": [
     "animation",
@@ -26,19 +25,39 @@
   },
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./dom": "./src/dom/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./dom": {
+      "types": "./dist/dom/index.d.ts",
+      "default": "./dist/dom/index.js"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "default": "./dist/node/index.js"
+    },
+    "./schema.json": "./spec/nudg-0.1.schema.json",
+    "./guide.md": "./spec/guide.md",
+    "./package.json": "./package.json"
   },
+  "types": "./dist/index.d.ts",
   "bin": {
-    "nudg": "./src/cli.ts"
+    "nudg": "./dist/cli.js"
   },
   "engines": {
-    "node": ">=23.6"
+    "node": ">=22.4"
   },
+  "files": [
+    "dist",
+    "spec/nudg-0.1.schema.json",
+    "spec/guide.md"
+  ],
   "scripts": {
     "test": "node --test",
     "typecheck": "tsc && tsc -p tsconfig.core.json",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
+    "prepack": "npm run build",
     "demo": "npm run build && python3 -m http.server 8787",
     "nudg": "node src/cli.ts"
   },

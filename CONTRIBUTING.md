@@ -15,7 +15,10 @@ You need Node 23.6 or later (it runs the TypeScript directly) and Python 3 for t
 npm install
 npm test            # conformance suite, schema, core, rendering
 npm run typecheck   # also checks that src/core uses no platform APIs
+npm run build       # compiles to dist/, which is what the npm package ships
 ```
+
+`npm pack` builds and packs the package; install the tarball in an empty project to try it the way users will.
 
 ## How the repository works
 

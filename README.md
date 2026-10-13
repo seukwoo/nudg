@@ -29,7 +29,14 @@ nudg doesn't contain an AI. The AI coding tool you already use turns your words 
 
 ## Try it
 
-You need Node 23.6 or later, which runs the TypeScript sources directly. There is no build step for the CLI.
+Install the library and CLI from npm (Node 22.4 or later):
+
+```sh
+npm install nudg
+npx nudg validate my.nudg.json
+```
+
+Or work from a clone. Node 23.6 or later runs the TypeScript sources directly, so there is no build step:
 
 ```sh
 git clone https://github.com/seukwoo/nudg.git
@@ -189,6 +196,8 @@ Worked out by expressing a toggle and a like button. See [`examples/`](examples/
 
 A nudg file is strict JSON with the extension `.nudg.json`. Every platform already parses it, JSON Schema describes it, and LLMs write it reliably, so there is no parser to maintain and nothing new to learn. A friendlier syntax can be added later as sugar that compiles to the same model, but JSON stays the source of truth.
 
+A file may start with `"$schema": "https://unpkg.com/nudg@0.1/spec/nudg-0.1.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `nudg/schema.json`.
+
 JSON has no comments. Instead, any object may carry a `note` string. Runtimes ignore it. Unlike a comment, a note survives tools rewriting the file, and an AI can read it as part of the data.
 
 ### Motion model
@@ -319,10 +328,10 @@ An unknown key without a prefix is a validator error with a "did you mean" hint,
 To use it from Claude Code (paths relative to the project the agent works in):
 
 ```sh
-claude mcp add nudg -- node /path/to/nudg/src/cli.ts mcp
+claude mcp add nudg -- npx -y nudg mcp
 ```
 
-Other clients take the same command: `{ "command": "node", "args": ["/path/to/nudg/src/cli.ts", "mcp"] }`.
+Other clients take the same command: `{ "command": "npx", "args": ["-y", "nudg", "mcp"] }`. From a clone, use `node /path/to/nudg/src/cli.ts mcp` instead.
 
 ### Seeing motion
 

@@ -1,10 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/seukwoo/nudg/spec/nudg-0.1.schema.json",
+  "$id": "https://unpkg.com/nudg@0.1/spec/nudg-0.1.schema.json",
   "title": "nudg 0.1",
   "description": "A nudg file: states, the events that move between them, and the motion in between. The schema covers structure; the validator (nudg validate) also checks references such as target names, state names, base values and motion names.",
   "type": "object",
   "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Schema URL for editors. Runtimes ignore it."
+    },
     "nudg": {
       "const": "0.1",
       "description": "Format version, as a string."

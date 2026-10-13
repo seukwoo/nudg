@@ -2,6 +2,8 @@ export { compile, didYouMean } from "./core/compile.ts";
 export type { CompileResult, ReadFile, Source } from "./core/compile.ts";
 export { createRuntime } from "./core/runtime.ts";
 export type { Runtime, Value } from "./core/runtime.ts";
+export { plot } from "./core/plot.ts";
+export type { Plot, PlotOptions } from "./core/plot.ts";
 export { simulate } from "./core/simulate.ts";
 export type { PropertySummary, Sample, Simulation, SimulateOptions, TimedEvent } from "./core/simulate.ts";
 export { EVENTS, PROPERTIES, VERSION } from "./core/vocabulary.ts";

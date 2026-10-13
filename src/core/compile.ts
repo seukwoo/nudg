@@ -52,7 +52,7 @@ interface LibraryEntry {
   origin: string;
 }
 
-const TOP_LEVEL_KEYS = ["nudg", "import", "targets", "values", "motions", "animate", "initial", "states", "regions"];
+const TOP_LEVEL_KEYS = ["$schema", "nudg", "import", "targets", "values", "motions", "animate", "initial", "states", "regions"];
 const MACHINE_KEYS = ["initial", "states", "regions"];
 const STATE_KEYS = ["set", "enter", "when", ...MACHINE_KEYS];
 const MOTION_KEYS = ["spring", "tween", "kick"];
@@ -103,6 +103,9 @@ function compileFile(
     return { library };
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
+  if ("$schema" in doc && typeof doc.$schema !== "string") {
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/nudg@0.1/spec/nudg-0.1.schema.json\", or remove it.");
+  }
 
   if (!("nudg" in doc)) {
     r.error("missing-version", "", "The file does not declare a format version.", `Add "nudg": "${VERSION}" at the top.`);

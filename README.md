@@ -248,7 +248,9 @@ An unknown key without a prefix is a validator error with a "did you mean" hint,
 | [`spec/conformance/`](spec/conformance/) | Language-neutral behavior and validation cases. Expected values come from an independent derivation. |
 | [`src/core/`](src/core/) | Reference runtime in TypeScript: compiler and validator, motion math, state machine, simulation. No platform APIs. |
 | [`src/cli.ts`](src/cli.ts) | `nudg validate` and `nudg simulate`, with `--json` for agents. |
+| [`src/dom/`](src/dom/) | DOM adapter: `play(program, root)` and `compileUrl(url)`. |
 | [`examples/`](examples/) | Toggle, toggle with press, like button, brand motion library. |
+| [`demo/`](demo/) | The examples running in a browser, plus a playground that recompiles as you type. |
 
 Node 23.6 or later runs the TypeScript directly:
 
@@ -257,8 +259,23 @@ npm install
 node src/cli.ts validate examples/*.json
 node src/cli.ts simulate examples/toggle.nudg.json --send track.tap@0.1
 npm test            # conformance suite, schema, core
-npm run typecheck
+npm run typecheck   # also checks that src/core uses no platform APIs
+npm run demo        # then open http://localhost:8787/demo/
 ```
+
+### DOM adapter
+
+```js
+import { compileUrl, play } from "nudg/dom";
+
+const { program, diagnostics } = await compileUrl("/toggle.nudg.json");
+const player = play(program, document.querySelector(".settings"));
+```
+
+- **Binding:** elements with `data-nudg="name"` under the root, plus `options.bind`. Unbound targets and undeclared names are reported (`player.unbound`, `player.unknown`) and logged.
+- **Input:** `pointerdown` is `down`, `click` is `tap` (so keyboard activation of a button also taps), and a release is `up` over the element or `cancel` outside it.
+- **Output:** `x`, `y`, `rotation`, `scale`, `scaleX`, `scaleY` become one `transform` (translate, then rotate, then scale, around the element's `transform-origin`). `opacity`, `width` and `height` map directly. `color` is `fill` on SVG elements and `background-color` otherwise. nudg writes only the styles for properties the file declares.
+- **Clock:** real time by default. `{ clock: "manual" }` plus `player.render(t)` draws exact moments, for tests and frame rendering. The demo exposes this as `?at=0.25&send=toggle:track.tap@0.1`.
 
 ## Open questions
 

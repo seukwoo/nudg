@@ -5,7 +5,8 @@
   "description": "The interaction format your AI can nudge.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./dom": "./src/dom/index.ts"
   },
   "bin": {
     "nudg": "./src/cli.ts"
@@ -15,7 +16,9 @@
   },
   "scripts": {
     "test": "node --test",
-    "typecheck": "tsc",
+    "typecheck": "tsc && tsc -p tsconfig.core.json",
+    "build": "tsc -p tsconfig.build.json",
+    "demo": "npm run build && python3 -m http.server 8787",
     "nudg": "node src/cli.ts"
   },
   "devDependencies": {

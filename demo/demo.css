@@ -1,0 +1,147 @@
+:root {
+  --bg: #f6f6f4;
+  --card: #ffffff;
+  --text: #1c1c1a;
+  --muted: #6b6b66;
+  --line: #e4e4df;
+  --code-bg: #f2f2ee;
+  --error: #c2410c;
+  --warning: #a16207;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141413;
+    --card: #1e1e1c;
+    --text: #ececea;
+    --muted: #9a9a94;
+    --line: #2f2f2c;
+    --code-bg: #262624;
+    --error: #fb923c;
+    --warning: #facc15;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+header, main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+header { padding-top: 48px; padding-bottom: 24px; }
+h1 { margin: 0 0 4px; font-size: 32px; letter-spacing: -0.02em; }
+header p { margin: 0; color: var(--muted); max-width: 60ch; }
+
+main {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  padding-bottom: 64px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  min-width: 0;
+}
+
+.playground { grid-column: 1 / -1; }
+
+.stage {
+  height: 160px;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.meta { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+h2 { margin: 0; font-size: 16px; }
+.state { font: 12px ui-monospace, "SF Mono", Menlo, monospace; color: var(--muted); }
+.card p { margin: 6px 0 10px; color: var(--muted); font-size: 14px; }
+
+code, pre, textarea { font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace; }
+p code { background: var(--code-bg); padding: 1px 4px; border-radius: 4px; }
+details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+pre {
+  margin: 8px 0 0;
+  padding: 12px;
+  background: var(--code-bg);
+  border-radius: 8px;
+  overflow: auto;
+  max-height: 320px;
+}
+
+/* Components. nudg owns transform and color; CSS owns everything else. */
+.toggle {
+  position: relative;
+  width: 52px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: #d1d5db;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.knob {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  pointer-events: none;
+}
+
+.like {
+  padding: 0;
+  border: 0;
+  background: none;
+  line-height: 0;
+}
+
+.like svg {
+  width: 56px;
+  height: 56px;
+  fill: #9ca3af;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+textarea {
+  width: 100%;
+  min-height: 360px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--code-bg);
+  color: var(--text);
+  resize: vertical;
+}
+
+.diagnostics { list-style: none; margin: 8px 0 0; padding: 0; font-size: 13px; }
+.diagnostics li { padding: 6px 0; border-top: 1px solid var(--line); }
+.diagnostics li:first-child { border-top: 0; }
+.diagnostics .error { color: var(--error); }
+.diagnostics .warning { color: var(--warning); }
+.diagnostics .ok { color: var(--muted); }
+.diagnostics .hint { display: block; color: var(--muted); }

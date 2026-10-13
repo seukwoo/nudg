@@ -3,8 +3,14 @@
     "target": "es2023",
     "module": "nodenext",
     "moduleResolution": "nodenext",
-    "lib": ["es2023"],
-    "types": ["node"],
+    "lib": [
+      "es2023",
+      "dom",
+      "dom.iterable"
+    ],
+    "types": [
+      "node"
+    ],
     "strict": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
@@ -13,5 +19,8 @@
     "noUnusedLocals": true,
     "skipLibCheck": true
   },
-  "include": ["src", "test"]
+  "include": [
+    "src",
+    "test"
+  ]
 }

@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [24, 26]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: Conformance cases match derive.py
+        run: python3 spec/conformance/derive.py && git diff --exit-code spec/conformance
+
+  package:
+    # The published package targets Node 22.4+, older than the sources need.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm pack
+      - name: Installed package works
+        run: |
+          mkdir /tmp/smoke && cd /tmp/smoke
+          npm init -y > /dev/null
+          npm install "$GITHUB_WORKSPACE"/nudg-*.tgz
+          cp "$GITHUB_WORKSPACE"/examples/like.nudg.json "$GITHUB_WORKSPACE"/examples/like.html .
+          mkdir motion && cp "$GITHUB_WORKSPACE"/examples/motion/brand.nudg.json motion/
+          npx nudg validate like.nudg.json
+          npx nudg simulate like.nudg.json --send heart.tap@0.1 --json > /dev/null
+          npx nudg render like.nudg.json --html like.html --send heart.tap@0 --at 0.1 --out frames.png
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' | npx nudg mcp | grep -q '"serverInfo"'

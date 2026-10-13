@@ -3,6 +3,27 @@
   "version": "0.0.0",
   "private": true,
   "description": "The interaction format your AI can nudge.",
+  "keywords": [
+    "animation",
+    "motion",
+    "interaction",
+    "micro-interactions",
+    "spring",
+    "state-machine",
+    "ui",
+    "ai",
+    "llm"
+  ],
+  "license": "MIT",
+  "author": "seukwoo",
+  "homepage": "https://github.com/seukwoo/nudg#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seukwoo/nudg.git"
+  },
+  "bugs": {
+    "url": "https://github.com/seukwoo/nudg/issues"
+  },
   "type": "module",
   "exports": {
     ".": "./src/index.ts",

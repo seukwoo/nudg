@@ -4,7 +4,7 @@
 
 nudg is a plain-text format for UI interactions: states, the events that move between them, and the motion in between. It lives in your codebase next to your components. Your AI coding tool writes it, a validator checks it, and a runtime plays it on any platform.
 
-> Status: early design. Nothing here is stable yet.
+> **Status: v0.1 draft.** The grammar, JSON Schema, conformance suite, TypeScript reference runtime, CLI, and DOM adapter work end to end for single-element interactions (stage 0). The format may still change before 1.0, and nothing is published to npm yet.
 
 ## Why
 
@@ -26,6 +26,56 @@ nudg doesn't contain an AI. The AI coding tool you already use turns your words 
 2. **You ask for a change in plain words.** "Make the toggle a little bouncier." Your AI edits one field in the nudg file (`"bounce": 0.25` → `0.4`) and leaves the component code alone. The vocabulary is chosen so that everyday words map to single fields: bouncier is `bounce`, faster is `duration`.
 3. **Your AI checks its own work** through the nudg CLI or MCP server: `validate` explains what's wrong and how to fix it, `simulate` sends events and reports values over time ("the knob now overshoots to 22.8"), and `render` draws any moment as an image.
 4. **The runtime plays the file** in your app: the core computes values every frame, and a thin adapter applies them to your views.
+
+## Try it
+
+You need Node 23.6 or later, which runs the TypeScript sources directly. There is no build step for the CLI.
+
+```sh
+git clone https://github.com/seukwoo/nudg.git
+cd nudg
+npm install
+```
+
+Validate a file. Here a spring has a typo. Errors carry a stable code, a JSON pointer, and a hint, so an AI can fix its own output:
+
+```
+$ node src/cli.ts validate bad.nudg.json
+bad.nudg.json: 2 errors
+  error unknown-key at /animate/knob.x/spring/duraton
+    Unknown key "duraton".
+    hint: Did you mean "duration"?
+  error spring-incomplete at /animate/knob.x/spring
+    The spring is missing duration.
+    hint: Add "duration", or use the default form: "duration" + "bounce".
+```
+
+Simulate the toggle: tap at 0.1 s and watch the knob spring across, overshoot slightly, and settle:
+
+```
+$ node src/cli.ts simulate examples/toggle.nudg.json --send track.tap@0.1 --every 0.1
+t      state  knob.x  track.color
+0.000  off    0.000   #d1d5db
+0.100  on     0.000   #d1d5db
+0.200  on     12.582  #82dc9f
+0.300  on     19.910  #4ade80
+0.400  on     20.485  #4ade80
+...
+
+summary
+  knob.x       final 20.000  min 0.000  max 20.567  at rest from 0.835s
+  track.color  final #4ade80  at rest from 0.301s
+```
+
+See it, as a graph or as real frames (PNG output uses a local Chrome), or in the browser:
+
+```sh
+node src/cli.ts plot examples/like.nudg.json --send heart.tap@0.1 --out like.png
+node src/cli.ts render examples/like.nudg.json --html examples/like.html --send heart.tap@0 --out frames.png
+npm run demo        # then open http://localhost:8787/demo/
+```
+
+Every command takes `--json` for agents. `node src/cli.ts --help` lists all options.
 
 ## Principles
 
@@ -253,19 +303,6 @@ An unknown key without a prefix is a validator error with a "did you mean" hint,
 | [`examples/`](examples/) | Toggle, toggle with press, like button, brand motion library, and host pages (`toggle.html`, `like.html`) with their markup. |
 | [`demo/`](demo/) | The examples running in a browser, plus a playground that recompiles as you type. |
 
-Node 23.6 or later runs the TypeScript directly:
-
-```sh
-npm install
-node src/cli.ts validate examples/*.json
-node src/cli.ts simulate examples/toggle.nudg.json --send track.tap@0.1
-node src/cli.ts plot examples/like.nudg.json --send heart.tap@0.1 --out like.png
-node src/cli.ts render examples/like.nudg.json --html examples/like.html --send heart.tap@0 --out frames.png
-npm test            # conformance suite, schema, core
-npm run typecheck   # also checks that src/core uses no platform APIs
-npm run demo        # then open http://localhost:8787/demo/
-```
-
 ### Seeing motion
 
 Two ways to look at an interaction, for people and for multimodal models:
@@ -298,4 +335,11 @@ const player = play(program, document.querySelector(".settings"));
 - Gesture-linked motion: rubber-band overscroll, springs that inherit a gesture's release velocity (stage 1).
 - Tweaking a named motion at the point of use, for example `{ "use": "snappy", "duration": 0.5 }`.
 - Schemes: which names a scheme may supply or override, how the host passes one in, and how the validator still catches misspelled names. The built-in Apple-like and Material-like libraries.
-- License.
+
+## Contributing
+
+Issues and pull requests are welcome. nudg is designed before it is coded, so for anything beyond a bug fix, please open an issue first to discuss the case it solves. See [CONTRIBUTING.md](CONTRIBUTING.md) for how the repository works.
+
+## License
+
+[MIT](LICENSE). This covers the spec, the JSON Schema, the conformance suite, and the reference implementation.

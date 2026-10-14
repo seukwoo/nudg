@@ -3,12 +3,13 @@
 
 import { existsSync, writeFileSync } from "node:fs";
 import { basename, extname } from "node:path";
+import { compare } from "./core/compare.ts";
 import { plot } from "./core/plot.ts";
 import { presets, type PresetName } from "./core/presets.ts";
 import { describeEvent, dragGesture, simulate, type SimulateOptions, type TimedEvent } from "./core/simulate.ts";
 import type { Diagnostic, Program } from "./core/types.ts";
 import { CHROME_HINT, findChrome, svgToPng } from "./node/chrome.ts";
-import { formatDiagnostic, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
+import { formatComparison, formatDiagnostic, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
 import { compilePath } from "./node/load.ts";
 import { serveMcp } from "./node/mcp.ts";
 import { frameTimes, renderFrames } from "./node/render.ts";
@@ -37,12 +38,21 @@ simulate and plot options
   preset <name> [--options '{"scale":0.9}']
                             Print a preset (press, hover, toggle, toast) as a nudg file,
                             to save and edit: nudg preset press > press.nudg.json
+  compare <a> <b>           Two versions under the same events: says first whether a person
+                            would notice the difference, then shows it. --html gives real A/B
+                            filmstrips in rows; without it, both curves on one graph.
   render <file>             Draw real frames of the component with headless Chrome, as one
                             filmstrip PNG. Uses the page's markup and styles; its scripts don't run.
 
 plot options
   --out <file.svg|file.png> Where to write. PNG needs Chrome (or NUDG_CHROME). Default: SVG to stdout.
   --title <text>            Graph title. Default: the file name.
+
+compare options
+  --html <page.html>        Real markup: A/B filmstrip rows (PNG, needs Chrome). Otherwise a graph.
+  --out <file.png|svg>      Where to write the picture. Default: graph as SVG to stdout, or compare.png.
+  --at / --frames           Frame times, as for render.
+  --labels <A,B>            Names for the two versions.
 
 render options
   --html <page.html>        Page with the component's markup (data-nudg names) and styles. Required.
@@ -213,6 +223,64 @@ function runPlot(args: Args, json: boolean): number {
   return 0;
 }
 
+async function runCompare(args: Args, json: boolean): Promise<number> {
+  const [fileA, fileB] = args.positional;
+  if (!fileA || !fileB || args.positional.length !== 2) fail("compare takes exactly two files: the current version and the changed one.");
+  const a = load(fileA);
+  const b = load(fileB);
+  for (const [file, result] of [[fileA, a], [fileB, b]] as const) {
+    if (!result.program) {
+      process.stdout.write(`${file}: can't compare, the file has errors\n`);
+      for (const d of result.diagnostics) process.stdout.write(formatDiagnostic(d) + "\n");
+      return 1;
+    }
+  }
+  const options = simulationOptions(args, a.program!);
+  const labels = (args.flags.get("labels")?.at(-1)?.split(",").map((s) => s.trim()) ?? ["A", "B"]) as [string, string];
+  const comparison = compare(a.program!, b.program!, options);
+  const html = args.flags.get("html")?.at(-1);
+  const out = args.flags.get("out")?.at(-1);
+  let picture: string | undefined;
+
+  if (html) {
+    if (!existsSync(html)) fail(`File not found: ${html}`);
+    const chrome = findChrome();
+    if (!chrome) fail(`Filmstrips need a browser. ${CHROME_HINT} Or drop --html for a graph.`);
+    let times = (args.flags.get("at") ?? []).map((raw) => parseSeconds(raw, "--at"));
+    if (times.length === 0) {
+      const frames = Number(args.flags.get("frames")?.at(-1) ?? 6);
+      const untilBoth = Math.max(comparison.a.samples.at(-1)!.t, comparison.b.samples.at(-1)!.t);
+      times = frameTimes(a.program!, { ...options, until: untilBoth }, frames);
+    }
+    picture = out ?? "compare.png";
+    if (extname(picture).toLowerCase() !== ".png") fail("With --html the picture is a PNG; use --out <file.png>.");
+    await renderFrames({ file: fileA, label: labels[0], variants: [{ file: fileB, label: labels[1] }], html, events: options.events, start: options.start, reducedMotion: options.reducedMotion, times, out: picture, chrome });
+  } else {
+    const graph = plot(a.program!, { ...options, every: undefined, against: b.program!, labels, title: `${basename(fileA)} vs ${basename(fileB)}` });
+    if (out && extname(out).toLowerCase() === ".png") {
+      const chrome = findChrome();
+      if (!chrome) fail(`Writing a PNG needs a browser. ${CHROME_HINT} Or write an .svg.`);
+      svgToPng(graph.svg, graph.width, graph.height, out, chrome);
+      picture = out;
+    } else if (out) {
+      writeFileSync(out, graph.svg + "\n");
+      picture = out;
+    } else if (!json) {
+      process.stdout.write(formatComparison(comparison, labels) + "\n\n" + graph.svg + "\n");
+      return 0;
+    }
+  }
+
+  if (json) {
+    const { a: _a, b: _b, ...rest } = comparison;
+    process.stdout.write(JSON.stringify({ ok: true, ...rest, summaryA: comparison.a.summary, summaryB: comparison.b.summary, picture }, null, 2) + "\n");
+  } else {
+    process.stdout.write(formatComparison(comparison, labels) + "\n");
+    if (picture) process.stdout.write(`\nwrote ${picture}\n`);
+  }
+  return 0;
+}
+
 async function runRender(args: Args, json: boolean): Promise<number> {
   const { program } = loadProgram("render", args, json);
   if (!program) return 1;
@@ -257,6 +325,7 @@ if (command === "validate") process.exit(validate(args, json));
 if (command === "simulate") process.exit(runSimulate(args, json));
 if (command === "plot") process.exit(runPlot(args, json));
 if (command === "render") process.exit(await runRender(args, json));
+if (command === "compare") process.exit(await runCompare(args, json));
 if (command === "preset") {
   const name = args.positional[0] as PresetName | undefined;
   if (!name || !(name in presets)) fail(`preset needs one of: ${Object.keys(presets).join(", ")}.`);
@@ -276,4 +345,4 @@ if (command === "mcp") {
   await serveMcp();
   process.exit(0);
 }
-fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, preset, mcp.`);
+fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, preset, mcp.`);

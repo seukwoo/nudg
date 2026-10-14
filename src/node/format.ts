@@ -1,5 +1,6 @@
 // Plain-text views of diagnostics and simulations, shared by the CLI and MCP server.
 
+import type { Comparison } from "../core/compare.ts";
 import { describeEvent, type Simulation } from "../core/simulate.ts";
 import type { Diagnostic } from "../core/types.ts";
 
@@ -35,5 +36,15 @@ export function formatSummary(sim: Simulation, keys: string[]): string {
     return `  ${key.padEnd(keyWidth)}  ${parts.join("  ")}`;
   });
   if (sim.unhandled.length) lines.push(`unhandled: ${sim.unhandled.map(describeEvent).join(", ")}`);
+  return lines.join("\n");
+}
+
+/** The comparison as the judge should read it: verdict first, then per property, then the proposal. */
+export function formatComparison(c: Comparison, labels: [string, string] = ["A", "B"]): string {
+  const lines = [c.headline, ""];
+  for (const p of c.properties) lines.push(`  ${p.summary}`);
+  if (c.suggestion) lines.push("", `Next: ${c.suggestion}`);
+  if (c.a.unhandled.length) lines.push(`unhandled in ${labels[0]}: ${c.a.unhandled.map(describeEvent).join(", ")}`);
+  if (c.b.unhandled.length) lines.push(`unhandled in ${labels[1]}: ${c.b.unhandled.map(describeEvent).join(", ")}`);
   return lines.join("\n");
 }

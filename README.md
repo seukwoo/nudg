@@ -21,7 +21,7 @@
 
 nudg describes a UI interaction in a small JSON file next to your component: its states, the events that move between them, and the motion in between. Your AI coding tool edits the file, nudg checks the edit, and a tiny runtime plays it in your app.
 
-## Say "bouncier", get a one-line diff
+## Say "bouncier", see before and after, judge
 
 ```diff
    "animate": {
@@ -35,6 +35,8 @@ nudg describes a UI interaction in a small JSON file next to your component: its
 </picture>
 
 Everyday words map to single fields: *bouncier* is `bounce`, *slower* is `duration`. The component code doesn't change.
+
+And it shows you, without being asked. `nudg_compare` plays both versions under the same tap and says first whether you'd even notice (*"A clear change: knob.x moves up to 2.1 units differently, settles 0.23 s later"*, or *"Nothing a person will notice; look at an exaggerated version first"*), then lays real frames of before and after side by side. You judge by looking.
 
 ## A whole interaction in one file
 

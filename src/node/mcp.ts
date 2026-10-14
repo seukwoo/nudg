@@ -7,12 +7,13 @@ import { dirname, extname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { compile, type CompileResult } from "../core/compile.ts";
+import { compare } from "../core/compare.ts";
 import { plot } from "../core/plot.ts";
 import { dragGesture, simulate, type SimulateOptions, type TimedEvent } from "../core/simulate.ts";
 import type { Program } from "../core/types.ts";
 import { VERSION } from "../core/vocabulary.ts";
 import { CHROME_HINT, findChrome, svgToPng } from "./chrome.ts";
-import { formatDiagnostic, formatSamples, formatStatus, formatSummary } from "./format.ts";
+import { formatComparison, formatDiagnostic, formatSamples, formatStatus, formatSummary } from "./format.ts";
 import { compilePath } from "./load.ts";
 import { frameTimes, renderFrames } from "./render.ts";
 
@@ -20,7 +21,8 @@ const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const GUIDE = resolve(dirname(fileURLToPath(import.meta.url)), "../../spec/guide.md");
 
 const INSTRUCTIONS = `nudg files (*.nudg.json) describe UI interactions: states, events, and spring or tween motion.
-If you haven't written one before, call nudg_guide first. After any edit, call nudg_validate and apply its hints until it reports no errors. To check behavior, use nudg_simulate (numbers) or nudg_plot (a graph image); use nudg_render when the host page's HTML is available.`;
+If you haven't written one before, call nudg_guide first. After any edit, call nudg_validate and apply its hints until it reports no errors.
+When you change motion for a person to judge, call nudg_compare with the version before and after: it says first whether the difference is perceptible, then shows both side by side (real A/B filmstrips when the host page's HTML is given). Pass its headline on to the person; if it suggests an exaggerated version, offer that. Use nudg_simulate for numbers, nudg_plot for one version's graph, nudg_render for one version's frames.`;
 
 type Json = Record<string, unknown>;
 type Content = { type: "text"; text: string } | { type: "image"; data: string; mimeType: string };
@@ -96,6 +98,26 @@ const TOOLS = [
     inputSchema: {
       type: "object",
       properties: { ...source, ...timing, out: { type: "string", description: "Also save the graph here (.svg or .png)." } },
+    },
+    annotations: { readOnlyHint: false },
+  },
+  {
+    name: "nudg_compare",
+    title: "Compare two versions",
+    description: "Two versions of an interaction under the same events, for a person to judge. Says first whether anyone would notice the difference (imperceptible / subtle / clear, per property, with what changed: overshoot, settle time, position), then shows both: with `html`, real A/B filmstrips in two rows; otherwise both curves on one graph. If the change is below perception it proposes looking at an exaggerated version first.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        a: { type: "object", description: "The current version: { file } or { source, path? }.", properties: source },
+        b: { type: "object", description: "The changed version: { file } or { source, path? }.", properties: source },
+        labels: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 2, description: "Names for the two versions, default [\"A\", \"B\"]." },
+        html: { type: "string", description: "The host page with the component's markup: gives real A/B filmstrips (needs Chrome)." },
+        at: { type: "array", items: { type: ["number", "string"] }, description: "Frame times for the filmstrips." },
+        frames: { type: "integer", minimum: 1, maximum: 60, description: "Evenly spaced frames when `at` is not given. Default 6." },
+        ...timing,
+        out: { type: "string", description: "Also save the picture here (.png; .svg for the graph)." },
+      },
+      required: ["a", "b"],
     },
     annotations: { readOnlyHint: false },
   },
@@ -193,6 +215,8 @@ async function callTool(name: string, args: Json): Promise<ToolResult> {
         return await plotTool(args);
       case "nudg_render":
         return await renderTool(args);
+      case "nudg_compare":
+        return await compareTool(args);
     }
     throw new ToolError(`Unknown tool: ${name}`);
   } catch (e) {
@@ -242,6 +266,49 @@ async function plotTool(args: Json): Promise<ToolResult> {
     content: [text(summary + (out ? `\nsaved ${out}` : "")), { type: "image", data: png.toString("base64"), mimeType: "image/png" }],
     structuredContent: { summary: result.simulation.summary, unhandled: result.simulation.unhandled },
   };
+}
+
+async function compareTool(args: Json): Promise<ToolResult> {
+  if (typeof args.a !== "object" || args.a === null || typeof args.b !== "object" || args.b === null) throw new ToolError("`a` and `b` are required: { file } or { source }.");
+  const a = loadProgram(args.a as Json);
+  const b = loadProgram(args.b as Json);
+  const labels = (Array.isArray(args.labels) && args.labels.length === 2 ? args.labels.map(String) : ["A", "B"]) as [string, string];
+  const options = timingOptions(args, a.program);
+  const comparison = compare(a.program, b.program, options);
+  const text0 = `${labels[0]}: ${a.label}  ${labels[1]}: ${b.label}\n\n${formatComparison(comparison, labels)}`;
+  const { a: _a, b: _b, ...structured } = comparison;
+  const out = optionalString(args.out, "out");
+  const chrome = findChrome();
+  const html = optionalString(args.html, "html");
+
+  if (html) {
+    if (!chrome) throw new ToolError(`Filmstrips need a browser. ${CHROME_HINT} Drop html for a graph.`);
+    const fileA = typeof (args.a as Json).file === "string" ? ((args.a as Json).file as string) : undefined;
+    const fileB = typeof (args.b as Json).file === "string" ? ((args.b as Json).file as string) : undefined;
+    if (!fileA || !fileB) throw new ToolError("With html, pass both versions as files (the harness loads them from disk).");
+    const at = Array.isArray(args.at) ? args.at.map((t, i) => time(t, `at[${i}]`)) : [];
+    const frames = args.frames === undefined ? 6 : Number(args.frames);
+    const untilBoth = Math.max(comparison.a.samples.at(-1)!.t, comparison.b.samples.at(-1)!.t);
+    const times = at.length ? [...at].sort((x, y) => x - y) : frameTimes(a.program, { ...options, until: untilBoth }, frames);
+    const { png } = await withTempFileAsync("compare.png", async (path) => {
+      await renderFrames({ file: resolve(fileA), label: labels[0], variants: [{ file: resolve(fileB), label: labels[1] }], html: resolve(html), events: options.events, start: options.start, reducedMotion: options.reducedMotion, times, out: path, chrome });
+      return { png: readFileSync(path) };
+    });
+    if (out) writeFileSync(out, png);
+    return { content: [text(text0 + (out ? `\nsaved ${out}` : "")), { type: "image", data: png.toString("base64"), mimeType: "image/png" }], structuredContent: structured as unknown as Json };
+  }
+
+  const graph = plot(a.program, { ...options, against: b.program, labels, title: `${a.label} vs ${b.label}` });
+  if (out && extname(out).toLowerCase() === ".svg") writeFileSync(out, graph.svg + "\n");
+  if (!chrome) {
+    return { content: [text(`${text0}\n\n(No Chrome found, so here is the SVG graph. ${CHROME_HINT})\n\n${graph.svg}`)], structuredContent: structured as unknown as Json };
+  }
+  const png = withTempFile("compare.png", (path) => {
+    svgToPng(graph.svg, graph.width, graph.height, path, chrome);
+    return readFileSync(path);
+  });
+  if (out && extname(out).toLowerCase() === ".png") writeFileSync(out, png);
+  return { content: [text(text0 + (out ? `\nsaved ${out}` : "")), { type: "image", data: png.toString("base64"), mimeType: "image/png" }], structuredContent: structured as unknown as Json };
 }
 
 async function renderTool(args: Json): Promise<ToolResult> {

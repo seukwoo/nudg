@@ -135,3 +135,4 @@ Change one thing at a time, then compare `nudg_plot` (overshoot `max`, `at rest`
 - `nudg_simulate` — send events at times, get states and values over time plus a per-property summary (`min`, `max`, `final`, `settledAt`). A whole drag is one item: `{ "drag": "track", "t": 0.1, "until": 0.3, "dx": 20 }`.
 - `nudg_plot` — a motion graph image: properties over time with events, targets, overshoot and settle times.
 - `nudg_render` — real frames of the component from the host page's markup and styles, as one filmstrip image.
+- `nudg_compare` — **call this whenever you change motion for a person**, with the version before and after. It says first whether anyone would notice (imperceptible / subtle / clear), then shows both side by side: real A/B filmstrips when the host page's `html` is given, otherwise both curves on one graph. Pass the headline on; if it proposes an exaggerated version, offer that. The person judges by looking, not by reading numbers.

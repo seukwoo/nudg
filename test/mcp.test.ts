@@ -2,6 +2,7 @@
 
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { after, before, test } from "node:test";
 import { findChrome } from "../src/node/chrome.ts";
@@ -47,7 +48,7 @@ test("lists the tools with input schemas", async () => {
   const { result } = await request("tools/list");
   assert.deepEqual(
     result.tools.map((t: { name: string }) => t.name),
-    ["nudg_guide", "nudg_validate", "nudg_simulate", "nudg_plot", "nudg_render"],
+    ["nudg_guide", "nudg_validate", "nudg_simulate", "nudg_plot", "nudg_compare", "nudg_render"],
   );
   for (const tool of result.tools) assert.equal(tool.inputSchema.type, "object");
 });
@@ -87,6 +88,20 @@ test("simulate accepts a whole drag as one item", async () => {
   assert.equal(result.structuredContent.samples.at(-1).state[0], "on");
   const bad = await call("nudg_simulate", { file: "examples/toggle-drag.nudg.json", events: [{ drag: "track", t: 0.3, until: 0.1 }] });
   assert.equal(bad.isError, true);
+});
+
+test("compare returns a verdict and a picture", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const base = JSON.parse(readFileSync(`${root}examples/toggle.nudg.json`, "utf8"));
+  const b = JSON.parse(JSON.stringify(base));
+  b.animate["knob.x"].spring.bounce = 0.5;
+  const result = await call("nudg_compare", { a: { file: "examples/toggle.nudg.json" }, b: { source: JSON.stringify(b) }, events: [{ event: "track.tap", t: 0.05 }], labels: ["now", "bouncier"] });
+  assert.equal(result.isError, undefined, result.content[0].text);
+  assert.match(result.content[0].text, /clear change/);
+  assert.equal(result.structuredContent.verdict, "clear");
+  assert.ok(result.content.some((c: any) => c.type === "image"));
+  const strip = await call("nudg_compare", { a: { file: "examples/toggle.nudg.json" }, b: { file: "examples/toggle-press.nudg.json" }, html: "examples/toggle.html", events: [{ event: "track.tap", t: 0.05 }], at: [0, 0.3] });
+  assert.equal(strip.isError, undefined, strip.content[0].text);
+  assert.ok(strip.content.some((c: any) => c.type === "image"), "a filmstrip with both rows");
 });
 
 test("plot returns an image", { skip: chrome ? false : "no Chrome found" }, async () => {

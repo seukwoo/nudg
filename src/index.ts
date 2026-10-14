@@ -4,6 +4,8 @@ export { createRuntime } from "./core/runtime.ts";
 export type { Runtime, Value } from "./core/runtime.ts";
 export { plot } from "./core/plot.ts";
 export type { Plot, PlotOptions } from "./core/plot.ts";
+export { presets, press, hover, toggle, toast } from "./core/presets.ts";
+export type { NudgDocument, PresetName, PressOptions, HoverOptions, ToggleOptions, ToastOptions, SpringOptions } from "./core/presets.ts";
 export { simulate } from "./core/simulate.ts";
 export type { PropertySummary, Sample, Simulation, SimulateOptions, TimedEvent } from "./core/simulate.ts";
 export { EVENTS, PROPERTIES, VERSION } from "./core/vocabulary.ts";

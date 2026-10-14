@@ -179,3 +179,20 @@ test("the runtime can start in other states, and rejects unknown paths", () => {
   assert.equal(rt.sample(0)["knob.x"], 20, "starts at the target, without animating");
   assert.throws(() => createRuntime(program!, { state: ["checked/onn"] }), /No state "onn"/);
 });
+
+test("presets are valid documents with the behavior their names promise", async () => {
+  const { presets } = await import("../src/core/presets.ts");
+  const compileDoc = (doc: object) => compile({ path: "preset.nudg.json", text: JSON.stringify(doc) });
+  for (const [name, make] of Object.entries(presets)) {
+    const { program, diagnostics } = compileDoc(make());
+    assert.deepEqual(diagnostics, [], name);
+    assert.ok(program, name);
+  }
+  const press = simulate(compileDoc(presets.press({ y: 6, scale: 1 })).program!, { events: [{ t: 0, event: "button.down" }, { t: 0.3, event: "button.up" }], every: 0.1 });
+  assert.ok((press.samples[1].values["button.y"] as number) > 5.5, "sunk by 0.1 s");
+  assert.ok(press.summary["button.y"].min! < 0, "and bounces back up");
+  const toast = simulate(compileDoc(presets.toast({ duration: 1 })).program!, { events: [{ t: 0, event: "host.show" }], every: 0.5 });
+  assert.deepEqual(toast.samples.map((s) => s.state[0]).slice(0, 4), ["shown", "shown", "hidden", "hidden"]);
+  const hover = compileDoc(presets.hover({ target: "tile", lift: -8, scale: 1.02 })).program!;
+  assert.deepEqual([...hover.properties.keys()], ["tile.y", "tile.scale"]);
+});

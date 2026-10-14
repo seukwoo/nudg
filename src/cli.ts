@@ -4,6 +4,7 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { basename, extname } from "node:path";
 import { plot } from "./core/plot.ts";
+import { presets, type PresetName } from "./core/presets.ts";
 import { describeEvent, dragGesture, simulate, type SimulateOptions, type TimedEvent } from "./core/simulate.ts";
 import type { Diagnostic, Program } from "./core/types.ts";
 import { CHROME_HINT, findChrome, svgToPng } from "./node/chrome.ts";
@@ -33,6 +34,9 @@ simulate and plot options
 
   mcp                       Run the MCP server on stdio (tools: nudg_guide, nudg_validate,
                             nudg_simulate, nudg_plot, nudg_render).
+  preset <name> [--options '{"scale":0.9}']
+                            Print a preset (press, hover, toggle, toast) as a nudg file,
+                            to save and edit: nudg preset press > press.nudg.json
   render <file>             Draw real frames of the component with headless Chrome, as one
                             filmstrip PNG. Uses the page's markup and styles; its scripts don't run.
 
@@ -253,8 +257,23 @@ if (command === "validate") process.exit(validate(args, json));
 if (command === "simulate") process.exit(runSimulate(args, json));
 if (command === "plot") process.exit(runPlot(args, json));
 if (command === "render") process.exit(await runRender(args, json));
+if (command === "preset") {
+  const name = args.positional[0] as PresetName | undefined;
+  if (!name || !(name in presets)) fail(`preset needs one of: ${Object.keys(presets).join(", ")}.`);
+  let options: Record<string, unknown> = {};
+  const raw = args.flags.get("options")?.at(-1);
+  if (raw !== undefined) {
+    try {
+      options = JSON.parse(raw);
+    } catch {
+      fail(`--options must be JSON, e.g. --options '{"scale":0.9}'.`);
+    }
+  }
+  process.stdout.write(JSON.stringify(presets[name!](options), null, 2) + "\n");
+  process.exit(0);
+}
 if (command === "mcp") {
   await serveMcp();
   process.exit(0);
 }
-fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, mcp.`);
+fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, preset, mcp.`);

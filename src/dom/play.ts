@@ -2,6 +2,7 @@
 // nudg events and inputs, and applies sampled values to styles. All motion math stays
 // in the core.
 
+import { compile } from "../core/compile.ts";
 import { createRuntime, type Runtime, type Value } from "../core/runtime.ts";
 import type { Machine, Program } from "../core/types.ts";
 
@@ -44,6 +45,25 @@ export interface Player {
 }
 
 const TRANSFORM_PROPS = new Set(["x", "y", "rotation", "scale", "scaleX", "scaleY"]);
+
+/**
+ * Compiles a document (a preset, or a parsed .nudg.json) and plays it, in one call:
+ * `playDoc(presets.press(), button)`. When `root` is an element with no [data-nudg]
+ * inside, it is bound to the document's first target. Throws if the document has errors.
+ */
+export function playDoc(doc: object, root: ParentNode | null = document, options: PlayOptions & { files?: Record<string, unknown> } = {}): Player {
+  const files = new Map(Object.entries(options.files ?? {}).map(([k, v]) => [k.replace(/^(\.\/)+/, ""), v]));
+  const { program, diagnostics } = compile({ path: "main.nudg.json", text: JSON.stringify(doc) }, (path) =>
+    files.has(path) ? JSON.stringify(files.get(path)) : undefined,
+  );
+  if (!program) {
+    const lines = diagnostics.filter((d) => d.severity === "error").map((d) => `${d.code} at ${d.path}: ${d.message}${d.hint ? ` (${d.hint})` : ""}`);
+    throw new Error(`nudg: the document has errors:\n${lines.join("\n")}`);
+  }
+  const bare = root instanceof Element && !root.querySelector("[data-nudg]") && !root.hasAttribute("data-nudg");
+  const { files: _files, ...rest } = options;
+  return play(program, bare ? null : root, bare ? { ...rest, bind: { [program.targets[0]]: root, ...rest.bind } } : rest);
+}
 /** Logical units the pointer must travel before a press becomes a drag. */
 const DRAG_SLOP = 4;
 

@@ -117,6 +117,26 @@ npx nudg simulate toggle.nudg.json --send track.tap@0.1
 
 Node 22.4 or later. See [Using nudg](docs/usage.md) for every command and option.
 
+## The simple case is one line
+
+A press, a hover, a toggle or a toast needs no file. Presets are ready-made nudg documents:
+
+```tsx
+import { useNudg, presets } from "@nudg/core/react";
+
+const { bind } = useNudg(presets.press({ scale: 0.96 }));
+<button ref={bind("button")}>Save</button>
+```
+
+```js
+import { playDoc } from "@nudg/core/dom";
+import { presets } from "@nudg/core";
+
+playDoc(presets.toast({ duration: 3 }), document.querySelector(".toast"));
+```
+
+When the options aren't enough, `nudg preset press > press.nudg.json` writes the same document as a file, and from there it's yours to edit, or your AI's.
+
 ## Your AI checks its own work
 
 An agent can't watch an animation, so nudg tells it what happened, in text and in pictures:

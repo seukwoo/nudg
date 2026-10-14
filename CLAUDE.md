@@ -8,7 +8,7 @@ Read README.md first. It holds the vision, principles, scope, and the design dec
 - This repo has its own git identity and credential helper (`seukwoo`). Don't change them, and don't push with any other GitHub account.
 - The user writes in Korean. Reply in Korean; repo docs and code are in English.
 - Design first, code second. Settle scope and grammar through discussion before scaffolding. Open questions go into the README; don't paper over them with assumptions.
-- Don't merge or push without the user's go-ahead.
+- `main` is protected: every change goes through a branch and a pull request, CI must pass, and history stays linear (merge with `gh pr merge --rebase`). Open the PR, then wait for the user's go-ahead before merging.
 
 ## Next step
 

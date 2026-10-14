@@ -74,7 +74,9 @@ h2 { margin: 0; font-size: 16px; }
 .state { font: 12px ui-monospace, "SF Mono", Menlo, monospace; color: var(--muted); }
 .card p { margin: 6px 0 10px; color: var(--muted); font-size: 14px; }
 
-code, pre, .row {
+code, pre, textarea { font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace; }
+
+.row {
   position: relative;
   width: min(260px, 100%);
   height: 56px;
@@ -108,9 +110,37 @@ code, pre, .row {
   user-select: none;
 }
 
-textarea { font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace; }
 p code { background: var(--code-bg); padding: 1px 4px; border-radius: 4px; }
 details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+.actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.actions button, .playground-tools button {
+  font: 12px/1 ui-sans-serif, system-ui, sans-serif;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+}
+.actions button:hover, .playground-tools button:hover { border-color: var(--muted); }
+.playground-tools { display: flex; gap: 6px; align-items: center; margin: 0 0 8px; color: var(--muted); font-size: 13px; }
+.playground-tools select { font: 13px ui-sans-serif, system-ui, sans-serif; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--text); }
+
+/* A generic stage: one labeled box per target, for files without their own markup. */
+.generic { display: flex; gap: 16px; align-items: center; justify-content: center; flex-wrap: wrap; padding: 16px; }
+.target {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: #cbd5e1;
+  color: #1e293b;
+  font: 11px ui-monospace, "SF Mono", Menlo, monospace;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
 pre {
   margin: 8px 0 0;
   padding: 12px;

@@ -169,3 +169,13 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Cause:** A rebase merge rewrites the commits, so the stacked branch still carried the old ones and conflicted with `main`.
 - **Resolution:** Rebased the branch onto `main` (git skipped the already-applied commit), force-pushed, and opened a fresh PR.
 - **Lesson:** With rebase merges and branch deletion, don't stack PRs; merge the base first, then branch from `main`. If stacking is unavoidable, rebase and retarget the dependent PR to `main` before merging its base.
+
+### "Open in playground does nothing, Copy doesn't work, the select is empty"
+- **Problem:** The user tried the demo and reported three dead controls at once.
+- **Cause:** Three unrelated controls dying together means the page's script never started. The likeliest trigger is a stale `dist/dom/index.js` served from the browser cache (the Python static server sends no cache headers), so the import of a newly added export failed and nothing was wired up. The dead controls were just the visible symptom.
+- **Resolution:** `npm run demo` now serves through `demo/serve.mjs`, a dependency-free static server that sends `Cache-Control: no-store`; the page shows a banner with the cause and the fix if its script hasn't started within a few seconds or a module fails to load (captured on the `<script>`, since module load errors don't reach `window.onerror`); copying falls back to a selection-based copy where the clipboard API is unavailable.
+- **Lesson:** When several unrelated things break at once, look for the single upstream failure before treating each symptom. And a demo must tell the viewer when it is broken, not sit there quietly.
+
+### Delete left the row gone for good
+- **Problem:** After tapping Delete in the swipe row there was no way back short of reloading the page.
+- **Resolution:** Each example has a Reset button (cards, the detail view, the playground) that destroys the player, restores the host markup, and starts again from the initial state, which is the per-component reset the user asked for.

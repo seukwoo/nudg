@@ -49,8 +49,8 @@ const center = (stage: string, selector: string) =>
 test("the site starts and shows every cataloged example", { skip }, async () => {
   await browser.send("Page.navigate", { url: `${base}/demo/` });
   await waitFor(() => browser.evaluate("window.__nudgStarted === true || undefined"), 10_000);
-  await waitFor(async () => ((await browser.evaluate("document.querySelectorAll('#grid .state:not(:empty)').length")) >= 14 ? true : undefined), 10_000);
   const catalog = JSON.parse(await browser.evaluate(`fetch("../examples/index.json").then((r) => r.text())`));
+  await waitFor(async () => ((await browser.evaluate("document.querySelectorAll('#grid .state:not(:empty)').length")) >= catalog.examples.length ? true : undefined), 10_000);
   assert.equal(await browser.evaluate("document.querySelectorAll('#grid .card').length"), catalog.examples.length);
   assert.equal(await browser.evaluate("document.getElementById('boot-error').hidden"), true);
   assert.equal(await browser.evaluate("document.querySelectorAll('#categories a').length"), catalog.categories.length + 1);
@@ -113,7 +113,8 @@ test("detail: a drag inside the shadow root, tabs, reset, open in playground", {
   await browser.evaluate("document.getElementById('detail-open').click()");
   await waitFor(() => browser.evaluate("location.hash === '#playground' && document.getElementById('playground-source').value.length > 100 || undefined"), 5_000);
   assert.equal(await browser.evaluate("document.getElementById('playground-example').value"), "swipe-row");
-  assert.equal(await browser.evaluate("document.getElementById('playground-example').options.length"), 14);
+  const total = JSON.parse(await browser.evaluate(`fetch("../examples/index.json").then((r) => r.text())`)).examples.length;
+  assert.equal(await browser.evaluate("document.getElementById('playground-example').options.length"), total);
   assert.match(await browser.evaluate("document.getElementById('playground-diagnostics').textContent"), /No problems/);
 });
 

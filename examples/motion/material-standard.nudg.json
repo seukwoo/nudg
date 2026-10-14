@@ -1,0 +1,18 @@
+{
+  "nudg": "0.2",
+  "note": "Material 3 standard motion scheme, from the token constants in androidx.compose.material3 (StandardMotionTokens, v0.14). The calmer sibling of the expressive scheme: spatial springs are nearly critically damped (ratio 0.9) so they barely overshoot; effects springs are identical to the expressive scheme's. Common names: standard = spatial-default, quick = spatial-fast, gentle = spatial-slow, playful = spatial-default (this scheme has no bouncier spring), fade = effects-default.",
+  "motions": {
+    "spatial-default": { "spring": { "stiffness": 700, "dampingRatio": 0.9 } },
+    "spatial-fast": { "spring": { "stiffness": 1400, "dampingRatio": 0.9 } },
+    "spatial-slow": { "spring": { "stiffness": 300, "dampingRatio": 0.9 } },
+    "effects-default": { "spring": { "stiffness": 1600, "dampingRatio": 1 } },
+    "effects-fast": { "spring": { "stiffness": 3800, "dampingRatio": 1 } },
+    "effects-slow": { "spring": { "stiffness": 800, "dampingRatio": 1 } },
+
+    "standard": { "spring": { "stiffness": 700, "dampingRatio": 0.9 }, "note": "= spatial-default" },
+    "quick": { "spring": { "stiffness": 1400, "dampingRatio": 0.9 }, "note": "= spatial-fast" },
+    "gentle": { "spring": { "stiffness": 300, "dampingRatio": 0.9 }, "note": "= spatial-slow" },
+    "playful": { "spring": { "stiffness": 700, "dampingRatio": 0.9 }, "note": "= spatial-default; this scheme has nothing bouncier" },
+    "fade": { "spring": { "stiffness": 1600, "dampingRatio": 1 }, "note": "= effects-default" }
+  }
+}

@@ -100,6 +100,14 @@ function mount(stage, program, content, { hook, onState } = {}) {
     });
     const extra = hook?.(player, root);
     if (extra) late = extra;
+    // WAI-ARIA switch pattern: the app keeps aria-checked in step with the state.
+    const switches = root.querySelectorAll("[role=switch]");
+    if (switches.length) {
+      const sync = (state) => switches.forEach((s) => s.setAttribute("aria-checked", String(state.includes("on"))));
+      const previous = late;
+      late = { onState: (state) => { previous?.onState?.(state); sync(state); } };
+      sync(player.runtime.state());
+    }
     onState?.(player.runtime.state());
     return player;
   };

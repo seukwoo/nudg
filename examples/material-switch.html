@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Material switch</title>
+  <style>
+    /* WAI-ARIA switch pattern: a button with role="switch"; Space and Enter toggle it. */
+    .m3-switch {
+      position: relative;
+      width: 52px;
+      height: 32px;
+      padding: 0;
+      border: 0;
+      border-radius: 16px;
+      background: #e6e0e9;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    /* The handle is laid out at its 24 dp "on" size; nudg scales it to 16 dp when off. */
+    .m3-switch .knob {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #79747e;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <button class="m3-switch" role="switch" aria-checked="false" aria-label="Wi-Fi" data-nudg="track"><span class="knob" data-nudg="knob"></span></button>
+  <!-- Host markup for material-switch.nudg.json. The app keeps aria-checked in step with the state. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./material-switch.nudg.json");
+    const el = document.querySelector("[role=switch]");
+    play(program, document.body, { onState: (state) => el.setAttribute("aria-checked", String(state.includes("on"))) });
+  </script>
+</body>
+</html>

@@ -301,6 +301,37 @@ Colors are hex strings (`#RGB`, `#RRGGBB`, `#RRGGBBAA`) and interpolate in OKLab
 
 An unknown key without a prefix is a validator error with a "did you mean" hint, so typos are caught instead of silently ignored. Keys starting with `x-` are extensions; runtimes that don't understand them ignore them.
 
+## Native feel on every platform
+
+Platform motion ships as nudg libraries, written in the same format as everything else and taken from the platforms' own published values:
+
+| Library | Source | Native names | Values |
+|---|---|---|---|
+| [`motion/apple.nudg.json`](examples/motion/apple.nudg.json) | SwiftUI `Spring` presets (iOS 17+) | `smooth`, `snappy`, `bouncy` | duration 0.5 s; bounce 0, 0.15, 0.3 |
+| [`motion/material-expressive.nudg.json`](examples/motion/material-expressive.nudg.json) | androidx Material 3 `ExpressiveMotionTokens` | `spatial-default/fast/slow`, `effects-default/fast/slow` | spatial (ratio, stiffness) 0.8/380, 0.6/800, 0.8/200; effects 1.0 with 1600, 3800, 800 |
+| [`motion/material-standard.nudg.json`](examples/motion/material-standard.nudg.json) | androidx Material 3 `StandardMotionTokens` | same | spatial 0.9 with 700, 1400, 300; effects as above |
+
+nudg's `duration` + `bounce` is SwiftUI's model, and `stiffness` + `dampingRatio` is Compose's, so the numbers are copied, not approximated.
+
+Every platform library also defines the same **common names**, so a file written against them changes feel by changing one line:
+
+| Common name | Meaning | Apple | Material Expressive |
+|---|---|---|---|
+| `standard` | the default spatial spring | snappy | spatial-default |
+| `quick` | faster | snappy at 0.3 s | spatial-fast |
+| `gentle` | slower, calmer | smooth | spatial-slow |
+| `playful` | the bounciest | bouncy | spatial-fast |
+| `fade` | for color and opacity; never bounces | smooth at 0.35 s | effects-default |
+
+```json
+"import": ["./motion/apple.nudg.json"],
+"animate": { "knob.x": "standard", "track.color": "fade" }
+```
+
+Use the common names by default. Use a native name (`snappy`, `spatial-fast`) when the point is to match a platform exactly, for example a web view that must feel like the iOS app beside it. See [`examples/ios-toggle.nudg.json`](examples/ios-toggle.nudg.json) and [`examples/material-switch.nudg.json`](examples/material-switch.nudg.json): the same machine, a different import.
+
+Host markup follows the [WAI-ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/patterns) patterns (`role="switch"`, `aria-checked`), so the examples are the web's canonical components with platform motion.
+
 ## Grammar additions (draft, v0.2)
 
 Stage 1 is about continuous interaction: a value follows a finger, and on release it settles somewhere sensible. Worked out by expressing a draggable toggle and a swipe-to-reveal row. A file that uses any of this declares `"nudg": "0.2"`; a 0.2 runtime also reads 0.1 files.

@@ -85,6 +85,14 @@ Declare `"nudg": "0.2"` to use these.
 - `when` next to `states` (or inside a region) handles events no active state handles: N tabs need N entries.
 - More events: `hoverstart`, `hoverend`, `focus`, `blur`, and `host.<name>` for events the app sends (a controlled toggle's `host.check`). `host` can't be a target name.
 
+## Platform motion
+
+Libraries in `examples/motion/` carry the platforms' published spring values: `apple.nudg.json` (SwiftUI `smooth`, `snappy`, `bouncy`), `material-expressive.nudg.json` and `material-standard.nudg.json` (Material 3 `spatial-*` and `effects-*` tokens). Every platform library also defines the common names `standard`, `quick`, `gentle`, `playful` and `fade` (for color and opacity).
+
+- Default to the common names, so changing the import changes the platform feel.
+- Use a native name only when the user asks to match a platform preset exactly ("use iOS's snappy spring").
+- "Make it feel like Android / Material" or "like iOS": change the `import` line, keep the file.
+
 ## Words to edits
 
 | Request | Edit |
@@ -100,6 +108,7 @@ Declare `"nudg": "0.2"` to use these.
 | harder to pull past the end | lower `overdrag` (0 stops dead) |
 | easier to flick across | raise `momentum` (e.g. 0.5 → 0.8); lower it to rely on position |
 | fade or tint with the drag | `map` the opacity or color from the dragged property |
+| feel like iOS / Android | import `motion/apple.nudg.json` / `motion/material-expressive.nudg.json` and use the common names |
 
 Change one thing at a time, then compare `nudg_plot` (overshoot `max`, `at rest` time) before and after.
 

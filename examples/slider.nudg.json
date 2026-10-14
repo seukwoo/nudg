@@ -1,0 +1,34 @@
+{
+  "nudg": "0.3",
+  "note": "A slider (WAI-ARIA slider pattern). Drag the thumb and it stays where you leave it (commit); arrow keys move it by one step, Home and End to the ends (step, clamped by the property's bounds). The fill is mapped from the thumb.",
+  "targets": ["thumb", "track", "fill"],
+  "values": {
+    "thumb.x": { "base": 60, "min": 0, "max": 200 },
+    "fill.width": { "map": "thumb.x", "from": [0, 200], "to": [12, 212] }
+  },
+  "animate": {
+    "thumb.x": { "spring": { "duration": 0.3, "bounce": 0.1 } }
+  },
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "when": {
+        "thumb.key.arrowright": { "step": { "thumb.x": 20 } },
+        "thumb.key.arrowup": { "step": { "thumb.x": 20 } },
+        "thumb.key.arrowleft": { "step": { "thumb.x": -20 } },
+        "thumb.key.arrowdown": { "step": { "thumb.x": -20 } },
+        "thumb.key.home": { "step": { "thumb.x": -1000 } },
+        "thumb.key.end": { "step": { "thumb.x": 1000 } },
+        "thumb.dragstart": "dragging",
+        "track.dragstart": "dragging"
+      }
+    },
+    "dragging": {
+      "follow": { "thumb.x": "thumb.drag.x" },
+      "when": {
+        "thumb.dragend": { "to": "idle", "commit": ["thumb.x"] },
+        "track.dragend": { "to": "idle", "commit": ["thumb.x"] }
+      }
+    }
+  }
+}

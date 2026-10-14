@@ -15,6 +15,11 @@ export interface RuntimeOptions {
    * e.g. ["on"] or ["checked/on"]. Values start at those states' targets, at rest.
    */
   state?: string[];
+  /**
+   * Reduced motion (v0.3): every spring and tween becomes a short linear tween and
+   * kicks do nothing. States, timers and followed values are unchanged.
+   */
+  reducedMotion?: boolean;
 }
 
 export interface Runtime {
@@ -27,7 +32,7 @@ export interface Runtime {
   sample(t: number): Record<string, Value>;
   /** Active leaf states as paths, e.g. ["on"] or ["checked/on", "press/up"]. */
   state(): string[];
-  /** True when every property (or the given one) has come to rest at time `t`. */
+  /** True when every property (or the given one) has come to rest at time `t` and no timer is pending. */
   settled(t: number, property?: string): boolean;
 }
 
@@ -38,19 +43,36 @@ type Segment =
 
 type StatesMachine = Machine & { kind: "states" };
 
+/** A timer set when its state was entered. `order` keeps file order among equal due times. */
+interface Pending {
+  due: number;
+  order: number;
+  machine: StatesMachine;
+  state: State;
+  transition: Transition;
+}
+
 /** Rest thresholds for `settled`, per channel. Advisory: values are never snapped. */
 const REST = { number: 1e-3, color: 1e-4 };
 /** Seconds of input history used for velocity. */
 const VELOCITY_WINDOW = 0.1;
 const INPUT = /^(.+)\.drag\.(x|y)$/;
+/** What every motion becomes under reduced motion. */
+const REDUCED: Motion = { kind: "tween", duration: 0.15, ease: "linear" };
 
 export function createRuntime(program: Program, options: RuntimeOptions = {}): Runtime {
   const active = new Map<Machine, string>();
   const segments = new Map<string, Segment>();
   const inputs = new Map<string, [number, number][]>();
+  /** Base values, which `step` and `commit` change for good. */
+  const bases = new Map<string, Channels>();
+  const pending: Pending[] = [];
+  let order = 0;
   let now = 0;
+  const reduced = options.reducedMotion === true;
 
-  enterMachine(program.machine, active, []);
+  for (const [key, prop] of program.properties) if (!prop.map) bases.set(key, prop.base);
+  enterMachine(program.machine, active, [], 0);
   for (const path of options.state ?? []) enterPath(path);
   {
     const targets = resolveTargets(active);
@@ -63,16 +85,17 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     }
   }
 
-  function enterMachine(machine: Machine, act: Map<Machine, string>, entered: State[]) {
-    if (machine.kind === "states") enterState(machine, machine.initial, act, entered);
-    else for (const region of machine.regions.values()) enterMachine(region, act, entered);
+  function enterMachine(machine: Machine, act: Map<Machine, string>, entered: State[], t: number) {
+    if (machine.kind === "states") enterState(machine, machine.initial, act, entered, t);
+    else for (const region of machine.regions.values()) enterMachine(region, act, entered, t);
   }
 
-  function enterState(machine: StatesMachine, name: string, act: Map<Machine, string>, entered: State[]) {
+  function enterState(machine: StatesMachine, name: string, act: Map<Machine, string>, entered: State[], t: number) {
     act.set(machine, name);
     const state = machine.states.get(name)!;
     entered.push(state);
-    if (state.machine) enterMachine(state.machine, act, entered);
+    if (act === active) for (const timer of state.timers) pending.push({ due: t + timer.delay, order: order++, machine, state, transition: timer.transition });
+    if (state.machine) enterMachine(state.machine, act, entered, t);
   }
 
   function exitMachine(machine: Machine, act: Map<Machine, string>) {
@@ -82,6 +105,9 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     }
     const state = machine.states.get(act.get(machine)!)!;
     if (state.machine) exitMachine(state.machine, act);
+    if (act === active) {
+      for (let i = pending.length - 1; i >= 0; i--) if (pending[i].state === state) pending.splice(i, 1);
+    }
     act.delete(machine);
   }
 
@@ -99,7 +125,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       if (!state) throw new Error(`No state "${parts[i]}" in state path "${path}".`);
       if (active.get(machine) !== parts[i]) {
         exitMachine(machine, active);
-        enterState(machine, parts[i], active, []);
+        enterState(machine, parts[i], active, [], 0);
       }
       if (i < parts.length - 1) {
         if (!state.machine) throw new Error(`State "${parts[i]}" has no states inside it, in state path "${path}".`);
@@ -124,8 +150,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
 
   /** Base values, overridden by every active state's `set`, deeper states last. */
   function resolveTargets(act: Map<Machine, string>): Map<string, Channels> {
-    const out = new Map<string, Channels>();
-    for (const [key, prop] of program.properties) if (!prop.map) out.set(key, prop.base);
+    const out = new Map<string, Channels>(bases);
     walkActive(act, (state) => {
       for (const [key, value] of state.set) out.set(key, value);
     });
@@ -186,6 +211,13 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     return evaluateMotion(segment, t);
   }
 
+  function clamp(key: string, value: number): number {
+    const prop = program.properties.get(key)!;
+    if (prop.min !== undefined && value < prop.min) return prop.min;
+    if (prop.max !== undefined && value > prop.max) return prop.max;
+    return value;
+  }
+
   /** Picks the candidate whose target for `by` is closest to where `by` was heading. */
   function nearest(machine: StatesMachine, choice: NonNullable<Transition["nearest"]>, t: number): string {
     const [pos, vel] = evaluate(segments.get(choice.by)!, t);
@@ -195,11 +227,20 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     for (const name of choice.states) {
       const hypothetical = new Map(active);
       exitMachine(machine, hypothetical);
-      enterState(machine, name, hypothetical, []);
+      enterState(machine, name, hypothetical, [], t);
       const distance = Math.abs(projected - resolveTargets(hypothetical).get(choice.by)![0]);
       if (distance < bestDistance) [best, bestDistance] = [name, distance];
     }
     return best;
+  }
+
+  /** Performs a transition from `state` in `machine` at time `t`. */
+  function perform(machine: StatesMachine, transition: Transition, t: number, fired: Transition[], entered: State[]) {
+    fired.push(transition);
+    if (transition.to === undefined && !transition.nearest) return; // step or commit only: stay
+    const target = transition.to ?? nearest(machine, transition.nearest!, t);
+    exitMachine(machine, active);
+    enterState(machine, target, active, entered, t);
   }
 
   /** Innermost states get the event first; then the machine's own `when`; each region separately. */
@@ -215,11 +256,71 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     if (state.machine && handle(state.machine, event, t, fired, entered)) return true;
     const transition = state.when.get(event) ?? machine.when.get(event);
     if (!transition) return false;
-    const target = transition.to ?? nearest(machine, transition.nearest!, t);
-    exitMachine(machine, active);
-    enterState(machine, target, active, entered);
-    fired.push(transition);
+    perform(machine, transition, t, fired, entered);
     return true;
+  }
+
+  /** After the machine changed at time `t`: commit and step bases, then retarget every property. */
+  function settle(t: number, fired: Transition[], entered: State[]) {
+    const committed = new Set<string>();
+    for (const transition of fired) {
+      for (const key of transition.commit ?? []) {
+        bases.set(key, [clamp(key, evaluate(segments.get(key)!, t)[0][0])]);
+        committed.add(key);
+      }
+      for (const [key, delta] of transition.step ?? []) bases.set(key, [clamp(key, bases.get(key)![0] + delta)]);
+    }
+    const overrides = new Map<string, Motion>();
+    for (const transition of fired) for (const [key, motion] of transition.animate) overrides.set(key, motion);
+    const targets = resolveTargets(active);
+    const follows = activeFollows(active);
+
+    for (const [key, prop] of program.properties) {
+      if (prop.map) continue;
+      const segment = segments.get(key)!;
+      const f = follows.get(key);
+      if (f) {
+        // Start following from wherever the value is now, so there's no jump.
+        if (segment.kind !== "follow" || segment.owner !== f.owner || entered.includes(f.owner)) {
+          segments.set(key, followSegment(f, evaluate(segment, t)[0][0], t));
+        }
+        continue;
+      }
+      const to = targets.get(key)!;
+      // Leaving a follow always hands off, carrying the input's velocity into the motion.
+      if (segment.kind === "motion" && sameChannels(segment.to, to)) continue;
+      const [pos, vel] = evaluate(segment, t);
+      // A committed value is placed, not thrown: it keeps no velocity from the finger.
+      if (committed.has(key)) vel.fill(0);
+      const motion = overrides.get(key) ?? program.animate.get(key);
+      segments.set(key, { kind: "motion", t0: t, from: pos, v0: vel, to, motion: motion && reduced ? REDUCED : motion });
+    }
+
+    // Kicks keep the target and add velocity, then their own spring carries the value.
+    if (reduced) return;
+    for (const state of entered) {
+      for (const [key, kick] of state.enter) {
+        const segment = segments.get(key)!;
+        if (segment.kind === "follow") continue;
+        const [pos, vel] = evaluate(segment, t);
+        vel[0] += kick.kick ?? 0;
+        segments.set(key, { kind: "motion", t0: t, from: pos, v0: vel, to: segment.to, motion: kick });
+      }
+    }
+  }
+
+  /** Fires every timer due by `t`, earliest first, each at its own due time. */
+  function fireDue(t: number) {
+    for (;;) {
+      let next: Pending | undefined;
+      for (const p of pending) if (p.due <= t + 1e-9 && (!next || p.due < next.due || (p.due === next.due && p.order < next.order))) next = p;
+      if (!next) return;
+      pending.splice(pending.indexOf(next), 1);
+      const fired: Transition[] = [];
+      const entered: State[] = [];
+      perform(next.machine, next.transition, next.due, fired, entered);
+      settle(next.due, fired, entered);
+    }
   }
 
   function advanceTo(t: number) {
@@ -227,6 +328,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       throw new RangeError(`Time must not go backwards: got ${t}, already at ${now}.`);
     }
     now = t;
+    fireDue(t);
   }
 
   const valueOf = (key: string, t: number): Channels => {
@@ -248,40 +350,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       const fired: Transition[] = [];
       const entered: State[] = [];
       if (!handle(program.machine, event, t, fired, entered)) return false;
-
-      const overrides = new Map<string, Motion>();
-      for (const transition of fired) for (const [key, motion] of transition.animate) overrides.set(key, motion);
-      const targets = resolveTargets(active);
-      const follows = activeFollows(active);
-
-      for (const [key, prop] of program.properties) {
-        if (prop.map) continue;
-        const segment = segments.get(key)!;
-        const f = follows.get(key);
-        if (f) {
-          // Start following from wherever the value is now, so there's no jump.
-          if (segment.kind !== "follow" || segment.owner !== f.owner || entered.includes(f.owner)) {
-            segments.set(key, followSegment(f, evaluate(segment, t)[0][0], t));
-          }
-          continue;
-        }
-        const to = targets.get(key)!;
-        // Leaving a follow always hands off, carrying the input's velocity into the motion.
-        if (segment.kind === "motion" && sameChannels(segment.to, to)) continue;
-        const [pos, vel] = evaluate(segment, t);
-        segments.set(key, { kind: "motion", t0: t, from: pos, v0: vel, to, motion: overrides.get(key) ?? program.animate.get(key) });
-      }
-
-      // Kicks keep the target and add velocity, then their own spring carries the value.
-      for (const state of entered) {
-        for (const [key, kick] of state.enter) {
-          const segment = segments.get(key)!;
-          if (segment.kind === "follow") continue;
-          const [pos, vel] = evaluate(segment, t);
-          vel[0] += kick.kick ?? 0;
-          segments.set(key, { kind: "motion", t0: t, from: pos, v0: vel, to: segment.to, motion: kick });
-        }
-      }
+      settle(t, fired, entered);
       return true;
     },
 
@@ -322,6 +391,8 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     },
 
     settled(t, property) {
+      advanceTo(t);
+      if (property === undefined && pending.length) return false;
       const keys = property === undefined ? [...program.properties.keys()] : [property];
       return keys.every((key) => {
         const prop = program.properties.get(key);

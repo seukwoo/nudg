@@ -79,7 +79,7 @@ test("imports report missing files, cycles and duplicate names", () => {
 
 test("$schema is allowed at the top level and must be a string", () => {
   const codes = (doc: unknown) => compile({ path: "main.nudg.json", text: JSON.stringify(doc) }).diagnostics.map((d) => d.code);
-  assert.deepEqual(codes({ $schema: "https://unpkg.com/@nudg/core@0.2/spec/nudg-0.2.schema.json", nudg: "0.1", motions: {} }), []);
+  assert.deepEqual(codes({ $schema: "https://unpkg.com/@nudg/core@0.3/spec/nudg-0.3.schema.json", nudg: "0.1", motions: {} }), []);
   assert.deepEqual(codes({ $schema: 1, nudg: "0.1", motions: {} }), ["invalid-type"]);
 });
 
@@ -151,6 +151,25 @@ test("a drag gesture lands where the throw was heading", async () => {
   const held = [...dragGesture("track", 0.1, 0.3, 9).filter((e) => !("event" in e && e.t === 0.3)), { t: 0.5, event: "track.dragend" }];
   const slow = simulate(program!, { events: held });
   assert.equal(slow.samples.at(-1)!.state[0], "off", "a drag held short of the midpoint springs back");
+});
+
+test("timers fire in simulation at exactly their due time", () => {
+  const { program } = compilePath(`${root}examples/toast.nudg.json`);
+  const sim = simulate(program!, { events: [{ t: 0.1, event: "host.show" }], every: 0.1 });
+  const at = (t: number) => sim.samples.find((s) => Math.abs(s.t - t) < 1e-9)!;
+  assert.deepEqual(at(3.0).state, ["shown"]);
+  assert.deepEqual(at(3.1).state, ["hidden"], "after:3s from 0.1 fires at 3.1");
+  assert.equal(at(3.1).values["toast.opacity"], 1, "the fade starts at the due time");
+  assert.ok((at(3.2).values["toast.opacity"] as number) < 1 && (at(3.4).values["toast.opacity"] as number) < 0.01);
+  assert.ok(sim.summary["toast.opacity"].settledAt! > 3.1, "the simulation ran past the timer");
+});
+
+test("reduced motion makes every motion a short linear tween", () => {
+  const { program } = compilePath(`${root}examples/toggle.nudg.json`);
+  const sim = simulate(program!, { events: [{ t: 0, event: "track.tap" }], every: 0.075, reducedMotion: true });
+  assert.equal(sim.samples[1].values["knob.x"], 10, "halfway through a 0.15 s linear tween");
+  assert.equal(sim.samples[2].values["knob.x"], 20);
+  assert.equal(sim.summary["knob.x"].max, 20, "no overshoot");
 });
 
 test("the runtime can start in other states, and rejects unknown paths", () => {

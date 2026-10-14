@@ -18,6 +18,10 @@ export interface PlayOptions {
   state?: string[];
   /** Called with the active states after any event changes them. */
   onState?: (state: string[]) => void;
+  /** Reduced motion (v0.3). Default: the system's prefers-reduced-motion setting. */
+  reducedMotion?: boolean;
+  /** Called with the values after every frame they're applied, e.g. to keep aria-valuenow in step. */
+  onFrame?: (values: Record<string, Value>) => void;
 }
 
 export interface Player {
@@ -28,6 +32,8 @@ export interface Player {
   readonly unknown: string[];
   /** Sends an event now, as if it came from input (e.g. "host.check"). */
   send(event: string): boolean;
+  /** The values last applied to the elements. */
+  values(): Record<string, Value>;
   /** Records an input sample now (e.g. "track.drag.x", 12). */
   input(name: string, value: number): boolean;
   /** Binds one more element to a target. Returns a function that unbinds it. */
@@ -45,7 +51,9 @@ export function play(program: Program, root: ParentNode | null = document, optio
   const elements = new Map<string, Set<Element>>();
   const cleanups = new Map<Element, () => void>();
   const found = new Set<string>();
-  const runtime = createRuntime(program, { state: options.state });
+  const reducedMotion = options.reducedMotion ?? (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const runtime = createRuntime(program, { state: options.state, reducedMotion });
+  const keyEvents = keyEventsOf(program);
   const manual = options.clock === "manual";
   const start = performance.now();
   const draggable = dragTargets(program);
@@ -82,14 +90,18 @@ export function play(program: Program, root: ParentNode | null = document, optio
     }
   }
 
+  let lastValues: Record<string, Value> = {};
   function apply(values: Record<string, Value>) {
+    lastValues = values;
     for (const [target, els] of elements) applyTo(target, values, els);
+    options.onFrame?.(values);
   }
 
   function tick() {
     frame = 0;
     const t = now();
     apply(runtime.sample(t));
+    syncState(); // timers may have fired while time advanced
     if (!runtime.settled(t)) frame = requestAnimationFrame(tick);
   }
 
@@ -100,15 +112,19 @@ export function play(program: Program, root: ParentNode | null = document, optio
     for (const e of els) e.setAttribute("data-nudg-state", value);
   }
 
-  function changed() {
-    if (manual) apply(runtime.sample(manualTime));
-    else if (!frame) frame = requestAnimationFrame(tick);
+  function syncState() {
     const state = runtime.state();
     if (state.join("\n") !== lastState) {
       lastState = state.join("\n");
       for (const els of elements.values()) reflectState(els);
       options.onState?.(state);
     }
+  }
+
+  function changed() {
+    if (manual) apply(runtime.sample(manualTime));
+    else if (!frame) frame = requestAnimationFrame(tick);
+    syncState();
   }
 
   function send(event: string): boolean {
@@ -159,6 +175,15 @@ export function play(program: Program, root: ParentNode | null = document, optio
       ["pointerleave", (e) => (e as PointerEvent).pointerType !== "touch" && send(`${name}.hoverend`)],
       ["focus", () => send(`${name}.focus`)],
       ["blur", () => send(`${name}.blur`)],
+      [
+        "keydown",
+        (e) => {
+          // Only keys the file listens for, so the page keeps its own behavior for the rest.
+          const event = `${name}.key.${keyName((e as KeyboardEvent).key)}`;
+          if (!keyEvents.has(event)) return;
+          if (send(event)) e.preventDefault();
+        },
+      ],
     ];
     for (const [type, fn] of listeners) el.addEventListener(type, fn);
     const style = (el as HTMLElement).style;
@@ -249,10 +274,12 @@ export function play(program: Program, root: ParentNode | null = document, optio
     send,
     input,
     bind,
+    values: () => lastValues,
     render(t) {
       if (!manual) throw new Error("render(t) needs { clock: \"manual\" }.");
       manualTime = t;
       apply(runtime.sample(t));
+      syncState();
     },
     destroy() {
       cancelAnimationFrame(frame);
@@ -262,6 +289,32 @@ export function play(program: Program, root: ParentNode | null = document, optio
       window.removeEventListener("pointercancel", onCancel, true);
     },
   };
+}
+
+/** KeyboardEvent.key as a nudg key name: " " is space, names are lowercased. */
+function keyName(key: string): string {
+  return key === " " ? "space" : key.toLowerCase();
+}
+
+/** Every target.key.<name> event the file handles. */
+function keyEventsOf(program: Program): Set<string> {
+  const out = new Set<string>();
+  const addEvents = (keys: Iterable<string>) => {
+    for (const key of keys) if (key.split(".")[1] === "key") out.add(key);
+  };
+  const walk = (machine: Machine) => {
+    if (machine.kind === "regions") {
+      for (const region of machine.regions.values()) walk(region);
+      return;
+    }
+    addEvents(machine.when.keys());
+    for (const state of machine.states.values()) {
+      addEvents(state.when.keys());
+      if (state.machine) walk(state.machine);
+    }
+  };
+  walk(program.machine);
+  return out;
 }
 
 /** Targets the file drags: used in drag events or as a followed drag input. */

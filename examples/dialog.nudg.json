@@ -1,0 +1,29 @@
+{
+  "nudg": "0.3",
+  "note": "A modal dialog (WAI-ARIA dialog pattern). It scales and fades in over a scrim; Escape, the scrim, or the close button dismisses it. The scrim's opacity is mapped from the dialog's, so they always agree.",
+  "targets": ["opener", "scrim", "dialog", "close"],
+  "values": {
+    "dialog.opacity": 0,
+    "dialog.scale": 0.92,
+    "scrim.opacity": { "map": "dialog.opacity", "from": [0, 1], "to": [0, 0.4] }
+  },
+  "animate": {
+    "dialog.opacity": { "tween": { "duration": 0.15, "ease": "out" } },
+    "dialog.scale": { "spring": { "duration": 0.3, "bounce": 0.15 } }
+  },
+  "initial": "closed",
+  "states": {
+    "closed": {
+      "when": { "opener.tap": "open", "host.open": "open" }
+    },
+    "open": {
+      "set": { "dialog.opacity": 1, "dialog.scale": 1 },
+      "when": {
+        "close.tap": "closed",
+        "scrim.tap": "closed",
+        "dialog.key.escape": "closed",
+        "host.close": "closed"
+      }
+    }
+  }
+}

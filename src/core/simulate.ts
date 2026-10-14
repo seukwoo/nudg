@@ -15,6 +15,8 @@ export interface SimulateOptions {
   events: TimedEvent[];
   /** Leaf state paths to start in, instead of `initial`. */
   start?: string[];
+  /** Reduced motion (v0.3): short linear tweens everywhere, no kicks. */
+  reducedMotion?: boolean;
   /** Last sample time. Defaults to when everything settles after the last event. */
   until?: number;
   /** Seconds between samples. Defaults to 0.05. */
@@ -87,8 +89,8 @@ export function simulate(program: Program, options: SimulateOptions): Simulation
   }
 
   const lastEvent = events.length ? events[events.length - 1].t : 0;
-  const start = { state: options.start };
-  const until = options.until ?? round(Math.ceil(findSettle(program, events, lastEvent, options.start) / every - 1e-9) * every);
+  const start = { state: options.start, reducedMotion: options.reducedMotion };
+  const until = options.until ?? round(Math.ceil(findSettle(program, events, lastEvent, start) / every - 1e-9) * every);
 
   // Pass 1: samples at the requested interval.
   const samples: Sample[] = [];
@@ -104,7 +106,9 @@ export function simulate(program: Program, options: SimulateOptions): Simulation
         if (!apply(rt, e) && !("event" in e && e.implied)) unhandled.push(e);
         next++;
       }
-      samples.push({ t, state: rt.state(), values: pick(rt.sample(t), keys) });
+      // Sampling advances the clock (timers may fire), so sample before reading the state.
+      const values = pick(rt.sample(t), keys);
+      samples.push({ t, state: rt.state(), values });
     }
   }
 
@@ -148,8 +152,8 @@ export function simulate(program: Program, options: SimulateOptions): Simulation
 }
 
 /** Earliest time after the last event when everything is at rest, capped. */
-function findSettle(program: Program, events: TimedEvent[], lastEvent: number, start?: string[]): number {
-  const rt = createRuntime(program, { state: start });
+function findSettle(program: Program, events: TimedEvent[], lastEvent: number, start: { state?: string[]; reducedMotion?: boolean }): number {
+  const rt = createRuntime(program, start);
   for (const e of events) apply(rt, e);
   for (let t = lastEvent; t <= lastEvent + MAX_SETTLE; t += 0.01) {
     if (rt.settled(t)) return Math.max(t, lastEvent + 0.1);

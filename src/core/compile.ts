@@ -10,6 +10,7 @@ import type {
   Ease,
   Follow,
   Machine,
+  Timer,
   Motion,
   Program,
   Property,
@@ -25,6 +26,9 @@ import {
   HOST,
   IDENTIFIER,
   INPUTS,
+  KEY_ALIASES,
+  KEY_NAME,
+  KEY_NAMES,
   NAMED_EASES,
   PROPERTIES,
   PROPERTY_ALIASES,
@@ -63,7 +67,8 @@ const MACHINE_KEYS = ["initial", "states", "regions"];
 /** A region's object: a machine that may also have machine-level `when`. */
 const REGION_KEYS = [...MACHINE_KEYS, "when"];
 const STATE_KEYS = ["set", "follow", "enter", "when", ...MACHINE_KEYS];
-const TRANSITION_KEYS = ["to", "nearest", "by", "momentum", "animate"];
+const TRANSITION_KEYS = ["to", "nearest", "by", "momentum", "animate", "step", "commit"];
+const VALUE_KEYS = ["base", "min", "max"];
 const FOLLOW_KEYS = ["input", "range", "overdrag"];
 const MAP_KEYS = ["map", "from", "to"];
 const MOTION_KEYS = ["spring", "tween", "kick"];
@@ -115,7 +120,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core@0.2/spec/nudg-0.2.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core@0.3/spec/nudg-0.3.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -226,14 +231,22 @@ class ComponentCompiler {
     this.version = version;
   }
 
-  /** Reports (once per path) a 0.2 feature in a 0.1 file. Returns false if it's not allowed. */
-  private needs02(p: string, what: string): boolean {
-    if (this.version !== "0.1") return true;
+  /** Reports (once per path) a feature newer than the file's format version. Returns false if it's not allowed. */
+  private needsVersion(min: string, p: string, what: string): boolean {
+    if (VERSIONS.indexOf(this.version) >= VERSIONS.indexOf(min)) return true;
     if (!this.versionReported.has(p)) {
       this.versionReported.add(p);
-      this.r.error("needs-version", p, `${what} needs format 0.2.`, `Change "nudg" to "0.2" at the top of the file.`);
+      this.r.error("needs-version", p, `${what} needs format ${min}.`, `Change "nudg" to "${min}" at the top of the file.`);
     }
     return false;
+  }
+
+  private needs02(p: string, what: string): boolean {
+    return this.needsVersion("0.2", p, what);
+  }
+
+  private needs03(p: string, what: string): boolean {
+    return this.needsVersion("0.3", p, what);
   }
 
   compile(doc: JsonObject): Program | undefined {
@@ -299,11 +312,53 @@ class ComponentCompiler {
         maps.push([key, value, p, kind]);
         continue;
       }
+      if (isObject(value)) {
+        this.properties.set(key, this.parseBounded(kind, key, value, p) ?? { kind, base: placeholder });
+        continue;
+      }
       // Register the property even if its value is invalid, so later uses don't cascade.
       const base = this.parseValue(kind, key, value, p) ?? placeholder;
       this.properties.set(key, { kind, base });
     }
     for (const [key, value, p, kind] of maps) this.parseMap(key, value, p, kind);
+  }
+
+  /** `{ "base": 0, "min": 0, "max": 200 }` (v0.3). */
+  private parseBounded(kind: PropertyKind, key: string, raw: JsonObject, p: string): Property | undefined {
+    const r = this.r;
+    if (!this.needs03(p, "A value with bounds")) return undefined;
+    r.keys(raw, p, VALUE_KEYS);
+    if (!("base" in raw)) {
+      r.error("missing-base", p, `"${key}" has bounds but no base value.`, `Add "base": <the value when no state sets it>, e.g. { "base": 0, "min": 0, "max": 200 }.`);
+      return undefined;
+    }
+    const base = this.parseValue(kind, key, raw.base, ptr(p, "base"));
+    if (!base) return undefined;
+    const prop: Property = { kind, base };
+    if (!("min" in raw) && !("max" in raw)) return prop;
+    if (kind === "color") {
+      r.error("invalid-bounds", p, "A color has no min or max.", "Bounds are for numeric properties such as x or opacity.");
+      return prop;
+    }
+    for (const bound of ["min", "max"] as const) {
+      if (!(bound in raw)) continue;
+      const n = raw[bound];
+      if (typeof n !== "number" || !Number.isFinite(n)) {
+        r.error("invalid-bounds", p, `"${bound}" must be a number.`);
+        return prop;
+      }
+      prop[bound] = n;
+    }
+    if (prop.min !== undefined && prop.max !== undefined && prop.min > prop.max) {
+      r.error("invalid-bounds", p, `"min" (${prop.min}) is greater than "max" (${prop.max}).`, "Swap them.");
+      delete prop.min;
+      delete prop.max;
+      return prop;
+    }
+    if ((prop.min !== undefined && base[0] < prop.min) || (prop.max !== undefined && base[0] > prop.max)) {
+      r.error("out-of-range", p, `The base value ${base[0]} is outside [${prop.min ?? "-∞"}, ${prop.max ?? "∞"}].`, "Move the base inside the bounds, or widen them.");
+    }
+    return prop;
   }
 
   private parseMap(key: string, raw: JsonObject, p: string, kind: PropertyKind) {
@@ -573,6 +628,7 @@ class ComponentCompiler {
     // Transitions target sibling states (machine-level ones, this machine's states).
     const checkTargets = (when: Map<string, Transition>, wp: string, from?: string) => {
       for (const [event, transition] of when) {
+        if (transition.to === undefined && !transition.nearest) continue;
         const targets: [string, string][] = transition.nearest
           ? transition.nearest.states.map((n, i) => [n, ptr(ptr(ptr(wp, event), "nearest"), i)])
           : [[transition.to!, ptr(wp, event)]];
@@ -589,7 +645,11 @@ class ComponentCompiler {
         }
       }
     };
-    for (const state of states.values()) checkTargets(state.when, ptr(ptr(sp, state.name), "when"), state.name);
+    for (const state of states.values()) {
+      const wp = ptr(ptr(sp, state.name), "when");
+      checkTargets(state.when, wp, state.name);
+      checkTargets(new Map(state.timers.map((t) => [t.key, t.transition])), wp, state.name);
+    }
     checkTargets(machineWhen, ptr(p, "when"));
     return ok ? { kind: "states", initial: initial as string, states, when: machineWhen } : undefined;
   }
@@ -601,7 +661,7 @@ class ComponentCompiler {
       return undefined;
     }
     r.keys(raw, p, STATE_KEYS);
-    const state: State = { name, set: new Map(), follow: new Map(), enter: new Map(), when: new Map() };
+    const state: State = { name, set: new Map(), follow: new Map(), enter: new Map(), when: new Map(), timers: [] };
 
     if ("set" in raw) {
       const set = raw.set;
@@ -614,7 +674,12 @@ class ComponentCompiler {
           const prop = this.property(key, kp);
           if (!prop) continue;
           const channels = this.parseValue(prop.kind, key, value, kp);
-          if (channels) state.set.set(key, channels);
+          if (!channels) continue;
+          if ((prop.min !== undefined && channels[0] < prop.min) || (prop.max !== undefined && channels[0] > prop.max)) {
+            r.error("out-of-range", kp, `${channels[0]} is outside "${key}"'s bounds [${prop.min ?? "-∞"}, ${prop.max ?? "∞"}].`, "Use a value inside the bounds, or widen them in \"values\".");
+            continue;
+          }
+          state.set.set(key, channels);
         }
       }
     }
@@ -623,7 +688,7 @@ class ComponentCompiler {
     for (const key of state.enter.keys()) {
       if (state.follow.has(key)) r.error("follow-conflict", ptr(ptr(p, "enter"), key), `"${key}" is followed in this state, so it can't also be kicked here.`, "Remove the kick, or follow a different property.");
     }
-    if ("when" in raw) state.when = this.parseWhen(raw.when, ptr(p, "when"), false);
+    if ("when" in raw) state.when = this.parseWhen(raw.when, ptr(p, "when"), false, state.timers);
     if ("states" in raw || "regions" in raw || "initial" in raw) {
       const machine = this.parseMachine(raw, p);
       if (!machine) return undefined;
@@ -632,7 +697,7 @@ class ComponentCompiler {
     return state;
   }
 
-  private parseWhen(raw: Json, wp: string, machineLevel: boolean): Map<string, Transition> {
+  private parseWhen(raw: Json, wp: string, machineLevel: boolean, timers?: Timer[]): Map<string, Transition> {
     const out = new Map<string, Transition>();
     if (machineLevel && !this.needs02(wp, "\"when\" on a machine")) return out;
     if (!isObject(raw)) {
@@ -642,11 +707,33 @@ class ComponentCompiler {
     for (const [event, value] of Object.entries(raw)) {
       if (event === "note" || event.startsWith("x-")) continue;
       const ep = ptr(wp, event);
+      if (event.startsWith("after:") || event === "after") {
+        const transition = this.parseTransition(value, ep);
+        const delay = this.parseAfter(event, ep, machineLevel);
+        if (transition && delay !== undefined && timers) timers.push({ key: event, delay, transition });
+        continue;
+      }
       const okEvent = this.checkEvent(event, ep);
       const transition = this.parseTransition(value, ep);
       if (okEvent && transition) out.set(event, transition);
     }
     return out;
+  }
+
+  /** `after:<time>` (v0.3): seconds after the state was entered. */
+  private parseAfter(key: string, p: string, machineLevel: boolean): number | undefined {
+    const r = this.r;
+    if (!this.needs03(p, "A timer (\"after:\")")) return undefined;
+    if (machineLevel) {
+      r.error("after-on-machine", p, "A timer can't be on a machine: \"after\" counts from entering one state.", "Put it in the \"when\" of the state it should time.");
+      return undefined;
+    }
+    const delay = parseTime(key.slice("after:".length));
+    if (delay === undefined || !key.startsWith("after:")) {
+      r.error("invalid-after", p, `"${key}" is not a timer.`, `Write "after:<time>", e.g. "after:3s", "after:300ms" or "after:0.5".`);
+      return undefined;
+    }
+    return delay;
   }
 
   private parseFollow(raw: Json, p: string, state: State): Map<string, Follow> {
@@ -678,6 +765,7 @@ class ComponentCompiler {
       if (isObject(value)) r.keys(value, kp, FOLLOW_KEYS);
       if (!this.checkInput(spec.input, typeof value === "string" ? kp : ptr(kp, "input"), kp)) continue;
       const follow: Follow = { input: spec.input as string, overdrag: 0 };
+      if (prop.min !== undefined && prop.max !== undefined) follow.range = [prop.min, prop.max];
       if ("range" in spec) {
         const range = spec.range;
         if (!Array.isArray(range) || range.length !== 2 || range.some((n) => typeof n !== "number" || !Number.isFinite(n)) || range[0] === range[1]) {
@@ -754,18 +842,95 @@ class ComponentCompiler {
     for (const key of ["by", "momentum"]) {
       if (key in raw) r.error("unknown-key", ptr(p, key), `"${key}" only goes with "nearest".`, "Add \"nearest\", or remove it.");
     }
-    if (typeof raw.to !== "string") {
+    const transition: Transition = { animate };
+    if ("step" in raw) transition.step = this.parseStep(raw.step, ptr(p, "step"));
+    if ("commit" in raw) transition.commit = this.parseCommit(raw.commit, ptr(p, "commit"));
+    if (typeof raw.to === "string") transition.to = raw.to;
+    else if (!("step" in raw) && !("commit" in raw)) {
       r.error("missing-to", p, "The transition has no \"to\" state.", "Add \"to\": \"<state name>\", or \"nearest\": [...] with \"by\".");
       return undefined;
+    } else if ("to" in raw) {
+      r.error("invalid-type", ptr(p, "to"), "\"to\" must be a state name.");
+      return undefined;
     }
-    return { to: raw.to, animate };
+    return transition;
+  }
+
+  /** `"step": { "thumb.x": 10 }` (v0.3): adds to a property's base value. */
+  private parseStep(raw: Json, p: string): Map<string, number> | undefined {
+    const r = this.r;
+    if (!this.needs03(p, "\"step\"")) return undefined;
+    const out = new Map<string, number>();
+    if (!isObject(raw)) {
+      r.error("invalid-type", p, "\"step\" must map properties to amounts.", `For example: "step": { "thumb.x": 10 }`);
+      return undefined;
+    }
+    for (const [key, value] of Object.entries(raw)) {
+      if (key === "note" || key.startsWith("x-")) continue;
+      const kp = ptr(p, key);
+      const prop = this.property(key, kp);
+      if (!prop) continue;
+      if (prop.kind === "color") {
+        r.error("invalid-step", kp, "A color can't be stepped.", "Step a numeric property such as x or opacity.");
+        continue;
+      }
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        r.error("invalid-value", kp, "The step amount must be a number.", "Negative steps down.");
+        continue;
+      }
+      out.set(key, value);
+    }
+    return out;
+  }
+
+  /** `"commit": ["thumb.x"]` (v0.3): the property's current value becomes its base. */
+  private parseCommit(raw: Json, p: string): string[] | undefined {
+    const r = this.r;
+    if (!this.needs03(p, "\"commit\"")) return undefined;
+    if (!Array.isArray(raw) || raw.some((k) => typeof k !== "string")) {
+      r.error("invalid-type", p, "\"commit\" must list property paths.", `For example: "commit": ["thumb.x"]`);
+      return undefined;
+    }
+    const out: string[] = [];
+    (raw as string[]).forEach((key, i) => {
+      const kp = ptr(p, i);
+      const prop = this.property(key, kp);
+      if (!prop) return;
+      if (prop.kind === "color") {
+        r.error("invalid-commit", kp, "A color can't be committed.", "Commit a numeric property such as x.");
+        return;
+      }
+      out.push(key);
+    });
+    return out;
   }
 
   private checkEvent(key: string, p: string): boolean {
     const r = this.r;
     const parts = key.split(".");
+    if (parts.length === 3 && parts[1] === "key") {
+      // target.key.<name> (v0.3)
+      if (!this.needs03(p, "A key event")) return false;
+      const [target, , name] = parts;
+      const ok = this.checkTarget(target, p);
+      if (KEY_NAMES.includes(name) || KEY_NAME.test(name)) return ok;
+      const alias = KEY_ALIASES[name] ?? KEY_ALIASES[name.toLowerCase()];
+      const lower = name.toLowerCase();
+      const guess = alias ?? (KEY_NAMES.includes(lower) || KEY_NAME.test(lower) ? lower : didYouMean(lower, KEY_NAMES));
+      r.error(
+        "invalid-event",
+        p,
+        `"${name}" is not a key name.`,
+        guess
+          ? `Use "${target}.key.${guess}".`
+          : name.includes("+")
+            ? "Keys have no modifiers; use the key alone, e.g. \"key.a\"."
+            : `Key names are the lowercase KeyboardEvent.key values: ${KEY_NAMES.join(", ")}, single characters, f1–f12.`,
+      );
+      return false;
+    }
     if (parts.length !== 2 || !parts[0] || !parts[1]) {
-      r.error("invalid-event", p, `"${key}" is not an event.`, "Write events as target.event, for example \"track.tap\".");
+      r.error("invalid-event", p, `"${key}" is not an event.`, "Write events as target.event, for example \"track.tap\" or \"thumb.key.arrowright\".");
       return false;
     }
     const [target, event] = parts;

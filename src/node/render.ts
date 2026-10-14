@@ -18,6 +18,8 @@ export interface RenderOptions {
   events: TimedEvent[];
   /** Leaf state paths to start in, instead of `initial`. */
   start?: string[];
+  /** Reduced motion (v0.3). */
+  reducedMotion?: boolean;
   /** One frame per time, in seconds. */
   times: number[];
   out: string;
@@ -73,7 +75,7 @@ export async function renderFrames(options: RenderOptions): Promise<RenderResult
   const html = resolve(options.html);
   // Only these folders are served, read-only, on 127.0.0.1, for the length of the render.
   const roots = [...new Set([process.cwd(), dirname(file), dirname(html)])];
-  const harness = buildHarness(readFileSync(html, "utf8"), html, file, options.events, options.times, options.start);
+  const harness = buildHarness(readFileSync(html, "utf8"), html, file, options.events, options.times, options.start, options.reducedMotion);
 
   const server = createServer((req, res) => {
     const path = decodeURIComponent(new URL(req.url ?? "/", "http://localhost").pathname);
@@ -122,7 +124,7 @@ export async function renderFrames(options: RenderOptions): Promise<RenderResult
   }
 }
 
-function buildHarness(page: string, htmlPath: string, nudgPath: string, events: TimedEvent[], times: number[], start?: string[]): string {
+function buildHarness(page: string, htmlPath: string, nudgPath: string, events: TimedEvent[], times: number[], start?: string[], reducedMotion?: boolean): string {
   const head = /<head[^>]*>([\s\S]*?)<\/head>/i.exec(page)?.[1] ?? "";
   const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(page);
   const body = bodyMatch ? bodyMatch[1] : head ? "" : page;
@@ -155,13 +157,14 @@ ${frames}
     const { compileUrl, play } = await import("/__nudg/dom/index${EXT}");
     const events = ${JSON.stringify(sorted)};
     const start = ${JSON.stringify(start ?? null)};
+    const reducedMotion = ${JSON.stringify(reducedMotion ?? false)};
     const { program, diagnostics } = await compileUrl(${JSON.stringify(`/fs${encodePath(nudgPath)}`)});
     if (!program) throw new Error("The file has errors: " + diagnostics.map((d) => d.code + " at " + d.path).join(", "));
     const frames = [];
     let player;
     for (const frame of document.querySelectorAll(".nudg-frame")) {
       const t = Number(frame.dataset.t);
-      player = play(program, frame.querySelector(".nudg-stage"), { clock: "manual", state: start ?? undefined });
+      player = play(program, frame.querySelector(".nudg-stage"), { clock: "manual", state: start ?? undefined, reducedMotion });
       for (const e of events) {
         if (e.t > t) break;
         player.render(e.t);

@@ -1,0 +1,703 @@
+{
+  "conformance": "0.3",
+  "name": "Validator (0.3): each document produces exactly these errors (code and JSON pointer)",
+  "documents": [
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "0.2",
+        "targets": [
+          "thumb"
+        ],
+        "values": {
+          "thumb.x": {
+            "base": 0,
+            "min": 0,
+            "max": 100
+          }
+        },
+        "animate": {
+          "thumb.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "thumb.key.arrowright": {
+                "step": {
+                  "thumb.x": 10
+                }
+              },
+              "thumb.key.arrowleft": {
+                "step": {
+                  "thumb.x": -10
+                }
+              },
+              "thumb.key.end": {
+                "step": {
+                  "thumb.x": 1000
+                }
+              },
+              "thumb.dragstart": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "thumb.x": "thumb.drag.x"
+            },
+            "when": {
+              "thumb.dragend": {
+                "to": "idle",
+                "commit": [
+                  "thumb.x"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/values/thumb.x"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/idle/when/thumb.key.arrowright"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/idle/when/thumb.key.arrowright/step"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/idle/when/thumb.key.arrowleft"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/idle/when/thumb.key.arrowleft/step"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/idle/when/thumb.key.end"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/idle/when/thumb.key.end/step"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/dragging/when/thumb.dragend/commit"
+        }
+      ]
+    },
+    {
+      "name": "after-on-machine",
+      "doc": {
+        "nudg": "0.3",
+        "targets": [
+          "thumb"
+        ],
+        "values": {
+          "thumb.x": {
+            "base": 0,
+            "min": 0,
+            "max": 100
+          }
+        },
+        "animate": {
+          "thumb.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "thumb.key.arrowright": {
+                "step": {
+                  "thumb.x": 10
+                }
+              },
+              "thumb.key.arrowleft": {
+                "step": {
+                  "thumb.x": -10
+                }
+              },
+              "thumb.key.end": {
+                "step": {
+                  "thumb.x": 1000
+                }
+              },
+              "thumb.dragstart": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "thumb.x": "thumb.drag.x"
+            },
+            "when": {
+              "thumb.dragend": {
+                "to": "idle",
+                "commit": [
+                  "thumb.x"
+                ]
+              }
+            }
+          }
+        },
+        "when": {
+          "after:1s": "idle"
+        }
+      },
+      "errors": [
+        {
+          "code": "after-on-machine",
+          "path": "/when/after:1s"
+        }
+      ]
+    },
+    {
+      "name": "invalid-after",
+      "doc": {
+        "nudg": "0.3",
+        "targets": [
+          "thumb"
+        ],
+        "values": {
+          "thumb.x": {
+            "base": 0,
+            "min": 0,
+            "max": 100
+          }
+        },
+        "animate": {
+          "thumb.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "thumb.key.arrowright": {
+                "step": {
+                  "thumb.x": 10
+                }
+              },
+              "thumb.key.arrowleft": {
+                "step": {
+                  "thumb.x": -10
+                }
+              },
+              "thumb.key.end": {
+                "step": {
+                  "thumb.x": 1000
+                }
+              },
+              "thumb.dragstart": "dragging",
+              "after:soon": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "thumb.x": "thumb.drag.x"
+            },
+            "when": {
+              "thumb.dragend": {
+                "to": "idle",
+                "commit": [
+                  "thumb.x"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-after",
+          "path": "/states/idle/when/after:soon"
+        }
+      ]
+    },
+    {
+      "name": "step-unknown-property",
+      "doc": {
+        "nudg": "0.3",
+        "targets": [
+          "thumb"
+        ],
+        "values": {
+          "thumb.x": {
+            "base": 0,
+            "min": 0,
+            "max": 100
+          }
+        },
+        "animate": {
+          "thumb.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "thumb.key.arrowright": {
+                "step": {
+                  "thumb.y": 10
+                }
+              },
+              "thumb.key.arrowleft": {
+                "step": {
+                  "thumb.x": -10
+                }
+              },
+              "thumb.key.end": {
+                "step": {
+                  "thumb.x": 1000
+                }
+              },
+              "thumb.dragstart": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "thumb.x": "thumb.drag.x"
+            },
+            "when": {
+              "thumb.dragend": {
+                "to": "idle",
+                "commit": [
+                  "thumb.x"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "missing-base-value",
+          "path": "/states/idle/when/thumb.key.arrowright/step/thumb.y"
+        }
+      ]
+    },
+    {
+      "name": "step-on-color",
+      "doc": {
+        "nudg": "0.3",
+        "targets": [
+          "thumb",
+          "track"
+        ],
+        "values": {
+          "thumb.x": {
+            "base": 0,
+            "min": 0,
+            "max": 100
+          },
+          "track.color": "#000000"
+        },
+        "animate": {
+          "thumb.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "thumb.key.arrowright": {
+                "step": {
+                  "track.color": 1
+                }
+              },
+              "thumb.key.arrowleft": {
+                "step": {
+                  "thumb.x": -10
+                }
+              },
+              "thumb.key.end": {
+                "step": {
+                  "thumb.x": 1000
+                }
+              },
+              "thumb.dragstart": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "thumb.x": "thumb.drag.x"
+            },
+            "when": {
+              "thumb.dragend": {
+                "to": "idle",
+                "commit": [
+                  "thumb.x"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-step",
+          "path": "/states/idle/when/thumb.key.arrowright/step/track.color"
+        }
+      ]
+    },
+    {
+      "name": "commit-unknown",
+      "doc": {
+        "nudg": "0.3",
+        "targets": [
+          "thumb"
+        ],
+        "values": {
+          "thumb.x": {
+            "base": 0,
+            "min": 0,
+            "max": 100
+          }
+        },
+        "animate": {
+          "thumb.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "thumb.key.arrowright": {
+                "step": {
+                  "thumb.x": 10
+                }
+              },
+              "thumb.key.arrowleft": {
+                "step": {
+                  "thumb.x": -10
+                }
+              },
+              "thumb.key.end": {
+                "step": {
+                  "thumb.x": 1000
+                }
+              },
+              "thumb.dragstart": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "thumb.x": "thumb.drag.x"
+            },
+            "when": {
+              "thumb.dragend": {
+                "to": "idle",
+                "commit": [
+                  "thumb.z"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-property",
+          "path": "/states/dragging/when/thumb.dragend/commit/0"
+        }
+      ]
+    },
+    {
+      "name": "out-of-range",
+      "doc": {
+        "nudg": "0.3",
+        "targets": [
+          "thumb"
+        ],
+        "values": {
+          "thumb.x": {
+            "base": 0,
+            "min": 0,
+            "max": 100
+          }
+        },
+        "animate": {
+          "thumb.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "thumb.key.arrowright": {
+                "step": {
+                  "thumb.x": 10
+                }
+              },
+              "thumb.key.arrowleft": {
+                "step": {
+                  "thumb.x": -10
+                }
+              },
+              "thumb.key.end": {
+                "step": {
+                  "thumb.x": 1000
+                }
+              },
+              "thumb.dragstart": "dragging"
+            },
+            "set": {
+              "thumb.x": 150
+            }
+          },
+          "dragging": {
+            "follow": {
+              "thumb.x": "thumb.drag.x"
+            },
+            "when": {
+              "thumb.dragend": {
+                "to": "idle",
+                "commit": [
+                  "thumb.x"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "out-of-range",
+          "path": "/states/idle/set/thumb.x"
+        }
+      ]
+    },
+    {
+      "name": "invalid-bounds",
+      "doc": {
+        "nudg": "0.3",
+        "targets": [
+          "thumb"
+        ],
+        "values": {
+          "thumb.x": {
+            "base": 50,
+            "min": 100,
+            "max": 0
+          }
+        },
+        "animate": {
+          "thumb.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "thumb.key.arrowright": {
+                "step": {
+                  "thumb.x": 10
+                }
+              },
+              "thumb.key.arrowleft": {
+                "step": {
+                  "thumb.x": -10
+                }
+              },
+              "thumb.key.end": {
+                "step": {
+                  "thumb.x": 1000
+                }
+              },
+              "thumb.dragstart": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "thumb.x": "thumb.drag.x"
+            },
+            "when": {
+              "thumb.dragend": {
+                "to": "idle",
+                "commit": [
+                  "thumb.x"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-bounds",
+          "path": "/values/thumb.x"
+        }
+      ]
+    },
+    {
+      "name": "missing-base",
+      "doc": {
+        "nudg": "0.3",
+        "targets": [
+          "thumb"
+        ],
+        "values": {
+          "thumb.x": {
+            "min": 0,
+            "max": 100
+          }
+        },
+        "animate": {
+          "thumb.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "thumb.key.arrowright": {
+                "step": {
+                  "thumb.x": 10
+                }
+              },
+              "thumb.key.arrowleft": {
+                "step": {
+                  "thumb.x": -10
+                }
+              },
+              "thumb.key.end": {
+                "step": {
+                  "thumb.x": 1000
+                }
+              },
+              "thumb.dragstart": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "thumb.x": "thumb.drag.x"
+            },
+            "when": {
+              "thumb.dragend": {
+                "to": "idle",
+                "commit": [
+                  "thumb.x"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "missing-base",
+          "path": "/values/thumb.x"
+        }
+      ]
+    },
+    {
+      "name": "invalid-key-name",
+      "doc": {
+        "nudg": "0.3",
+        "targets": [
+          "thumb"
+        ],
+        "values": {
+          "thumb.x": {
+            "base": 0,
+            "min": 0,
+            "max": 100
+          }
+        },
+        "animate": {
+          "thumb.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "thumb.key.arrowright": {
+                "step": {
+                  "thumb.x": 10
+                }
+              },
+              "thumb.key.arrowleft": {
+                "step": {
+                  "thumb.x": -10
+                }
+              },
+              "thumb.key.end": {
+                "step": {
+                  "thumb.x": 1000
+                }
+              },
+              "thumb.dragstart": "dragging",
+              "thumb.key.Shift+A": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "thumb.x": "thumb.drag.x"
+            },
+            "when": {
+              "thumb.dragend": {
+                "to": "idle",
+                "commit": [
+                  "thumb.x"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-event",
+          "path": "/states/idle/when/thumb.key.Shift+A"
+        }
+      ]
+    }
+  ]
+}

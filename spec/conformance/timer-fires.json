@@ -1,0 +1,100 @@
+{
+  "conformance": "0.3",
+  "name": "Timer: after:500ms fires at exactly 0.6 s, even when the host only asks for a later time; values move from the due time",
+  "doc": {
+    "nudg": "0.3",
+    "targets": [
+      "toast"
+    ],
+    "values": {
+      "toast.y": 12,
+      "toast.opacity": 0
+    },
+    "animate": {
+      "toast.y": {
+        "spring": {
+          "duration": 0.4,
+          "bounce": 0.2
+        }
+      },
+      "toast.opacity": {
+        "tween": {
+          "duration": 0.2,
+          "ease": "linear"
+        }
+      }
+    },
+    "initial": "hidden",
+    "when": {
+      "host.show": "shown",
+      "host.hide": "hidden"
+    },
+    "states": {
+      "hidden": {},
+      "shown": {
+        "set": {
+          "toast.y": 0,
+          "toast.opacity": 1
+        },
+        "when": {
+          "after:500ms": "hidden",
+          "toast.tap": "hidden"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0.1,
+      "send": "host.show"
+    },
+    {
+      "t": 0.55,
+      "expect": {
+        "state": [
+          "shown"
+        ],
+        "values": {
+          "toast.y": -0.068972624,
+          "toast.opacity": 1.0
+        }
+      }
+    },
+    {
+      "t": 0.65,
+      "expect": {
+        "state": [
+          "hidden"
+        ],
+        "values": {
+          "toast.y": 2.4119519,
+          "toast.opacity": 0.75
+        }
+      }
+    },
+    {
+      "t": 0.8,
+      "expect": {
+        "state": [
+          "hidden"
+        ],
+        "values": {
+          "toast.y": 11.070239719,
+          "toast.opacity": 0.0
+        }
+      }
+    },
+    {
+      "t": 1.2,
+      "expect": {
+        "state": [
+          "hidden"
+        ],
+        "values": {
+          "toast.y": 11.999818769,
+          "toast.opacity": 0.0
+        }
+      }
+    }
+  ]
+}

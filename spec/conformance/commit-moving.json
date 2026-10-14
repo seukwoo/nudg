@@ -1,0 +1,140 @@
+{
+  "conformance": "0.3",
+  "name": "commit: a value released while moving stays exactly where it was, with no velocity carried over",
+  "doc": {
+    "nudg": "0.3",
+    "targets": [
+      "thumb"
+    ],
+    "values": {
+      "thumb.x": {
+        "base": 0,
+        "min": 0,
+        "max": 100
+      }
+    },
+    "animate": {
+      "thumb.x": {
+        "spring": {
+          "duration": 0.3,
+          "bounce": 0
+        }
+      }
+    },
+    "initial": "idle",
+    "states": {
+      "idle": {
+        "when": {
+          "thumb.key.arrowright": {
+            "step": {
+              "thumb.x": 10
+            }
+          },
+          "thumb.key.arrowleft": {
+            "step": {
+              "thumb.x": -10
+            }
+          },
+          "thumb.key.end": {
+            "step": {
+              "thumb.x": 1000
+            }
+          },
+          "thumb.dragstart": "dragging"
+        }
+      },
+      "dragging": {
+        "follow": {
+          "thumb.x": "thumb.drag.x"
+        },
+        "when": {
+          "thumb.dragend": {
+            "to": "idle",
+            "commit": [
+              "thumb.x"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0.1,
+      "send": "thumb.dragstart"
+    },
+    {
+      "t": 0.14,
+      "input": "thumb.drag.x",
+      "value": 6
+    },
+    {
+      "t": 0.18,
+      "input": "thumb.drag.x",
+      "value": 12
+    },
+    {
+      "t": 0.22,
+      "input": "thumb.drag.x",
+      "value": 18
+    },
+    {
+      "t": 0.26,
+      "input": "thumb.drag.x",
+      "value": 24
+    },
+    {
+      "t": 0.3,
+      "input": "thumb.drag.x",
+      "value": 30
+    },
+    {
+      "t": 0.3,
+      "send": "thumb.dragend"
+    },
+    {
+      "t": 0.3,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "thumb.x": 30.0
+        }
+      }
+    },
+    {
+      "t": 0.35,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "thumb.x": 30.0
+        }
+      }
+    },
+    {
+      "t": 0.5,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "thumb.x": 30.0
+        }
+      }
+    },
+    {
+      "t": 1.0,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "thumb.x": 30.0
+        }
+      }
+    }
+  ]
+}

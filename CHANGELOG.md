@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0
+
+Stage 1 continued: what the component guidelines (WAI-ARIA APG, Apple HIG, Material 3) need. A 0.3 runtime still reads 0.1 and 0.2 files.
+
+- **Format v0.3:** key events (`target.key.<name>`, lowercase `KeyboardEvent.key` names); `after:<time>` timers in a state's `when`, deterministic and restarted on re-entry; `step` and `commit` transitions that change a property's base value, with property bounds (`{ "base", "min", "max" }`) that also default a `follow`'s range.
+- **Runtime:** a `reducedMotion` option (short linear tweens, no kicks); the DOM adapter follows `prefers-reduced-motion`, and `simulate`/`plot`/`render` and the MCP tools take `--reduced-motion` / `reducedMotion`. The DOM adapter sends key events for keys the file handles (and prevents their default), reflects timer-driven state changes, and exposes `player.values()`.
+- **React hook:** `files` keys may be written like imports (`./x.nudg.json`); `reducedMotion` option.
+- **Examples:** slider, tooltip, dialog (WAI-ARIA patterns), and the toast now hides itself with a timer. JSON Schema 0.3 (`@nudg/core/schema.json`; 0.1 and 0.2 still ship).
+
 ## 0.2.0
 
 Stage 1: continuous interaction. A 0.2 runtime still reads 0.1 files.

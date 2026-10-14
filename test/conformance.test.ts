@@ -22,6 +22,7 @@ interface Case {
   name: string;
   doc: unknown;
   start?: string[];
+  reducedMotion?: boolean;
   files?: Record<string, unknown>;
   steps?: Step[];
   documents?: { name: string; doc: unknown; files?: Record<string, unknown>; errors: { code: string; path: string }[] }[];
@@ -69,16 +70,17 @@ for (const file of readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
   test(`${file}: ${c.name}`, () => {
     const { program, diagnostics } = compileCase(c.doc, c.files);
     assert.ok(program, `document should compile: ${JSON.stringify(diagnostics, null, 2)}`);
-    const rt = createRuntime(program, { state: c.start });
+    const rt = createRuntime(program, { state: c.start, reducedMotion: c.reducedMotion });
     for (const step of c.steps ?? []) {
       if (step.input !== undefined) assert.ok(rt.input(step.input, step.value!, step.t), `input ${step.input} at ${step.t}s`);
       if (step.send !== undefined) {
         const handled = rt.send(step.send, step.t);
         if (step.handled !== undefined) assert.equal(handled, step.handled, `${step.send} at ${step.t}s handled`);
       }
+      // Asking for time t fires any timers due by then, so advance before reading the state.
+      const values = step.expect ? rt.sample(step.t) : undefined;
       if (step.expect?.state) assert.deepEqual(rt.state(), step.expect.state, `state at ${step.t}s`);
-      if (step.expect?.values) {
-        const values = rt.sample(step.t);
+      if (step.expect?.values && values) {
         for (const [key, expected] of Object.entries(step.expect.values)) assertValue(key, values[key], expected, step.t);
       }
     }

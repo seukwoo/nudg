@@ -70,6 +70,14 @@ const HOOKS = {
   "pull-to-refresh": (player) => ({
     onState: (state) => state.includes("refreshing") && setTimeout(() => player.send("host.done"), 1500),
   }),
+  // WAI-ARIA dialog: focus moves into the dialog when it opens and back to the opener when it closes.
+  dialog: (player, root) => ({
+    onState: (state) => root.querySelector(state.includes("open") ? ".close" : ".opener")?.focus({ preventScroll: true }),
+  }),
+  // WAI-ARIA slider: aria-valuenow follows the value, frame by frame.
+  slider: (player, root) => ({
+    onFrame: (values) => root.querySelector("[role=slider]")?.setAttribute("aria-valuenow", String(Math.round(values["thumb.x"] / 2))),
+  }),
 };
 
 const STAGE_STYLE = `
@@ -97,6 +105,7 @@ function mount(stage, program, content, { hook, onState } = {}) {
         onState?.(state);
         late?.onState?.(state);
       },
+      onFrame: (values) => late?.onFrame?.(values),
     });
     const extra = hook?.(player, root);
     if (extra) late = extra;

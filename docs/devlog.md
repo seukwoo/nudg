@@ -145,3 +145,16 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Problem:** A test expected a 9-unit drag over 0.4 s to spring back, but it landed on.
 - **Cause:** A steady drag still has velocity (22 units/s) at the moment of release; with momentum 0.5 s the projection crosses the midpoint. The runtime was right.
 - **Resolution:** The test holds the pointer still before releasing. Position decides only when the finger has stopped, which is also how the conformance case was written.
+
+## 2026-10-14: Demo
+
+### Example code blocks collapsed to two lines
+- **Problem:** Opening an example's source on the demo page showed an empty box with scrollbars (reported by the user with a screenshot).
+- **Cause:** When the swipe row's CSS was added, a scripted find-and-replace targeted the first `textarea {` in the file, which was the tail of the shared rule `code, pre, textarea { font: ... }`. That turned the rule into `code, pre, .row { height: 56px; overflow: hidden; ... }`, so every code block inherited the row's height.
+- **Resolution:** The rules were separated again. Found by measuring the `pre` and its ancestors over the DevTools protocol (height 56 px against 542 px of content), then grepping the stylesheet for `56px`.
+- **Lesson:** Scripted replacements must anchor on a whole, unique line, not a fragment that can appear inside another selector list. Render the page after any stylesheet edit.
+
+### The playground only knew the toggle
+- **Problem:** Pasting another example into the playground gave nothing to interact with, and files with imports couldn't compile there at all.
+- **Cause:** The playground stage was hard-coded toggle markup, and it compiled text without a way to fetch imports.
+- **Resolution:** "Open in playground" brings an example's markup along; any file whose targets the stage doesn't cover gets one labeled box per target, so every file is playable; `compileText` in the DOM adapter fetches imports relative to a base URL. Copy buttons were added on each card and in the playground.

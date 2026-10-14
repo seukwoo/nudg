@@ -19,6 +19,7 @@
       </div>
       <div class="meta"><h2>Toggle</h2><span class="state"></span></div>
       <p>The knob springs; the color tweens. Tap again mid-flight: the spring keeps its velocity.</p>
+      <div class="actions"><button type="button" data-copy>Copy JSON</button><button type="button" data-open>Open in playground</button></div>
       <details><summary>toggle.nudg.json</summary><pre><code></code></pre></details>
     </section>
 
@@ -28,6 +29,7 @@
       </div>
       <div class="meta"><h2>Toggle with press</h2><span class="state"></span></div>
       <p>Two parallel regions: checked, and a knob that shrinks while pressed. Turning off settles without overshoot.</p>
+      <div class="actions"><button type="button" data-copy>Copy JSON</button><button type="button" data-open>Open in playground</button></div>
       <details><summary>toggle-press.nudg.json</summary><pre><code></code></pre></details>
     </section>
 
@@ -37,6 +39,7 @@
       </div>
       <div class="meta"><h2>Like</h2><span class="state"></span></div>
       <p>A kick adds velocity to the heart's scale without changing its target, so it pops and settles. The motions come from an imported brand library.</p>
+      <div class="actions"><button type="button" data-copy>Copy JSON</button><button type="button" data-open>Open in playground</button></div>
       <details><summary>like.nudg.json</summary><pre><code></code></pre></details>
     </section>
 
@@ -46,6 +49,7 @@
       </div>
       <div class="meta"><h2>Draggable toggle</h2><span class="state"></span></div>
       <p>Drag the knob, or flick it. On release it springs to where the throw was heading, carrying your finger's speed. The color is mapped from the knob's position.</p>
+      <div class="actions"><button type="button" data-copy>Copy JSON</button><button type="button" data-open>Open in playground</button></div>
       <details><summary>toggle-drag.nudg.json</summary><pre><code></code></pre></details>
     </section>
 
@@ -58,6 +62,7 @@
       </div>
       <div class="meta"><h2>Swipe row</h2><span class="state"></span></div>
       <p>Swipe left to reveal Delete. A short or slow swipe snaps back; a long or quick one stays open. The action fades in through a map.</p>
+      <div class="actions"><button type="button" data-copy>Copy JSON</button><button type="button" data-open>Open in playground</button></div>
       <details><summary>swipe-row.nudg.json</summary><pre><code></code></pre></details>
     </section>
 
@@ -66,7 +71,11 @@
         <button class="toggle" data-nudg="track" aria-label="Toggle"><span class="knob" data-nudg="knob"></span></button>
       </div>
       <div class="meta"><h2>Playground</h2><span class="state"></span></div>
-      <p>Edit the file and tap the toggle. Try <code>"bounce": 0.6</code>, or misspell a key to see the validator's hint.</p>
+      <p>Edit the file and interact with the stage. Try <code>"bounce": 0.6</code>, or misspell a key to see the validator's hint. Paste any nudg file: targets without markup get a labeled box each.</p>
+      <div class="playground-tools">
+        <label>Example <select id="playground-example"></select></label>
+        <button type="button" id="playground-copy">Copy JSON</button>
+      </div>
       <textarea id="playground-source" spellcheck="false" aria-label="nudg source"></textarea>
       <ul class="diagnostics" id="playground-diagnostics"></ul>
     </section>

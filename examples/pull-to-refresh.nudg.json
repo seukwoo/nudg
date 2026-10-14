@@ -1,0 +1,23 @@
+{
+  "nudg": "0.2",
+  "note": "Pull a list down to refresh. The list follows the finger with growing resistance, the spinner fades and grows in with the pull, and a release past the halfway point holds the list open until the app reports it's done.",
+  "targets": ["list", "spinner"],
+  "values": {
+    "list.y": 0,
+    "spinner.opacity": { "map": "list.y", "from": [0, 56], "to": [0, 1] },
+    "spinner.scale": { "map": "list.y", "from": [0, 56], "to": [0.5, 1] }
+  },
+  "animate": {
+    "list.y": { "spring": { "duration": 0.4, "bounce": 0.15 } }
+  },
+  "initial": "idle",
+  "when": { "list.dragstart": "pulling", "host.done": "idle" },
+  "states": {
+    "idle": {},
+    "pulling": {
+      "follow": { "list.y": { "input": "list.drag.y", "range": [0, 80], "overdrag": 0.35 } },
+      "when": { "list.dragend": { "nearest": ["idle", "refreshing"], "by": "list.y", "momentum": 0.2 } }
+    },
+    "refreshing": { "set": { "list.y": 56 } }
+  }
+}

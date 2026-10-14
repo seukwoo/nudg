@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Button press</title>
+  <style>
+    .pressable {
+      padding: 12px 24px;
+      border: 0;
+      border-radius: 10px;
+      background: #2563eb;
+      color: #fff;
+      font: 600 15px ui-sans-serif, system-ui, sans-serif;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body>
+  <button class="pressable" data-nudg="button">Press me</button>
+  <!-- Host markup for button-press.nudg.json. Serve the repo and build first to try it live. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./button-press.nudg.json");
+    play(program, document.body);
+  </script>
+</body>
+</html>

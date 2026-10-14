@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import { hexToOklab, oklabToHex } from "../src/core/color.ts";
@@ -17,10 +17,25 @@ test("colors survive a round trip through OKLab", () => {
 });
 
 test("examples compile with no diagnostics", () => {
-  for (const name of readdirSync(`${root}examples`).filter((f) => f.endsWith(".json"))) {
+  for (const name of readdirSync(`${root}examples`).filter((f) => f.endsWith(".nudg.json"))) {
     const { program, diagnostics } = compilePath(`${root}examples/${name}`);
     assert.deepEqual(diagnostics, [], name);
     assert.ok(program, name);
+  }
+});
+
+test("the example catalog matches the files", () => {
+  const catalog = JSON.parse(readFileSync(`${root}examples/index.json`, "utf8"));
+  const categories = new Set(catalog.categories.map((c: { id: string }) => c.id));
+  const files = readdirSync(`${root}examples`).filter((f) => f.endsWith(".nudg.json")).map((f) => f.replace(/\.nudg\.json$/, ""));
+  assert.deepEqual([...new Set(catalog.examples.map((e: { id: string }) => e.id))].sort(), files.sort(), "every example file is cataloged once");
+  for (const e of catalog.examples) {
+    assert.ok(categories.has(e.category), `${e.id}: unknown category ${e.category}`);
+    assert.ok(existsSync(`${root}examples/${e.html}`), `${e.id}: missing ${e.html}`);
+    assert.ok(e.tags.length && e.summary && e.prompts.length, `${e.id}: needs tags, a summary and prompts`);
+    const html = readFileSync(`${root}examples/${e.html}`, "utf8");
+    const { program } = compilePath(`${root}examples/${e.id}.nudg.json`);
+    for (const t of program!.targets) assert.ok(html.includes(`data-nudg="${t}"`), `${e.id}: ${e.html} has no element for ${t}`);
   }
 });
 

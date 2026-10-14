@@ -1,0 +1,139 @@
+{
+  "note": "The example catalog. The demo site, docs and tests read it; add an entry when you add an example.",
+  "categories": [
+    { "id": "buttons", "title": "Buttons & cards" },
+    { "id": "toggles", "title": "Toggles & checks" },
+    { "id": "lists", "title": "Lists & rows" },
+    { "id": "navigation", "title": "Navigation" },
+    { "id": "overlays", "title": "Sheets & overlays" },
+    { "id": "feedback", "title": "Feedback" }
+  ],
+  "examples": [
+    {
+      "id": "toggle",
+      "title": "Toggle",
+      "category": "toggles",
+      "tags": ["spring", "tween"],
+      "html": "toggle.html",
+      "summary": "The knob springs; the color tweens. Tap again mid-flight: the spring keeps its velocity.",
+      "prompts": ["Make the toggle a little bouncier, then show me a before/after plot.", "Make the color change faster than the knob."]
+    },
+    {
+      "id": "toggle-press",
+      "title": "Toggle with press",
+      "category": "toggles",
+      "tags": ["spring", "parallel", "transition-animate"],
+      "html": "toggle.html",
+      "summary": "Two parallel regions: checked, and a knob that shrinks while pressed. Turning off settles without overshoot.",
+      "prompts": ["Make the knob shrink more while pressed.", "Make turning off bounce as much as turning on."]
+    },
+    {
+      "id": "toggle-drag",
+      "title": "Draggable toggle",
+      "category": "toggles",
+      "tags": ["drag", "follow", "nearest", "map", "host-event"],
+      "html": "toggle.html",
+      "summary": "Drag the knob, or flick it. On release it springs to where the throw was heading, carrying your finger's speed. The color is mapped from the knob's position.",
+      "prompts": ["Make it harder to pull the knob past the ends.", "Make a quick flick cross over more easily."]
+    },
+    {
+      "id": "button-press",
+      "title": "Button press",
+      "category": "buttons",
+      "tags": ["spring", "transition-animate"],
+      "html": "button-press.html",
+      "summary": "The button sinks quickly while pressed and springs back with a little bounce on release.",
+      "prompts": ["Make the release bouncier.", "Make the press sink deeper but slower."]
+    },
+    {
+      "id": "hover-card",
+      "title": "Hover card",
+      "category": "buttons",
+      "tags": ["hover", "spring", "parallel"],
+      "html": "hover-card.html",
+      "summary": "The card lifts on hover and settles under a press. Hover and press are parallel regions on different properties.",
+      "prompts": ["Lift the card higher on hover, with a softer spring.", "Add a slight tilt on hover."]
+    },
+    {
+      "id": "like",
+      "title": "Like",
+      "category": "buttons",
+      "tags": ["kick", "spring", "import"],
+      "html": "like.html",
+      "summary": "A kick adds velocity to the heart's scale without changing its target, so it pops and settles. The motions come from an imported brand library.",
+      "prompts": ["Make the pop twice as strong.", "Make every motion in the brand library snappier."]
+    },
+    {
+      "id": "swipe-row",
+      "title": "Swipe row",
+      "category": "lists",
+      "tags": ["drag", "follow", "nearest", "map"],
+      "html": "swipe-row.html",
+      "summary": "Swipe left to reveal Delete. A short or slow swipe snaps back; a long or quick one stays open. The action fades in through a map.",
+      "prompts": ["Make the row easier to open with a short swipe.", "Make the delete action fade in later."]
+    },
+    {
+      "id": "accordion",
+      "title": "Accordion",
+      "category": "lists",
+      "tags": ["height", "tween", "rotation"],
+      "html": "accordion.html",
+      "summary": "The panel's height springs open without overshoot, its content fades in, and the chevron turns.",
+      "prompts": ["Let the panel overshoot a little when it opens.", "Make the chevron turn a bit before the panel opens."]
+    },
+    {
+      "id": "carousel",
+      "title": "Carousel",
+      "category": "lists",
+      "tags": ["drag", "follow", "nearest", "map"],
+      "html": "carousel.html",
+      "summary": "Drag the strip and release: it snaps to the nearest slide, carrying the finger's speed. The dots cross-fade through a map.",
+      "prompts": ["Make the slides snap more firmly, with no bounce.", "Make it easier to flick to the next slide."]
+    },
+    {
+      "id": "pull-to-refresh",
+      "title": "Pull to refresh",
+      "category": "lists",
+      "tags": ["drag", "follow", "nearest", "map", "host-event"],
+      "html": "pull-to-refresh.html",
+      "summary": "The list follows the finger with growing resistance, the spinner fades and grows with the pull, and a release past halfway holds the list open until the app reports it's done.",
+      "prompts": ["Require a longer pull before it refreshes.", "Make the list spring back with more bounce."]
+    },
+    {
+      "id": "segmented",
+      "title": "Segmented control",
+      "category": "navigation",
+      "tags": ["any-state-when", "drag", "nearest"],
+      "html": "segmented.html",
+      "summary": "Tap a segment to move the indicator, or drag it and let it snap. Transitions are listed once on the machine, not once per state.",
+      "prompts": ["Make the indicator move with a bit of overshoot.", "Add a fourth segment."]
+    },
+    {
+      "id": "bottom-sheet",
+      "title": "Bottom sheet",
+      "category": "overlays",
+      "tags": ["drag", "follow", "nearest", "map", "any-state-when", "host-event"],
+      "html": "bottom-sheet.html",
+      "summary": "Three resting points: closed, half and full. Drag between them; on release it settles at the nearest, judged by where the throw was heading. The scrim is mapped from the sheet's position.",
+      "prompts": ["Make the sheet snap to full more easily when flicked up.", "Darken the scrim more when the sheet is fully open."]
+    },
+    {
+      "id": "toast",
+      "title": "Toast",
+      "category": "feedback",
+      "tags": ["host-event", "spring", "tween"],
+      "html": "toast.html",
+      "summary": "The app shows and hides it. It rises with a soft spring while fading in; tapping dismisses it early.",
+      "prompts": ["Make the toast slide in from the right instead of from below.", "Make it fade out slower than it fades in."]
+    },
+    {
+      "id": "shake",
+      "title": "Shake on error",
+      "category": "feedback",
+      "tags": ["kick", "host-event", "tween"],
+      "html": "shake.html",
+      "summary": "The field shakes and turns red when the app rejects it. The shake is a kick with a bouncy spring, so it's real motion, not keyframes.",
+      "prompts": ["Make the shake shorter and sharper.", "Shake vertically instead of horizontally."]
+    }
+  ]
+}

@@ -189,13 +189,15 @@ export function play(program: Program, root: ParentNode | null = document, optio
 
   const onRelease = (e: Event, cancelled: boolean) => {
     const p = e as PointerEvent;
+    // One pointer can press nested targets at once; if it dragged any of them, none taps.
+    const dragged = [...pressed.values()].some((press) => press.pointer === p.pointerId && press.dragging);
     for (const [name, press] of pressed) {
       if (press.pointer !== p.pointerId) continue;
       pressed.delete(name);
       const inside = [...(elements.get(name) ?? [])].some((el) => el.contains(e.target as Node));
       send(`${name}.${!cancelled && inside ? "up" : "cancel"}`);
-      if (press.dragging) {
-        send(`${name}.dragend`);
+      if (press.dragging) send(`${name}.dragend`);
+      if (dragged) {
         // The browser may still fire a click for this press; it isn't a tap.
         suppressTap.add(name);
         setTimeout(() => suppressTap.delete(name), 0);

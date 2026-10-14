@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Segmented control</title>
+  <style>
+    .segmented {
+      position: relative;
+      display: flex;
+      padding: 3px;
+      border-radius: 10px;
+      background: #e4e4df;
+      font: 13px ui-sans-serif, system-ui, sans-serif;
+      user-select: none;
+      cursor: grab;
+    }
+    .segmented .indicator {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 72px;
+      height: 28px;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
+    }
+    /* Segments sit above the indicator so they get the taps; dragging is on the control. */
+    .segmented button {
+      position: relative;
+      width: 72px;
+      height: 28px;
+      border: 0;
+      background: none;
+      font: inherit;
+      color: #1c1c1a;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body>
+  <div class="segmented" data-nudg="control" role="tablist">
+    <div class="indicator" data-nudg="indicator"></div>
+    <button type="button" role="tab" data-nudg="seg1">Day</button>
+    <button type="button" role="tab" data-nudg="seg2">Week</button>
+    <button type="button" role="tab" data-nudg="seg3">Month</button>
+  </div>
+  <!-- Host markup for segmented.nudg.json. Serve the repo and build first to try it live. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./segmented.nudg.json");
+    play(program, document.body);
+  </script>
+</body>
+</html>

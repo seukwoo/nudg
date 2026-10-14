@@ -1,146 +1,352 @@
-// Demo wiring. Run `npm run demo` and open http://localhost:8787/demo/
+// The examples site. Run `npm run demo` and open http://localhost:8787/demo/
 //
-// Deterministic frames: ?at=0.25&send=toggle:track.tap@0.1 renders every card with a
-// manual clock at 0.25 s, after sending the listed events (card:event@seconds).
+// Everything comes from ../examples/index.json: each example's nudg file is compiled
+// and played on its host page's markup, which lives in a shadow root so the pages'
+// styles can't collide with each other or with this site.
 
 import { compileText, compileUrl, play } from "../dist/dom/index.js";
 
-const params = new URLSearchParams(location.search);
-const frameAt = params.has("at") ? Number(params.get("at")) : undefined;
-const sends = params.getAll("send");
+const catalog = await fetch("../examples/index.json").then((r) => r.json());
+const examples = catalog.examples;
+const byId = new Map(examples.map((e) => [e.id, e]));
 
-function start(name, program, card) {
-  const stage = card.querySelector(".stage");
-  const label = card.querySelector(".state");
-  const player = play(program, stage, { clock: frameAt === undefined ? "realtime" : "manual" });
-  const showState = () => (label.textContent = player.runtime.state().join("  "));
+// --- loading ---------------------------------------------------------------------
 
-  if (frameAt !== undefined) {
-    const events = sends
-      .filter((s) => s.startsWith(`${name}:`))
-      .map((s) => {
-        const [event, t] = s.slice(name.length + 1).split("@");
-        return { event, t: Number(t) };
-      })
-      .sort((a, b) => a.t - b.t);
-    for (const { event, t } of events) {
-      player.render(t);
-      player.send(event);
-    }
-    player.render(frameAt);
+const programs = new Map();
+const sources = new Map();
+const pages = new Map();
+
+/** Compiles an example's file (once) and fetches its source text. */
+async function load(ex) {
+  if (!programs.has(ex.id)) {
+    const url = `../examples/${ex.id}.nudg.json`;
+    const [result, text] = await Promise.all([compileUrl(url), fetch(url).then((r) => r.text())]);
+    programs.set(ex.id, result);
+    sources.set(ex.id, text);
   }
-
-  showState();
-  // Releases can land outside the stage (a cancel), so listen on the window.
-  const onInput = () => requestAnimationFrame(showState);
-  const types = ["pointerdown", "pointerup", "pointercancel", "click"];
-  for (const type of types) window.addEventListener(type, onInput);
-  return {
-    player,
-    stop() {
-      player.destroy();
-      for (const type of types) window.removeEventListener(type, onInput);
-    },
-  };
+  return { ...programs.get(ex.id), source: sources.get(ex.id) };
 }
 
-const EXAMPLES = ["toggle", "toggle-press", "like", "toggle-drag", "swipe-row"];
-const sources = new Map();
+/** A host page's style and markup, without its scripts. */
+async function page(file) {
+  if (!pages.has(file)) {
+    const html = await fetch(`../examples/${file}`).then((r) => r.text());
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const style = [...doc.querySelectorAll("style")].map((s) => s.textContent).join("\n");
+    doc.querySelectorAll("script").forEach((s) => s.remove());
+    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_COMMENT);
+    const comments = [];
+    while (walker.nextNode()) comments.push(walker.currentNode);
+    comments.forEach((c) => c.remove());
+    pages.set(file, { style, markup: doc.body.innerHTML.trim() });
+  }
+  return pages.get(file);
+}
+
+// --- playing ---------------------------------------------------------------------
+
+/**
+ * App-side behavior some examples need, since the host page's own script doesn't run
+ * here: the events an app would send, wired to the example's controls.
+ */
+const HOOKS = {
+  shake(player, root) {
+    const form = root.querySelector("form");
+    const input = root.querySelector("input");
+    form?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      player.send(input.value.includes("@") ? "host.valid" : "host.invalid");
+    });
+    input?.addEventListener("input", () => player.send("host.valid"));
+  },
+  toast(player, root) {
+    let timer;
+    root.querySelector(".toast-show")?.addEventListener("click", () => {
+      player.send("host.show");
+      clearTimeout(timer);
+      timer = setTimeout(() => player.send("host.hide"), 2500);
+    });
+  },
+  "pull-to-refresh": (player) => ({
+    onState: (state) => state.includes("refreshing") && setTimeout(() => player.send("host.done"), 1500),
+  }),
+};
+
+const STAGE_STYLE = `
+  :host { display: grid; place-items: center; }
+  .generic { display: flex; gap: 16px; align-items: center; justify-content: center; flex-wrap: wrap; padding: 16px; }
+  .target { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 12px; background: #cbd5e1; color: #1e293b;
+    font: 11px ui-monospace, "SF Mono", Menlo, monospace; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+`;
+
+/**
+ * Plays a program on a stage. `content` is { style, markup }; when the markup lacks
+ * some target, every target gets a labeled box instead.
+ */
+function mount(stage, program, content, { hook, onState } = {}) {
+  const root = stage.shadowRoot ?? stage.attachShadow({ mode: "open" });
+  const names = new Set([...new DOMParser().parseFromString(`<div>${content.markup}</div>`, "text/html").querySelectorAll("[data-nudg]")].map((el) => el.dataset.nudg));
+  const covered = program.targets.every((t) => names.has(t));
+  root.innerHTML = `<style>${STAGE_STYLE}${covered ? content.style : ""}</style>${covered ? content.markup : `<div class="generic">${program.targets.map((t) => `<div class="target" data-nudg="${t}">${t}</div>`).join("")}</div>`}`;
+
+  let late;
+  const player = play(program, root, {
+    onState: (state) => {
+      onState?.(state);
+      late?.onState?.(state);
+    },
+  });
+  const extra = hook?.(player, root);
+  if (extra) late = extra;
+  onState?.(player.runtime.state());
+  return player;
+}
+
+const live = new Map();
+function unmountAll() {
+  for (const player of live.values()) player.destroy();
+  live.clear();
+}
+
+// --- helpers ---------------------------------------------------------------------
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") node.className = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else if (v !== undefined && v !== null && v !== false) node.setAttribute(k, v === true ? "" : v);
+  }
+  node.append(...children);
+  return node;
+}
 
 async function copyText(button, text) {
+  const label = button.textContent;
   try {
     await navigator.clipboard.writeText(text);
-    const label = button.textContent;
     button.textContent = "Copied";
-    setTimeout(() => (button.textContent = label), 1500);
   } catch {
     button.textContent = "Copy failed";
   }
+  setTimeout(() => (button.textContent = label), 1500);
 }
 
-for (const card of document.querySelectorAll("[data-example]")) {
-  const name = card.dataset.example;
-  const url = `../examples/${name}.nudg.json`;
-  const [{ program, diagnostics }, source] = await Promise.all([compileUrl(url), fetch(url).then((r) => r.text())]);
-  sources.set(name, source);
-  card.querySelector("pre code").textContent = source;
-  card.querySelector("[data-copy]").addEventListener("click", (e) => copyText(e.currentTarget, source));
-  card.querySelector("[data-open]").addEventListener("click", () => openInPlayground(name));
-  if (program) start(name, program, card);
-  else card.querySelector(".state").textContent = `${diagnostics.length} problems`;
+function tagLink(tag) {
+  return el("a", { class: "tag", href: `#tag=${encodeURIComponent(tag)}` }, tag);
 }
 
-// Playground: recompile on every edit and replay. Any file works: targets that have no
-// markup in the stage get a labeled box each.
-const card = document.querySelector(".playground");
-const stage = document.getElementById("playground-stage");
-const textarea = document.getElementById("playground-source");
-const list = document.getElementById("playground-diagnostics");
-const picker = document.getElementById("playground-example");
-for (const name of EXAMPLES) picker.append(new Option(`${name}.nudg.json`, name));
-picker.addEventListener("change", () => openInPlayground(picker.value));
-document.getElementById("playground-copy").addEventListener("click", (e) => copyText(e.currentTarget, textarea.value));
+function reactSnippet(ex, program) {
+  const name = ex.title.replace(/[^A-Za-z0-9]+/g, "") || "Component";
+  const refs = program.targets.map((t) => `      <div ref={bind("${t}")} />`).join("\n");
+  const host = program.targets.length ? "" : "";
+  return `import { useNudg } from "@nudg/core/react";
+import doc from "./${ex.id}.nudg.json";
 
-let current;
-let pending = 0;
-/** The markup the stage currently shows, so a file whose targets it covers keeps it. */
-let stageMarkup = stage.innerHTML;
-
-function openInPlayground(name) {
-  const example = document.querySelector(`[data-example="${name}"] .stage`);
-  stageMarkup = example ? example.innerHTML : "";
-  textarea.value = sources.get(name) ?? "";
-  picker.value = name;
-  update();
-  card.scrollIntoView({ behavior: "smooth", block: "start" });
+export function ${name}() {
+  const { bind, state, send } = useNudg(doc);
+  // Attach each target to one of your own elements; nudg writes their styles.
+  return (
+    <div data-state={state.join(" ")}>
+${refs}
+    </div>
+  );
+}${host}
+`;
 }
 
-function setStage(program) {
-  const names = new Set([...new DOMParser().parseFromString(`<div>${stageMarkup}</div>`, "text/html").querySelectorAll("[data-nudg]")].map((el) => el.dataset.nudg));
-  if (program.targets.every((t) => names.has(t))) {
-    stage.innerHTML = stageMarkup;
-    return;
-  }
-  const generic = document.createElement("div");
-  generic.className = "generic";
-  for (const t of program.targets) {
-    const box = document.createElement("div");
-    box.className = "target";
-    box.dataset.nudg = t;
-    box.textContent = t;
-    generic.append(box);
-  }
-  stage.replaceChildren(generic);
+// --- views -----------------------------------------------------------------------
+
+const views = {
+  browse: document.getElementById("view-browse"),
+  detail: document.getElementById("view-detail"),
+  playground: document.getElementById("view-playground"),
+};
+
+function show(name) {
+  for (const [key, section] of Object.entries(views)) section.hidden = key !== name;
+  document.getElementById("nav-playground").setAttribute("aria-current", name === "playground" ? "true" : "false");
+  window.scrollTo(0, 0);
 }
 
-async function update() {
-  const text = textarea.value;
+// Browse: category nav, tag chips, search, grid.
+const grid = document.getElementById("grid");
+const search = document.getElementById("search");
+const nav = document.getElementById("categories");
+
+function renderNav(current) {
+  const count = (id) => examples.filter((e) => !id || e.category === id).length;
+  nav.replaceChildren(
+    el("a", { href: "#", "aria-current": !current ? "true" : "false" }, "All examples", el("span", {}, String(count()))),
+    ...catalog.categories.map((c) =>
+      el("a", { href: `#category=${c.id}`, "aria-current": current === c.id ? "true" : "false" }, c.title, el("span", {}, String(count(c.id)))),
+    ),
+  );
+}
+
+function renderTags(current) {
+  const counts = new Map();
+  for (const e of examples) for (const t of e.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+  const tags = document.getElementById("tags");
+  tags.replaceChildren(
+    ...[...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([t, n]) =>
+      el("a", { class: "tag", href: current === t ? "#" : `#tag=${encodeURIComponent(t)}`, "aria-pressed": current === t ? "true" : "false" }, `${t} ${n}`),
+    ),
+  );
+}
+
+async function renderBrowse({ category, tag, q }) {
+  show("browse");
+  unmountAll();
+  renderNav(category);
+  renderTags(tag);
+  const title = category ? catalog.categories.find((c) => c.id === category)?.title : tag ? `Tagged ${tag}` : "All examples";
+  document.getElementById("browse-title").textContent = title ?? "All examples";
+  const needle = (q ?? "").trim().toLowerCase();
+  const shown = examples.filter(
+    (e) =>
+      (!category || e.category === category) &&
+      (!tag || e.tags.includes(tag)) &&
+      (!needle || [e.id, e.title, e.summary, ...e.tags].join(" ").toLowerCase().includes(needle)),
+  );
+  document.getElementById("empty").hidden = shown.length > 0;
+  grid.replaceChildren(
+    ...shown.map((ex) => {
+      const state = el("span", { class: "state" });
+      const stage = el("div", { class: "stage" });
+      const card = el(
+        "article",
+        { class: "card" },
+        stage,
+        el("div", { class: "meta" }, el("h3", {}, el("a", { href: `#example/${ex.id}` }, ex.title)), state),
+        el("p", {}, ex.summary),
+      );
+      Promise.all([load(ex), page(ex.html)]).then(([{ program, diagnostics }, content]) => {
+        if (!program) {
+          state.textContent = `${diagnostics.length} problems`;
+          return;
+        }
+        if (grid.contains(card)) live.set(ex.id, mount(stage, program, content, { hook: HOOKS[ex.id], onState: (s) => (state.textContent = s.join("  ")) }));
+      });
+      return card;
+    }),
+  );
+}
+
+// Detail: a large stage, the catalog entry, prompts, and the source under tabs.
+let detailTab = "nudg";
+async function renderDetail(id) {
+  const ex = byId.get(id);
+  if (!ex) return renderBrowse({});
+  show("detail");
+  unmountAll();
+  renderNav(ex.category);
+  document.title = `${ex.title} · nudg examples`;
+  document.getElementById("detail-title").textContent = ex.title;
+  document.getElementById("detail-summary").textContent = ex.summary;
+  document.getElementById("detail-tags").replaceChildren(...ex.tags.map(tagLink));
+  document.getElementById("detail-hint").textContent = ex.tags.includes("host-event") ? "Some transitions are sent by the app; this page wires its controls to them." : "";
+  const prompts = document.getElementById("detail-prompts");
+  prompts.replaceChildren(
+    ...ex.prompts.map((p) => {
+      const button = el("button", { type: "button", onclick: (e) => copyText(e.currentTarget, p) }, "Copy");
+      return el("li", {}, el("span", {}, p), button);
+    }),
+  );
+
+  const [{ program, diagnostics, source }, content] = await Promise.all([load(ex), page(ex.html)]);
+  if (location.hash !== `#example/${id}`) return;
+  const stateLabel = document.getElementById("detail-state");
+  if (program) live.set(ex.id, mount(document.getElementById("detail-stage"), program, content, { hook: HOOKS[ex.id], onState: (s) => (stateLabel.textContent = s.join("  ")) }));
+  else stateLabel.textContent = `${diagnostics.length} problems`;
+
+  const code = document.getElementById("detail-code");
+  const tabs = { nudg: source, html: `<style>\n${content.style.trim()}\n</style>\n\n${content.markup}`, react: program ? reactSnippet(ex, program) : "" };
+  const tablist = document.getElementById("detail-tabs");
+  const select = (name) => {
+    detailTab = name;
+    for (const b of tablist.querySelectorAll("[role=tab]")) b.setAttribute("aria-selected", b.dataset.tab === name ? "true" : "false");
+    code.textContent = tabs[name];
+  };
+  tablist.onclick = (e) => e.target.dataset?.tab && select(e.target.dataset.tab);
+  select(detailTab);
+  document.getElementById("detail-copy").onclick = (e) => copyText(e.currentTarget, source);
+  document.getElementById("detail-open").onclick = () => {
+    playgroundSeed = ex.id;
+    location.hash = "#playground";
+  };
+}
+
+// Playground: any file, recompiled on every edit.
+const pgStage = document.getElementById("playground-stage");
+const pgSource = document.getElementById("playground-source");
+const pgList = document.getElementById("playground-diagnostics");
+const pgPicker = document.getElementById("playground-example");
+const pgState = document.getElementById("playground-state");
+for (const ex of examples) pgPicker.append(new Option(`${ex.id}.nudg.json`, ex.id));
+pgPicker.addEventListener("change", () => seedPlayground(pgPicker.value));
+document.getElementById("playground-copy").addEventListener("click", (e) => copyText(e.currentTarget, pgSource.value));
+let playgroundSeed = "toggle";
+let playgroundContent = { style: "", markup: "" };
+let playgroundLoaded = null;
+let pgPending = 0;
+
+async function seedPlayground(id) {
+  const ex = byId.get(id);
+  if (!ex) return;
+  const [{ source }, content] = await Promise.all([load(ex), page(ex.html)]);
+  playgroundContent = content;
+  playgroundLoaded = id;
+  pgSource.value = source;
+  pgPicker.value = id;
+  updatePlayground();
+}
+
+async function renderPlayground() {
+  show("playground");
+  unmountAll();
+  renderNav(undefined);
+  document.title = "Playground · nudg examples";
+  if (playgroundLoaded !== playgroundSeed || !pgSource.value) await seedPlayground(playgroundSeed);
+  else updatePlayground();
+}
+
+async function updatePlayground() {
+  const text = pgSource.value;
   const { program, diagnostics } = await compileText(text, "../examples/playground.nudg.json");
-  if (text !== textarea.value) return; // superseded by a newer edit
-  list.replaceChildren(
+  if (text !== pgSource.value || views.playground.hidden) return;
+  pgList.replaceChildren(
     ...(diagnostics.length
-      ? diagnostics.map((d) => {
-          const li = document.createElement("li");
-          li.className = d.severity;
-          li.textContent = `${d.severity} ${d.code} at ${d.path || "/"}: ${d.message}`;
-          if (d.hint) {
-            const hint = document.createElement("span");
-            hint.className = "hint";
-            hint.textContent = `hint: ${d.hint}`;
-            li.append(hint);
-          }
-          return li;
-        })
-      : [Object.assign(document.createElement("li"), { className: "ok", textContent: "No problems. Interact with the stage." })]),
+      ? diagnostics.map((d) =>
+          el("li", { class: d.severity }, `${d.severity} ${d.code} at ${d.path || "/"}: ${d.message}`, ...(d.hint ? [el("span", { class: "hint" }, `hint: ${d.hint}`)] : [])),
+        )
+      : [el("li", { class: "ok" }, "No problems. Interact with the stage.")]),
   );
   if (!program) return;
-  current?.stop();
-  setStage(program);
-  current = start("playground", program, card);
+  live.get("playground")?.destroy();
+  live.set("playground", mount(pgStage, program, playgroundContent, { hook: HOOKS[playgroundLoaded], onState: (s) => (pgState.textContent = s.join("  ")) }));
 }
 
-textarea.addEventListener("input", () => {
-  clearTimeout(pending);
-  pending = setTimeout(update, 150);
+pgSource.addEventListener("input", () => {
+  clearTimeout(pgPending);
+  pgPending = setTimeout(updatePlayground, 150);
 });
-openInPlayground("toggle");
+
+// --- routing ---------------------------------------------------------------------
+
+function route() {
+  const hash = location.hash.replace(/^#/, "");
+  if (hash === "playground") return renderPlayground();
+  if (hash.startsWith("example/")) return renderDetail(decodeURIComponent(hash.slice("example/".length)));
+  const params = new URLSearchParams(hash);
+  document.title = "nudg examples";
+  const q = params.get("q") ?? search.value;
+  return renderBrowse({ category: params.get("category") ?? undefined, tag: params.get("tag") ?? undefined, q });
+}
+
+search.addEventListener("input", () => {
+  if (views.browse.hidden) location.hash = "#";
+  else route();
+});
+window.addEventListener("hashchange", route);
+route();

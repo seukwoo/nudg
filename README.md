@@ -328,6 +328,8 @@ Every platform library also defines the same **common names**, so a file written
 "animate": { "knob.x": "standard", "track.color": "fade" }
 ```
 
+The libraries ship in the npm package (`node_modules/@nudg/core/examples/motion/`). A nudg file's `import` is a path relative to the file, so copy the library you want next to your files, or point the import at the installed copy.
+
 Use the common names by default. Use a native name (`snappy`, `spatial-fast`) when the point is to match a platform exactly, for example a web view that must feel like the iOS app beside it. See [`examples/ios-toggle.nudg.json`](examples/ios-toggle.nudg.json) and [`examples/material-switch.nudg.json`](examples/material-switch.nudg.json): the same machine, a different import.
 
 Host markup follows the [WAI-ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/patterns) patterns (`role="switch"`, `aria-checked`), so the examples are the web's canonical components with platform motion.

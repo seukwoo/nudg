@@ -43,6 +43,7 @@
     },
     "./schema.json": "./spec/nudg-0.2.schema.json",
     "./guide.md": "./spec/guide.md",
+    "./motion/*": "./examples/motion/*",
     "./package.json": "./package.json"
   },
   "types": "./dist/index.d.ts",
@@ -56,7 +57,10 @@
     "dist",
     "spec/nudg-0.1.schema.json",
     "spec/nudg-0.2.schema.json",
-    "spec/guide.md"
+    "spec/guide.md",
+    "examples/motion/apple.nudg.json",
+    "examples/motion/material-expressive.nudg.json",
+    "examples/motion/material-standard.nudg.json"
   ],
   "scripts": {
     "test": "node --test",

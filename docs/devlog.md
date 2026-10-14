@@ -163,3 +163,9 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Problem:** Pasting another example into the playground gave nothing to interact with, and files with imports couldn't compile there at all.
 - **Cause:** The playground stage was hard-coded toggle markup, and it compiled text without a way to fetch imports.
 - **Resolution:** "Open in playground" brings an example's markup along; any file whose targets the stage doesn't cover gets one labeled box per target, so every file is playable; `compileText` in the DOM adapter fetches imports relative to a base URL. Copy buttons were added on each card and in the playground.
+
+### A stacked pull request closed itself
+- **Problem:** The examples-site PR was stacked on the examples PR. Merging the first (rebase merge, branch deleted) left the second "dirty", and GitHub closed it when its base branch disappeared; a closed PR can't be retargeted.
+- **Cause:** A rebase merge rewrites the commits, so the stacked branch still carried the old ones and conflicted with `main`.
+- **Resolution:** Rebased the branch onto `main` (git skipped the already-applied commit), force-pushed, and opened a fresh PR.
+- **Lesson:** With rebase merges and branch deletion, don't stack PRs; merge the base first, then branch from `main`. If stacking is unavoidable, rebase and retarget the dependent PR to `main` before merging its base.

@@ -89,22 +89,37 @@ function mount(stage, program, content, { hook, onState } = {}) {
   const covered = program.targets.every((t) => names.has(t));
   root.innerHTML = `<style>${STAGE_STYLE}${covered ? content.style : ""}</style>${covered ? content.markup : `<div class="generic">${program.targets.map((t) => `<div class="target" data-nudg="${t}">${t}</div>`).join("")}</div>`}`;
 
-  let late;
-  const player = play(program, root, {
-    onState: (state) => {
-      onState?.(state);
-      late?.onState?.(state);
+  const start = () => {
+    let late;
+    const player = play(program, root, {
+      onState: (state) => {
+        onState?.(state);
+        late?.onState?.(state);
+      },
+    });
+    const extra = hook?.(player, root);
+    if (extra) late = extra;
+    onState?.(player.runtime.state());
+    return player;
+  };
+  let player = start();
+  return {
+    get player() {
+      return player;
     },
-  });
-  const extra = hook?.(player, root);
-  if (extra) late = extra;
-  onState?.(player.runtime.state());
-  return player;
+    /** Back to the initial state, with fresh markup: the host page's own reset. */
+    reset() {
+      player.destroy();
+      root.innerHTML = root.innerHTML;
+      player = start();
+    },
+    destroy: () => player.destroy(),
+  };
 }
 
 const live = new Map();
 function unmountAll() {
-  for (const player of live.values()) player.destroy();
+  for (const handle of live.values()) handle.destroy();
   live.clear();
 }
 
@@ -121,15 +136,25 @@ function el(tag, attrs = {}, ...children) {
   return node;
 }
 
+/** Copies text, falling back to a selection-based copy where the clipboard API is unavailable (e.g. plain http on a LAN address). */
 async function copyText(button, text) {
   const label = button.textContent;
+  let ok = false;
   try {
     await navigator.clipboard.writeText(text);
-    button.textContent = "Copied";
+    ok = true;
   } catch {
-    button.textContent = "Copy failed";
+    const area = document.body.appendChild(el("textarea", { style: "position:fixed;opacity:0", "aria-hidden": "true" }, text));
+    area.select();
+    try {
+      ok = document.execCommand("copy");
+    } catch {
+      ok = false;
+    }
+    area.remove();
   }
-  setTimeout(() => (button.textContent = label), 1500);
+  button.textContent = ok ? "Copied" : "Copy failed (select the text and copy)";
+  setTimeout(() => (button.textContent = label), ok ? 1500 : 3500);
 }
 
 function tagLink(tag) {
@@ -214,11 +239,12 @@ async function renderBrowse({ category, tag, q }) {
     ...shown.map((ex) => {
       const state = el("span", { class: "state" });
       const stage = el("div", { class: "stage" });
+      const reset = el("button", { type: "button", class: "reset", title: "Back to the initial state", onclick: () => live.get(ex.id)?.reset() }, "Reset");
       const card = el(
         "article",
         { class: "card" },
         stage,
-        el("div", { class: "meta" }, el("h3", {}, el("a", { href: `#example/${ex.id}` }, ex.title)), state),
+        el("div", { class: "meta" }, el("h3", {}, el("a", { href: `#example/${ex.id}` }, ex.title)), state, reset),
         el("p", {}, ex.summary),
       );
       Promise.all([load(ex), page(ex.html)]).then(([{ program, diagnostics }, content]) => {
@@ -271,6 +297,7 @@ async function renderDetail(id) {
   tablist.onclick = (e) => e.target.dataset?.tab && select(e.target.dataset.tab);
   select(detailTab);
   document.getElementById("detail-copy").onclick = (e) => copyText(e.currentTarget, source);
+  document.getElementById("detail-reset").onclick = () => live.get(ex.id)?.reset();
   document.getElementById("detail-open").onclick = () => {
     playgroundSeed = ex.id;
     location.hash = "#playground";
@@ -286,6 +313,7 @@ const pgState = document.getElementById("playground-state");
 for (const ex of examples) pgPicker.append(new Option(`${ex.id}.nudg.json`, ex.id));
 pgPicker.addEventListener("change", () => seedPlayground(pgPicker.value));
 document.getElementById("playground-copy").addEventListener("click", (e) => copyText(e.currentTarget, pgSource.value));
+document.getElementById("playground-reset").addEventListener("click", () => live.get("playground")?.reset());
 let playgroundSeed = "toggle";
 let playgroundContent = { style: "", markup: "" };
 let playgroundLoaded = null;
@@ -350,3 +378,4 @@ search.addEventListener("input", () => {
 });
 window.addEventListener("hashchange", route);
 route();
+window.__nudgStarted = true;

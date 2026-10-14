@@ -7,6 +7,29 @@
   <link rel="stylesheet" href="demo.css">
 </head>
 <body>
+  <div class="boot-error" id="boot-error" hidden>
+    <strong>The site didn't start.</strong>
+    <span id="boot-error-why">Its JavaScript failed to load.</span>
+    Run <code>npm run demo</code> in the repository (it builds <code>dist/</code> and serves this page without caching), then reload.
+  </div>
+  <script>
+    // If main.js never starts (a stale dist/, a server that caches, a module error), say so.
+    // A module that fails to load fires "error" on its <script>, not on window, so capture.
+    window.addEventListener("error", (e) => {
+      if (window.__nudgStarted) return;
+      const why = e.message ? `Error: ${e.message}` : e.target?.src ? `Could not load ${e.target.src.replace(location.origin, "")} or one of the modules it imports. Is dist/ built and up to date?` : "Its JavaScript failed to load.";
+      document.getElementById("boot-error-why").textContent = why;
+      document.getElementById("boot-error").hidden = false;
+    }, true);
+    window.addEventListener("unhandledrejection", (e) => {
+      if (window.__nudgStarted) return;
+      document.getElementById("boot-error-why").textContent = `Error: ${e.reason?.message ?? e.reason}`;
+      document.getElementById("boot-error").hidden = false;
+    });
+    setTimeout(() => {
+      if (!window.__nudgStarted) document.getElementById("boot-error").hidden = false;
+    }, 4000);
+  </script>
   <div class="app">
     <aside class="lnb">
       <a class="brand" href="#"><strong>nudg</strong><span>examples</span></a>
@@ -35,7 +58,7 @@
         <div class="detail">
           <div class="detail-stage">
             <div class="stage stage-large" id="detail-stage"></div>
-            <div class="stage-foot"><span class="state" id="detail-state"></span><span class="hint" id="detail-hint"></span></div>
+            <div class="stage-foot"><span class="state" id="detail-state"></span><span class="hint" id="detail-hint"></span><button type="button" class="reset" id="detail-reset" title="Back to the initial state">Reset</button></div>
           </div>
           <div class="detail-info">
             <h1 id="detail-title"></h1>
@@ -68,7 +91,7 @@
         <div class="playground">
           <div>
             <div class="stage stage-large" id="playground-stage"></div>
-            <div class="stage-foot"><span class="state" id="playground-state"></span></div>
+            <div class="stage-foot"><span class="state" id="playground-state"></span><button type="button" class="reset" id="playground-reset" title="Back to the initial state">Reset</button></div>
           </div>
           <div>
             <div class="playground-tools">

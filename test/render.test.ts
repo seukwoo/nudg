@@ -62,7 +62,12 @@ test("compare page plays both versions offline, with press-both and slow motion"
     await browser.send("Runtime.enable");
     browser.on("Runtime.exceptionThrown", (p) => errors.push(p.exceptionDetails.exception?.description ?? p.exceptionDetails.text));
     await browser.send("Page.navigate", { url: `file://${file}` });
-    await browser.evaluate(`new Promise((r) => { const tick = () => document.getElementById("time").textContent !== "0.00s" ? r() : setTimeout(tick, 50); tick(); })`);
+    // Navigation returns before the document is committed; wait until the page is playing.
+    const { waitFor } = await import("../src/node/cdp.ts");
+    await waitFor(async () => {
+      const t = await browser.evaluate(`document.getElementById("time")?.textContent ?? ""`);
+      return t && t !== "0.00s" ? t : undefined;
+    }, 15_000);
     // Press both at ¼× with a 1 s hold, then look mid-hold: A sits at 0.94, B at 0.80.
     await browser.evaluate(`document.querySelector('[data-hold="1"]').click(); document.querySelector('[data-speed="0.25"]').click(); document.getElementById("press-both").click()`);
     await new Promise((r) => setTimeout(r, 1500));

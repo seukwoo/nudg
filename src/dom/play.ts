@@ -93,12 +93,20 @@ export function play(program: Program, root: ParentNode | null = document, optio
     if (!runtime.settled(t)) frame = requestAnimationFrame(tick);
   }
 
+  // The active states, on every bound element, so CSS can style by state:
+  // [data-nudg-state~="refreshing"] { animation: spin 1s linear infinite }
+  function reflectState(els: Iterable<Element>) {
+    const value = runtime.state().join(" ");
+    for (const e of els) e.setAttribute("data-nudg-state", value);
+  }
+
   function changed() {
     if (manual) apply(runtime.sample(manualTime));
     else if (!frame) frame = requestAnimationFrame(tick);
     const state = runtime.state();
     if (state.join("\n") !== lastState) {
       lastState = state.join("\n");
+      for (const els of elements.values()) reflectState(els);
       options.onState?.(state);
     }
   }
@@ -158,8 +166,10 @@ export function play(program: Program, root: ParentNode | null = document, optio
     // Let a drag reach us instead of scrolling the page.
     if (draggable.has(name) && style) style.touchAction = "none";
     applyTo(name, runtime.sample(now()), [el]);
+    reflectState([el]);
 
     const unbind = () => {
+      el.removeAttribute("data-nudg-state");
       for (const [type, fn] of listeners) el.removeEventListener(type, fn);
       if (draggable.has(name) && style) style.touchAction = touchAction;
       elements.get(name)?.delete(el);

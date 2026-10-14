@@ -96,7 +96,7 @@
       "category": "lists",
       "tags": ["drag", "follow", "nearest", "map", "host-event"],
       "html": "pull-to-refresh.html",
-      "summary": "The list follows the finger with growing resistance, the spinner fades and grows with the pull, and a release past halfway holds the list open until the app reports it's done.",
+      "summary": "The list follows the finger with growing resistance, the spinner fades and grows with the pull, and a release past halfway holds the list open until the app reports it's done. While refreshing, CSS spins the spinner through the state attribute nudg sets.",
       "prompts": ["Require a longer pull before it refreshes.", "Make the list spring back with more bounce."]
     },
     {

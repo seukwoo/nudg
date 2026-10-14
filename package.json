@@ -68,6 +68,7 @@
     "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
     "prepack": "npm run build",
     "demo": "npm run build && node demo/serve.mjs",
+    "media": "node scripts/readme-media.ts",
     "nudg": "node src/cli.ts"
   },
   "devDependencies": {

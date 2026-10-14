@@ -13,6 +13,10 @@ import { launchBrowser, waitFor } from "./cdp.ts";
 export interface RenderOptions {
   /** The nudg file. */
   file: string;
+  /** More versions of the file to render as further rows, same markup and events (A/B). */
+  variants?: { file: string; label: string }[];
+  /** Label for the first row when there are variants. Default "A". */
+  label?: string;
   /** A page with the component's markup (data-nudg names) and styles. Its scripts don't run. */
   html: string;
   events: TimedEvent[];
@@ -74,8 +78,9 @@ export async function renderFrames(options: RenderOptions): Promise<RenderResult
   const file = resolve(options.file);
   const html = resolve(options.html);
   // Only these folders are served, read-only, on 127.0.0.1, for the length of the render.
-  const roots = [...new Set([process.cwd(), dirname(file), dirname(html)])];
-  const harness = buildHarness(readFileSync(html, "utf8"), html, file, options.events, options.times, options.start, options.reducedMotion);
+  const rows = [{ file, label: options.label ?? "A" }, ...(options.variants ?? []).map((v) => ({ file: resolve(v.file), label: v.label }))];
+  const roots = [...new Set([process.cwd(), dirname(html), ...rows.map((row) => dirname(row.file))])];
+  const harness = buildHarness(readFileSync(html, "utf8"), html, rows, options.variants ? true : false, options.events, options.times, options.start, options.reducedMotion);
 
   const server = createServer((req, res) => {
     const path = decodeURIComponent(new URL(req.url ?? "/", "http://localhost").pathname);
@@ -108,7 +113,7 @@ export async function renderFrames(options: RenderOptions): Promise<RenderResult
 
     const scale = options.scale ?? 2;
     const { width, height } = await browser.evaluate(
-      `(() => { const r = document.querySelector(".nudg-strip").getBoundingClientRect(); return { width: Math.ceil(r.width), height: Math.ceil(r.height) }; })()`,
+      `(() => { const r = document.querySelector(".nudg-rows").getBoundingClientRect(); return { width: Math.ceil(r.width), height: Math.ceil(r.height) }; })()`,
     );
     await browser.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: scale, mobile: false });
     const shot = await browser.send("Page.captureScreenshot", {
@@ -124,13 +129,17 @@ export async function renderFrames(options: RenderOptions): Promise<RenderResult
   }
 }
 
-function buildHarness(page: string, htmlPath: string, nudgPath: string, events: TimedEvent[], times: number[], start?: string[], reducedMotion?: boolean): string {
+function buildHarness(page: string, htmlPath: string, rows: { file: string; label: string }[], labeled: boolean, events: TimedEvent[], times: number[], start?: string[], reducedMotion?: boolean): string {
   const head = /<head[^>]*>([\s\S]*?)<\/head>/i.exec(page)?.[1] ?? "";
   const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(page);
   const body = bodyMatch ? bodyMatch[1] : head ? "" : page;
   const noScripts = (s: string) => s.replace(/<script[\s\S]*?<\/script>/gi, "");
-  const frames = times
-    .map((t) => `<figure class="nudg-frame" data-t="${t}"><div class="nudg-stage">${noScripts(body)}</div><figcaption>${fmt(t)}s</figcaption></figure>`)
+  const strip = (row: number) =>
+    times
+      .map((t) => `<figure class="nudg-frame" data-row="${row}" data-t="${t}"><div class="nudg-stage">${noScripts(body)}</div><figcaption>${fmt(t)}s</figcaption></figure>`)
+      .join("\n");
+  const frames = rows
+    .map((row, i) => `<div class="nudg-row">${labeled ? `<div class="nudg-label">${escapeHtml(row.label)}</div>` : ""}<div class="nudg-strip">${strip(i)}</div></div>`)
     .join("\n");
   const sorted = [...events].sort((a, b) => a.t - b.t);
 
@@ -142,14 +151,17 @@ function buildHarness(page: string, htmlPath: string, nudgPath: string, events: 
 ${noScripts(head)}
 <style>
   html, body { margin: 0 !important; padding: 0 !important; min-height: 0 !important; width: max-content !important; }
-  .nudg-strip { display: inline-flex; gap: 8px; padding: 8px; background: #fcfcfb; }
+  .nudg-rows { display: inline-flex; flex-direction: column; background: #fcfcfb; }
+  .nudg-row { display: flex; align-items: center; }
+  .nudg-label { width: 28px; padding-left: 8px; font: 600 13px/1 ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; }
+  .nudg-strip { display: inline-flex; gap: 8px; padding: 8px; }
   .nudg-frame { margin: 0; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
   .nudg-stage { position: relative; }
   .nudg-frame figcaption { font: 12px/1.4 ui-monospace, "SF Mono", Menlo, monospace; color: #52514e; text-align: center; }
 </style>
 </head>
 <body>
-<div class="nudg-strip">
+<div class="nudg-rows">
 ${frames}
 </div>
 <script type="module">
@@ -158,12 +170,17 @@ ${frames}
     const events = ${JSON.stringify(sorted)};
     const start = ${JSON.stringify(start ?? null)};
     const reducedMotion = ${JSON.stringify(reducedMotion ?? false)};
-    const { program, diagnostics } = await compileUrl(${JSON.stringify(`/fs${encodePath(nudgPath)}`)});
-    if (!program) throw new Error("The file has errors: " + diagnostics.map((d) => d.code + " at " + d.path).join(", "));
+    const programs = [];
+    for (const url of ${JSON.stringify(rows.map((row) => `/fs${encodePath(row.file)}`))}) {
+      const { program, diagnostics } = await compileUrl(url);
+      if (!program) throw new Error(url + " has errors: " + diagnostics.map((d) => d.code + " at " + d.path).join(", "));
+      programs.push(program);
+    }
     const frames = [];
     let player;
     for (const frame of document.querySelectorAll(".nudg-frame")) {
       const t = Number(frame.dataset.t);
+      const program = programs[Number(frame.dataset.row)];
       player = play(program, frame.querySelector(".nudg-stage"), { clock: "manual", state: start ?? undefined, reducedMotion });
       for (const e of events) {
         if (e.t > t) break;
@@ -172,7 +189,7 @@ ${frames}
         else player.input(e.input, e.value);
       }
       player.render(t);
-      frames.push({ t, state: player.runtime.state() });
+      if (frame.dataset.row === "0") frames.push({ t, state: player.runtime.state() });
     }
     await document.fonts.ready;
     await Promise.all([...document.images].map((img) => img.decode().catch(() => {})));
@@ -217,6 +234,10 @@ function isFile(path: string): boolean {
 
 function encodePath(path: string): string {
   return path.split(sep).map(encodeURIComponent).join("/");
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function fmt(t: number): string {

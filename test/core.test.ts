@@ -196,3 +196,39 @@ test("presets are valid documents with the behavior their names promise", async 
   const hover = compileDoc(presets.hover({ target: "tile", lift: -8, scale: 1.02 })).program!;
   assert.deepEqual([...hover.properties.keys()], ["tile.y", "tile.scale"]);
 });
+
+test("compare says first whether a person would notice", async () => {
+  const { compare } = await import("../src/core/compare.ts");
+  const base = JSON.parse(readFileSync(`${root}examples/toggle.nudg.json`, "utf8"));
+  const variant = (bounce: number) => {
+    const doc = JSON.parse(JSON.stringify(base));
+    doc.animate["knob.x"].spring.bounce = bounce;
+    return compile({ path: "v.nudg.json", text: JSON.stringify(doc) }).program!;
+  };
+  const a = compile({ path: "a.nudg.json", text: JSON.stringify(base) }).program!;
+  const events = [{ t: 0.05, event: "track.tap" }];
+
+  const same = compare(a, a, { events });
+  assert.equal(same.verdict, "imperceptible");
+  assert.match(same.headline, /identically/);
+
+  const tiny = compare(a, variant(0.26), { events });
+  assert.equal(tiny.verdict, "imperceptible");
+  assert.match(tiny.headline, /Nothing a person will notice/);
+  assert.match(tiny.suggestion ?? "", /exaggerated/);
+
+  const bouncier = compare(a, variant(0.4), { events });
+  assert.equal(bouncier.verdict, "clear");
+  assert.match(bouncier.headline, /clear change/);
+  const knob = bouncier.properties.find((p) => p.property === "knob.x")!;
+  assert.ok(knob.maxDifference > 1 && knob.overshoot![1] > knob.overshoot![0]);
+  assert.equal(bouncier.properties.find((p) => p.property === "track.color")!.maxDifference, 0);
+});
+
+test("plot can overlay a second version", async () => {
+  const { plot } = await import("../src/core/plot.ts");
+  const base = compilePath(`${root}examples/toggle.nudg.json`).program!;
+  const { svg } = plot(base, { events: [{ t: 0.05, event: "track.tap" }], against: base, labels: ["now", "later"] });
+  assert.match(svg, /class="series against"/);
+  assert.match(svg, />later</);
+});

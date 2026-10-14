@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **`nudg compare` / `nudg_compare`:** two versions under the same events, for a person to judge. A perceptibility verdict first (imperceptible / subtle / clear, per property: max difference, overshoot, settle time), then real A/B filmstrips in rows (with the host HTML) or one graph with both curves (`plot` gained `against`). When nothing crosses perception it proposes an exaggerated version. The MCP instructions tell the AI to show it whenever it changes motion for a person.
 - **Presets:** `presets.press()`, `hover()`, `toggle()`, `toast()` return ready-made documents, so the simple case is one line with no file: `useNudg(presets.press())` or `playDoc(presets.toast(), element)`. `nudg preset <name>` prints one as a file to edit. `useNudg` compiles inline documents by content, so a preset call in render doesn't recompile or reset.
 - **Docs:** `simulate` and `plot` check the file; `render --html` and real-page tests check the app.
 

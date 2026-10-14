@@ -9,6 +9,10 @@ export interface PlotOptions extends SimulateOptions {
   title?: string;
   /** Total width in px. Default 760. */
   width?: number;
+  /** A second version of the file to draw over the first, dashed, under the same events (A vs B). */
+  against?: Program;
+  /** Labels for the legend when `against` is given. Default A and B. */
+  labels?: [string, string];
 }
 
 export interface Plot {
@@ -28,17 +32,33 @@ const BAND = { height: 22, gap: 4 };
 
 export function plot(program: Program, options: PlotOptions): Plot {
   const width = options.width ?? 760;
-  const simulation = simulate(program, { ...options, every: 1 / SAMPLE_RATE });
+  let simulation = simulate(program, { ...options, every: 1 / SAMPLE_RATE });
+  let against = options.against ? simulate(options.against, { ...options, every: 1 / SAMPLE_RATE }) : undefined;
+  if (against) {
+    // Both over the same span, so the two lines share one time axis.
+    const span = Math.max(simulation.samples.at(-1)!.t, against.samples.at(-1)!.t);
+    if (simulation.samples.at(-1)!.t < span) simulation = simulate(program, { ...options, every: 1 / SAMPLE_RATE, until: span });
+    if (against.samples.at(-1)!.t < span) against = simulate(options.against!, { ...options, every: 1 / SAMPLE_RATE, until: span });
+  }
   const { samples, summary } = simulation;
-  const keys = options.properties ?? [...program.properties.keys()];
+  const keys = (options.properties ?? [...program.properties.keys()]).filter((k) => !against || options.against!.properties.has(k));
   const until = samples[samples.length - 1].t;
   const plotW = width - MARGIN.left - MARGIN.right;
   const x = (t: number) => MARGIN.left + (until ? (t / until) * plotW : 0);
   const out: string[] = [];
   let y = MARGIN.top;
 
-  // Title and the event script.
+  // Title (with a legend when comparing) and the event script.
   out.push(text(MARGIN.left, y + 14, options.title ?? "nudg", "title"));
+  if (against) {
+    const [la, lb] = options.labels ?? ["A", "B"];
+    const right = width - MARGIN.right;
+    out.push(text(right, y + 14, lb, "legend", "end"));
+    out.push(`<line class="series against" x1="${r(right - 8 * Math.max(lb.length, 1) - 34)}" x2="${r(right - 8 * Math.max(lb.length, 1) - 10)}" y1="${r(y + 9)}" y2="${r(y + 9)}"/>`);
+    const laX = right - 8 * Math.max(lb.length, 1) - 50;
+    out.push(text(laX, y + 14, la, "legend", "end"));
+    out.push(`<line class="series" x1="${r(laX - 8 * Math.max(la.length, 1) - 34)}" x2="${r(laX - 8 * Math.max(la.length, 1) - 10)}" y1="${r(y + 9)}" y2="${r(y + 9)}"/>`);
+  }
   y += 22;
   const script = describeScript(options.events);
   // Wrap the script to the plot width (monospace, about 7 px per character at 12 px).
@@ -88,11 +108,16 @@ export function plot(program: Program, options: PlotOptions): Plot {
 
     if (kind === "color") {
       panels.push(text(MARGIN.left, y - 12, key, "panel-title"));
-      for (let i = 0; i < samples.length - 1; i++) {
-        const x0 = x(samples[i].t);
-        const x1 = x(samples[i + 1].t);
-        panels.push(`<rect x="${r(x0)}" y="${r(y)}" width="${r(x1 - x0 + 0.5)}" height="${STRIP.height}" fill="${values[i]}"/>`);
-      }
+      // When comparing, two half-height strips: A above B.
+      const strips = against ? [values, against.samples.map((s) => s.values[key])] : [values];
+      const h = STRIP.height / strips.length;
+      strips.forEach((vals, row) => {
+        for (let i = 0; i < samples.length - 1; i++) {
+          const x0 = x(samples[i].t);
+          const x1 = x(samples[i + 1].t);
+          panels.push(`<rect x="${r(x0)}" y="${r(y + row * h)}" width="${r(x1 - x0 + 0.5)}" height="${r(h)}" fill="${vals[i]}"/>`);
+        }
+      });
       panels.push(`<rect class="frame" x="${MARGIN.left}" y="${r(y)}" width="${r(plotW)}" height="${STRIP.height}"/>`);
       if (s.settledAt !== undefined) panels.push(settleMark(x(s.settledAt), y + STRIP.height, s.settledAt, MARGIN.left + plotW));
       y += STRIP.height + GAP;
@@ -100,10 +125,11 @@ export function plot(program: Program, options: PlotOptions): Plot {
     }
 
     const nums = values as number[];
+    const bNums = against ? (against.samples.map((s) => s.values[key]) as number[]) : [];
     const target = nums[nums.length - 1];
     const start = nums[0];
-    let lo = Math.min(...nums, target);
-    let hi = Math.max(...nums, target);
+    let lo = Math.min(...nums, ...bNums, target);
+    let hi = Math.max(...nums, ...bNums, target);
     if (hi - lo < 1e-9) {
       lo -= 1;
       hi += 1;
@@ -120,6 +146,10 @@ export function plot(program: Program, options: PlotOptions): Plot {
     }
     panels.push(`<line class="target" x1="${MARGIN.left}" x2="${MARGIN.left + plotW}" y1="${r(py(target))}" y2="${r(py(target))}"/>`);
     const points = nums.map((v, i) => `${r(x(samples[i].t))},${r(py(v))}`).join(" ");
+    if (against) {
+      const bPoints = bNums.map((v, i) => `${r(x(against!.samples[i].t))},${r(py(v))}`).join(" ");
+      panels.push(`<polyline class="series against" points="${bPoints}"/>`);
+    }
     panels.push(`<polyline class="series" points="${points}"/>`);
 
     // Extremes outside the start-to-target range: overshoot, a kick's pop, a dip.
@@ -143,6 +173,8 @@ export function plot(program: Program, options: PlotOptions): Plot {
       panels.push(text(px + (anchor === "end" ? -8 : 8), ppy + (above ? -6 : 14), note, "note", anchor));
     }
     if (s.settledAt !== undefined) panels.push(settleMark(x(s.settledAt), y + PANEL.height, s.settledAt, MARGIN.left + plotW));
+    const bSettled = against?.summary[key]?.settledAt;
+    if (bSettled !== undefined) panels.push(`<line class="settle against" x1="${r(x(bSettled))}" x2="${r(x(bSettled))}" y1="${r(y + PANEL.height - 6)}" y2="${r(y + PANEL.height + 4)}"/>`);
     y += PANEL.height + GAP;
   }
 
@@ -182,10 +214,10 @@ export function plot(program: Program, options: PlotOptions): Plot {
 }
 
 const STYLE = `
-svg { --surface: #fcfcfb; --text: #0b0b0b; --muted: #52514e; --faint: #8a8984; --grid: #e7e6e2; --band: #efeeea; --series: #2a78d6;
+svg { --surface: #fcfcfb; --text: #0b0b0b; --muted: #52514e; --faint: #8a8984; --grid: #e7e6e2; --band: #efeeea; --series: #2a78d6; --against: #eb6834;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
 @media (prefers-color-scheme: dark) {
-  svg { --surface: #1a1a19; --text: #f0efec; --muted: #c3c2b7; --faint: #8f8e86; --grid: #2e2e2b; --band: #2a2a27; --series: #3987e5; }
+  svg { --surface: #1a1a19; --text: #f0efec; --muted: #c3c2b7; --faint: #8f8e86; --grid: #2e2e2b; --band: #2a2a27; --series: #3987e5; --against: #d95926; }
 }
 .surface { fill: var(--surface); }
 .title { font-size: 15px; font-weight: 600; fill: var(--text); }
@@ -198,9 +230,12 @@ svg { --surface: #fcfcfb; --text: #0b0b0b; --muted: #52514e; --faint: #8a8984; -
 .grid { stroke: var(--grid); stroke-width: 1; }
 .target { stroke: var(--faint); stroke-width: 1; stroke-dasharray: 4 4; }
 .series { fill: none; stroke: var(--series); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.series.against { stroke: var(--against); stroke-dasharray: 5 4; }
+.legend { font-size: 12px; fill: var(--muted); }
 .peak { fill: var(--series); stroke: var(--surface); stroke-width: 2; }
 .event { stroke: var(--faint); stroke-width: 1; stroke-dasharray: 2 3; }
 .settle { stroke: var(--muted); stroke-width: 1.5; }
+.settle.against { stroke: var(--against); stroke-dasharray: 3 2; }
 .frame { fill: none; stroke: var(--grid); }
 `;
 

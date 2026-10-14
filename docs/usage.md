@@ -56,6 +56,23 @@ npx nudg render examples/like.nudg.json --html examples/like.html --send heart.t
 See [Seeing motion](#seeing-motion) below.
 All three also take `--reduced-motion` (0.3): springs and tweens become 0.15 s linear tweens and kicks do nothing, so you can check what a reduced-motion user sees.
 
+### compare
+
+```sh
+nudg compare toggle.nudg.json toggle-bouncier.nudg.json --send track.tap@0.05 --html toggle.html --out compare.png
+```
+
+Two versions under the same events, for a person to judge. It speaks first:
+
+```
+A clear change: knob.x moves up to 2.1 units differently, settles 0.23 s later, overshoot 0.6 → 1.9 units.
+
+  knob.x: differs by up to 2.11 units at 0.21s (subtle); overshoot 0.57 → 1.90 units; at rest 0.79s → 1.01s (clear).
+  track.color: identical.
+```
+
+Each property gets a verdict: **imperceptible** (under a device pixel at 1×, or under about three frames), **subtle**, or **clear**. When nothing crosses the threshold it says so and proposes the next turn: look at an exaggerated version first, then dial it back. With `--html` the picture is real A/B filmstrips in two rows, same markup, same moments; without it, both curves on one graph (solid A, dashed B). `--labels now,bouncier` names the rows.
+
 ### preset
 
 ```sh
@@ -75,6 +92,7 @@ Prints a preset (`press`, `hover`, `toggle`, `toast`) as a nudg file. The same p
 | `nudg_validate` | Diagnostics with codes, JSON pointers and fix hints. Takes a `file`, or `source` to check text before writing it. |
 | `nudg_simulate` | States and values over time for a list of events, with a per-property summary. |
 | `nudg_plot` | A motion graph image. |
+| `nudg_compare` | Two versions under the same events: a perceptibility verdict first (imperceptible / subtle / clear, per property), then real A/B filmstrips (with `html`) or one graph with both curves. Proposes an exaggerated version when nothing would be noticed. |
 | `nudg_render` | Real frames of the component as a filmstrip image, from the host page (needs Chrome). |
 
 To use it from Claude Code (paths relative to the project the agent works in):

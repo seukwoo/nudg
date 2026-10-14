@@ -163,8 +163,10 @@ export function plot(program: Program, options: PlotOptions): Plot {
       if (v < nums[iMin]) iMin = j;
     });
     const marks: [number, string, boolean][] = [];
-    if ((s.max ?? hi) > Math.max(start, target) + eps) marks.push([iMax, `max ${fmt(s.max!)}`, true]);
-    if ((s.min ?? lo) < Math.min(start, target) - eps) marks.push([iMin, `min ${fmt(s.min!)}`, false]);
+    // Under one logical unit past the target is under a device pixel at 1×: say so.
+    const tiny = (excess: number) => (kind === "length" && excess < 1 ? " (<1px)" : "");
+    if ((s.max ?? hi) > Math.max(start, target) + eps) marks.push([iMax, `max ${fmt(s.max!)}${tiny(s.max! - Math.max(start, target))}`, true]);
+    if ((s.min ?? lo) < Math.min(start, target) - eps) marks.push([iMin, `min ${fmt(s.min!)}${tiny(Math.min(start, target) - s.min!)}`, false]);
     for (const [i, note, above] of marks) {
       const px = x(samples[i].t);
       const ppy = py(nums[i]);

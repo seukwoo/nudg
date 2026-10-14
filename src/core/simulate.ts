@@ -37,6 +37,12 @@ export interface PropertySummary {
   /** Numeric properties only, scanned at 1 ms resolution. */
   min?: number;
   max?: number;
+  /**
+   * How far past its target the value went, at most, in the direction it was traveling;
+   * measured per target (each time an event or timer changes where the value is heading),
+   * so a press that goes 0 → 6 → 0 without bouncing has an overshoot of 0.
+   */
+  overshoot?: number;
   /** When the property came to rest for good, or undefined if it hadn't by `until`. */
   settledAt?: number;
 }
@@ -118,6 +124,9 @@ export function simulate(program: Program, options: SimulateOptions): Simulation
     const rt = createRuntime(program, start);
     const settledSince = new Map<string, number | undefined>();
     const extremes = new Map<string, [number, number]>();
+    // Per target: where the value started heading there, and the furthest it went past.
+    const legs = new Map<string, { target: number; from: number; over: number }>();
+    const overshoots = new Map<string, number>();
     let next = 0;
     let last: Record<string, Value> = {};
     const steps = Math.round(until / SCAN_STEP);
@@ -128,11 +137,24 @@ export function simulate(program: Program, options: SimulateOptions): Simulation
         next++;
       }
       last = rt.sample(t);
+      const targetsNow = rt.targets();
       for (const key of keys) {
         const v = last[key];
         if (typeof v === "number") {
           const [lo, hi] = extremes.get(key) ?? [v, v];
           extremes.set(key, [Math.min(lo, v), Math.max(hi, v)]);
+          const target = targetsNow[key];
+          if (typeof target === "number") {
+            let leg = legs.get(key);
+            if (!leg || leg.target !== target) {
+              leg = { target, from: v, over: 0 };
+              legs.set(key, leg);
+            }
+            // Past the target in the direction of travel.
+            const past = target >= leg.from ? v - target : target - v;
+            if (past > leg.over) leg.over = past;
+            if (leg.over > (overshoots.get(key) ?? 0)) overshoots.set(key, leg.over);
+          }
         }
         if (!rt.settled(t, key)) settledSince.set(key, undefined);
         else if (settledSince.get(key) === undefined) settledSince.set(key, t);
@@ -142,6 +164,7 @@ export function simulate(program: Program, options: SimulateOptions): Simulation
       const s: PropertySummary = { final: last[key] };
       const ex = extremes.get(key);
       if (ex) [s.min, s.max] = ex;
+      if (ex) s.overshoot = overshoots.get(key) ?? 0;
       const at = settledSince.get(key);
       if (at !== undefined) s.settledAt = at;
       summary[key] = s;

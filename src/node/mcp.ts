@@ -7,13 +7,14 @@ import { dirname, extname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { compile, type CompileResult } from "../core/compile.ts";
-import { compare } from "../core/compare.ts";
+import { compare, compareFrameTimes } from "../core/compare.ts";
 import { plot } from "../core/plot.ts";
 import { dragGesture, simulate, type SimulateOptions, type TimedEvent } from "../core/simulate.ts";
 import type { Program } from "../core/types.ts";
 import { VERSION } from "../core/vocabulary.ts";
 import { CHROME_HINT, findChrome, svgToPng } from "./chrome.ts";
 import { formatComparison, formatDiagnostic, formatSamples, formatStatus, formatSummary } from "./format.ts";
+import { comparePage, readWithImports } from "./compare-page.ts";
 import { compilePath } from "./load.ts";
 import { frameTimes, renderFrames } from "./render.ts";
 
@@ -111,7 +112,8 @@ const TOOLS = [
         a: { type: "object", description: "The current version: { file } or { source, path? }.", properties: source },
         b: { type: "object", description: "The changed version: { file } or { source, path? }.", properties: source },
         labels: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 2, description: "Names for the two versions, default [\"A\", \"B\"]." },
-        html: { type: "string", description: "The host page with the component's markup: gives real A/B filmstrips (needs Chrome)." },
+        html: { type: "string", description: "The host page with the component's markup. Gives real A/B filmstrips (needs Chrome) and writes a page the person should open: both versions playing side by side in a loop, with slow motion. Stills can't show feel; that page can." },
+        page: { type: "string", description: "Where to write that page. Default: next to `out` as .html, else in the temp folder." },
         at: { type: "array", items: { type: ["number", "string"] }, description: "Frame times for the filmstrips." },
         frames: { type: "integer", minimum: 1, maximum: 60, description: "Evenly spaced frames when `at` is not given. Default 6." },
         ...timing,
@@ -288,14 +290,18 @@ async function compareTool(args: Json): Promise<ToolResult> {
     if (!fileA || !fileB) throw new ToolError("With html, pass both versions as files (the harness loads them from disk).");
     const at = Array.isArray(args.at) ? args.at.map((t, i) => time(t, `at[${i}]`)) : [];
     const frames = args.frames === undefined ? 6 : Number(args.frames);
-    const untilBoth = Math.max(comparison.a.samples.at(-1)!.t, comparison.b.samples.at(-1)!.t);
-    const times = at.length ? [...at].sort((x, y) => x - y) : frameTimes(a.program, { ...options, until: untilBoth }, frames);
+    const chosen = at.length ? { times: [...at].sort((x, y) => x - y), marks: {} } : compareFrameTimes(comparison, frames);
     const { png } = await withTempFileAsync("compare.png", async (path) => {
-      await renderFrames({ file: resolve(fileA), label: labels[0], variants: [{ file: resolve(fileB), label: labels[1] }], html: resolve(html), events: options.events, start: options.start, reducedMotion: options.reducedMotion, times, out: path, chrome });
+      await renderFrames({ file: resolve(fileA), label: labels[0], variants: [{ file: resolve(fileB), label: labels[1] }], html: resolve(html), events: options.events, start: options.start, reducedMotion: options.reducedMotion, times: chosen.times, marks: chosen.marks, out: path, chrome });
       return { png: readFileSync(path) };
     });
     if (out) writeFileSync(out, png);
-    return { content: [text(text0 + (out ? `\nsaved ${out}` : "")), { type: "image", data: png.toString("base64"), mimeType: "image/png" }], structuredContent: structured as unknown as Json };
+    // The page goes next to --out when there is one, else into the temp folder: never into the project unasked.
+    const pagePath = resolve(optionalString(args.page, "page") ?? (out ? out.replace(/\.[^.]*$/, "") + ".html" : join(tmpdir(), "nudg-compare.html")));
+    const untilBoth2 = Math.max(comparison.a.samples.at(-1)!.t, comparison.b.samples.at(-1)!.t);
+    writeFileSync(pagePath, comparePage({ html: readFileSync(resolve(html), "utf8"), a: readWithImports(fileA), b: readWithImports(fileB), labels, events: options.events, until: untilBoth2, start: options.start, reducedMotion: options.reducedMotion, headline: comparison.headline }));
+    const openIt = `\n\nFor the person: open ${pagePath} in a browser. Both versions play side by side in a loop, with ¼× and ⅒× slow motion and live values; stills can't show feel, that page can. Tell them to open it and judge there.`;
+    return { content: [text(text0 + (out ? `\nsaved ${out}` : "") + openIt), { type: "image", data: png.toString("base64"), mimeType: "image/png" }], structuredContent: { ...(structured as unknown as Json), page: pagePath } };
   }
 
   const graph = plot(a.program, { ...options, against: b.program, labels, title: `${a.label} vs ${b.label}` });

@@ -71,6 +71,16 @@ A clear change: knob.x moves up to 2.1 units differently, settles 0.23 s later, 
   track.color: identical.
 ```
 
+With `--html`, the frames aren't only evenly spaced: the moments the verdict talks about are always included and captioned (where each property differs most, each event and 80 ms after it), so the side-by-side shows what the sentence says.
+
+Stills can't show motion. For the person, write a page instead:
+
+```sh
+nudg compare toggle.nudg.json toggle-bouncier.nudg.json --send track.tap@0.05 --html toggle.html --out compare.html
+```
+
+`compare.html` plays A and B side by side on the real markup, with the same events, in a loop, with the live values under each. Buttons: replay the events, **press both** (a tap on both at once, with a 0.3 s or 1 s hold), speed 1× / ¼× / ⅒×, pause. The stages also respond to your own taps and drags. The runtime is inlined, so the file works offline and from any folder.
+
 Each property gets a verdict: **imperceptible** (under a device pixel at 1×, or under about three frames), **subtle**, or **clear**. When nothing crosses the threshold it says so and proposes the next turn: look at an exaggerated version first, then dial it back. With `--html` the picture is real A/B filmstrips in two rows, same markup, same moments; without it, both curves on one graph (solid A, dashed B). `--labels now,bouncier` names the rows.
 
 ### preset
@@ -92,7 +102,7 @@ Prints a preset (`press`, `hover`, `toggle`, `toast`) as a nudg file. The same p
 | `nudg_validate` | Diagnostics with codes, JSON pointers and fix hints. Takes a `file`, or `source` to check text before writing it. |
 | `nudg_simulate` | States and values over time for a list of events, with a per-property summary. |
 | `nudg_plot` | A motion graph image. |
-| `nudg_compare` | Two versions under the same events: a perceptibility verdict first (imperceptible / subtle / clear, per property), then real A/B filmstrips (with `html`) or one graph with both curves. Proposes an exaggerated version when nothing would be noticed. |
+| `nudg_compare` | Two versions under the same events: a perceptibility verdict first (imperceptible / subtle / clear, per property), then real A/B filmstrips (with `html`) or one graph with both curves. With `html` it also writes `compare.html`, a page that plays both side by side in slow motion, and tells the person to open it. Proposes an exaggerated version when nothing would be noticed. |
 | `nudg_render` | Real frames of the component as a filmstrip image, from the host page (needs Chrome). |
 
 To use it from Claude Code (paths relative to the project the agent works in):
@@ -102,6 +112,8 @@ claude mcp add nudg -- npx -y @nudg/core mcp
 ```
 
 Other clients take the same command: `{ "command": "npx", "args": ["-y", "@nudg/core", "mcp"] }`. From a clone, use `node /path/to/nudg/src/cli.ts mcp` instead.
+
+The server process lives as long as the client's session, so a newly published version is picked up only when the client reconnects (restart the session, or `/mcp` reconnect in Claude Code). Until then the tools are the version that was running when the session started.
 
 ## React adapter
 

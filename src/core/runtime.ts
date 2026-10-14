@@ -30,6 +30,11 @@ export interface Runtime {
   input(name: string, value: number, t: number): boolean;
   /** Property values at time `t`: numbers in logical units, colors as hex. */
   sample(t: number): Record<string, Value>;
+  /**
+   * Where each property is heading right now (its resolved target), or undefined while
+   * it follows an input or is mapped. Changes only when an event or timer fires.
+   */
+  targets(): Record<string, Value | undefined>;
   /** Active leaf states as paths, e.g. ["on"] or ["checked/on", "press/up"]. */
   state(): string[];
   /** True when every property (or the given one) has come to rest at time `t` and no timer is pending. */
@@ -370,6 +375,21 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       for (const [key, prop] of program.properties) {
         const channels = valueOf(key, t);
         out[key] = prop.kind === "color" ? oklabToHex(channels) : channels[0];
+      }
+      return out;
+    },
+
+    targets() {
+      const out: Record<string, Value | undefined> = {};
+      const resolved = resolveTargets(active);
+      for (const [key, prop] of program.properties) {
+        const segment = segments.get(key);
+        if (prop.map || !segment || segment.kind === "follow") {
+          out[key] = undefined;
+          continue;
+        }
+        const to = resolved.get(key)!;
+        out[key] = prop.kind === "color" ? oklabToHex(to) : to[0];
       }
       return out;
     },

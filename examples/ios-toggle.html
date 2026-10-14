@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>iOS toggle</title>
+  <style>
+    /* WAI-ARIA switch pattern: a button with role="switch"; Space and Enter toggle it. */
+    .ios-toggle {
+      position: relative;
+      width: 51px;
+      height: 31px;
+      padding: 0;
+      border: 0;
+      border-radius: 16px;
+      background: #e9e9ea;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .ios-toggle .knob {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 27px;
+      height: 27px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 3px 8px rgb(0 0 0 / 0.15), 0 3px 1px rgb(0 0 0 / 0.06);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <button class="ios-toggle" role="switch" aria-checked="false" aria-label="Wi-Fi" data-nudg="track"><span class="knob" data-nudg="knob"></span></button>
+  <!-- Host markup for ios-toggle.nudg.json. The app keeps aria-checked in step with the state. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./ios-toggle.nudg.json");
+    const el = document.querySelector("[role=switch]");
+    play(program, document.body, { onState: (state) => el.setAttribute("aria-checked", String(state.includes("on"))) });
+  </script>
+</body>
+</html>

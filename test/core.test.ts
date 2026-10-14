@@ -46,6 +46,24 @@ test("a file without a machine is a library", () => {
   assert.deepEqual([...motions.keys()], ["snappy", "fade", "pop", "shake"]);
 });
 
+test("platform motion libraries compile and define the common names", () => {
+  const common = ["standard", "quick", "gentle", "playful", "fade"];
+  for (const name of ["apple", "material-expressive", "material-standard"]) {
+    const { program, motions, diagnostics } = compilePath(`${root}examples/motion/${name}.nudg.json`);
+    assert.equal(program, undefined, `${name} is a library`);
+    assert.deepEqual(diagnostics, [], name);
+    for (const c of common) assert.ok(motions.has(c), `${name} defines ${c}`);
+    const fade = motions.get("fade")!;
+    assert.ok(fade.kind === "spring" && fade.damping >= 2 * Math.sqrt(fade.stiffness * fade.mass) - 1e-9, `${name}: fade never bounces`);
+  }
+  // The published numbers, as written.
+  const apple = compilePath(`${root}examples/motion/apple.nudg.json`).motions;
+  const snappy = apple.get("snappy")!;
+  assert.ok(snappy.kind === "spring" && Math.abs(snappy.stiffness - (2 * Math.PI / 0.5) ** 2) < 1e-9 && Math.abs(snappy.damping - 2 * 0.85 * Math.sqrt(snappy.stiffness)) < 1e-9);
+  const m3 = compilePath(`${root}examples/motion/material-expressive.nudg.json`).motions.get("spatial-default")!;
+  assert.ok(m3.kind === "spring" && m3.stiffness === 380 && Math.abs(m3.damping - 2 * 0.8 * Math.sqrt(380)) < 1e-9);
+});
+
 test("imports report missing files, cycles and duplicate names", () => {
   const files: Record<string, unknown> = {
     "a.nudg.json": { nudg: "0.1", import: ["./b.nudg.json"], motions: { soft: { spring: { duration: 0.5 } } } },

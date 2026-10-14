@@ -1,0 +1,17 @@
+{
+  "nudg": "0.2",
+  "note": "The toggle with Apple's motion: the knob moves with SwiftUI's snappy spring and the track color with a quick non-bouncing one. Only the import differs from material-switch.nudg.json; swap it and the same file feels like the other platform.",
+  "import": ["./motion/apple.nudg.json"],
+  "targets": ["knob", "track"],
+  "values": { "knob.x": 0, "track.color": "#E9E9EA" },
+  "animate": { "knob.x": "standard", "track.color": "fade" },
+  "initial": "off",
+  "when": { "host.check": "on", "host.uncheck": "off" },
+  "states": {
+    "off": { "when": { "track.tap": "on" } },
+    "on": {
+      "set": { "knob.x": 20, "track.color": "#34C759" },
+      "when": { "track.tap": "off" }
+    }
+  }
+}

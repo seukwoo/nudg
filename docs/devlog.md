@@ -180,3 +180,14 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 ### Delete left the row gone for good
 - **Problem:** After tapping Delete in the swipe row there was no way back short of reloading the page.
 - **Resolution:** Each example has a Reset button (cards, the detail view, the playground) that destroys the player, restores the host markup, and starts again from the initial state, which is the per-component reset the user asked for.
+
+## 2026-10-14: Platform motion
+
+### Which numbers are the real ones
+- **Problem:** Blog posts and community ports disagreed on Material 3 Expressive's spring values (380/0.73, 380/0.8, 700/0.6 all appeared), and Apple's docs pages are rendered client-side, so a plain fetch returns only the title.
+- **Resolution:** Material values were read from the androidx source itself (`ExpressiveMotionTokens.kt`, `StandardMotionTokens.kt`); Apple's from the documentation JSON behind the rendered pages, which states the base bounce for `snappy` (0.15) and `bouncy` (0.3). The libraries cite their sources in `note`, and a test pins the numbers.
+- **Lesson:** For published constants, go to the source file or the data behind the page; secondary sources drift.
+
+### Native names or common names
+- **Problem:** A platform library could expose the platform's own names (`snappy`, `spatial-default`), which are faithful but tie a file to one library, or shared names, which let one import line change the feel but hide the origin.
+- **Resolution:** Both, in the same file: native names as published, and the common names `standard`, `quick`, `gentle`, `playful`, `fade` with a `note` saying which native value each one is. The agent guide says to default to common names and use native ones only when matching a platform exactly is the point.

@@ -9,11 +9,13 @@ import { presets, type PresetName } from "./core/presets.ts";
 import { describeEvent, dragGesture, simulate, type SimulateOptions, type TimedEvent } from "./core/simulate.ts";
 import type { Diagnostic, Program } from "./core/types.ts";
 import { CHROME_HINT, findChrome, svgToPng } from "./node/chrome.ts";
-import { formatComparison, formatDiagnostic, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
+import { formatComparison, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
 import { comparePage, readWithImports } from "./node/compare-page.ts";
 import { compilePath } from "./node/load.ts";
 import { serveMcp } from "./node/mcp.ts";
 import { frameTimes, renderFrames } from "./node/render.ts";
+import { ACTIONS, checkAction, observe, type HostAction } from "./node/observe.ts";
+import { actionsToEvents, judgeHost } from "./core/observe.ts";
 
 const USAGE = `nudg <command> [options]
 
@@ -35,7 +37,7 @@ simulate and plot options
   --props <a,b,...>         Properties to report. Default: all.
 
   mcp                       Run the MCP server on stdio (tools: nudg_guide, nudg_validate,
-                            nudg_simulate, nudg_plot, nudg_compare, nudg_render).
+                            nudg_simulate, nudg_plot, nudg_compare, nudg_render, nudg_observe).
   preset <name> [--options '{"scale":0.9}']
                             Print a preset (press, hover, toggle, toast) as a nudg file,
                             to save and edit: nudg preset press > press.nudg.json
@@ -44,6 +46,9 @@ simulate and plot options
                             filmstrips in rows; without it, both curves on one graph.
   render <file>             Draw real frames of the component with headless Chrome, as one
                             filmstrip PNG. Uses the page's markup and styles; its scripts don't run.
+  observe <url|page.html>   Host truth: open the real page (scripts and all) in headless Chrome,
+                            do what a finger would, measure the element every frame, and say
+                            what the page actually showed. With --file, judge it against the file.
 
 plot options
   --out <file.svg|file.png> Where to write. PNG needs Chrome (or NUDG_CHROME). Default: SVG to stdout.
@@ -56,6 +61,17 @@ compare options
   --out <file.html|png|svg> Where to write. Default: graph as SVG to stdout, or compare.png with --html.
   --at / --frames           Frame times, as for render.
   --labels <A,B>            Names for the two versions.
+
+observe options
+  --select <css>            The element to measure (shadow roots included). Default, with --file:
+                            [data-nudg="<the file's first target>"].
+  --do <action@time>        An action on it: down, up, tap, hover, leave, or key:<name>, e.g.
+                            tap@0.1 or key:escape@0.5. Repeatable. The page's own handlers run.
+  --file <x.nudg.json>      The file the page should be playing. Its events default to the actions
+                            at the times they happened; --send overrides them.
+  --settle <seconds>        How long to keep measuring after the last action. Default: 1.5.
+  --warmup <seconds>        How long to let the page's scripts start first. Default: 0.5.
+  --viewport <w>x<h>        Window size, e.g. 390x844 for a phone.
 
 render options
   --html <page.html>        Page with the component's markup (data-nudg names) and styles. Required.
@@ -286,6 +302,61 @@ async function runCompare(args: Args, json: boolean): Promise<number> {
   return 0;
 }
 
+async function runObserve(args: Args, json: boolean): Promise<number> {
+  const url = args.positional[0];
+  if (!url || args.positional.length > 1) fail("observe takes one URL or page path.");
+  const file = args.flags.get("file")?.at(-1);
+  let program: Program | undefined;
+  if (file) {
+    const loaded = load(file);
+    if (!loaded.program) {
+      process.stdout.write(`${file}: can't observe against it, the file has errors\n`);
+      for (const d of loaded.diagnostics) process.stdout.write(formatDiagnostic(d) + "\n");
+      return 1;
+    }
+    program = loaded.program;
+  }
+  const target = program ? [...program.properties.keys()][0]?.split(".")[0] : undefined;
+  const selector = args.flags.get("select")?.at(-1) ?? (target ? `[data-nudg="${target}"]` : undefined);
+  if (!selector) fail("observe needs --select <css> (or --file, whose first target names the element).");
+  const actions: HostAction[] = (args.flags.get("do") ?? []).map((raw) => {
+    const at = raw.lastIndexOf("@");
+    if (at <= 0) fail(`--do expects action@time, e.g. tap@0.1, got "${raw}".`);
+    const action = raw.slice(0, at);
+    const problem = checkAction(action);
+    if (problem) fail(problem);
+    return { action, t: parseSeconds(raw.slice(at + 1), "--do time") };
+  });
+  if (actions.length === 0) fail(`observe needs at least one --do <action@time>. Actions are ${ACTIONS}.`);
+  const chrome = findChrome();
+  if (!chrome) fail(`observe needs a browser. ${CHROME_HINT}`);
+  const settle = args.flags.get("settle")?.at(-1);
+  const warmup = args.flags.get("warmup")?.at(-1);
+  const vp = args.flags.get("viewport")?.at(-1);
+  const viewport = vp ? (() => {
+    const m = /^(\d+)x(\d+)$/.exec(vp);
+    if (!m) fail(`--viewport expects <w>x<h>, e.g. 390x844, got "${vp}".`);
+    return { width: Number(m[1]), height: Number(m[2]) };
+  })() : undefined;
+  const observation = await observe({ url, selector, actions, chrome, settle: settle ? parseSeconds(settle, "--settle") : undefined, warmup: warmup ? parseSeconds(warmup, "--warmup") : undefined, viewport });
+
+  let judgement;
+  let simulation;
+  if (program) {
+    const options = simulationOptions(args, program);
+    if (options.events.length === 0) options.events = actionsToEvents(target!, observation.series.marks);
+    const last = observation.series.samples.at(-1)?.t ?? 0;
+    simulation = simulate(program, { ...options, until: options.until ?? Math.max(last, options.events.at(-1)?.t ?? 0) });
+    judgement = judgeHost(simulation, observation.summary, { target });
+  }
+  if (json) {
+    process.stdout.write(JSON.stringify({ ok: true, url, selector, marks: observation.series.marks, summary: observation.summary, unmountedAt: observation.series.unmountedAt, judgement, file: simulation ? { events: simulation.samples.length ? undefined : undefined, summary: simulation.summary } : undefined, samples: observation.series.samples }, null, 2) + "\n");
+  } else {
+    process.stdout.write(formatObservation({ url, selector, summary: observation.summary, marks: observation.series.marks }, judgement) + "\n");
+  }
+  return judgement && judgement.verdict !== "played" ? 1 : 0;
+}
+
 async function runRender(args: Args, json: boolean): Promise<number> {
   const { program } = loadProgram("render", args, json);
   if (!program) return 1;
@@ -330,6 +401,7 @@ if (command === "validate") process.exit(validate(args, json));
 if (command === "simulate") process.exit(runSimulate(args, json));
 if (command === "plot") process.exit(runPlot(args, json));
 if (command === "render") process.exit(await runRender(args, json));
+if (command === "observe") process.exit(await runObserve(args, json));
 if (command === "compare") process.exit(await runCompare(args, json));
 if (command === "preset") {
   const name = args.positional[0] as PresetName | undefined;

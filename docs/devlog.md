@@ -242,3 +242,9 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 
 ### What the field report asked for next
 - The report's priority list: host truth first (a transition the file plays but the page never shows, because the element unmounts on click), then perceptual framing of numbers, then exit handling in the adapter, then feel words in the guide. This change covers the numbers, the frames and the words; host truth is the next tool.
+
+### Host truth: measuring the page instead of trusting the file
+- **Problem:** Every tool so far verified the file. The field report's top item was a release spring the file played perfectly while the app never showed it: the block unmounted on click. Nothing in nudg could see that.
+- **Design:** `observe` drives the real page through Chrome DevTools (real pointer and key events, so React handlers, CSS transitions and navigation all run), and samples the element each frame: computed `transform` decomposed into translate, scale and rotation, plus `opacity`, size, and presence (re-querying the selector through open shadow roots, so an unmount or a remount is seen). The summary is in the file's terms (min, max, final, settled, overshoot), and the judgement reuses `compare`'s perceptibility thresholds. Overshoot on the page has no targets to measure against, so it is measured per leg between actions and plateaus; a leg that ends where it began reports none.
+- **Two choices:** a `tap` holds for 80 ms and is marked as a down and an up, because a zero-length tap makes the file's press spring go nowhere and the comparison meaningless. And the file is simulated at the times the actions *actually* happened (the page's clock), not the requested ones, so a few milliseconds of scheduling jitter don't show up as a difference.
+- **Lesson:** The host is the only ground truth. A file-level tool can be exact and still wrong about what a person sees; the judge needs one tool that looks at the page.

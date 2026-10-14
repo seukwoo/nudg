@@ -8,14 +8,16 @@ import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { compile, type CompileResult } from "../core/compile.ts";
 import { compare, compareFrameTimes } from "../core/compare.ts";
+import { actionsToEvents, judgeHost } from "../core/observe.ts";
 import { plot } from "../core/plot.ts";
 import { dragGesture, simulate, type SimulateOptions, type TimedEvent } from "../core/simulate.ts";
 import type { Program } from "../core/types.ts";
 import { VERSION } from "../core/vocabulary.ts";
 import { CHROME_HINT, findChrome, svgToPng } from "./chrome.ts";
-import { formatComparison, formatDiagnostic, formatSamples, formatStatus, formatSummary } from "./format.ts";
+import { formatComparison, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./format.ts";
 import { comparePage, readWithImports } from "./compare-page.ts";
 import { compilePath } from "./load.ts";
+import { ACTIONS, checkAction, observe, type HostAction } from "./observe.ts";
 import { frameTimes, renderFrames } from "./render.ts";
 
 const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
@@ -23,7 +25,7 @@ const GUIDE = resolve(dirname(fileURLToPath(import.meta.url)), "../../spec/guide
 
 const INSTRUCTIONS = `nudg files (*.nudg.json) describe UI interactions: states, events, and spring or tween motion.
 If you haven't written one before, call nudg_guide first. After any edit, call nudg_validate and apply its hints until it reports no errors.
-When you change motion for a person to judge, call nudg_compare with the version before and after: it says first whether the difference is perceptible, then shows both side by side (real A/B filmstrips when the host page's HTML is given). Pass its headline on to the person; if it suggests an exaggerated version, offer that. Use nudg_simulate for numbers, nudg_plot for one version's graph, nudg_render for one version's frames.`;
+When you change motion for a person to judge, call nudg_compare with the version before and after: it says first whether the difference is perceptible, then shows both side by side (real A/B filmstrips when the host page's HTML is given). Pass its headline on to the person; if it suggests an exaggerated version, offer that. Use nudg_simulate for numbers, nudg_plot for one version's graph, nudg_render for one version's frames. The file says what should happen; nudg_observe says what the real page showed: after wiring a file into an app, or when the person says it doesn't look right, call it with the running page's URL and the file, and report what it found (a page that never shows the motion, an element that unmounts mid-motion, a CSS transition fighting the spring).`;
 
 type Json = Record<string, unknown>;
 type Content = { type: "text"; text: string } | { type: "image"; data: string; mimeType: string };
@@ -144,6 +146,33 @@ const TOOLS = [
     },
     annotations: { readOnlyHint: false },
   },
+  {
+    name: "nudg_observe",
+    title: "Observe the real page",
+    description: "Host truth. Opens the real page (its scripts run) in headless Chrome, performs actions on the element as a finger or a key would, measures it every frame (translate, scale, rotation, opacity, size, and whether it is still there), and says what the page actually showed. With `file`, judges the page against the file under the same actions: played as the file says, differs, never shown (the element left the page), or nothing moved. Needs a local Chrome.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: { type: "string", description: "An http(s) URL of the running app, or a local .html path (served from the working directory)." },
+        selector: { type: "string", description: "CSS selector of the element to measure; shadow roots are searched. Default, with `file`: [data-nudg=\"<the file's first target>\"]." },
+        actions: {
+          type: "array",
+          description: `What to do, in time order: { "action": "tap", "t": 0.1 }. Actions are ${ACTIONS}. The page's own handlers run, so a click that navigates away will.`,
+          items: { type: "object", properties: { action: { type: "string" }, t: { type: ["number", "string"] } }, required: ["action", "t"] },
+          minItems: 1,
+        },
+        file: source.file,
+        events: { ...timing.events, description: "The file's events to judge against. Default: the actions, as the file's events, at the times they actually happened." },
+        start: timing.start,
+        reducedMotion: timing.reducedMotion,
+        settle: { type: ["number", "string"], description: "Seconds to keep measuring after the last action. Default 1.5." },
+        warmup: { type: ["number", "string"], description: "Seconds to let the page's scripts start first. Default 0.5." },
+        viewport: { type: "object", properties: { width: { type: "integer" }, height: { type: "integer" } }, description: "Window size, e.g. a phone's 390×844." },
+      },
+      required: ["url", "actions"],
+    },
+    annotations: { readOnlyHint: true },
+  },
 ];
 
 export function serveMcp(input: NodeJS.ReadableStream = process.stdin, output: NodeJS.WritableStream = process.stdout): Promise<void> {
@@ -219,6 +248,8 @@ async function callTool(name: string, args: Json): Promise<ToolResult> {
         return await renderTool(args);
       case "nudg_compare":
         return await compareTool(args);
+      case "nudg_observe":
+        return await observeTool(args);
     }
     throw new ToolError(`Unknown tool: ${name}`);
   } catch (e) {
@@ -315,6 +346,41 @@ async function compareTool(args: Json): Promise<ToolResult> {
   });
   if (out && extname(out).toLowerCase() === ".png") writeFileSync(out, png);
   return { content: [text(text0 + (out ? `\nsaved ${out}` : "")), { type: "image", data: png.toString("base64"), mimeType: "image/png" }], structuredContent: structured as unknown as Json };
+}
+
+async function observeTool(args: Json): Promise<ToolResult> {
+  const url = requiredString(args.url, "url");
+  const chrome = findChrome();
+  if (!chrome) throw new ToolError(`nudg_observe needs a browser. ${CHROME_HINT}`);
+  const program = args.file !== undefined || args.source !== undefined ? loadProgram(args).program : undefined;
+  const target = program ? [...program.properties.keys()][0]?.split(".")[0] : undefined;
+  const selector = optionalString(args.selector, "selector") ?? (target ? `[data-nudg="${target}"]` : undefined);
+  if (!selector) throw new ToolError("Pass `selector` (or `file`, whose first target names the element).");
+  if (!Array.isArray(args.actions) || args.actions.length === 0) throw new ToolError(`\`actions\` must list at least one { action, t }. Actions are ${ACTIONS}.`);
+  const actions: HostAction[] = args.actions.map((a, i) => {
+    const item = (typeof a === "object" && a !== null ? a : {}) as Json;
+    const action = requiredString(item.action, `actions[${i}].action`);
+    const problem = checkAction(action);
+    if (problem) throw new ToolError(problem);
+    return { action, t: time(item.t, `actions[${i}].t`) };
+  });
+  const viewport = typeof args.viewport === "object" && args.viewport !== null ? (args.viewport as { width: number; height: number }) : undefined;
+  const observation = await observe({ url, selector, actions, chrome, settle: optionalTime(args.settle, "settle"), warmup: optionalTime(args.warmup, "warmup"), viewport });
+  let judgement;
+  let fileSummary;
+  if (program) {
+    const options = timingOptions(args, program);
+    if (options.events.length === 0) options.events = actionsToEvents(target!, observation.series.marks);
+    const last = observation.series.samples.at(-1)?.t ?? 0;
+    const sim = simulate(program, { ...options, until: options.until ?? Math.max(last, options.events.at(-1)?.t ?? 0) });
+    judgement = judgeHost(sim, observation.summary, { target });
+    fileSummary = sim.summary;
+  }
+  const view = { url, selector, summary: observation.summary, marks: observation.series.marks };
+  return {
+    content: [text(formatObservation(view, judgement))],
+    structuredContent: { ok: true, url, selector, marks: observation.series.marks, summary: observation.summary, judgement: judgement as unknown as Json, file: fileSummary as unknown as Json } as Json,
+  };
 }
 
 async function renderTool(args: Json): Promise<ToolResult> {

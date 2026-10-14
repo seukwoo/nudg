@@ -83,6 +83,27 @@ nudg compare toggle.nudg.json toggle-bouncier.nudg.json --send track.tap@0.05 --
 
 Each property gets a verdict: **imperceptible** (under a device pixel at 1×, or under about three frames), **subtle**, or **clear**. When nothing crosses the threshold it says so and proposes the next turn: look at an exaggerated version first, then dial it back. With `--html` the picture is real A/B filmstrips in two rows, same markup, same moments; without it, both curves on one graph (solid A, dashed B). `--labels now,bouncier` names the rows.
 
+### observe
+
+The file says what should happen. `observe` says what the real page showed:
+
+```sh
+nudg observe http://localhost:5173/ --file block-press.nudg.json --do tap@0.1
+nudg observe examples/button-press.html --select '[data-nudg="button"]' --do down@0.1 --do up@0.5
+```
+
+It opens the page in headless Chrome with its scripts running (a local `.html` is served from the working directory), performs the actions as a finger or a key would (`down`, `up`, `tap`, `hover`, `leave`, `key:escape`, ...), measures the element every frame (translate, scale, rotation, opacity, size, and whether it is still in the page), and reports:
+
+```
+The element left the page at 0.18s, mid-motion: what the file plays after that is never shown.
+
+#btn on unmount.html, after down at 0.10s, up at 0.18s:
+  scale: 0.974 … 1.000; final 0.974; still moving at the end
+  the element left the page at 0.18s
+```
+
+With `--file` it judges the page against the file under the same actions, at the times they actually happened: **played** as the file says, **differs** (a CSS transition on the same property, a re-render that resets the element, a stale build), **never shown** (the element unmounted mid-motion), or **nothing moved** (the element isn't bound, or the actions don't reach it). The exit code is 1 unless the page played the file. `--select` defaults to `[data-nudg="<the file's first target>"]`; `--send` overrides the derived events; `--settle` and `--warmup` set how long to measure after the last action and how long to let the page start; `--viewport 390x844` sets the window.
+
 ### preset
 
 ```sh
@@ -104,6 +125,7 @@ Prints a preset (`press`, `hover`, `toggle`, `toast`) as a nudg file. The same p
 | `nudg_plot` | A motion graph image. |
 | `nudg_compare` | Two versions under the same events: a perceptibility verdict first (imperceptible / subtle / clear, per property), then real A/B filmstrips (with `html`) or one graph with both curves. With `html` it also writes `compare.html`, a page that plays both side by side in slow motion, and tells the person to open it. Proposes an exaggerated version when nothing would be noticed. |
 | `nudg_render` | Real frames of the component as a filmstrip image, from the host page (needs Chrome). |
+| `nudg_observe` | Host truth: opens the running page, performs actions, measures the element every frame, and judges what the page showed against the file (played / differs / never shown / nothing moved). |
 
 To use it from Claude Code (paths relative to the project the agent works in):
 

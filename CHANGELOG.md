@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **`nudg observe` / `nudg_observe`: host truth.** Opens the real page in headless Chrome with its scripts running, performs actions (`tap`, `down`, `up`, `hover`, `leave`, `key:<name>`), measures the element every frame (translate, scale, rotation, opacity, size, presence through shadow roots), and reports what the page showed. With a file it judges the page under the same actions at the times they happened: played, differs, never shown (unmounted mid-motion), or nothing moved. The DOM adapter is not involved: it measures any page, however the motion is made.
 - **Overshoot is measured per target leg.** The simulator reports `overshoot` per property as how far the value went past wherever it was heading at the time, so a press that goes 0 → 6 → 0 without bouncing reports 0 (it used to report the whole excursion); `compare` uses it. The runtime exposes `targets()`.
 - **`nudg compare --out compare.html`: a page that plays A and B side by side**, on the real markup, with the same events, looping, with live values, replay, press-both with a chosen hold, 1× / ¼× / ⅒× speed and pause. The runtime is inlined, so the file works offline. `nudg_compare` writes it next to the filmstrip whenever `html` is given and tells the person to open it. Stills can't show motion; this can.
 - **Compare filmstrips show the moments that matter:** where each property differs most, each event and 80 ms after it, captioned and outlined, on top of the evenly spaced frames.

@@ -48,7 +48,7 @@ test("lists the tools with input schemas", async () => {
   const { result } = await request("tools/list");
   assert.deepEqual(
     result.tools.map((t: { name: string }) => t.name),
-    ["nudg_guide", "nudg_validate", "nudg_simulate", "nudg_plot", "nudg_compare", "nudg_render"],
+    ["nudg_guide", "nudg_validate", "nudg_simulate", "nudg_plot", "nudg_compare", "nudg_render", "nudg_observe"],
   );
   for (const tool of result.tools) assert.equal(tool.inputSchema.type, "object");
 });
@@ -102,6 +102,16 @@ test("compare returns a verdict and a picture", { skip: chrome ? false : "no Chr
   const strip = await call("nudg_compare", { a: { file: "examples/toggle.nudg.json" }, b: { file: "examples/toggle-press.nudg.json" }, html: "examples/toggle.html", events: [{ event: "track.tap", t: 0.05 }], at: [0, 0.3] });
   assert.equal(strip.isError, undefined, strip.content[0].text);
   assert.ok(strip.content.some((c: any) => c.type === "image"), "a filmstrip with both rows");
+});
+
+test("observe judges the real page against the file", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const result = await call("nudg_observe", { url: "test/fixtures/host/unmount.html", selector: "#btn", file: "examples/button-press.nudg.json", actions: [{ action: "tap", t: 0.1 }], settle: 0.5 });
+  assert.equal(result.isError, undefined, result.content[0].text);
+  assert.match(result.content[0].text, /left the page at 0\.\d+s/);
+  assert.equal(result.structuredContent.judgement.verdict, "never-shown");
+  const bad = await call("nudg_observe", { url: "test/fixtures/host/unmount.html", selector: "#btn", actions: [{ action: "poke", t: 0.1 }] });
+  assert.equal(bad.isError, true);
+  assert.match(bad.content[0].text, /Unknown action "poke"/);
 });
 
 test("plot returns an image", { skip: chrome ? false : "no Chrome found" }, async () => {

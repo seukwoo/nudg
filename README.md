@@ -1,178 +1,44 @@
+<div align="center">
+
 # nudg
 
 **The interaction format your AI can nudge.**
 
-nudg is a plain-text format for UI interactions: states, the events that move between them, and the motion in between. It lives in your codebase next to your components. Your AI coding tool writes it, a validator checks it, and a runtime plays it on any platform.
+[![npm](https://img.shields.io/npm/v/@nudg/core)](https://www.npmjs.com/package/@nudg/core)
+[![CI](https://github.com/seukwoo/nudg/actions/workflows/ci.yml/badge.svg)](https://github.com/seukwoo/nudg/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-> **Status: v0.1 draft.** The grammar, JSON Schema, conformance suite, TypeScript reference runtime, CLI, and DOM adapter work end to end for single-element interactions (stage 0). The format may still change before 1.0, and nothing is published to npm yet.
+<a href="https://seukwoo.github.io/nudg/demo/">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/hero-dark.svg">
+    <img alt="A toggle, a toggle that shrinks while pressed, and a like button, each played by nudg" src="docs/media/hero-light.svg" width="720">
+  </picture>
+</a>
 
-## Why
+**[Try all 16 examples in the live demo →](https://seukwoo.github.io/nudg/demo/)**
 
-Today's interactive animation formats are binary files authored in a dedicated studio. That worked when a designer handed a finished asset to an engineer. It doesn't fit how software is built now:
+</div>
 
-- **Your AI can't edit it.** A binary file is a black box to an LLM. You can't ask for "make the toggle a little bouncier" and get a diff.
-- **It can't be reviewed.** No meaningful diff, no code review, no history you can read.
-- **It needs the studio.** Every change, however small, goes back through one specific tool.
+nudg describes a UI interaction in a small JSON file next to your component: its states, the events that move between them, and the motion in between. Your AI coding tool edits the file, nudg checks the edit, and a tiny runtime plays it in your app.
 
-Meanwhile, more and more UI is written by people working with AI coding tools, moving fast, inside the repo. Interactions should be able to live there too.
+## Say "bouncier", get a one-line diff
 
-nudg is meant to slip into that workflow instead of asking you to leave it.
-
-## How it works
-
-nudg doesn't contain an AI. The AI coding tool you already use turns your words into edits; nudg makes those edits small, checkable, and safe.
-
-1. **Your app imports the nudg runtime.** The interaction lives in a file next to the component, for example `toggle.nudg.json`. The component plays it and marks its parts by name (`data-nudg="knob"`).
-2. **You ask for a change in plain words.** "Make the toggle a little bouncier." Your AI edits one field in the nudg file (`"bounce": 0.25` → `0.4`) and leaves the component code alone. The vocabulary is chosen so that everyday words map to single fields: bouncier is `bounce`, faster is `duration`.
-3. **Your AI checks its own work** through the nudg CLI or MCP server: `validate` explains what's wrong and how to fix it, `simulate` sends events and reports values over time ("the knob now overshoots to 22.8"), and `render` draws any moment as an image.
-4. **The runtime plays the file** in your app: the core computes values every frame, and a thin adapter applies them to your views.
-
-## Try it
-
-Install the library and CLI from npm (Node 22.4 or later):
-
-```sh
-npm install @nudg/core
-npx nudg validate my.nudg.json
+```diff
+   "animate": {
+-    "knob.x": { "spring": { "duration": 0.35, "bounce": 0.25 } },
++    "knob.x": { "spring": { "duration": 0.35, "bounce": 0.6 } },
 ```
 
-Or work from a clone. Node 23.6 or later runs the TypeScript sources directly, so there is no build step:
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/bouncier-dark.svg">
+  <img alt="The toggle before and after the edit: with bounce 0.6 the knob overshoots and settles" src="docs/media/bouncier-light.svg" width="716">
+</picture>
 
-```sh
-git clone https://github.com/seukwoo/nudg.git
-cd nudg
-npm install
-```
+Everyday words map to single fields: *bouncier* is `bounce`, *slower* is `duration`. The component code doesn't change.
 
-Validate a file. Here a spring has a typo. Errors carry a stable code, a JSON pointer, and a hint, so an AI can fix its own output:
+## A whole interaction in one file
 
-```
-$ node src/cli.ts validate bad.nudg.json
-bad.nudg.json: 2 errors
-  error unknown-key at /animate/knob.x/spring/duraton
-    Unknown key "duraton".
-    hint: Did you mean "duration"?
-  error spring-incomplete at /animate/knob.x/spring
-    The spring is missing duration.
-    hint: Add "duration", or use the default form: "duration" + "bounce".
-```
-
-Simulate the toggle: tap at 0.1 s and watch the knob spring across, overshoot slightly, and settle:
-
-```
-$ node src/cli.ts simulate examples/toggle.nudg.json --send track.tap@0.1 --every 0.1
-t      state  knob.x  track.color
-0.000  off    0.000   #d1d5db
-0.100  on     0.000   #d1d5db
-0.200  on     12.582  #82dc9f
-0.300  on     19.910  #4ade80
-0.400  on     20.485  #4ade80
-...
-
-summary
-  knob.x       final 20.000  min 0.000  max 20.567  at rest from 0.835s
-  track.color  final #4ade80  at rest from 0.301s
-```
-
-See it, as a graph or as real frames (PNG output uses a local Chrome), or in the browser:
-
-```sh
-node src/cli.ts plot examples/like.nudg.json --send heart.tap@0.1 --out like.png
-node src/cli.ts simulate examples/toggle-drag.nudg.json --drag track:9@0.1-0.18
-node src/cli.ts render examples/like.nudg.json --html examples/like.html --send heart.tap@0 --out frames.png
-npm run demo        # then open http://localhost:8787/demo/
-```
-
-Every command takes `--json` for agents. `node src/cli.ts --help` lists all options.
-
-## Principles
-
-### AI-native
-
-These are concrete requirements, not a slogan. Each one is something the format and tooling must actually do:
-
-1. **Text source.** A small vocabulary an LLM can write correctly without a page of examples. Compact, diffable, stable identifiers for targeted edits.
-2. **Validator with fix hints.** Errors are machine-readable and say how to fix them, so an AI can correct its own output in a loop.
-3. **Headless simulation.** Send events, advance time, and inspect state without rendering anything, so behavior can be tested, not just looked at.
-4. **Frame rendering.** Render any moment to an image so a multimodal model (or a person) can check what it actually looks like.
-5. **CLI and MCP from day one.** Every capability is callable by an agent. A visual editor may come later, but the text stays the source of truth.
-
-### Any platform
-
-Edit one file, and every platform picks up the change.
-
-The nudg core never draws anything. It takes events in and gives property values out. The host app applies those values to its own views:
-
-```
- host app (web, iOS, Android, Flutter, Unity, Qt, ...)
-   │  events: tap, drag, data changed
-   ▼
- ┌──────────────── nudg core ────────────────┐
- │  state + time + motion (headless)          │
- └────────────────────────────────────────────┘
-   │  values: knob.x = 18.3, track.color = #4ADE80
-   ▼
- host applies values to its own views (thin adapter)
-```
-
-Any platform that can set a property and send an event can run nudg. A new platform needs only a thin adapter.
-
-- **The spec is the source of truth, not an implementation.** Behavior is defined by the spec plus a language-neutral conformance suite: event sequences and timestamps in, expected states and values out. Any runtime that passes the suite is a nudg runtime.
-- **The core stays small.** State transitions, the clock, and motion math (springs, tweens). A small core is cheap to port, and ports are checked by the conformance suite.
-- **The reference implementation is TypeScript.** It is the fastest to iterate on and matches the first target. A portable core (for example Rust via WASM and FFI) can come later without changing the format.
-- **Code generation stays possible.** Teams that don't want a runtime dependency can compile a nudg file to platform code (SwiftUI, Compose, ...).
-
-## Scope
-
-### Where it starts: web UI micro-interactions
-
-A micro-interaction is a small, self-contained UI moment with one job: trigger → rules (state) → feedback (motion). Examples:
-
-- A like button whose heart pops when tapped
-- A toggle whose knob springs across the track
-- A button that sinks slightly while pressed
-- An input that shakes on invalid entry
-- Pull-to-refresh, swipe-to-delete
-- A tab indicator that slides to the selected tab
-- A toast that slides in and out
-
-This is the first target because the gap is real: full animation tools are overkill here, and CSS alone gets messy once state is involved. It is also where people building with AI coding tools are the most numerous, and the pieces are small enough to polish to a high bar.
-
-### Where it grows
-
-The format is designed for the whole range from day one. Implementation starts at stage 0.
-
-| Stage | Scope | Examples | Needs |
-|---|---|---|---|
-| 0 | Single element | Toggle, button, like | States, transitions, springs; DOM adapter |
-| 1 | Component | Tabs, accordion, swipe row, carousel | Coordinating several targets, gestures; React adapter |
-| 2 | Screens and flows | Onboarding, modals, screen transitions | Nested states, data inputs, composing machines |
-| 3 | Native | iOS, Android | SwiftUI and Compose adapters, or code generation |
-| 4 | Standalone content | Physics, canvas, game-like scenes | Own rendering, physics |
-
-### What nudg is not
-
-- **Not a drawing or illustration tool.** Character animation, bones, and mesh deformation belong to tools built for them.
-- **Not a design tool.** nudg animates the components you already have. It doesn't replace your design system.
-- **Not a general-purpose state management library.** It is scoped to interactions and motion.
-
-## Design decisions
-
-These are expensive to change later, so they are fixed early:
-
-1. **Platform-neutral vocabulary.** Abstract properties (`x`, `y`, `scale`, `rotation`, `opacity`, `color`, ...), never CSS or platform syntax. Adapters translate.
-2. **Composition.** The grammar allows machines inside machines (nested states, composed components) from the start, even before stage 0 uses it.
-3. **Deterministic clock.** The same events at the same times always produce the same states and values. Simulation, frame rendering, and the conformance suite depend on it.
-4. **Open event namespace.** Pointer and keyboard first; gestures, sensors, and app data later, without breaking existing files.
-5. **Versioning and extensions.** Every file declares a format version, and there is a defined rule for unknown fields and namespaced extensions.
-6. **Core and renderers are separate.** The headless core is pure logic; drawing is always an adapter's job.
-7. **Units: all supported, with a default.** A bare number is a *logical unit*. On every major platform this is already the same size: a CSS `px`, an iOS `pt`, and an Android `dp` are all density-independent logical units. `px`, `pt`, and `dp` are accepted as aliases for it. `%` is relative. Other units can arrive through the extension rule.
-8. **Targets are bound by name.** A nudg file refers to targets by name (`knob`, `track`) and never knows what they are on a given platform. The host registers which of its views each name means, for example `bind("knob", element)`. On the web, `data-nudg="knob"` attributes bind automatically. The validator and runtime report names that are used but never bound, and the reverse.
-9. **Strings are never code.** A string is always a name (a state, a motion, a target path) or a value (`"#4ADE80"`, `"300ms"`); the only free text is `note`. Computation is always an object with one operator key (`map`, `follow`, `nearest`, ...), from a small closed set that grows only when a real interaction needs it. There is no expression language, so a reader (or an AI) never has to guess whether a string is a formula or a sentence, and the validator can check every operator precisely.
-
-## Grammar (draft, v0.1)
-
-Worked out by expressing a toggle and a like button. See [`examples/`](examples/).
+This is the toggle above, complete:
 
 ```json
 {
@@ -194,326 +60,126 @@ Worked out by expressing a toggle and a like button. See [`examples/`](examples/
 }
 ```
 
-### Syntax: plain JSON
+- **States say where.** In `on`, the knob sits at 20 and the track is green.
+- **`animate` says how.** The knob springs there; the color tweens.
+- **`when` says what moves between states.** A tap on the track.
 
-A nudg file is strict JSON with the extension `.nudg.json`. Every platform already parses it, JSON Schema describes it, and LLMs write it reliably, so there is no parser to maintain and nothing new to learn. A friendlier syntax can be added later as sugar that compiles to the same model, but JSON stays the source of truth.
+Interrupt it mid-flight and the spring carries its velocity into the new direction, with nothing extra to write.
 
-A file may start with `"$schema": "https://unpkg.com/@nudg/core@0.2/spec/nudg-0.2.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
-
-JSON has no comments. Instead, any object may carry a `note` string. Runtimes ignore it. Unlike a comment, a note survives tools rewriting the file, and an AI can read it as part of the data.
-
-### Motion model
-
-- **States say where.** A state only declares target values.
-- **`animate` says how.** It maps each property to the motion that carries it to its target. When the target changes mid-flight (a second tap while the knob is still moving), the value retargets from where it is. A spring also keeps its velocity, so interruption is correct by default instead of a special case.
-- **`enter` adds a moment.** Some feedback is transient: a heart that pops and settles back, a field that shakes. The target doesn't change, so `enter` plays a *kick* when a state is entered through a transition (see below). Loading a file enters its initial states without kicks.
-
-A transition can override `animate` for itself:
-
-```json
-"track.tap": { "to": "off", "animate": { "knob.x": { "spring": { "duration": 0.3, "bounce": 0 } } } }
-```
-
-### Defining your own motion
-
-Platform motion is not special in nudg. Motion is defined in three layers, and the same format is used at every layer:
-
-1. **Primitives** (in the core, defined by the spec and checked by the conformance suite): `spring`, `tween`, and `kick`. The core stays small.
-2. **Named motions:** a file's `motions` defines motions by name, and anywhere a motion is expected, a name can be used instead. `import` brings in the named motions of other files, so a design system keeps its signature motion in one library and every component follows it. "Make the whole app snappier" is a one-line diff in that library.
-3. **Schemes:** a motion library the host chooses. Apple-like and Material-like feels ship as nudg libraries written in this same format, not as runtime code, so a team's own signature motion is a peer of the platform ones.
-
-Identical motion on every platform is the default: explicit parameters and named motions mean the same values everywhere. A scheme is an explicit input, so the same events with the same scheme still produce the same values, and the conformance suite can test each scheme.
-
-A library file has `motions` and no machine:
-
-```json
-{
-  "nudg": "0.1",
-  "motions": {
-    "snappy": { "spring": { "duration": 0.3, "bounce": 0.15 } },
-    "pop": { "kick": 6, "spring": { "duration": 0.4, "bounce": 0.5 } }
-  }
-}
-```
-
-A component imports it:
-
-```json
-{
-  "nudg": "0.1",
-  "import": ["./motion/brand.nudg.json"],
-  "targets": ["heart"],
-  "values": { "heart.scale": 1 },
-  "animate": { "heart.scale": "snappy" },
-  "initial": "idle",
-  "states": {
-    "idle": { "when": { "heart.tap": "liked" } },
-    "liked": { "enter": { "heart.scale": "pop" }, "when": { "heart.tap": "idle" } }
-  }
-}
-```
-
-- `import` paths are relative to the importing file. Imports may chain; a cycle is an error. In v0.1 only `motions` are imported.
-- A name defined twice (locally and in an import, or in two imports) is an error that names both sources. Use a new name instead of shadowing.
-
-### Structure
-
-- **Top level:** `nudg` (format version), `import`, `targets`, `values`, `motions`, `animate`, and a machine. A file without a machine is a library.
-- **Machine:** either `initial` + `states` (one active state at a time) or `regions` (named machines that all run in parallel).
-- **State:** `set` (values while active), `enter` (kicks played on entry), `when` (transitions), and optionally a nested machine. Machines and states share this shape at every depth, which covers composition (decision 2).
-- **Transition:** `"event": "target-state"` or `"event": { "to": ..., "animate": ..., "note": ... }`. In v0.1 a transition targets a sibling state.
-
-### Paths and events
-
-- One dotted form everywhere: `target.property` for values (`knob.x`), `target.event` for events (`track.tap`). The same string appears in `values`, `set`, `animate`, `enter`, and `when`, so it can be found and edited directly.
-- Stage 0 pointer events: `down`, `up`, `cancel`, `tap`. The host sends each as a separate event; a click is `down`, `up`, `tap`, in that order.
-- Events are processed one at a time, in the order sent. Each event is offered to every active region, in the order the regions appear in the file.
-- Transitions live under `when`, not `on`, so they never collide with a state named `on`.
-
-### Value resolution
-
-1. Start from `values` (the base). Every property used anywhere must have a base value.
-2. Apply `set` from every active state; a deeper state overrides its ancestors.
-3. If two parallel regions set the same property, the validator reports an error.
-
-### Motion primitives
-
-- **`spring`:** platforms offer many spring APIs, but they describe one physical model (mass, stiffness, damping) in different forms. nudg has one spring primitive and accepts the common forms:
-  - `duration` + `bounce` (the default form). `duration` is perceptual, in seconds. `bounce` is 0 for no overshoot, toward 1 for more bounce, and negative for overdamped; it must be below 1. With mass 1, stiffness = (2π / duration)² and damping ratio = 1 − bounce.
-  - `response` + `dampingFraction`, where response = duration and dampingFraction = 1 − bounce.
-  - `stiffness` + `dampingRatio`, with mass 1.
-  - `stiffness` + `damping` + `mass`.
-
-  Every form converts exactly to stiffness, damping, and mass, which is what the spec computes with. A spring uses exactly one form; mixing them is a validator error. `tension` / `friction` are rejected with a hint, because tools disagree on what they mean. Fit-to-duration springs (a fixed total time plus a damping value) are not supported, because they don't map to a single physical spring. The spec defines springs by their closed-form solution, so results are deterministic (decision 3).
-- **`tween`:** `duration` and `ease`. `ease` is `linear`, `in`, `out`, `in-out`, one of the classic curve families (`in-`, `out-` or `in-out-` followed by `sine`, `quad`, `cubic`, `quart`, `quint`, `expo`, `circ` or `back`, e.g. `out-cubic`), or a cubic Bézier `[x1, y1, x2, y2]`; the default is `in-out`. Bounce and elastic aren't curves: use a spring. On retarget, a tween restarts from the current value with its full duration.
-- **`kick`:** adds velocity (units per second) to a numeric property without changing its target, then lets the motion's `spring` carry it back. A kick always comes with a `spring`. A positive kick on `scale` is a pop; a negative kick on `x` with a high bounce is a shake.
-
-### Colors
-
-Colors are hex strings (`#RGB`, `#RRGGBB`, `#RRGGBBAA`) and interpolate in OKLab, which keeps midpoints from going muddy. A color can be tweened or sprung; a kick on a color is an error.
-
-### Units
-
-- Time: a bare number is seconds; `"350ms"` is also accepted.
-- Length: a bare number is a logical unit (decision 7).
-
-### Unknown fields and extensions
-
-An unknown key without a prefix is a validator error with a "did you mean" hint, so typos are caught instead of silently ignored. Keys starting with `x-` are extensions; runtimes that don't understand them ignore them.
-
-## Native feel on every platform
-
-Platform motion ships as nudg libraries, written in the same format as everything else and taken from the platforms' own published values:
-
-| Library | Source | Native names | Values |
-|---|---|---|---|
-| [`motion/apple.nudg.json`](examples/motion/apple.nudg.json) | SwiftUI `Spring` presets (iOS 17+) | `smooth`, `snappy`, `bouncy` | duration 0.5 s; bounce 0, 0.15, 0.3 |
-| [`motion/material-expressive.nudg.json`](examples/motion/material-expressive.nudg.json) | androidx Material 3 `ExpressiveMotionTokens` | `spatial-default/fast/slow`, `effects-default/fast/slow` | spatial (ratio, stiffness) 0.8/380, 0.6/800, 0.8/200; effects 1.0 with 1600, 3800, 800 |
-| [`motion/material-standard.nudg.json`](examples/motion/material-standard.nudg.json) | androidx Material 3 `StandardMotionTokens` | same | spatial 0.9 with 700, 1400, 300; effects as above |
-
-nudg's `duration` + `bounce` is SwiftUI's model, and `stiffness` + `dampingRatio` is Compose's, so the numbers are copied, not approximated.
-
-Every platform library also defines the same **common names**, so a file written against them changes feel by changing one line:
-
-| Common name | Meaning | Apple | Material Expressive |
-|---|---|---|---|
-| `standard` | the default spatial spring | snappy | spatial-default |
-| `quick` | faster | snappy at 0.3 s | spatial-fast |
-| `gentle` | slower, calmer | smooth | spatial-slow |
-| `playful` | the bounciest | bouncy | spatial-fast |
-| `fade` | for color and opacity; never bounces | smooth at 0.35 s | effects-default |
-
-```json
-"import": ["./motion/apple.nudg.json"],
-"animate": { "knob.x": "standard", "track.color": "fade" }
-```
-
-The libraries ship in the npm package (`node_modules/@nudg/core/examples/motion/`). A nudg file's `import` is a path relative to the file, so copy the library you want next to your files, or point the import at the installed copy.
-
-Use the common names by default. Use a native name (`snappy`, `spatial-fast`) when the point is to match a platform exactly, for example a web view that must feel like the iOS app beside it. See [`examples/ios-toggle.nudg.json`](examples/ios-toggle.nudg.json) and [`examples/material-switch.nudg.json`](examples/material-switch.nudg.json): the same machine, a different import.
-
-Host markup follows the [WAI-ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/patterns) patterns (`role="switch"`, `aria-checked`), so the examples are the web's canonical components with platform motion.
-
-## Grammar additions (draft, v0.2)
-
-Stage 1 is about continuous interaction: a value follows a finger, and on release it settles somewhere sensible. Worked out by expressing a draggable toggle and a swipe-to-reveal row. A file that uses any of this declares `"nudg": "0.2"`; a 0.2 runtime also reads 0.1 files.
-
-```json
-{
-  "nudg": "0.2",
-  "targets": ["knob", "track"],
-  "values": {
-    "knob.x": 0,
-    "track.color": { "map": "knob.x", "from": [0, 20], "to": ["#D1D5DB", "#4ADE80"] }
-  },
-  "animate": { "knob.x": { "spring": { "duration": 0.35, "bounce": 0.25 } } },
-  "initial": "off",
-  "states": {
-    "off": { "when": { "track.tap": "on", "knob.dragstart": "dragging" } },
-    "on": { "set": { "knob.x": 20 }, "when": { "track.tap": "off", "knob.dragstart": "dragging" } },
-    "dragging": {
-      "follow": { "knob.x": { "input": "knob.drag.x", "range": [0, 20], "overdrag": 0.3 } },
-      "when": { "knob.dragend": { "nearest": ["off", "on"], "by": "knob.x" } }
-    }
-  }
-}
-```
-
-### Drag events and inputs
-
-- **Events:** `dragstart` once the pointer has moved more than 4 logical units since `down`; `dragend` when it's released or cancelled after that. A release after a drag sends `up` (or `cancel`) and then `dragend`, and no `tap`.
-- **Inputs** are continuous values the host supplies over time. `target.drag.x` and `target.drag.y` are the pointer's travel since `down`, in logical units. `dragstart` counts as 0, so on the first sample a followed value catches up by the distance the pointer moved before the drag was recognized, and stays under the finger.
-- **Velocity** is computed by the runtime, never by the host, so every platform agrees: the least-squares slope of an input's samples over the 0.1 s before the moment it's needed, or 0 with fewer than two samples in that window.
-
-### `follow`: a value that tracks an input
-
-In a state's `follow`, a property tracks an input directly, with no motion:
-
-```json
-"follow": { "knob.x": { "input": "knob.drag.x", "range": [0, 20], "overdrag": 0.3 } }
-```
-
-- The value is the property's value when the state was entered, plus how far the input has moved since then. Starting from the current value means no jump, even mid-animation.
-- `range` (optional) bounds it. Past the range, the value moves `overdrag` times as far as the input (0 to 1; default 0, a hard stop), which feels like a rubber band.
-- `"follow": { "knob.x": "knob.drag.x" }` is the short form, with no range.
-- When the state is left, the property springs (or tweens) to its new target from where it is, and a spring starts with the input's velocity: the finger's speed carries into the motion.
-- A followed property must be numeric, can't also be in that state's `set`, and two parallel regions can't follow the same property.
-
-### `nearest`: settle where the throw was heading
-
-A transition can choose its target on the spot:
-
-```json
-"knob.dragend": { "nearest": ["off", "on"], "by": "knob.x" }
-```
-
-- The runtime projects where `by` was heading: its value plus its velocity times `momentum` seconds (default 0.5; 0 means position only). A quick flick crosses over even from a short distance.
-- It goes to the listed sibling state whose target for `by` is closest to that point; on a tie, the first listed.
-- Like any transition, it may also carry `animate` to override motion.
-
-### `map`: a value derived from another
-
-In `values`, a property can be computed from another property instead of having its own base value:
-
-```json
-"action.opacity": { "map": "content.x", "from": [0, -80], "to": [0, 1] }
-```
-
-- `from` lists points on the source property; `to` lists the derived values at those points (numbers, or colors interpolated in OKLab). Between points it's linear; outside, it holds the end value.
-- At least two points; `from` must be strictly increasing or strictly decreasing.
-- The source must be a numeric property with its own base value (no chains of maps in v0.2).
-- A mapped property follows its source at every moment, during springs and drags alike, so it can't be set, animated, followed or kicked itself.
-
-### Transitions from any state
-
-A machine can list `when` next to `states` (or inside a region). It applies when no active state in that machine handles the event, so N tabs need N entries instead of N².
-
-### More events
-
-- `hoverstart` and `hoverend`: a hovering pointer (mouse or pen) enters or leaves the target.
-- `focus` and `blur`: the target gains or loses keyboard focus.
-- `host.<name>`: an event the app sends, for example `host.check` when a controlled toggle's `checked` prop turns true. `host` is reserved and can't be a target name.
-
-### Starting state
-
-The runtime can start in states other than `initial` (for a controlled component that mounts already on), without animating: `createRuntime(program, { state: ["on"] })`. Paths are the ones `state()` reports; regions not listed start at their `initial`.
-
-## Repository
-
-| Path | What it is |
-|---|---|
-| [`spec/nudg-0.1.schema.json`](spec/nudg-0.1.schema.json) | JSON Schema, for editors and LLM structured output. The validator checks more (references, base values, motion names). |
-| [`spec/conformance/`](spec/conformance/) | Language-neutral behavior and validation cases. Expected values come from an independent derivation. |
-| [`src/core/`](src/core/) | Reference runtime in TypeScript: compiler and validator, motion math, state machine, simulation. No platform APIs. |
-| [`src/cli.ts`](src/cli.ts) | `nudg validate`, `simulate`, `plot`, `render` and `mcp`, with `--json` for agents. |
-| [`src/node/`](src/node/) | Node helpers: file loading, Chrome discovery, frame rendering over the DevTools protocol, the MCP server. |
-| [`docs/devlog.md`](docs/devlog.md) | Development log: problems met while building nudg, their causes, and how they were resolved. |
-| [`spec/guide.md`](spec/guide.md) | The format on one page, written for AI agents (served by the `nudg_guide` tool). |
-| [`src/dom/`](src/dom/) | DOM adapter: `play(program, root)` and `compileUrl(url)`. |
-| [`src/react/`](src/react/) | React adapter: the `useNudg` hook. |
-| [`examples/`](examples/) | Fourteen interactions (toggles, buttons, lists, sheets, feedback), each a nudg file plus a host page with its markup, cataloged in `index.json` with categories, concept tags and prompts to try with an AI. |
-| [`demo/`](demo/) | The examples site: browse by category, tag or search; open one for its source as nudg, HTML and React; edit any file in the playground. Built from `examples/index.json`, with each example's markup in a shadow root. |
-
-### MCP server
-
-`nudg mcp` serves the same capabilities as tools over stdio, with no dependencies:
-
-| Tool | What it does |
-|---|---|
-| `nudg_guide` | The format on one page, including which field to change for "bouncier", "snappier", and so on. |
-| `nudg_validate` | Diagnostics with codes, JSON pointers and fix hints. Takes a `file`, or `source` to check text before writing it. |
-| `nudg_simulate` | States and values over time for a list of events, with a per-property summary. |
-| `nudg_plot` | A motion graph image. |
-| `nudg_render` | Real frames of the component as a filmstrip image, from the host page (needs Chrome). |
-
-To use it from Claude Code (paths relative to the project the agent works in):
-
-```sh
-claude mcp add nudg -- npx -y @nudg/core mcp
-```
-
-Other clients take the same command: `{ "command": "npx", "args": ["-y", "@nudg/core", "mcp"] }`. From a clone, use `node /path/to/nudg/src/cli.ts mcp` instead.
-
-### React adapter
+Your component binds its parts by name, and nudg plays the file on them:
 
 ```tsx
 import { useNudg } from "@nudg/core/react";
-import toggle from "./toggle-drag.nudg.json";
+import toggle from "./toggle.nudg.json";
 
-function Toggle({ checked }: { checked: boolean }) {
-  const { bind, state, send } = useNudg(toggle);
-  useEffect(() => void send(checked ? "host.check" : "host.uncheck"), [checked]);
+function Toggle() {
+  const { bind } = useNudg(toggle);
   return (
-    <button ref={bind("track")} aria-pressed={state.includes("on")}>
+    <button ref={bind("track")}>
       <span ref={bind("knob")} />
     </button>
   );
 }
 ```
 
-`bind(name)` returns a stable ref callback. Values go straight to the elements' styles, so the component doesn't re-render while things move; `state` updates only when the state changes. The hook takes a JSON object (compiled once, with `files` for its imports) or a compiled program. React 18 or later is an optional peer dependency.
+Values go straight to the elements' styles, so the component doesn't re-render while things move. Not using React? The DOM adapter binds `data-nudg="knob"` attributes instead; see [Using nudg](docs/usage.md#dom-adapter).
 
-### Seeing motion
+## Native feel, one import
 
-Two ways to look at an interaction, for people and for multimodal models:
+nudg ships the platforms' own motion as libraries in the same format: SwiftUI's springs, and Material 3's motion tokens, copied from their published values. They share common names like `standard`, `quick` and `playful`, so switching an interaction from iOS feel to Android feel is a one-line diff:
 
-- **`nudg plot`** draws a motion graph: each property over time, with state bands, events, the target, overshoot and settle times. It needs nothing but the file (PNG output uses a local Chrome; SVG doesn't).
-- **`nudg render`** draws real frames of the component as one filmstrip PNG. It takes the host page's markup and styles (`--html`), plays the file on a manual clock in headless Chrome, and captures each `--at` time (or `--frames` evenly spaced ones). The page's own scripts don't run. Set `NUDG_CHROME` if Chrome isn't found.
-
-### DOM adapter
-
-```js
-import { compileUrl, play } from "@nudg/core/dom";
-
-const { program, diagnostics } = await compileUrl("/toggle.nudg.json");
-const player = play(program, document.querySelector(".settings"));
+```diff
+-  "import": ["./motion/apple.nudg.json"],
++  "import": ["./motion/material-expressive.nudg.json"],
+   "animate": { "knob.x": "standard", "track.color": "fade" }
 ```
 
-- **Binding:** elements with `data-nudg="name"` under the root, plus `options.bind`. Unbound targets and undeclared names are reported (`player.unbound`, `player.unknown`) and logged.
-- **Input:** `pointerdown` is `down`, `click` is `tap` (so keyboard activation of a button also taps), and a release is `up` over the element or `cancel` outside it. For targets the file drags, travel past 4 px is `dragstart`, pointer moves become `drag.x` / `drag.y` samples, the release adds `dragend`, the click that follows is swallowed, and `touch-action: none` keeps the page from scrolling instead. Pointer enter and leave (not touch) are `hoverstart` / `hoverend`; `focus` and `blur` map directly.
-- **State in CSS:** every bound element carries `data-nudg-state` with the active states (`"checked/on press/up"`), so styles can depend on state without any code: `.spinner[data-nudg-state~="refreshing"] { animation: spin 0.8s linear infinite }`. This is how continuous decoration such as a loading spin is done today.
-- **App events and state:** `player.send("host.check")` sends an app event, `player.input(name, value)` an input sample, `{ state: ["on"] }` starts somewhere other than `initial`, and `onState` reports state changes. `player.bind(name, element)` binds an element later and returns a function that unbinds it.
-- **Output:** `x`, `y`, `rotation`, `scale`, `scaleX`, `scaleY` become one `transform` (translate, then rotate, then scale, around the element's `transform-origin`). `opacity`, `width` and `height` map directly. `color` is `fill` on SVG elements and `background-color` otherwise. nudg writes only the styles for properties the file declares.
-- **Clock:** real time by default. `{ clock: "manual" }` plus `player.render(t)` draws exact moments, for tests and frame rendering. The demo exposes this as `?at=0.25&send=toggle:track.tap@0.1`.
+See [platform motion](docs/usage.md#native-feel-on-every-platform) for every name and value.
 
-## Open questions
+## Get started
 
-- Transitions that cross machine levels (to a parent's sibling, into a nested state).
-- Keyboard events beyond focus (`space`, `enter`, arrow keys), and whether `click` covering keyboard activation is enough.
-- Layout (v0.3): measured positions and sizes (`{ "measure": "tab2.x" }` for a tab indicator), a natural size (`"auto"`) to collapse a row from, and `%` units.
-- Decay (fling, inertia) as a motion of its own, for scroll-like content without snap points (v0.3). Snapping is covered by `nearest`.
-- Nonlinear rubber banding that depends on the view's size, instead of the linear `overdrag` factor.
-- Continuous motion while a state is active (a spinner turning, a marquee): a rate-driven value, and how it hands off when the state is left (a rotation at 720° shouldn't unwind to 0). Today this is left to CSS through `data-nudg-state`.
-- `nearest` limited to neighbors of the current state (a carousel that moves one slide per swipe however hard the flick), instead of tuning `momentum` down.
-- Pinch, rotate and other multi-pointer gestures.
-- More primitives and combinators: `keyframes`, `sequence`, `delay`, `stagger`.
-- Tweaking a named motion at the point of use, for example `{ "use": "snappy", "duration": 0.5 }`.
-- Schemes: which names a scheme may supply or override, how the host passes one in, and how the validator still catches misspelled names. The built-in Apple-like and Material-like libraries.
+```sh
+npm install @nudg/core
+```
+
+Give your AI agent the nudg tools over MCP. This is for Claude Code; any MCP client can run the same command:
+
+```sh
+claude mcp add nudg -- npx -y @nudg/core mcp
+```
+
+Or use the CLI yourself:
+
+```sh
+npx nudg validate toggle.nudg.json
+npx nudg simulate toggle.nudg.json --send track.tap@0.1
+```
+
+Node 22.4 or later. See [Using nudg](docs/usage.md) for every command and option.
+
+## Your AI checks its own work
+
+An agent can't watch an animation, so nudg tells it what happened, in text and in pictures:
+
+| Tool | What the agent gets |
+|---|---|
+| `validate` | Each problem with a stable code, a JSON pointer, and a hint that says how to fix it. |
+| `simulate` | States and values over time for a list of events: "the knob overshoots to 20.57 and is at rest from 0.84 s". |
+| `plot` | A motion graph of every property, like the one below. |
+| `render` | Real frames of your component, captured in a headless browser. |
+
+<img alt="nudg plot output: the knob's position and the track's color over time, tapped twice" src="docs/media/toggle-plot.svg" width="760">
+
+<sub>`nudg plot` output for the toggle, tapped again while still moving. The spring turns around smoothly instead of restarting.</sub>
+
+## How it works
+
+The nudg core never draws anything. Events go in, property values come out, and a thin adapter applies them to your views:
+
+```
+ your app (web today; iOS, Android, and more to come)
+   │  events: tap, drag, hover, focus, app events
+   ▼
+ ┌──────────────── nudg core ────────────────┐
+ │  states + clock + motion math (headless)   │
+ └────────────────────────────────────────────┘
+   │  values: knob.x = 18.3, track.color = #4ADE80
+   ▼
+ adapter sets them on your views
+```
+
+- **Deterministic.** The same events at the same times always give the same values, so motion can be tested like any other code.
+- **Portable.** Any platform that can set a property and send an event can run nudg. The spec and a language-neutral [conformance suite](spec/conformance/) define the behavior, not one implementation.
+- **Just JSON.** No new syntax, no studio, readable diffs. A [JSON Schema](spec/nudg-0.1.schema.json) gives editors completion.
+
+## Why
+
+Interactive animation usually lives in binary files made in a dedicated studio. An AI can't edit them, a reviewer can't read the diff, and every small change goes back through that one tool. nudg keeps interactions as text in your repo, where your AI coding tool already works. [More on the design](docs/design.md).
+
+## Status
+
+**Early, and moving.** Version 0.2 is [on npm](https://www.npmjs.com/package/@nudg/core) with taps, hovers, drags and throws, values derived from other values, and adapters for the DOM and React. The format may still change before 1.0; see the [changelog](CHANGELOG.md).
+
+| Stage | Scope | Examples | |
+|---|---|---|---|
+| 0 | Single element | Toggle, button, like | Done |
+| 1 | Component | Swipe row, carousel, bottom sheet, tabs | Done, except layout measurement for tab indicators (next) |
+| 2 | Screens and flows | Onboarding, modals, screen transitions | Planned |
+| 3 | Native | iOS and Android | Planned |
+| 4 | Standalone content | Physics, canvas, game-like scenes | Planned |
+
+## Documentation
+
+- [The nudg format](docs/spec.md): the full grammar.
+- [Using nudg](docs/usage.md): the CLI, the MCP server, the React and DOM adapters, and platform motion.
+- [Design](docs/design.md): principles, scope, decisions, and open questions.
+- [Guide for AI agents](spec/guide.md): the format on one page.
+- [Development log](docs/devlog.md): problems met while building nudg, and how they were resolved.
 
 ## Contributing
 
-Issues and pull requests are welcome. nudg is designed before it is coded, so for anything beyond a bug fix, please open an issue first to discuss the case it solves. See [CONTRIBUTING.md](CONTRIBUTING.md) for how the repository works.
+Issues and pull requests are welcome. nudg is designed before it is coded, so for anything beyond a bug fix, please open an issue first to talk through the interaction you want to build. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-[MIT](LICENSE). This covers the spec, the JSON Schema, the conformance suite, and the reference implementation.
+[MIT](LICENSE)

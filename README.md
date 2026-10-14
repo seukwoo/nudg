@@ -398,8 +398,8 @@ The runtime can start in states other than `initial` (for a controlled component
 | [`spec/guide.md`](spec/guide.md) | The format on one page, written for AI agents (served by the `nudg_guide` tool). |
 | [`src/dom/`](src/dom/) | DOM adapter: `play(program, root)` and `compileUrl(url)`. |
 | [`src/react/`](src/react/) | React adapter: the `useNudg` hook. |
-| [`examples/`](examples/) | Toggle, toggle with press, like button, brand motion library, and host pages (`toggle.html`, `like.html`) with their markup. |
-| [`demo/`](demo/) | The examples running in a browser, plus a playground that recompiles as you type. |
+| [`examples/`](examples/) | Fourteen interactions (toggles, buttons, lists, sheets, feedback), each a nudg file plus a host page with its markup, cataloged in `index.json` with categories, concept tags and prompts to try with an AI. |
+| [`demo/`](demo/) | The examples site: browse by category, tag or search; open one for its source as nudg, HTML and React; edit any file in the playground. Built from `examples/index.json`, with each example's markup in a shadow root. |
 
 ### MCP server
 

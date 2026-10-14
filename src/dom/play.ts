@@ -194,7 +194,9 @@ export function play(program: Program, root: ParentNode | null = document, optio
     for (const [name, press] of pressed) {
       if (press.pointer !== p.pointerId) continue;
       pressed.delete(name);
-      const inside = [...(elements.get(name) ?? [])].some((el) => el.contains(e.target as Node));
+      // composedPath sees into shadow roots, where e.target is retargeted to the host.
+      const released = (e.composedPath?.()[0] ?? e.target) as Node;
+      const inside = [...(elements.get(name) ?? [])].some((el) => el.contains(released));
       send(`${name}.${!cancelled && inside ? "up" : "cancel"}`);
       if (press.dragging) send(`${name}.dragend`);
       if (dragged) {

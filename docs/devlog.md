@@ -154,6 +154,11 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Resolution:** The rules were separated again. Found by measuring the `pre` and its ancestors over the DevTools protocol (height 56 px against 542 px of content), then grepping the stylesheet for `56px`.
 - **Lesson:** Scripted replacements must anchor on a whole, unique line, not a fragment that can appear inside another selector list. Render the page after any stylesheet edit.
 
+### Releases inside a shadow root looked like cancels
+- **Problem:** On the new examples site, where each example's markup lives in a shadow root, a tap inside an example would have been reported as `cancel` instead of `up`.
+- **Cause:** The DOM adapter decides between `up` and `cancel` in a window-level `pointerup` listener by checking whether `e.target` is inside the bound element. Events crossing a shadow boundary are retargeted to the shadow host, which the element doesn't contain.
+- **Resolution:** The adapter uses `e.composedPath()[0]`, the real target, with `e.target` as the fallback.
+
 ### The playground only knew the toggle
 - **Problem:** Pasting another example into the playground gave nothing to interact with, and files with imports couldn't compile there at all.
 - **Cause:** The playground stage was hard-coded toggle markup, and it compiled text without a way to fetch imports.

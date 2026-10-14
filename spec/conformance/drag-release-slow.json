@@ -1,0 +1,264 @@
+{
+  "conformance": "0.2",
+  "name": "Drag: released after a pause, nearest uses position only and springs back off",
+  "doc": {
+    "nudg": "0.2",
+    "targets": [
+      "knob",
+      "track"
+    ],
+    "values": {
+      "knob.x": 0,
+      "track.color": {
+        "map": "knob.x",
+        "from": [
+          0,
+          20
+        ],
+        "to": [
+          "#D1D5DB",
+          "#4ADE80"
+        ]
+      }
+    },
+    "animate": {
+      "knob.x": {
+        "spring": {
+          "duration": 0.35,
+          "bounce": 0.25
+        }
+      }
+    },
+    "initial": "off",
+    "states": {
+      "off": {
+        "when": {
+          "track.tap": "on",
+          "track.dragstart": "dragging"
+        }
+      },
+      "on": {
+        "set": {
+          "knob.x": 20
+        },
+        "when": {
+          "track.tap": "off",
+          "track.dragstart": "dragging"
+        }
+      },
+      "dragging": {
+        "follow": {
+          "knob.x": {
+            "input": "track.drag.x",
+            "range": [
+              0,
+              20
+            ],
+            "overdrag": 0.3
+          }
+        },
+        "when": {
+          "track.dragend": {
+            "nearest": [
+              "off",
+              "on"
+            ],
+            "by": "knob.x"
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "off"
+        ],
+        "values": {
+          "knob.x": 0,
+          "track.color": "#d1d5db"
+        }
+      }
+    },
+    {
+      "t": 0.1,
+      "send": "track.dragstart"
+    },
+    {
+      "t": 0.12,
+      "input": "track.drag.x",
+      "value": 0.8
+    },
+    {
+      "t": 0.13,
+      "expect": {
+        "state": [
+          "dragging"
+        ],
+        "values": {
+          "knob.x": 0.8,
+          "track.color": "#cdd6d8"
+        }
+      }
+    },
+    {
+      "t": 0.14,
+      "input": "track.drag.x",
+      "value": 1.6
+    },
+    {
+      "t": 0.16,
+      "input": "track.drag.x",
+      "value": 2.4
+    },
+    {
+      "t": 0.17,
+      "expect": {
+        "state": [
+          "dragging"
+        ],
+        "values": {
+          "knob.x": 2.4,
+          "track.color": "#c5d7d1"
+        }
+      }
+    },
+    {
+      "t": 0.18,
+      "input": "track.drag.x",
+      "value": 3.2
+    },
+    {
+      "t": 0.2,
+      "input": "track.drag.x",
+      "value": 4.0
+    },
+    {
+      "t": 0.21,
+      "expect": {
+        "state": [
+          "dragging"
+        ],
+        "values": {
+          "knob.x": 4.0,
+          "track.color": "#bcd8ca"
+        }
+      }
+    },
+    {
+      "t": 0.22,
+      "input": "track.drag.x",
+      "value": 4.8
+    },
+    {
+      "t": 0.24,
+      "input": "track.drag.x",
+      "value": 5.6
+    },
+    {
+      "t": 0.25,
+      "expect": {
+        "state": [
+          "dragging"
+        ],
+        "values": {
+          "knob.x": 5.6,
+          "track.color": "#b4d9c3"
+        }
+      }
+    },
+    {
+      "t": 0.26,
+      "input": "track.drag.x",
+      "value": 6.4
+    },
+    {
+      "t": 0.28,
+      "input": "track.drag.x",
+      "value": 7.2
+    },
+    {
+      "t": 0.29,
+      "expect": {
+        "state": [
+          "dragging"
+        ],
+        "values": {
+          "knob.x": 7.2,
+          "track.color": "#abdabc"
+        }
+      }
+    },
+    {
+      "t": 0.3,
+      "input": "track.drag.x",
+      "value": 8.0
+    },
+    {
+      "t": 0.45,
+      "send": "track.dragend"
+    },
+    {
+      "t": 0.45,
+      "expect": {
+        "state": [
+          "off"
+        ],
+        "values": {
+          "knob.x": 8.0,
+          "track.color": "#a6dab8"
+        }
+      }
+    },
+    {
+      "t": 0.49,
+      "expect": {
+        "state": [
+          "off"
+        ],
+        "values": {
+          "knob.x": 6.572824831,
+          "track.color": "#aed9bf"
+        }
+      }
+    },
+    {
+      "t": 0.55,
+      "expect": {
+        "state": [
+          "off"
+        ],
+        "values": {
+          "knob.x": 2.96733743,
+          "track.color": "#c2d7ce"
+        }
+      }
+    },
+    {
+      "t": 0.65,
+      "expect": {
+        "state": [
+          "off"
+        ],
+        "values": {
+          "knob.x": 0.036042806,
+          "track.color": "#d1d5db"
+        }
+      }
+    },
+    {
+      "t": 0.85,
+      "expect": {
+        "state": [
+          "off"
+        ],
+        "values": {
+          "knob.x": -0.040171239,
+          "track.color": "#d1d5db"
+        }
+      }
+    }
+  ]
+}

@@ -40,26 +40,52 @@ export interface TweenMotion {
 
 export type Motion = SpringMotion | TweenMotion;
 
+/** A property computed from another at every moment (v0.2). */
+export interface PropertyMap {
+  source: string;
+  /** Strictly monotonic points on the source. */
+  from: number[];
+  to: Channels[];
+}
+
 export interface Property {
   kind: PropertyKind;
+  /** For a mapped property, its value at the source's base. */
   base: Channels;
+  map?: PropertyMap;
+}
+
+/** A property tracking an input while a state is active (v0.2). */
+export interface Follow {
+  input: string;
+  range?: [number, number];
+  overdrag: number;
 }
 
 export interface Transition {
-  to: string;
+  /** The target state, unless `nearest` picks it. */
+  to?: string;
+  nearest?: { states: string[]; by: string; momentum: number };
   animate: Map<string, Motion>;
 }
 
 export interface State {
   name: string;
   set: Map<string, Channels>;
+  follow: Map<string, Follow>;
   enter: Map<string, SpringMotion>;
   when: Map<string, Transition>;
   machine?: Machine;
 }
 
 export type Machine =
-  | { kind: "states"; initial: string; states: Map<string, State> }
+  | {
+      kind: "states";
+      initial: string;
+      states: Map<string, State>;
+      /** Transitions from any of these states, when none of them handles the event (v0.2). */
+      when: Map<string, Transition>;
+    }
   | { kind: "regions"; regions: Map<string, Machine> };
 
 export interface Program {

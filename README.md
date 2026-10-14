@@ -78,6 +78,7 @@ See it, as a graph or as real frames (PNG output uses a local Chrome), or in the
 
 ```sh
 node src/cli.ts plot examples/like.nudg.json --send heart.tap@0.1 --out like.png
+node src/cli.ts simulate examples/toggle-drag.nudg.json --drag track:9@0.1-0.18
 node src/cli.ts render examples/like.nudg.json --html examples/like.html --send heart.tap@0 --out frames.png
 npm run demo        # then open http://localhost:8787/demo/
 ```
@@ -197,7 +198,7 @@ Worked out by expressing a toggle and a like button. See [`examples/`](examples/
 
 A nudg file is strict JSON with the extension `.nudg.json`. Every platform already parses it, JSON Schema describes it, and LLMs write it reliably, so there is no parser to maintain and nothing new to learn. A friendlier syntax can be added later as sugar that compiles to the same model, but JSON stays the source of truth.
 
-A file may start with `"$schema": "https://unpkg.com/@nudg/core@0.1/spec/nudg-0.1.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
+A file may start with `"$schema": "https://unpkg.com/@nudg/core@0.2/spec/nudg-0.2.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
 
 JSON has no comments. Instead, any object may carry a `note` string. Runtimes ignore it. Unlike a comment, a note survives tools rewriting the file, and an AI can read it as part of the data.
 
@@ -328,7 +329,7 @@ Stage 1 is about continuous interaction: a value follows a finger, and on releas
 ### Drag events and inputs
 
 - **Events:** `dragstart` once the pointer has moved more than 4 logical units since `down`; `dragend` when it's released or cancelled after that. A release after a drag sends `up` (or `cancel`) and then `dragend`, and no `tap`.
-- **Inputs** are continuous values the host supplies over time. `target.drag.x` and `target.drag.y` are the pointer's travel since the drag began, in logical units.
+- **Inputs** are continuous values the host supplies over time. `target.drag.x` and `target.drag.y` are the pointer's travel since `down`, in logical units. `dragstart` counts as 0, so on the first sample a followed value catches up by the distance the pointer moved before the drag was recognized, and stays under the finger.
 - **Velocity** is computed by the runtime, never by the host, so every platform agrees: the least-squares slope of an input's samples over the 0.1 s before the moment it's needed, or 0 with fewer than two samples in that window.
 
 ### `follow`: a value that tracks an input
@@ -396,6 +397,7 @@ The runtime can start in states other than `initial` (for a controlled component
 | [`docs/devlog.md`](docs/devlog.md) | Development log: problems met while building nudg, their causes, and how they were resolved. |
 | [`spec/guide.md`](spec/guide.md) | The format on one page, written for AI agents (served by the `nudg_guide` tool). |
 | [`src/dom/`](src/dom/) | DOM adapter: `play(program, root)` and `compileUrl(url)`. |
+| [`src/react/`](src/react/) | React adapter: the `useNudg` hook. |
 | [`examples/`](examples/) | Toggle, toggle with press, like button, brand motion library, and host pages (`toggle.html`, `like.html`) with their markup. |
 | [`demo/`](demo/) | The examples running in a browser, plus a playground that recompiles as you type. |
 
@@ -419,6 +421,25 @@ claude mcp add nudg -- npx -y @nudg/core mcp
 
 Other clients take the same command: `{ "command": "npx", "args": ["-y", "@nudg/core", "mcp"] }`. From a clone, use `node /path/to/nudg/src/cli.ts mcp` instead.
 
+### React adapter
+
+```tsx
+import { useNudg } from "@nudg/core/react";
+import toggle from "./toggle-drag.nudg.json";
+
+function Toggle({ checked }: { checked: boolean }) {
+  const { bind, state, send } = useNudg(toggle);
+  useEffect(() => void send(checked ? "host.check" : "host.uncheck"), [checked]);
+  return (
+    <button ref={bind("track")} aria-pressed={state.includes("on")}>
+      <span ref={bind("knob")} />
+    </button>
+  );
+}
+```
+
+`bind(name)` returns a stable ref callback. Values go straight to the elements' styles, so the component doesn't re-render while things move; `state` updates only when the state changes. The hook takes a JSON object (compiled once, with `files` for its imports) or a compiled program. React 18 or later is an optional peer dependency.
+
 ### Seeing motion
 
 Two ways to look at an interaction, for people and for multimodal models:
@@ -436,7 +457,8 @@ const player = play(program, document.querySelector(".settings"));
 ```
 
 - **Binding:** elements with `data-nudg="name"` under the root, plus `options.bind`. Unbound targets and undeclared names are reported (`player.unbound`, `player.unknown`) and logged.
-- **Input:** `pointerdown` is `down`, `click` is `tap` (so keyboard activation of a button also taps), and a release is `up` over the element or `cancel` outside it.
+- **Input:** `pointerdown` is `down`, `click` is `tap` (so keyboard activation of a button also taps), and a release is `up` over the element or `cancel` outside it. For targets the file drags, travel past 4 px is `dragstart`, pointer moves become `drag.x` / `drag.y` samples, the release adds `dragend`, the click that follows is swallowed, and `touch-action: none` keeps the page from scrolling instead. Pointer enter and leave (not touch) are `hoverstart` / `hoverend`; `focus` and `blur` map directly.
+- **App events and state:** `player.send("host.check")` sends an app event, `player.input(name, value)` an input sample, `{ state: ["on"] }` starts somewhere other than `initial`, and `onState` reports state changes. `player.bind(name, element)` binds an element later and returns a function that unbinds it.
 - **Output:** `x`, `y`, `rotation`, `scale`, `scaleX`, `scaleY` become one `transform` (translate, then rotate, then scale, around the element's `transform-origin`). `opacity`, `width` and `height` map directly. `color` is `fill` on SVG elements and `background-color` otherwise. nudg writes only the styles for properties the file declares.
 - **Clock:** real time by default. `{ clock: "manual" }` plus `player.render(t)` draws exact moments, for tests and frame rendering. The demo exposes this as `?at=0.25&send=toggle:track.tap@0.1`.
 

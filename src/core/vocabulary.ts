@@ -1,6 +1,8 @@
 import type { PropertyKind } from "./types.ts";
 
-export const VERSION = "0.1";
+/** The newest format version; every listed version is read. */
+export const VERSION = "0.2";
+export const VERSIONS = ["0.1", "0.2"];
 
 /** Platform-neutral properties (design decision 1). Adapters translate them. */
 export const PROPERTIES: Record<string, PropertyKind> = {
@@ -30,7 +32,13 @@ export const PROPERTY_ALIASES: Record<string, string> = {
   fill: "color",
 };
 
-export const EVENTS = ["down", "up", "cancel", "tap"] as const;
+export const EVENTS = ["down", "up", "cancel", "tap", "dragstart", "dragend", "hoverstart", "hoverend", "focus", "blur"] as const;
+/** Events that need format 0.2. */
+export const EVENTS_0_2 = ["dragstart", "dragend", "hoverstart", "hoverend", "focus", "blur"];
+/** Inputs a target can supply, as target.<input> (v0.2). */
+export const INPUTS = ["drag.x", "drag.y"];
+/** Event and target prefix for events the app sends: host.<name>. */
+export const HOST = "host";
 
 export const EVENT_ALIASES: Record<string, string> = {
   click: "tap",
@@ -44,6 +52,14 @@ export const EVENT_ALIASES: Record<string, string> = {
   touchend: "up",
   pointercancel: "cancel",
   touchcancel: "cancel",
+  pan: "dragstart",
+  panstart: "dragstart",
+  panend: "dragend",
+  mouseenter: "hoverstart",
+  pointerenter: "hoverstart",
+  mouseleave: "hoverend",
+  pointerleave: "hoverend",
+  hover: "hoverstart",
 };
 
 export const NAMED_EASES: Record<string, readonly [number, number, number, number] | "linear"> = {

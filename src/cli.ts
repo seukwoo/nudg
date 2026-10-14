@@ -4,7 +4,7 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { basename, extname } from "node:path";
 import { plot } from "./core/plot.ts";
-import { simulate, type SimulateOptions } from "./core/simulate.ts";
+import { describeEvent, dragGesture, simulate, type SimulateOptions, type TimedEvent } from "./core/simulate.ts";
 import type { Diagnostic, Program } from "./core/types.ts";
 import { CHROME_HINT, findChrome, svgToPng } from "./node/chrome.ts";
 import { formatDiagnostic, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
@@ -22,6 +22,10 @@ Commands
 
 simulate and plot options
   --send <event@time>       Event and time, e.g. track.tap@0.1 or track.tap@100ms. Repeatable.
+  --drag <t:dx[,dy]@a-b>    A drag on target t by (dx, dy) from time a to b, e.g. track:20@0.1-0.3.
+                            Sends down, dragstart, 60 input samples per second, up, dragend.
+  --input <name=v@time>     One input sample, e.g. track.drag.x=12@0.2. Repeatable.
+  --start <path,...>        Start in these states instead of initial, e.g. on.
   --until <seconds>         Last sample time. Default: when everything settles.
   --every <seconds>         Sample interval (simulate only). Default: 0.05.
   --props <a,b,...>         Properties to report. Default: all.
@@ -115,11 +119,25 @@ function loadProgram(command: string, args: Args, json: boolean): { file: string
 }
 
 function simulationOptions(args: Args, program: Program): SimulateOptions {
-  const events = (args.flags.get("send") ?? []).map((raw) => {
+  const events: TimedEvent[] = (args.flags.get("send") ?? []).map((raw) => {
     const at = raw.lastIndexOf("@");
     if (at <= 0) fail(`--send expects event@time, e.g. track.tap@0.1, got "${raw}".`);
     return { event: raw.slice(0, at), t: parseSeconds(raw.slice(at + 1), "--send time") };
   });
+  for (const raw of args.flags.get("drag") ?? []) {
+    const m = /^([^:]+):(-?[\d.]+)(?:,(-?[\d.]+))?@([\d.]+m?s?)-([\d.]+m?s?)$/.exec(raw);
+    if (!m) fail(`--drag expects target:dx[,dy]@from-to, e.g. track:20@0.1-0.3, got "${raw}".`);
+    const from = parseSeconds(m[4], "--drag start");
+    const to = parseSeconds(m[5], "--drag end");
+    if (!(to > from)) fail(`--drag must end after it starts, got "${raw}".`);
+    events.push(...dragGesture(m[1], from, to, Number(m[2]), m[3] === undefined ? 0 : Number(m[3])));
+  }
+  for (const raw of args.flags.get("input") ?? []) {
+    const m = /^([^=]+)=(-?[\d.]+)@(.+)$/.exec(raw);
+    if (!m) fail(`--input expects name=value@time, e.g. track.drag.x=12@0.2, got "${raw}".`);
+    events.push({ input: m[1], value: Number(m[2]), t: parseSeconds(m[3], "--input time") });
+  }
+  const start = args.flags.get("start")?.at(-1)?.split(",").map((p) => p.trim()).filter(Boolean);
   const until = args.flags.get("until")?.at(-1);
   const every = args.flags.get("every")?.at(-1);
   const props = args.flags.get("props")?.at(-1);
@@ -129,6 +147,7 @@ function simulationOptions(args: Args, program: Program): SimulateOptions {
   }
   return {
     events,
+    start,
     until: until === undefined ? undefined : parseSeconds(until, "--until"),
     every: every === undefined ? undefined : parseSeconds(every, "--every"),
     properties,
@@ -182,7 +201,7 @@ function runPlot(args: Args, json: boolean): number {
   } else {
     process.stdout.write(`wrote ${out}\n`);
     if (result.simulation.unhandled.length) {
-      process.stdout.write(`unhandled: ${result.simulation.unhandled.map((e) => `${e.event}@${e.t}`).join(", ")}\n`);
+      process.stdout.write(`unhandled: ${result.simulation.unhandled.map(describeEvent).join(", ")}\n`);
     }
   }
   return 0;
@@ -209,7 +228,7 @@ async function runRender(args: Args, json: boolean): Promise<number> {
   }
   times.sort((a, b) => a - b);
 
-  const result = await renderFrames({ file, html, events: options.events, times, out, chrome });
+  const result = await renderFrames({ file, html, events: options.events, start: options.start, times, out, chrome });
   if (json) {
     process.stdout.write(JSON.stringify({ ok: true, ...result }, null, 2) + "\n");
   } else {

@@ -1,6 +1,6 @@
 // Plain-text views of diagnostics and simulations, shared by the CLI and MCP server.
 
-import type { Simulation } from "../core/simulate.ts";
+import { describeEvent, type Simulation } from "../core/simulate.ts";
 import type { Diagnostic } from "../core/types.ts";
 
 export function formatDiagnostic(d: Diagnostic): string {
@@ -34,6 +34,6 @@ export function formatSummary(sim: Simulation, keys: string[]): string {
     parts.push(s.settledAt === undefined ? "still moving" : `at rest from ${s.settledAt.toFixed(3)}s`);
     return `  ${key.padEnd(keyWidth)}  ${parts.join("  ")}`;
   });
-  if (sim.unhandled.length) lines.push(`unhandled: ${sim.unhandled.map((e) => `${e.event}@${e.t}`).join(", ")}`);
+  if (sim.unhandled.length) lines.push(`unhandled: ${sim.unhandled.map(describeEvent).join(", ")}`);
   return lines.join("\n");
 }

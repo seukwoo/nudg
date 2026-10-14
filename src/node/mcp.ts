@@ -8,7 +8,7 @@ import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { compile, type CompileResult } from "../core/compile.ts";
 import { plot } from "../core/plot.ts";
-import { simulate, type SimulateOptions, type TimedEvent } from "../core/simulate.ts";
+import { dragGesture, simulate, type SimulateOptions, type TimedEvent } from "../core/simulate.ts";
 import type { Program } from "../core/types.ts";
 import { VERSION } from "../core/vocabulary.ts";
 import { CHROME_HINT, findChrome, svgToPng } from "./chrome.ts";
@@ -41,16 +41,24 @@ const source = {
 const timing = {
   events: {
     type: "array",
-    description: "Events to send, e.g. [{ \"event\": \"track.tap\", \"t\": 0.1 }].",
+    description:
+      "What happens, in time order. Each item is an event { \"event\": \"track.tap\", \"t\": 0.1 }, an input sample { \"input\": \"track.drag.x\", \"value\": 12, \"t\": 0.2 }, or a whole drag { \"drag\": \"track\", \"t\": 0.1, \"until\": 0.3, \"dx\": 20 } (down, dragstart, 60 samples per second, up, dragend).",
     items: {
       type: "object",
       properties: {
         event: { type: "string", description: "target.event, e.g. track.tap" },
-        t: { type: ["number", "string"], description: "Seconds, or a string like \"100ms\"." },
+        input: { type: "string", description: "target.drag.x or target.drag.y" },
+        value: { type: "number", description: "The input's value (with `input`)." },
+        drag: { type: "string", description: "Target to drag (with `until` and `dx`/`dy`)." },
+        until: { type: ["number", "string"], description: "When the drag is released (with `drag`)." },
+        dx: { type: "number", description: "Horizontal travel of the drag, in logical units." },
+        dy: { type: "number", description: "Vertical travel of the drag, in logical units." },
+        t: { type: ["number", "string"], description: "Seconds, or a string like \"100ms\". For a drag, when it starts." },
       },
-      required: ["event", "t"],
+      required: ["t"],
     },
   },
+  start: { type: "array", items: { type: "string" }, description: "Start in these states instead of initial, e.g. [\"on\"]." },
   until: { type: ["number", "string"], description: "Last time to look at. Default: when everything has come to rest." },
   properties: { type: "array", items: { type: "string" }, description: "Properties to report, e.g. [\"knob.x\"]. Default: all." },
 };
@@ -100,6 +108,7 @@ const TOOLS = [
         file: source.file,
         html: { type: "string", description: "Page with the component's markup and styles. Its scripts don't run." },
         events: timing.events,
+        start: timing.start,
         at: { type: "array", items: { type: ["number", "string"] }, description: "Frame times. Default: evenly spaced until at rest." },
         frames: { type: "integer", minimum: 1, maximum: 60, description: "Number of evenly spaced frames when `at` is not given. Default 6." },
         until: timing.until,
@@ -247,7 +256,7 @@ async function renderTool(args: Json): Promise<ToolResult> {
   const out = optionalString(args.out, "out");
 
   const { result, png } = await withTempFileAsync("frames.png", async (path) => {
-    const result = await renderFrames({ file: resolve(file), html: resolve(html), events: options.events, times, out: path, chrome });
+    const result = await renderFrames({ file: resolve(file), html: resolve(html), events: options.events, start: options.start, times, out: path, chrome });
     return { result, png: readFileSync(path) };
   });
   if (out) writeFileSync(out, png);
@@ -282,12 +291,29 @@ function loadProgram(args: Json): { label: string; program: Program } {
 function timingOptions(args: Json, program: Program): SimulateOptions {
   const raw = args.events ?? [];
   if (!Array.isArray(raw)) throw new ToolError("`events` must be an array of { event, t }.");
-  const events: TimedEvent[] = raw.map((e, i) => {
-    if (typeof e !== "object" || e === null || typeof (e as Json).event !== "string") {
-      throw new ToolError(`events[${i}] must look like { "event": "track.tap", "t": 0.1 }.`);
+  const events: TimedEvent[] = raw.flatMap((e, i): TimedEvent[] => {
+    const item = (typeof e === "object" && e !== null ? e : {}) as Json;
+    const t = () => time(item.t, `events[${i}].t`);
+    if (typeof item.event === "string") return [{ event: item.event, t: t() }];
+    if (typeof item.input === "string") {
+      if (typeof item.value !== "number") throw new ToolError(`events[${i}] needs a numeric "value" with "input".`);
+      return [{ input: item.input, value: item.value, t: t() }];
     }
-    return { event: (e as Json).event as string, t: time((e as Json).t, `events[${i}].t`) };
+    if (typeof item.drag === "string") {
+      const from = t();
+      const to = time(item.until, `events[${i}].until`);
+      if (!(to > from)) throw new ToolError(`events[${i}]: "until" must be after "t".`);
+      const dx = typeof item.dx === "number" ? item.dx : 0;
+      const dy = typeof item.dy === "number" ? item.dy : 0;
+      return dragGesture(item.drag, from, to, dx, dy);
+    }
+    throw new ToolError(`events[${i}] must have "event", "input" or "drag", e.g. { "event": "track.tap", "t": 0.1 }.`);
   });
+  let start: string[] | undefined;
+  if (args.start !== undefined) {
+    if (!Array.isArray(args.start) || args.start.some((p) => typeof p !== "string")) throw new ToolError("`start` must be an array of state paths.");
+    start = args.start as string[];
+  }
   let properties: string[] | undefined;
   if (args.properties !== undefined) {
     if (!Array.isArray(args.properties) || args.properties.some((p) => typeof p !== "string")) throw new ToolError("`properties` must be an array of names.");
@@ -295,7 +321,7 @@ function timingOptions(args: Json, program: Program): SimulateOptions {
     const unknown = properties.filter((p) => !program.properties.has(p));
     if (unknown.length) throw new ToolError(`Unknown properties: ${unknown.join(", ")}. This file has ${[...program.properties.keys()].join(", ")}.`);
   }
-  return { events, until: optionalTime(args.until, "until"), properties };
+  return { events, start, until: optionalTime(args.until, "until"), properties };
 }
 
 function time(raw: unknown, what: string): number {

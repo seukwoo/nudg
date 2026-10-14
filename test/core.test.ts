@@ -46,7 +46,7 @@ test("imports report missing files, cycles and duplicate names", () => {
 
 test("$schema is allowed at the top level and must be a string", () => {
   const codes = (doc: unknown) => compile({ path: "main.nudg.json", text: JSON.stringify(doc) }).diagnostics.map((d) => d.code);
-  assert.deepEqual(codes({ $schema: "https://unpkg.com/@nudg/core@0.1/spec/nudg-0.1.schema.json", nudg: "0.1", motions: {} }), []);
+  assert.deepEqual(codes({ $schema: "https://unpkg.com/@nudg/core@0.2/spec/nudg-0.2.schema.json", nudg: "0.1", motions: {} }), []);
   assert.deepEqual(codes({ $schema: 1, nudg: "0.1", motions: {} }), ["invalid-type"]);
 });
 
@@ -100,4 +100,30 @@ test("plot draws a labeled graph with overshoot and settle marks", async () => {
   assert.match(svg, /at rest 0\.\d+s/);
   assert.match(svg, />liked</);
   assert.match(svg, /<desc>Events: heart\.tap @ 0\.1s\. heart\.scale: final/);
+});
+
+test("a drag gesture lands where the throw was heading", async () => {
+  const { dragGesture } = await import("../src/core/simulate.ts");
+  const { program } = compilePath(`${root}examples/toggle-drag.nudg.json`);
+  const events = dragGesture("track", 0.1, 0.18, 9);
+  assert.deepEqual(events.slice(0, 2), [
+    { t: 0.1, event: "track.down", implied: true },
+    { t: 0.1, event: "track.dragstart" },
+  ]);
+  assert.deepEqual(events.slice(-2).map((e) => "event" in e && e.event), ["track.up", "track.dragend"]);
+  const quick = simulate(program!, { events });
+  assert.equal(quick.samples.at(-1)!.state[0], "on", "a quick 9-unit flick crosses the midpoint");
+  assert.deepEqual(quick.unhandled, [], "helper-added down and up aren't reported");
+  // The same 9 units, but held still before the release: no velocity, so position decides.
+  const held = [...dragGesture("track", 0.1, 0.3, 9).filter((e) => !("event" in e && e.t === 0.3)), { t: 0.5, event: "track.dragend" }];
+  const slow = simulate(program!, { events: held });
+  assert.equal(slow.samples.at(-1)!.state[0], "off", "a drag held short of the midpoint springs back");
+});
+
+test("the runtime can start in other states, and rejects unknown paths", () => {
+  const { program } = compilePath(`${root}examples/toggle-press.nudg.json`);
+  const rt = createRuntime(program!, { state: ["checked/on"] });
+  assert.deepEqual(rt.state(), ["checked/on", "press/up"]);
+  assert.equal(rt.sample(0)["knob.x"], 20, "starts at the target, without animating");
+  assert.throws(() => createRuntime(program!, { state: ["checked/onn"] }), /No state "onn"/);
 });

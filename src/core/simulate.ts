@@ -1,16 +1,20 @@
 // Headless simulation: events at given times in, sampled states and values out,
 // plus a summary an AI can read without looking at every sample.
 
-import { createRuntime, type Value } from "./runtime.ts";
+import { createRuntime, type Runtime, type Value } from "./runtime.ts";
 import type { Program } from "./types.ts";
 
-export interface TimedEvent {
-  t: number;
-  event: string;
-}
+/**
+ * An event, or an input sample (v0.2), at a time in seconds. `implied` marks events a
+ * helper added (a drag's down and up), which aren't reported as unhandled.
+ */
+export type TimedEvent = { t: number; event: string; implied?: boolean } | { t: number; input: string; value: number };
 
 export interface SimulateOptions {
+  /** Events and input samples. Ties keep their order. */
   events: TimedEvent[];
+  /** Leaf state paths to start in, instead of `initial`. */
+  start?: string[];
   /** Last sample time. Defaults to when everything settles after the last event. */
   until?: number;
   /** Seconds between samples. Defaults to 0.05. */
@@ -38,8 +42,36 @@ export interface PropertySummary {
 export interface Simulation {
   samples: Sample[];
   summary: Record<string, PropertySummary>;
-  /** Events that no state handled. Often a typo, sometimes intended. */
+  /** Events that no state handled, and input samples for unknown inputs. Often a typo, sometimes intended. */
   unhandled: TimedEvent[];
+}
+
+/**
+ * The events and input samples of one drag: down and dragstart at `from`, the pointer
+ * moving evenly by (dx, dy) at `rate` samples per second, then up and dragend at `to`.
+ */
+export function dragGesture(target: string, from: number, to: number, dx: number, dy = 0, rate = 60): TimedEvent[] {
+  const out: TimedEvent[] = [
+    { t: from, event: `${target}.down`, implied: true },
+    { t: from, event: `${target}.dragstart` },
+  ];
+  const n = Math.max(1, Math.round((to - from) * rate));
+  for (let k = 1; k <= n; k++) {
+    const t = round(from + ((to - from) * k) / n);
+    out.push({ t, input: `${target}.drag.x`, value: round((dx * k) / n) });
+    if (dy) out.push({ t, input: `${target}.drag.y`, value: round((dy * k) / n) });
+  }
+  out.push({ t: to, event: `${target}.up`, implied: true }, { t: to, event: `${target}.dragend` });
+  return out;
+}
+
+/** Applies one event or input sample; false if nothing used it. */
+export function apply(rt: Runtime, e: TimedEvent): boolean {
+  return "event" in e ? rt.send(e.event, e.t) : rt.input(e.input, e.value, e.t);
+}
+
+export function describeEvent(e: TimedEvent): string {
+  return "event" in e ? `${e.event}@${e.t}` : `${e.input}=${e.value}@${e.t}`;
 }
 
 const SCAN_STEP = 0.001;
@@ -55,19 +87,21 @@ export function simulate(program: Program, options: SimulateOptions): Simulation
   }
 
   const lastEvent = events.length ? events[events.length - 1].t : 0;
-  const until = options.until ?? round(Math.ceil(findSettle(program, events, lastEvent) / every - 1e-9) * every);
+  const start = { state: options.start };
+  const until = options.until ?? round(Math.ceil(findSettle(program, events, lastEvent, options.start) / every - 1e-9) * every);
 
   // Pass 1: samples at the requested interval.
   const samples: Sample[] = [];
   const unhandled: TimedEvent[] = [];
   {
-    const rt = createRuntime(program);
+    const rt = createRuntime(program, start);
     let next = 0;
     const steps = Math.round(until / every);
     for (let i = 0; i <= steps; i++) {
       const t = round(i * every);
       while (next < events.length && events[next].t <= t) {
-        if (!rt.send(events[next].event, events[next].t)) unhandled.push(events[next]);
+        const e = events[next];
+        if (!apply(rt, e) && !("event" in e && e.implied)) unhandled.push(e);
         next++;
       }
       samples.push({ t, state: rt.state(), values: pick(rt.sample(t), keys) });
@@ -77,7 +111,7 @@ export function simulate(program: Program, options: SimulateOptions): Simulation
   // Pass 2: a fine scan for extremes and settle times.
   const summary: Record<string, PropertySummary> = {};
   {
-    const rt = createRuntime(program);
+    const rt = createRuntime(program, start);
     const settledSince = new Map<string, number | undefined>();
     const extremes = new Map<string, [number, number]>();
     let next = 0;
@@ -86,7 +120,7 @@ export function simulate(program: Program, options: SimulateOptions): Simulation
     for (let i = 0; i <= steps; i++) {
       const t = round(i * SCAN_STEP);
       while (next < events.length && events[next].t <= t) {
-        rt.send(events[next].event, events[next].t);
+        apply(rt, events[next]);
         next++;
       }
       last = rt.sample(t);
@@ -114,9 +148,9 @@ export function simulate(program: Program, options: SimulateOptions): Simulation
 }
 
 /** Earliest time after the last event when everything is at rest, capped. */
-function findSettle(program: Program, events: TimedEvent[], lastEvent: number): number {
-  const rt = createRuntime(program);
-  for (const e of events) rt.send(e.event, e.t);
+function findSettle(program: Program, events: TimedEvent[], lastEvent: number, start?: string[]): number {
+  const rt = createRuntime(program, { state: start });
+  for (const e of events) apply(rt, e);
   for (let t = lastEvent; t <= lastEvent + MAX_SETTLE; t += 0.01) {
     if (rt.settled(t)) return Math.max(t, lastEvent + 0.1);
   }

@@ -40,6 +40,27 @@
       <details><summary>like.nudg.json</summary><pre><code></code></pre></details>
     </section>
 
+    <section class="card" data-example="toggle-drag">
+      <div class="stage">
+        <button class="toggle" data-nudg="track" aria-label="Toggle"><span class="knob" data-nudg="knob"></span></button>
+      </div>
+      <div class="meta"><h2>Draggable toggle</h2><span class="state"></span></div>
+      <p>Drag the knob, or flick it. On release it springs to where the throw was heading, carrying your finger's speed. The color is mapped from the knob's position.</p>
+      <details><summary>toggle-drag.nudg.json</summary><pre><code></code></pre></details>
+    </section>
+
+    <section class="card" data-example="swipe-row">
+      <div class="stage">
+        <div class="row" data-nudg="row">
+          <button class="action" data-nudg="action">Delete</button>
+          <div class="content" data-nudg="content">Swipe me left</div>
+        </div>
+      </div>
+      <div class="meta"><h2>Swipe row</h2><span class="state"></span></div>
+      <p>Swipe left to reveal Delete. A short or slow swipe snaps back; a long or quick one stays open. The action fades in through a map.</p>
+      <details><summary>swipe-row.nudg.json</summary><pre><code></code></pre></details>
+    </section>
+
     <section class="card playground">
       <div class="stage" id="playground-stage">
         <button class="toggle" data-nudg="track" aria-label="Toggle"><span class="knob" data-nudg="knob"></span></button>

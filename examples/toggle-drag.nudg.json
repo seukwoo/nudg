@@ -1,0 +1,30 @@
+{
+  "nudg": "0.2",
+  "note": "The toggle, draggable: the knob follows the finger, and on release springs to whichever side the throw was heading. The color is mapped from the knob's position, so it blends while dragging.",
+  "targets": ["knob", "track"],
+  "values": {
+    "knob.x": 0,
+    "track.color": { "map": "knob.x", "from": [0, 20], "to": ["#D1D5DB", "#4ADE80"] }
+  },
+  "animate": {
+    "knob.x": { "spring": { "duration": 0.35, "bounce": 0.25 } }
+  },
+  "initial": "off",
+  "when": {
+    "host.check": "on",
+    "host.uncheck": "off"
+  },
+  "states": {
+    "off": {
+      "when": { "track.tap": "on", "track.dragstart": "dragging" }
+    },
+    "on": {
+      "set": { "knob.x": 20 },
+      "when": { "track.tap": "off", "track.dragstart": "dragging" }
+    },
+    "dragging": {
+      "follow": { "knob.x": { "input": "track.drag.x", "range": [0, 20], "overdrag": 0.3 } },
+      "when": { "track.dragend": { "nearest": ["off", "on"], "by": "knob.x" } }
+    }
+  }
+}

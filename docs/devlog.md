@@ -122,3 +122,26 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 ### Who computes drag velocity
 - **Problem:** Each platform measures pointer velocity differently, which would break determinism.
 - **Resolution:** The runtime computes it from input samples: the least-squares slope over the last 0.1 s. The window is inclusive with a 1e-9 tolerance, and conformance cases place samples away from the window's edges so floating-point rounding can't make implementations disagree.
+
+### Conformance cases that couldn't tell right from wrong
+- **Problem:** Mutating the runtime (a 0.15 s velocity window, no momentum in `nearest`, no overdrag scaling of the handoff velocity) left every conformance case green.
+- **Cause:** The first drag cases were too "clean": a constant-speed flick gives the same slope for any window, and releases far from the midpoint pass with or without momentum.
+- **Resolution:** Cases were redesigned to fail under each mutation: a slow start then a flick released short of the midpoint (window and momentum matter), a release while moving below the range (overdrag scales velocity), and a release exactly at the midpoint (ties). Each mutation now fails at least one case.
+- **Lesson:** Run mutation checks on every new behavior; a passing suite says nothing until it has been seen failing.
+
+## 2026-10-13: Stage 1 implementation
+
+### The new demo cards did nothing
+- **Problem:** The draggable toggle and swipe row rendered but ignored every input, with empty state labels.
+- **Cause:** The DOM adapter sampled the runtime at t = 0 after binding elements, but the real-time clock had already advanced by a fraction of a millisecond, so the runtime threw "time must not go backwards" and `play()` never returned. The 0.1 demo got away with it because binding was faster.
+- **Resolution:** The initial sample uses the current clock time. Found by capturing the browser console over the DevTools protocol, which is now the first thing to check when a page "does nothing".
+
+### A drag that stopped short of the finger
+- **Problem:** Dragging the toggle 14 px back past the midpoint still left it on.
+- **Cause:** Drag inputs measured travel from where the drag was recognized (after 4 px of slop), so the knob lagged the finger by the slop. The test drags were short enough for that offset to change the outcome.
+- **Resolution:** Inputs measure travel since the press; `dragstart` counts as 0, so the first sample catches the value up with the pointer. The spec says so explicitly now.
+
+### "Slow" drags aren't slow
+- **Problem:** A test expected a 9-unit drag over 0.4 s to spring back, but it landed on.
+- **Cause:** A steady drag still has velocity (22 units/s) at the moment of release; with momentum 0.5 s the projection crosses the midpoint. The runtime was right.
+- **Resolution:** The test holds the pointer still before releasing. Position decides only when the finger has stopped, which is also how the conformance case was written.

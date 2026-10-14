@@ -139,6 +139,13 @@ class Prop:
             self.tween_from, self.tween_t0 = list(self.pos), t
             self.vel = [0.0] * len(self.pos)
 
+    def handoff(self, pos, vel, value, motion, t):
+        """Leaves a follow: start from an exact position and velocity."""
+        self.t = t
+        self.pos, self.vel = [float(pos)], [float(vel)]
+        self.target = [float(value)]
+        self.motion = motion
+
     def kick(self, dv, motion, t):
         self.advance(t)
         self.vel[0] += dv
@@ -482,6 +489,218 @@ def validation_cases():
     })
 
 
+# --- v0.2: drag, follow, nearest, map ----------------------------------------
+
+WINDOW = 0.1
+
+
+def ls_velocity(samples, t):
+    """Least-squares slope of (time, value) samples in [t - 0.1, t]; 0 with fewer than two."""
+    pts = [(ti, vi) for ti, vi in samples if t - WINDOW - 1e-9 <= ti <= t + 1e-9]
+    if len(pts) < 2:
+        return 0.0
+    mt = sum(p[0] for p in pts) / len(pts)
+    mv = sum(p[1] for p in pts) / len(pts)
+    den = sum((p[0] - mt) ** 2 for p in pts)
+    return 0.0 if den == 0 else sum((p[0] - mt) * (p[1] - mv) for p in pts) / den
+
+
+def constrain(raw, lo, hi, overdrag):
+    if raw < lo:
+        return lo - (lo - raw) * overdrag, overdrag
+    if raw > hi:
+        return hi + (raw - hi) * overdrag, overdrag
+    return raw, 1.0
+
+
+def lerp_map(x, xs, ys):
+    """Piecewise-linear map, holding the end values outside."""
+    pts = sorted(zip(xs, ys))
+    norm = lambda y: y.lower() if isinstance(y, str) else y
+    if x <= pts[0][0]:
+        return norm(pts[0][1])
+    if x >= pts[-1][0]:
+        return norm(pts[-1][1])
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        if x0 <= x <= x1:
+            u = (x - x0) / (x1 - x0)
+            if isinstance(y0, str):
+                a, b = hex_to_oklab(y0), hex_to_oklab(y1)
+                return oklab_to_hex([p + (q - p) * u for p, q in zip(a, b)])
+            return y0 + (y1 - y0) * u
+
+
+DRAG_TOGGLE = {
+    "nudg": "0.2",
+    "targets": ["knob", "track"],
+    "values": {
+        "knob.x": 0,
+        "track.color": {"map": "knob.x", "from": [0, 20], "to": ["#D1D5DB", "#4ADE80"]},
+    },
+    "animate": {"knob.x": spring_json(0.35, 0.25)},
+    "initial": "off",
+    "states": {
+        "off": {"when": {"track.tap": "on", "track.dragstart": "dragging"}},
+        "on": {"set": {"knob.x": 20}, "when": {"track.tap": "off", "track.dragstart": "dragging"}},
+        "dragging": {
+            "follow": {"knob.x": {"input": "track.drag.x", "range": [0, 20], "overdrag": 0.3}},
+            "when": {"track.dragend": {"nearest": ["off", "on"], "by": "knob.x"}},
+        },
+    },
+}
+COLOR_MAP = ([0, 20], ["#D1D5DB", "#4ADE80"])
+
+
+def drag_case(name, title, samples, release, follow_range=(0, 20), overdrag=0.3):
+    """Drag from `off` (knob at 0) starting at 0.1 s; `samples` are (t, drag.x)."""
+    s = spring(0.35, 0.25)
+    steps = [{"t": 0, "expect": {"state": ["off"], "values": {"knob.x": 0, "track.color": "#d1d5db"}}}]
+    steps.append({"t": 0.1, "send": "track.dragstart"})
+    history = [(0.1, 0.0)]  # dragstart resets the input to 0
+
+    def followed(t):
+        raw = 0 + max((h for h in history if h[0] <= t + 1e-12), key=lambda h: h[0])[1]
+        return constrain(raw, *follow_range, overdrag)
+
+    probes = sorted({round(t + 0.01, 6) for t, _ in samples[::2]} | {release})
+    queue = sorted([(t, "input", v) for t, v in samples] + [(t, "probe", None) for t in probes if t < release])
+    for t, kind, v in queue:
+        if kind == "input":
+            history.append((t, v))
+            steps.append({"t": t, "input": "track.drag.x", "value": v})
+        else:
+            x, _ = followed(t)
+            steps.append({"t": t, "expect": {"state": ["dragging"], "values": {"knob.x": round(x, 9), "track.color": lerp_map(x, *COLOR_MAP)}}})
+
+    x, factor = followed(release)
+    v = ls_velocity(history, release) * factor
+    projected = x + v * 0.5
+    target_state = "off" if abs(projected - 0) <= abs(projected - 20) else "on"
+    target = 0 if target_state == "off" else 20
+    steps.append({"t": release, "send": "track.dragend"})
+    knob = Prop(0)
+    knob.handoff(x, v, target, s, release)
+    for dt in (0.0, 0.04, 0.1, 0.2, 0.4):
+        t = round(release + dt, 6)
+        kx = knob.value(t)
+        steps.append({"t": t, "expect": {"state": [target_state], "values": {"knob.x": kx, "track.color": lerp_map(kx, *COLOR_MAP)}}})
+    write(name, {"conformance": "0.2", "name": title, "doc": DRAG_TOGGLE, "steps": steps})
+
+
+def drag_cases():
+    # Slow, then a quick flick, released at 8: short of the midpoint (10), but heading
+    # far past it. Position alone would go back off; the projection lands on. The slow
+    # start sits partly outside the 0.1 s velocity window, so the window size matters.
+    flick = [(round(0.1 + 0.02 * i, 6), round(5 * 0.02 * i, 6)) for i in range(1, 13)]
+    flick += [(0.36, 3.2), (0.38, 5.6), (0.4, 8.0)]
+    drag_case("drag-flick", "Drag: a flick released short of the midpoint projects past it and springs on with the finger's velocity", flick, 0.41)
+    # Past the top of the range with overdrag, then held still: no velocity, settles on from 23.
+    over = [(round(0.1 + 0.02 * i, 6), round(150 * 0.02 * i, 6)) for i in range(1, 11)]
+    drag_case("drag-overdrag", "Drag: past the range the value moves at the overdrag ratio; a held release has no velocity", over, 0.5)
+    # Below the range and released while still moving: the handoff velocity is scaled by overdrag too.
+    below = [(round(0.1 + 0.02 * i, 6), round(-50 * 0.02 * i, 6)) for i in range(1, 11)]
+    drag_case("drag-overdrag-below", "Drag: below the range, released while moving; the spring starts with the input's velocity times overdrag", below, 0.31)
+    # Held exactly at the midpoint: a tie goes to the first listed state.
+    tie = [(round(0.1 + 0.02 * i, 6), round(50 * 0.02 * i, 6)) for i in range(1, 11)]
+    drag_case("drag-tie", "Drag: released exactly halfway with no velocity, a tie goes to the first listed state", tie, 0.5)
+    # A slow drag to 8 and a pause: nearest by position alone goes back off.
+    slow = [(round(0.1 + 0.02 * i, 6), round(40 * 0.02 * i, 6)) for i in range(1, 11)]
+    drag_case("drag-release-slow", "Drag: released after a pause, nearest uses position only and springs back off", slow, 0.45)
+
+
+def tabs_cases():
+    doc = {
+        "nudg": "0.2",
+        "targets": ["tab1", "tab2", "tab3", "indicator"],
+        "values": {
+            "indicator.x": 0,
+            "indicator.opacity": {"map": "indicator.x", "from": [0, 50, 100], "to": [1, 0.5, 1]},
+        },
+        "animate": {"indicator.x": {"tween": {"duration": 0.2, "ease": "linear"}}},
+        "initial": "first",
+        "when": {"tab1.tap": "first", "tab2.tap": "second", "tab3.tap": "third", "host.reset": "first"},
+        "states": {
+            "first": {},
+            "second": {"set": {"indicator.x": 50}},
+            "third": {"set": {"indicator.x": 100}, "when": {"tab3.tap": "first"}},
+        },
+    }
+    xs, ys = [0, 50, 100], [1, 0.5, 1]
+    x = Prop(100)
+    steps = [{"t": 0, "expect": {"state": ["third"], "values": {"indicator.x": 100, "indicator.opacity": 1}}}]
+    # Inside `third`, its own transition wins over the machine's.
+    steps.append({"t": 0.1, "send": "tab3.tap"})
+    x.retarget(0, tween(0.2, "linear"), 0.1)
+    for t in (0.15, 0.2):
+        v = x.value(t)
+        steps.append({"t": t, "expect": {"state": ["first"], "values": {"indicator.x": v, "indicator.opacity": round(lerp_map(v, xs, ys), 9)}}})
+    steps.append({"t": 0.2, "send": "tab2.tap"})
+    x.retarget(50, tween(0.2, "linear"), 0.2)
+    for t in (0.3, 0.4):
+        v = x.value(t)
+        steps.append({"t": t, "expect": {"state": ["second"], "values": {"indicator.x": v, "indicator.opacity": round(lerp_map(v, xs, ys), 9)}}})
+    steps.append({"t": 0.5, "send": "host.reset"})
+    x.retarget(0, tween(0.2, "linear"), 0.5)
+    steps.append({"t": 0.6, "expect": {"state": ["first"], "values": {"indicator.x": x.value(0.6)}}})
+    steps.append({"t": 0.7, "send": "tab1.hoverstart", "handled": False})
+    write("any-state-transitions", {
+        "conformance": "0.2",
+        "name": "Machine: transitions from any state, a state's own transition first, host events, a starting state, multi-point map",
+        "doc": doc,
+        "start": ["third"],
+        "steps": steps,
+    })
+
+
+def validation_v02_cases():
+    def doc(version="0.2", **patch):
+        d = json.loads(json.dumps(DRAG_TOGGLE))
+        d["nudg"] = version
+        for k, v in patch.items():
+            d[k] = v
+        return d
+
+    out = []
+    d = doc("0.1")
+    d["values"]["track.color"] = "#D1D5DB"
+    out.append(("needs-version", d, [
+        ("needs-version", "/states/off/when/track.dragstart"),
+        ("needs-version", "/states/on/when/track.dragstart"),
+        ("needs-version", "/states/dragging/follow"),
+        ("needs-version", "/states/dragging/when/track.dragend"),
+    ]))
+    d = doc()
+    d["states"]["dragging"]["set"] = {"knob.x": 5}
+    out.append(("follow-conflict", d, [("follow-conflict", "/states/dragging/follow/knob.x")]))
+    d = doc()
+    d["states"]["dragging"]["follow"] = {"knob.x": "track.drag.z"}
+    out.append(("unknown-input", d, [("unknown-input", "/states/dragging/follow/knob.x")]))
+    d = doc()
+    d["states"]["dragging"]["when"]["track.dragend"] = {"nearest": ["off", "onn"], "by": "knob.x"}
+    out.append(("nearest-unknown-state", d, [("unknown-state", "/states/dragging/when/track.dragend/nearest/1")]))
+    d = doc()
+    d["states"]["dragging"]["when"]["track.dragend"] = {"nearest": ["off", "on"], "by": "track.color"}
+    out.append(("nearest-by", d, [("invalid-by", "/states/dragging/when/track.dragend/by")]))
+    d = doc()
+    d["targets"].append("dot")
+    d["values"]["dot.opacity"] = {"map": "track.color", "from": [0, 1], "to": [0, 1]}
+    out.append(("map-source", d, [("invalid-map-source", "/values/dot.opacity/map")]))
+    d = doc()
+    d["states"]["on"]["set"]["track.color"] = "#000000"
+    out.append(("mapped-property", d, [("mapped-property", "/states/on/set/track.color")]))
+    d = doc()
+    d["values"]["track.color"] = {"map": "knob.x", "from": [0, 0], "to": ["#D1D5DB", "#4ADE80"]}
+    out.append(("map-points", d, [("invalid-map", "/values/track.color/from")]))
+    d = doc()
+    d["targets"] = ["knob", "track", "host"]
+    out.append(("reserved-name", d, [("reserved-name", "/targets/2")]))
+    write("validation-0.2", {
+        "conformance": "0.2",
+        "name": "Validator (0.2): each document produces exactly these errors (code and JSON pointer)",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 if __name__ == "__main__":
     toggle_cases()
     spring_form_cases()
@@ -489,4 +708,7 @@ if __name__ == "__main__":
     machine_cases()
     tween_cases()
     validation_cases()
+    drag_cases()
+    tabs_cases()
+    validation_v02_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

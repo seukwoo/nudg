@@ -1,0 +1,153 @@
+{
+  "conformance": "0.2",
+  "name": "Machine: transitions from any state, a state's own transition first, host events, a starting state, multi-point map",
+  "doc": {
+    "nudg": "0.2",
+    "targets": [
+      "tab1",
+      "tab2",
+      "tab3",
+      "indicator"
+    ],
+    "values": {
+      "indicator.x": 0,
+      "indicator.opacity": {
+        "map": "indicator.x",
+        "from": [
+          0,
+          50,
+          100
+        ],
+        "to": [
+          1,
+          0.5,
+          1
+        ]
+      }
+    },
+    "animate": {
+      "indicator.x": {
+        "tween": {
+          "duration": 0.2,
+          "ease": "linear"
+        }
+      }
+    },
+    "initial": "first",
+    "when": {
+      "tab1.tap": "first",
+      "tab2.tap": "second",
+      "tab3.tap": "third",
+      "host.reset": "first"
+    },
+    "states": {
+      "first": {},
+      "second": {
+        "set": {
+          "indicator.x": 50
+        }
+      },
+      "third": {
+        "set": {
+          "indicator.x": 100
+        },
+        "when": {
+          "tab3.tap": "first"
+        }
+      }
+    }
+  },
+  "start": [
+    "third"
+  ],
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "third"
+        ],
+        "values": {
+          "indicator.x": 100,
+          "indicator.opacity": 1
+        }
+      }
+    },
+    {
+      "t": 0.1,
+      "send": "tab3.tap"
+    },
+    {
+      "t": 0.15,
+      "expect": {
+        "state": [
+          "first"
+        ],
+        "values": {
+          "indicator.x": 75.0,
+          "indicator.opacity": 0.75
+        }
+      }
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "state": [
+          "first"
+        ],
+        "values": {
+          "indicator.x": 50.0,
+          "indicator.opacity": 0.5
+        }
+      }
+    },
+    {
+      "t": 0.2,
+      "send": "tab2.tap"
+    },
+    {
+      "t": 0.3,
+      "expect": {
+        "state": [
+          "second"
+        ],
+        "values": {
+          "indicator.x": 50.0,
+          "indicator.opacity": 0.5
+        }
+      }
+    },
+    {
+      "t": 0.4,
+      "expect": {
+        "state": [
+          "second"
+        ],
+        "values": {
+          "indicator.x": 50.0,
+          "indicator.opacity": 0.5
+        }
+      }
+    },
+    {
+      "t": 0.5,
+      "send": "host.reset"
+    },
+    {
+      "t": 0.6,
+      "expect": {
+        "state": [
+          "first"
+        ],
+        "values": {
+          "indicator.x": 25.0
+        }
+      }
+    },
+    {
+      "t": 0.7,
+      "send": "tab1.hoverstart",
+      "handled": false
+    }
+  ]
+}

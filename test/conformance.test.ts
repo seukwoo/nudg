@@ -12,6 +12,8 @@ const COLOR_TOLERANCE = 1;
 interface Step {
   t: number;
   send?: string;
+  input?: string;
+  value?: number;
   handled?: boolean;
   expect?: { state?: string[]; values?: Record<string, Value> };
 }
@@ -19,6 +21,7 @@ interface Step {
 interface Case {
   name: string;
   doc: unknown;
+  start?: string[];
   files?: Record<string, unknown>;
   steps?: Step[];
   documents?: { name: string; doc: unknown; files?: Record<string, unknown>; errors: { code: string; path: string }[] }[];
@@ -66,8 +69,9 @@ for (const file of readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
   test(`${file}: ${c.name}`, () => {
     const { program, diagnostics } = compileCase(c.doc, c.files);
     assert.ok(program, `document should compile: ${JSON.stringify(diagnostics, null, 2)}`);
-    const rt = createRuntime(program);
+    const rt = createRuntime(program, { state: c.start });
     for (const step of c.steps ?? []) {
+      if (step.input !== undefined) assert.ok(rt.input(step.input, step.value!, step.t), `input ${step.input} at ${step.t}s`);
       if (step.send !== undefined) {
         const handled = rt.send(step.send, step.t);
         if (step.handled !== undefined) assert.equal(handled, step.handled, `${step.send} at ${step.t}s handled`);

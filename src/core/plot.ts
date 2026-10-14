@@ -40,9 +40,20 @@ export function plot(program: Program, options: PlotOptions): Plot {
   // Title and the event script.
   out.push(text(MARGIN.left, y + 14, options.title ?? "nudg", "title"));
   y += 22;
-  const script = options.events.map((e) => `${e.event} @ ${fmt(e.t)}s`).join("  ·  ");
-  out.push(text(MARGIN.left, y + 12, script || "no events", "subtitle"));
-  y += 26;
+  const script = describeScript(options.events);
+  // Wrap the script to the plot width (monospace, about 7 px per character at 12 px).
+  const perLine = Math.max(20, Math.floor((width - MARGIN.left - MARGIN.right) / 7.3));
+  const lines: string[] = [];
+  for (const part of (script || "no events").split("  ·  ")) {
+    const last = lines.length - 1;
+    if (last >= 0 && lines[last].length + part.length + 5 <= perLine) lines[last] += `  ·  ${part}`;
+    else lines.push(part);
+  }
+  for (const line of lines) {
+    out.push(text(MARGIN.left, y + 12, line, "subtitle"));
+    y += 18;
+  }
+  y += 8;
 
   // State bands, one row per region.
   const regionOf = (path: string) => (path.includes("/") ? path.slice(0, path.indexOf("/")) : "");
@@ -58,7 +69,9 @@ export function plot(program: Program, options: PlotOptions): Plot {
       const x0 = x(samples[runStart].t);
       const x1 = x(i < samples.length ? samples[i].t : until);
       out.push(`<rect class="band" x="${r(x0)}" y="${r(y)}" width="${r(Math.max(0, x1 - x0 - 2))}" height="${BAND.height}" rx="4"/>`);
-      if (x1 - x0 > 28) out.push(text(x0 + 6, y + 15, label(current, region), "band-label"));
+      // Only label a band the name fits in (monospace, about 6.7 px per character at 11 px).
+      const name = label(current, region);
+      if (x1 - x0 - 2 >= name.length * 6.7 + 12) out.push(text(x0 + 6, y + 15, name, "band-label"));
       runStart = i;
       current = next ?? current;
     }
@@ -135,8 +148,10 @@ export function plot(program: Program, options: PlotOptions): Plot {
 
   // Event markers span the bands and every panel.
   const events: string[] = [];
+  const markedTimes = new Set<number>();
   for (const e of options.events) {
-    if (e.t > until) continue;
+    if (!("event" in e) || e.t > until || markedTimes.has(e.t)) continue;
+    markedTimes.add(e.t);
     events.push(`<line class="event" x1="${r(x(e.t))}" x2="${r(x(e.t))}" y1="${r(plotTop - 6)}" y2="${r(y - GAP + 26)}"/>`);
   }
 
@@ -188,6 +203,30 @@ svg { --surface: #fcfcfb; --text: #0b0b0b; --muted: #52514e; --faint: #8a8984; -
 .settle { stroke: var(--muted); stroke-width: 1.5; }
 .frame { fill: none; stroke: var(--grid); }
 `;
+
+/**
+ * Events in time order, without helper-added ones; each input's samples summarized as
+ * one entry, e.g. "track.drag.x 0→8 (15 samples)".
+ */
+function describeScript(events: PlotOptions["events"]): string {
+  const parts: string[] = [];
+  const inputs = new Map<string, { first: number; last: number; count: number; at: number }>();
+  for (const e of [...events].sort((a, b) => a.t - b.t)) {
+    if ("event" in e) {
+      if (e.implied) continue;
+      parts.push(`${e.event} @ ${fmt(e.t)}s`);
+      continue;
+    }
+    const seen = inputs.get(e.input);
+    if (seen) Object.assign(seen, { last: e.value, count: seen.count + 1 });
+    else {
+      inputs.set(e.input, { first: e.value, last: e.value, count: 1, at: parts.length });
+      parts.push("");
+    }
+  }
+  for (const [name, s] of inputs) parts[s.at] = `${name} ${fmt(s.first)}→${fmt(s.last)} (${s.count} samples)`;
+  return parts.join("  ·  ");
+}
 
 function settleMark(px: number, bottom: number, at: number, right: number): string {
   const nearEdge = px > right - 48;

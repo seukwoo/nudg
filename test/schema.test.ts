@@ -7,7 +7,8 @@ import { test } from "node:test";
 import { Ajv2020 } from "ajv/dist/2020.js";
 
 const read = (url: URL) => JSON.parse(readFileSync(url, "utf8"));
-const schema = read(new URL("../spec/nudg-0.1.schema.json", import.meta.url));
+const schema = read(new URL("../spec/nudg-0.2.schema.json", import.meta.url));
+const schema01 = read(new URL("../spec/nudg-0.1.schema.json", import.meta.url));
 const validate = new Ajv2020({ allErrors: true, strict: false }).compile(schema);
 
 function valid(doc: unknown): boolean {
@@ -19,6 +20,13 @@ function filesIn(dir: URL): URL[] {
     e.isDirectory() ? filesIn(new URL(`${e.name}/`, dir)) : e.name.endsWith(".json") ? [new URL(e.name, dir)] : [],
   );
 }
+
+test("the 0.1 schema still compiles and accepts the 0.1 examples", () => {
+  const validate01 = new Ajv2020({ allErrors: true, strict: false }).compile(schema01);
+  for (const name of ["toggle", "toggle-press", "like"]) {
+    assert.ok(validate01(read(new URL(`../examples/${name}.nudg.json`, import.meta.url))), name);
+  }
+});
 
 test("schema accepts every example", () => {
   for (const url of filesIn(new URL("../examples/", import.meta.url))) {
@@ -71,6 +79,6 @@ test("schema rejects structural mistakes", () => {
   noted.note = "ok";
   noted.values.note = "base values";
   noted.states.off["x-vendor"] = { anything: true };
-  noted.$schema = "https://unpkg.com/@nudg/core@0.1/spec/nudg-0.1.schema.json";
+  noted.$schema = "https://unpkg.com/@nudg/core@0.2/spec/nudg-0.2.schema.json";
   assert.ok(valid(noted), `notes and x- extensions: ${JSON.stringify(validate.errors, null, 2)}`);
 });

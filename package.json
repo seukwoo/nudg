@@ -1,6 +1,6 @@
 {
   "name": "@nudg/core",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "The interaction format your AI can nudge.",
   "keywords": [
     "animation",
@@ -33,11 +33,15 @@
       "types": "./dist/dom/index.d.ts",
       "default": "./dist/dom/index.js"
     },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "default": "./dist/react/index.js"
+    },
     "./node": {
       "types": "./dist/node/index.d.ts",
       "default": "./dist/node/index.js"
     },
-    "./schema.json": "./spec/nudg-0.1.schema.json",
+    "./schema.json": "./spec/nudg-0.2.schema.json",
     "./guide.md": "./spec/guide.md",
     "./package.json": "./package.json"
   },
@@ -51,6 +55,7 @@
   "files": [
     "dist",
     "spec/nudg-0.1.schema.json",
+    "spec/nudg-0.2.schema.json",
     "spec/guide.md"
   ],
   "scripts": {
@@ -63,10 +68,20 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
     "ajv": "^8.20.0",
+    "react": "^19.3.0",
     "typescript": "^7.0.2"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   }
 }

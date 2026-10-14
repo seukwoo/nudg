@@ -81,6 +81,14 @@ test("simulate returns a summary; a broken file is a tool error with fixes", asy
   assert.equal(missing.isError, true);
 });
 
+test("simulate accepts a whole drag as one item", async () => {
+  const result = await call("nudg_simulate", { file: "examples/toggle-drag.nudg.json", events: [{ drag: "track", t: 0.1, until: 0.18, dx: 9 }] });
+  assert.equal(result.isError, undefined, result.content[0].text);
+  assert.equal(result.structuredContent.samples.at(-1).state[0], "on");
+  const bad = await call("nudg_simulate", { file: "examples/toggle-drag.nudg.json", events: [{ drag: "track", t: 0.3, until: 0.1 }] });
+  assert.equal(bad.isError, true);
+});
+
 test("plot returns an image", { skip: chrome ? false : "no Chrome found" }, async () => {
   const result = await call("nudg_plot", { file: "examples/toggle.nudg.json", events: [{ event: "track.tap", t: 0.1 }] });
   const image = result.content.find((c: any) => c.type === "image");

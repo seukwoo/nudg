@@ -1,0 +1,31 @@
+{
+  "nudg": "0.2",
+  "note": "A list row that swipes left to reveal a delete action. A short or slow swipe snaps back; a long or quick one stays open. The action fades in with the swipe.",
+  "targets": ["row", "content", "action"],
+  "values": {
+    "content.x": 0,
+    "row.opacity": 1,
+    "action.opacity": { "map": "content.x", "from": [0, -40, -88], "to": [0, 0.2, 1] }
+  },
+  "animate": {
+    "content.x": { "spring": { "duration": 0.4, "bounce": 0 } },
+    "row.opacity": { "tween": { "duration": 0.25, "ease": "out" } }
+  },
+  "initial": "closed",
+  "states": {
+    "closed": {
+      "when": { "content.dragstart": "dragging" }
+    },
+    "open": {
+      "set": { "content.x": -88 },
+      "when": { "content.dragstart": "dragging", "content.tap": "closed", "action.tap": "deleted" }
+    },
+    "dragging": {
+      "follow": { "content.x": { "input": "content.drag.x", "range": [-88, 0], "overdrag": 0.25 } },
+      "when": { "content.dragend": { "nearest": ["closed", "open"], "by": "content.x" } }
+    },
+    "deleted": {
+      "set": { "content.x": -360, "row.opacity": 0 }
+    }
+  }
+}

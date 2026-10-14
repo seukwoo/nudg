@@ -191,3 +191,15 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 ### Native names or common names
 - **Problem:** A platform library could expose the platform's own names (`snappy`, `spatial-default`), which are faithful but tie a file to one library, or shared names, which let one import line change the feel but hide the origin.
 - **Resolution:** Both, in the same file: native names as published, and the common names `standard`, `quick`, `gentle`, `playful`, `fade` with a `note` saying which native value each one is. The agent guide says to default to common names and use native ones only when matching a platform exactly is the point.
+
+## 2026-10-14: First use in an app (playsnack)
+
+### The React hook's `files` keys had to be pre-normalized
+- **Problem:** `useNudg(doc, { files: { "./snack.nudg.json": lib } })` reported the import as not found; only `{ "snack.nudg.json": lib }` worked.
+- **Cause:** The compiler resolves imports to normalized paths before asking the file reader, and the hook passed the caller's keys straight through.
+- **Resolution:** The hook strips a leading `./` from `files` keys, so they can be written the way imports are.
+- **Lesson:** Found within the first hour of using nudg in a real app (the playsnack block button). Dogfooding finds what tests don't: the tests always wrote the normalized key.
+
+### What the app needed that nudg didn't have
+- A reduced-motion mode (the app honors `prefers-reduced-motion`; the component falls back to its CSS press for now).
+- A mount/unmount pattern for toasts: a conditionally rendered element can't animate out. The app wraps the player in a component that unmounts after the exit; nudg could offer "settled" as React state to make that exact.

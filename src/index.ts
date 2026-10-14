@@ -3,6 +3,8 @@ export type { CompileResult, ReadFile, Source } from "./core/compile.ts";
 export { createRuntime } from "./core/runtime.ts";
 export type { Runtime, Value } from "./core/runtime.ts";
 export { plot } from "./core/plot.ts";
+export { actionsToEvents, decomposeMatrix, judgeHost, measuredName, summarizeHost } from "./core/observe.ts";
+export type { HostJudgement, HostMark, HostSample, HostSeries, HostSummary } from "./core/observe.ts";
 export type { Plot, PlotOptions } from "./core/plot.ts";
 export { presets, press, hover, toggle, toast } from "./core/presets.ts";
 export type { NudgDocument, PresetName, PressOptions, HoverOptions, ToggleOptions, ToastOptions, SpringOptions } from "./core/presets.ts";

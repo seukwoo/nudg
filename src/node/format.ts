@@ -1,6 +1,7 @@
 // Plain-text views of diagnostics and simulations, shared by the CLI and MCP server.
 
 import type { Comparison } from "../core/compare.ts";
+import type { HostJudgement, HostSummary } from "../core/observe.ts";
 import { describeEvent, type Simulation } from "../core/simulate.ts";
 import type { Diagnostic } from "../core/types.ts";
 
@@ -46,5 +47,31 @@ export function formatComparison(c: Comparison, labels: [string, string] = ["A",
   if (c.suggestion) lines.push("", `Next: ${c.suggestion}`);
   if (c.a.unhandled.length) lines.push(`unhandled in ${labels[0]}: ${c.a.unhandled.map(describeEvent).join(", ")}`);
   if (c.b.unhandled.length) lines.push(`unhandled in ${labels[1]}: ${c.b.unhandled.map(describeEvent).join(", ")}`);
+  return lines.join("\n");
+}
+
+/** What the page did, property by property, then the judgement against the file if there is one. */
+export function formatObservation(o: { url: string; selector: string; summary: HostSummary; marks: { t: number; action: string }[] }, judgement?: HostJudgement): string {
+  const lines: string[] = [];
+  if (judgement) lines.push(judgement.headline, "");
+  lines.push(`${o.selector} on ${o.url}, after ${o.marks.map((m) => `${m.action} at ${m.t.toFixed(2)}s`).join(", ") || "no actions"}:`);
+  const moved = Object.entries(o.summary.properties).filter(([, p]) => p.changed);
+  const shown = moved.filter(([k]) => !(k === "scaleX" || k === "scaleY") || !(o.summary.properties.scale?.changed));
+  for (const [key, p] of shown) {
+    const f = (v: number) => (["scale", "scaleX", "scaleY", "opacity"].includes(key) ? v.toFixed(3) : v.toFixed(1));
+    const parts = [`${f(p.min!)} … ${f(p.max!)}`, `final ${f(p.final as number)}`];
+    if ((p.overshoot ?? 0) > 0) parts.push(`overshoot ${f(p.overshoot!)}`);
+    parts.push(p.settledAt === undefined ? "still moving at the end" : `at rest from ${p.settledAt.toFixed(2)}s`);
+    lines.push(`  ${key}: ${parts.join("; ")}`);
+  }
+  if (o.summary.still.length) lines.push(`  unchanged: ${o.summary.still.filter((k) => k !== "scaleX" && k !== "scaleY").join(", ")}`);
+  if (o.summary.unmountedAt !== undefined) lines.push(`  the element left the page at ${o.summary.unmountedAt.toFixed(2)}s`);
+  if (o.summary.remountedAt !== undefined) lines.push(`  a new element took the selector's place at ${o.summary.remountedAt.toFixed(2)}s`);
+  lines.push(`  measured every ${(o.summary.frameInterval * 1000).toFixed(0)} ms`);
+  if (judgement) {
+    lines.push("", "Against the file:");
+    for (const p of judgement.properties) lines.push(`  ${p.summary}`);
+    if (judgement.suggestion) lines.push("", judgement.suggestion);
+  }
   return lines.join("\n");
 }

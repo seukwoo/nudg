@@ -47,7 +47,7 @@ export interface RenderResult {
   unknown: string[];
 }
 
-const TYPES: Record<string, string> = {
+export const TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -228,7 +228,7 @@ function stripTypes(source: string): string {
   return strip(source);
 }
 
-function listen(server: Server): Promise<number> {
+export function listen(server: Server): Promise<number> {
   return new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(0, "127.0.0.1", () => resolve((server.address() as { port: number }).port));

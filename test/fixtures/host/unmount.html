@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Unmounts on click</title>
+  <style>
+    button { padding: 12px 24px; border: 0; border-radius: 10px; background: #2563eb; color: #fff; transition: transform 0.2s ease-out; }
+    button.down { transform: scale(0.9); }
+  </style>
+</head>
+<body>
+  <div id="host"><button id="btn">Press me</button></div>
+  <script>
+    // Like a component that navigates away on click: the element is gone before its release plays.
+    const b = document.getElementById("btn");
+    b.addEventListener("pointerdown", () => b.classList.add("down"));
+    b.addEventListener("click", () => setTimeout(() => b.remove(), 60));
+  </script>
+</body>
+</html>

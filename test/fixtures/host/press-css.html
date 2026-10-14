@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>CSS press</title>
+  <style>
+    button { padding: 12px 24px; border: 0; border-radius: 10px; background: #2563eb; color: #fff; transition: transform 0.2s ease-out; }
+    button.down { transform: scale(0.9); }
+  </style>
+</head>
+<body>
+  <button id="btn">Press me</button>
+  <script>
+    const b = document.getElementById("btn");
+    b.addEventListener("pointerdown", () => b.classList.add("down"));
+    b.addEventListener("pointerup", () => b.classList.remove("down"));
+  </script>
+</body>
+</html>

@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.4.0
+
+The package moves to 0.4 for two new judge tools; the format stays 0.3 (`"nudg": "0.3"`), and the v0.4 grammar (layout measurement, decay) is still ahead.
 
 - **`nudg observe` / `nudg_observe`: host truth.** Opens the real page in headless Chrome with its scripts running, performs actions (`tap`, `down`, `up`, `hover`, `leave`, `key:<name>`), measures the element every frame (translate, scale, rotation, opacity, size, presence through shadow roots), and reports what the page showed. With a file it judges the page under the same actions at the times they happened: played, differs, never shown (unmounted mid-motion), or nothing moved. The DOM adapter is not involved: it measures any page, however the motion is made.
 - **Overshoot is measured per target leg.** The simulator reports `overshoot` per property as how far the value went past wherever it was heading at the time, so a press that goes 0 → 6 → 0 without bouncing reports 0 (it used to report the whole excursion); `compare` uses it. The runtime exposes `targets()`.

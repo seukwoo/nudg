@@ -73,7 +73,8 @@ const HOOKS = {
 };
 
 const STAGE_STYLE = `
-  :host { display: grid; place-items: center; }
+  :host { display: grid; place-items: center; padding: 12px; box-sizing: border-box; }
+  :host > * { max-width: 100%; }
   .generic { display: flex; gap: 16px; align-items: center; justify-content: center; flex-wrap: wrap; padding: 16px; }
   .target { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 12px; background: #cbd5e1; color: #1e293b;
     font: 11px ui-monospace, "SF Mono", Menlo, monospace; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }

@@ -56,6 +56,22 @@ test("the site starts and shows every cataloged example", { skip }, async () => 
   assert.equal(await browser.evaluate("document.querySelectorAll('#categories a').length"), catalog.categories.length + 1);
 });
 
+test("no example overflows its card stage, at wide and narrow widths", { skip }, async () => {
+  for (const width of [1800, 1100, 390]) {
+    await browser.send("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: width < 800 });
+    await sleep(300);
+    const overflowing = await browser.evaluate(`[...document.querySelectorAll("#grid .card")].flatMap((card) => {
+      const stage = card.querySelector(".stage");
+      const s = stage.getBoundingClientRect();
+      return [...stage.shadowRoot.children].filter((el) => el.tagName !== "STYLE").map((el) => el.getBoundingClientRect())
+        .filter((r) => r.width && (r.left < s.left - 0.5 || r.right > s.right + 0.5 || r.top < s.top - 0.5 || r.bottom > s.bottom + 0.5))
+        .map(() => card.querySelector("h3").textContent + " @" + ${width});
+    })`);
+    assert.deepEqual(overflowing, []);
+  }
+  await browser.send("Emulation.clearDeviceMetricsOverride");
+});
+
 test("filters: category, tag and search", { skip }, async () => {
   await go("#category=lists");
   assert.equal(await browser.evaluate("document.getElementById('browse-title').textContent"), "Lists & rows");

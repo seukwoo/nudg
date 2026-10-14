@@ -126,6 +126,26 @@ test("playground: a typo gets a hint; a pasted file gets generic boxes", { skip 
   assert.equal(await browser.evaluate("document.getElementById('playground-stage').shadowRoot.querySelectorAll('.target').length"), 1);
 });
 
+test("bound elements carry the active state, so CSS can animate by state", { skip }, async () => {
+  await go("#example/pull-to-refresh");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent || undefined"), 5_000);
+  const spinner = "document.getElementById('detail-stage').shadowRoot.querySelector('[data-nudg=spinner]')";
+  assert.equal(await browser.evaluate(`${spinner}.dataset.nudgState`), "idle");
+  assert.equal(await browser.evaluate(`getComputedStyle(${spinner}).animationName`), "none");
+  const [x, y] = await center("detail-stage", "[data-nudg=list]");
+  await mouse("mousePressed", x, y);
+  for (let i = 1; i <= 8; i++) {
+    await mouse("mouseMoved", x, y + i * 9);
+    await sleep(16);
+  }
+  await mouse("mouseReleased", x, y + 72);
+  await sleep(300);
+  assert.equal(await browser.evaluate(`${spinner}.dataset.nudgState`), "refreshing");
+  assert.equal(await browser.evaluate(`getComputedStyle(${spinner}).animationName`), "ptr-spin");
+  await sleep(1800);
+  assert.equal(await browser.evaluate(`${spinner}.dataset.nudgState`), "idle", "the demo's app hook sends host.done");
+});
+
 test("no page errors were thrown", { skip }, () => {
   assert.deepEqual(errors, []);
 });

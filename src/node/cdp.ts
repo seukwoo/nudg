@@ -7,6 +7,8 @@ import { join } from "node:path";
 
 export interface Browser {
   send(method: string, params?: Record<string, unknown>): Promise<any>;
+  /** Subscribes to a protocol event, e.g. "Runtime.exceptionThrown" (enable its domain first). */
+  on(method: string, handler: (params: any) => void): void;
   /** Evaluates an expression in the page and returns its value. */
   evaluate(expression: string): Promise<any>;
   close(): Promise<void>;
@@ -45,8 +47,10 @@ export async function launchBrowser(chrome: string): Promise<Browser> {
     });
     let nextId = 0;
     const pending = new Map<number, { resolve: (v: any) => void; reject: (e: Error) => void }>();
+    const listeners = new Map<string, ((params: any) => void)[]>();
     ws.onmessage = (message) => {
       const msg = JSON.parse(String(message.data));
+      if (msg.method) for (const fn of listeners.get(msg.method) ?? []) fn(msg.params);
       const waiter = msg.id !== undefined ? pending.get(msg.id) : undefined;
       if (!waiter) return;
       pending.delete(msg.id);
@@ -63,6 +67,9 @@ export async function launchBrowser(chrome: string): Promise<Browser> {
 
     return {
       send,
+      on(method, handler) {
+        listeners.set(method, [...(listeners.get(method) ?? []), handler]);
+      },
       async evaluate(expression) {
         const result = await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
         if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description ?? "Evaluation failed.");

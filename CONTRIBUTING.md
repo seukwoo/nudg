@@ -9,11 +9,11 @@ Thanks for your interest. nudg is early, and the most useful contributions right
 
 ## Setup
 
-You need Node 23.6 or later (it runs the TypeScript directly) and Python 3 for the conformance generator. The rendering test needs a local Chrome and is skipped without one; set `NUDG_CHROME` if Chrome is installed but not found.
+You need Node 23.6 or later (it runs the TypeScript directly) and Python 3 for the conformance generator. The rendering test and the examples-site test drive a local Chrome and are skipped without one; set `NUDG_CHROME` if Chrome is installed but not found.
 
 ```sh
 npm install
-npm test            # conformance suite, schema, core, rendering
+npm test            # conformance suite, schema, core, rendering, the examples site in a browser
 npm run typecheck   # also checks that src/core uses no platform APIs
 npm run build       # compiles to dist/, which is what the npm package ships
 ```

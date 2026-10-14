@@ -175,6 +175,7 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Cause:** Three unrelated controls dying together means the page's script never started. The likeliest trigger is a stale `dist/dom/index.js` served from the browser cache (the Python static server sends no cache headers), so the import of a newly added export failed and nothing was wired up. The dead controls were just the visible symptom.
 - **Resolution:** `npm run demo` now serves through `demo/serve.mjs`, a dependency-free static server that sends `Cache-Control: no-store`; the page shows a banner with the cause and the fix if its script hasn't started within a few seconds or a module fails to load (captured on the `<script>`, since module load errors don't reach `window.onerror`); copying falls back to a selection-based copy where the clipboard API is unavailable.
 - **Lesson:** When several unrelated things break at once, look for the single upstream failure before treating each symptom. And a demo must tell the viewer when it is broken, not sit there quietly.
+- **Follow-up:** The one-off DevTools scripts used to check the site became `test/demo.test.ts`: it builds, serves through `demo/serve.mjs`, and drives the site in headless Chrome (cards, filters, a drag inside a shadow root, reset, the playground, no page errors). Breaking the reset handler or the catalog URL makes it fail, so it guards the paths the user hit.
 
 ### Delete left the row gone for good
 - **Problem:** After tapping Delete in the swipe row there was no way back short of reloading the page.

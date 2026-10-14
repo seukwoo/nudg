@@ -23,12 +23,22 @@ const TYPES = {
   ".txt": "text/plain; charset=utf-8",
 };
 
-/** Starts the server; resolves with it once it's listening (port 0 picks a free port). */
+/**
+ * Starts the server; resolves with it once it's listening. Port 0 picks a free port;
+ * a busy port falls through to the next ones, up to ten tries.
+ */
 export function serve(port = 8787, host = "127.0.0.1") {
   return new Promise((resolveListening, reject) => {
     const server = createServer(handle);
-    server.once("error", reject);
-    server.listen(port, host, () => resolveListening(server));
+    let tries = 0;
+    const attempt = (p) => {
+      server.once("error", (err) => {
+        if (err.code === "EADDRINUSE" && p !== 0 && ++tries < 10) attempt(p + 1);
+        else reject(err);
+      });
+      server.listen(p, host, () => resolveListening(server));
+    };
+    attempt(port);
   });
 }
 
@@ -56,6 +66,8 @@ function end(res, status, text) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const port = Number(process.argv[2] ?? process.env.PORT ?? 8787);
   const server = await serve(port);
-  console.log(`nudg examples: http://localhost:${server.address().port}/demo/`);
+  const actual = server.address().port;
+  if (actual !== port) console.log(`Port ${port} is in use (another server, or an earlier \`npm run demo\`?); using ${actual} instead.`);
+  console.log(`nudg examples: http://localhost:${actual}/demo/`);
   if (!existsSync(join(root, "dist", "dom", "index.js"))) console.log("dist/ is missing: run `npm run build` first, or use `npm run demo`.");
 }

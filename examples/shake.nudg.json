@@ -1,0 +1,19 @@
+{
+  "nudg": "0.2",
+  "note": "A field that shakes and turns red when the app rejects it. The shake is a kick on x with a bouncy spring, so it's real motion, not keyframes. Rejecting again re-enters the state and shakes again.",
+  "targets": ["field"],
+  "values": { "field.x": 0, "field.color": "#D1D5DB" },
+  "animate": {
+    "field.x": { "spring": { "duration": 0.3, "bounce": 0 } },
+    "field.color": { "tween": { "duration": 0.2, "ease": "out" } }
+  },
+  "initial": "idle",
+  "when": { "host.invalid": "invalid", "host.valid": "idle" },
+  "states": {
+    "idle": {},
+    "invalid": {
+      "set": { "field.color": "#F87171" },
+      "enter": { "field.x": { "kick": -600, "spring": { "duration": 0.3, "bounce": 0.7 } } }
+    }
+  }
+}

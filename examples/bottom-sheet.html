@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Bottom sheet</title>
+  <style>
+    .sheet-demo {
+      position: relative;
+      width: 240px;
+      height: 160px;
+      overflow: hidden;
+      border-radius: 12px;
+      background: #f6f6f4;
+      font: 14px ui-sans-serif, system-ui, sans-serif;
+    }
+    .sheet-demo .opener {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 2;
+      padding: 8px 12px;
+      border: 1px solid #e4e4df;
+      border-radius: 8px;
+      background: #fff;
+      font: inherit;
+      cursor: pointer;
+    }
+    .sheet-demo .scrim { position: absolute; inset: 0; z-index: 1; background: #000; }
+    .sheet-demo .sheet {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 3;
+      height: 150px;
+      border-radius: 14px 14px 0 0;
+      background: #fff;
+      box-shadow: 0 -4px 20px rgb(0 0 0 / 0.12);
+      cursor: grab;
+      user-select: none;
+    }
+    .sheet-demo .grip { width: 36px; height: 4px; margin: 8px auto 12px; border-radius: 2px; background: #d1d5db; }
+    .sheet-demo .sheet p { margin: 0 16px; color: #6b6b66; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="sheet-demo">
+    <button type="button" class="opener" data-nudg="opener">Open sheet</button>
+    <div class="scrim" data-nudg="scrim"></div>
+    <div class="sheet" data-nudg="sheet"><div class="grip"></div><p>Drag me between closed, half and full.</p></div>
+  </div>
+  <!-- Host markup for bottom-sheet.nudg.json. Serve the repo and build first to try it live. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./bottom-sheet.nudg.json");
+    play(program, document.body);
+  </script>
+</body>
+</html>

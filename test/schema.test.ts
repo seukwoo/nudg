@@ -17,7 +17,7 @@ function valid(doc: unknown): boolean {
 
 function filesIn(dir: URL): URL[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
-    e.isDirectory() ? filesIn(new URL(`${e.name}/`, dir)) : e.name.endsWith(".json") ? [new URL(e.name, dir)] : [],
+    e.isDirectory() ? filesIn(new URL(`${e.name}/`, dir)) : e.name.endsWith(".json") && e.name !== "index.json" ? [new URL(e.name, dir)] : [],
   );
 }
 

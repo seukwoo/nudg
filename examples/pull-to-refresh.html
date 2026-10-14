@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Pull to refresh</title>
+  <style>
+    .ptr {
+      position: relative;
+      width: 220px;
+      height: 160px;
+      overflow: hidden;
+      border: 1px solid #e4e4df;
+      border-radius: 12px;
+      background: #fff;
+      font: 14px ui-sans-serif, system-ui, sans-serif;
+    }
+    .ptr .spinner {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      width: 24px;
+      height: 24px;
+      margin-left: -12px;
+      border: 3px solid #e4e4df;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+    }
+    .ptr .list { position: relative; background: #fff; cursor: grab; user-select: none; }
+    .ptr .list div { padding: 12px 14px; border-bottom: 1px solid #f0f0ec; color: #1c1c1a; }
+  </style>
+</head>
+<body>
+  <div class="ptr">
+    <div class="spinner" data-nudg="spinner"></div>
+    <div class="list" data-nudg="list"><div>Pull me down</div><div>Second item</div><div>Third item</div><div>Fourth item</div></div>
+  </div>
+  <!-- Host markup for pull-to-refresh.nudg.json. The app sends host.done when its refresh finishes. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./pull-to-refresh.nudg.json");
+    const player = play(program, document.body, {
+      onState: (state) => state.includes("refreshing") && setTimeout(() => player.send("host.done"), 1500),
+    });
+  </script>
+</body>
+</html>

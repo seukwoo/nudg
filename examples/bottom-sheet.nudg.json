@@ -1,0 +1,28 @@
+{
+  "nudg": "0.2",
+  "note": "A bottom sheet with three resting points: closed, half and full. Drag it between them; on release it settles at the nearest one, judged by where the throw was heading. The scrim's opacity is mapped from the sheet's position.",
+  "targets": ["sheet", "scrim", "opener"],
+  "values": {
+    "sheet.y": 150,
+    "scrim.opacity": { "map": "sheet.y", "from": [10, 150], "to": [0.45, 0] }
+  },
+  "animate": {
+    "sheet.y": { "spring": { "duration": 0.4, "bounce": 0.1 } }
+  },
+  "initial": "closed",
+  "when": {
+    "opener.tap": "half",
+    "scrim.tap": "closed",
+    "host.close": "closed",
+    "sheet.dragstart": "dragging"
+  },
+  "states": {
+    "closed": {},
+    "half": { "set": { "sheet.y": 80 } },
+    "full": { "set": { "sheet.y": 10 } },
+    "dragging": {
+      "follow": { "sheet.y": { "input": "sheet.drag.y", "range": [10, 150], "overdrag": 0.15 } },
+      "when": { "sheet.dragend": { "nearest": ["closed", "half", "full"], "by": "sheet.y" } }
+    }
+  }
+}

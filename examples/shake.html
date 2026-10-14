@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Shake on error</title>
+  <style>
+    .shake-form { display: flex; gap: 8px; align-items: center; font: 14px ui-sans-serif, system-ui, sans-serif; }
+    /* The wrapper's background acts as the border, so nudg can color it. */
+    .field { padding: 2px; border-radius: 9px; background: #d1d5db; }
+    .field input {
+      width: 160px;
+      padding: 8px 10px;
+      border: 0;
+      border-radius: 7px;
+      background: #fff;
+      font: inherit;
+      outline: none;
+    }
+    .shake-form button {
+      padding: 9px 14px;
+      border: 0;
+      border-radius: 8px;
+      background: #1c1c1a;
+      color: #fff;
+      font: inherit;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <form class="shake-form">
+    <div class="field" data-nudg="field"><input type="email" placeholder="Email" aria-label="Email"></div>
+    <button type="submit">Submit</button>
+  </form>
+  <!-- Host markup for shake.nudg.json. The app decides validity and sends host.invalid or host.valid. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./shake.nudg.json");
+    const player = play(program, document.body);
+    const form = document.querySelector(".shake-form");
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      player.send(form.querySelector("input").value.includes("@") ? "host.valid" : "host.invalid");
+    });
+    form.querySelector("input").addEventListener("input", () => player.send("host.valid"));
+  </script>
+</body>
+</html>

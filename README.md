@@ -469,6 +469,7 @@ const player = play(program, document.querySelector(".settings"));
 - Layout (v0.3): measured positions and sizes (`{ "measure": "tab2.x" }` for a tab indicator), a natural size (`"auto"`) to collapse a row from, and `%` units.
 - Decay (fling, inertia) as a motion of its own, for scroll-like content without snap points (v0.3). Snapping is covered by `nearest`.
 - Nonlinear rubber banding that depends on the view's size, instead of the linear `overdrag` factor.
+- `nearest` limited to neighbors of the current state (a carousel that moves one slide per swipe however hard the flick), instead of tuning `momentum` down.
 - Pinch, rotate and other multi-pointer gestures.
 - More primitives and combinators: `keyframes`, `sequence`, `delay`, `stagger`.
 - Tweaking a named motion at the point of use, for example `{ "use": "snappy", "duration": 0.5 }`.

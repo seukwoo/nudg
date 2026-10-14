@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Toast</title>
+  <style>
+    .toast-demo { position: relative; width: 240px; height: 120px; font: 14px ui-sans-serif, system-ui, sans-serif; }
+    .toast-demo > button {
+      padding: 8px 14px;
+      border: 1px solid #e4e4df;
+      border-radius: 8px;
+      background: #fff;
+      font: inherit;
+      cursor: pointer;
+    }
+    .toast {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: #1c1c1a;
+      color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="toast-demo">
+    <button type="button" class="toast-show">Show toast</button>
+    <div class="toast" data-nudg="toast">Saved. Tap to dismiss.</div>
+  </div>
+  <!-- Host markup for toast.nudg.json. The app sends host.show and host.hide. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./toast.nudg.json");
+    const player = play(program, document.body);
+    let timer;
+    document.querySelector(".toast-show").addEventListener("click", () => {
+      player.send("host.show");
+      clearTimeout(timer);
+      timer = setTimeout(() => player.send("host.hide"), 2500);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "nudg": "0.1",
+  "note": "A button that sinks while pressed. Pressing is quick and flat; releasing springs back with a little bounce, so the two directions feel different.",
+  "targets": ["button"],
+  "values": { "button.scale": 1 },
+  "animate": {
+    "button.scale": { "spring": { "duration": 0.3, "bounce": 0.45 } }
+  },
+  "initial": "up",
+  "states": {
+    "up": {
+      "when": {
+        "button.down": {
+          "to": "down",
+          "animate": { "button.scale": { "spring": { "duration": 0.12, "bounce": 0 } } },
+          "note": "Sink fast, with no overshoot."
+        }
+      }
+    },
+    "down": {
+      "set": { "button.scale": 0.94 },
+      "when": { "button.up": "up", "button.cancel": "up" }
+    }
+  }
+}

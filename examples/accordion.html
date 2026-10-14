@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Accordion</title>
+  <style>
+    .accordion { width: 240px; border: 1px solid #e4e4df; border-radius: 10px; background: #fff; font: 14px/1.4 ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; }
+    .accordion .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 10px 12px;
+      border: 0;
+      background: none;
+      font: inherit;
+      font-weight: 600;
+      color: inherit;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .accordion .chevron { width: 16px; height: 16px; fill: none; stroke: #6b6b66; stroke-width: 2; }
+    /* nudg sets the panel's height; overflow hides the content while it's short. */
+    .accordion .panel { overflow: hidden; padding: 0 12px; box-sizing: border-box; color: #6b6b66; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="accordion">
+    <button type="button" class="header" data-nudg="header">What is nudg?<svg class="chevron" data-nudg="chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6l5 5 5-5"/></svg></button>
+    <div class="panel" data-nudg="panel"><p>A plain-text format for UI interactions: states, events, and the motion between them. Your AI writes it; a runtime plays it.</p></div>
+  </div>
+  <!-- Host markup for accordion.nudg.json. Serve the repo and build first to try it live. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./accordion.nudg.json");
+    play(program, document.body);
+  </script>
+</body>
+</html>

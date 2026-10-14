@@ -1,0 +1,25 @@
+{
+  "nudg": "0.2",
+  "note": "A three-way segmented control. Tapping a segment moves the indicator; dragging anywhere on the control slides it, and on release it snaps to the nearest segment. Transitions live on the machine, so each tap is listed once instead of once per state.",
+  "targets": ["control", "seg1", "seg2", "seg3", "indicator"],
+  "values": { "indicator.x": 0 },
+  "animate": {
+    "indicator.x": { "spring": { "duration": 0.3, "bounce": 0.1 } }
+  },
+  "initial": "first",
+  "when": {
+    "seg1.tap": "first",
+    "seg2.tap": "second",
+    "seg3.tap": "third",
+    "control.dragstart": "dragging"
+  },
+  "states": {
+    "first": {},
+    "second": { "set": { "indicator.x": 72 } },
+    "third": { "set": { "indicator.x": 144 } },
+    "dragging": {
+      "follow": { "indicator.x": { "input": "control.drag.x", "range": [0, 144], "overdrag": 0.2 } },
+      "when": { "control.dragend": { "nearest": ["first", "second", "third"], "by": "indicator.x" } }
+    }
+  }
+}

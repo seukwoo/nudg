@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Hover card</title>
+  <style>
+    .hcard {
+      width: 180px;
+      padding: 14px 16px;
+      border: 1px solid #e4e4df;
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 8px 24px rgb(0 0 0 / 0.08);
+      font: 14px/1.4 ui-sans-serif, system-ui, sans-serif;
+      color: #1c1c1a;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .hcard strong { display: block; margin-bottom: 2px; }
+    .hcard span { color: #6b6b66; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="hcard" data-nudg="card"><strong>Hover me</strong><span>Lifts on hover, settles on press</span></div>
+  <!-- Host markup for hover-card.nudg.json. Serve the repo and build first to try it live. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./hover-card.nudg.json");
+    play(program, document.body);
+  </script>
+</body>
+</html>

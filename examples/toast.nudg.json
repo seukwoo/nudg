@@ -1,0 +1,19 @@
+{
+  "nudg": "0.2",
+  "note": "A toast the app shows and hides. It rises with a soft spring while fading in with a tween; tapping it dismisses it early.",
+  "targets": ["toast"],
+  "values": { "toast.y": 24, "toast.opacity": 0 },
+  "animate": {
+    "toast.y": { "spring": { "duration": 0.4, "bounce": 0.25 } },
+    "toast.opacity": { "tween": { "duration": 0.2, "ease": "out" } }
+  },
+  "initial": "hidden",
+  "when": { "host.show": "shown", "host.hide": "hidden" },
+  "states": {
+    "hidden": {},
+    "shown": {
+      "set": { "toast.y": 0, "toast.opacity": 1 },
+      "when": { "toast.tap": "hidden" }
+    }
+  }
+}

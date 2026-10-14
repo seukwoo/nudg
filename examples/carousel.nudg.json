@@ -1,0 +1,30 @@
+{
+  "nudg": "0.2",
+  "note": "A three-slide carousel. Drag the strip and release: it snaps to the nearest slide, carrying the finger's speed. The dots are mapped from the strip's position, so they cross-fade while dragging. Tapping a dot jumps to its slide.",
+  "targets": ["strip", "dot1", "dot2", "dot3"],
+  "values": {
+    "strip.x": 0,
+    "dot1.opacity": { "map": "strip.x", "from": [-200, 0], "to": [0.3, 1] },
+    "dot2.opacity": { "map": "strip.x", "from": [-400, -200, 0], "to": [0.3, 1, 0.3] },
+    "dot3.opacity": { "map": "strip.x", "from": [-400, -200], "to": [1, 0.3] }
+  },
+  "animate": {
+    "strip.x": { "spring": { "duration": 0.4, "bounce": 0.1 } }
+  },
+  "initial": "first",
+  "when": {
+    "dot1.tap": "first",
+    "dot2.tap": "second",
+    "dot3.tap": "third",
+    "strip.dragstart": "dragging"
+  },
+  "states": {
+    "first": {},
+    "second": { "set": { "strip.x": -200 } },
+    "third": { "set": { "strip.x": -400 } },
+    "dragging": {
+      "follow": { "strip.x": { "input": "strip.drag.x", "range": [-400, 0], "overdrag": 0.25 } },
+      "when": { "strip.dragend": { "nearest": ["first", "second", "third"], "by": "strip.x", "momentum": 0.1, "note": "Low momentum, so a flick moves one slide rather than two." } }
+    }
+  }
+}

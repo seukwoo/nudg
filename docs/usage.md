@@ -56,6 +56,15 @@ npx nudg render examples/like.nudg.json --html examples/like.html --send heart.t
 See [Seeing motion](#seeing-motion) below.
 All three also take `--reduced-motion` (0.3): springs and tweens become 0.15 s linear tweens and kicks do nothing, so you can check what a reduced-motion user sees.
 
+### preset
+
+```sh
+nudg preset press > press.nudg.json
+nudg preset toast --options '{"duration": 5}'
+```
+
+Prints a preset (`press`, `hover`, `toggle`, `toast`) as a nudg file. The same presets are `presets.*` in `@nudg/core` and `@nudg/core/react`, for use without a file: `useNudg(presets.press())`, `playDoc(presets.hover(), element)`.
+
 ## MCP server
 
 `nudg mcp` serves the same capabilities as tools over stdio, with no dependencies:
@@ -114,7 +123,7 @@ const player = play(program, document.querySelector(".settings"));
 
 ## Seeing motion
 
-Two ways to look at an interaction, for people and for multimodal models:
+Two ways to look at an interaction, for people and for multimodal models. Both check the **file**: what the values and states do over time. Whether the **app** shows it (the element exists, isn't unmounted on click, isn't covered) is for `nudg render --html` with the real markup, and for tests that drive the real page.
 
 - **`nudg plot`** draws a motion graph: each property over time, with state bands, events, the target, overshoot and settle times. It needs nothing but the file (PNG output uses a local Chrome; SVG doesn't).
 - **`nudg render`** draws real frames of the component as one filmstrip PNG. It takes the host page's markup and styles (`--html`), plays the file on a manual clock in headless Chrome, and captures each `--at` time (or `--frames` evenly spaced ones). The page's own scripts don't run. Set `NUDG_CHROME` if Chrome isn't found.

@@ -7,6 +7,8 @@ import { createRuntime } from "../core/runtime.ts";
 import type { Program } from "../core/types.ts";
 import { play, type Player } from "../dom/play.ts";
 
+export { presets, press, hover, toggle, toast } from "../core/presets.ts";
+
 export interface UseNudgOptions {
   /** Leaf state paths to start in instead of `initial`, e.g. ["on"] for a toggle that mounts checked. */
   state?: string[];
@@ -35,7 +37,9 @@ const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : us
  * (for example from `import toggle from "./toggle.nudg.json"`), which is compiled once.
  */
 export function useNudg(source: Program | object, options: UseNudgOptions = {}): Nudg {
-  const program = useMemo(() => toProgram(source, options.files), [source]);
+  // An inline document (a preset call) is a new object every render; compile by content, not identity.
+  const key = isProgram(source) ? source : JSON.stringify(source);
+  const program = useMemo(() => toProgram(source, options.files), [key]);
   const player = useRef<Player | null>(null);
   // Elements currently attached through refs, so a new player (new program) can rebind them.
   const attached = useRef(new Map<string, { element: Element; unbind?: () => void }>());
@@ -74,8 +78,12 @@ export function useNudg(source: Program | object, options: UseNudgOptions = {}):
   return { bind, state, send };
 }
 
+function isProgram(source: Program | object): source is Program {
+  return "machine" in source && (source as Program).properties instanceof Map;
+}
+
 function toProgram(source: Program | object, files: Record<string, unknown> = {}): Program {
-  if ("machine" in source && (source as Program).properties instanceof Map) return source as Program;
+  if (isProgram(source)) return source;
   // The compiler asks for normalized paths ("motion/brand.nudg.json"); accept keys as people write imports.
   const byPath = new Map(Object.entries(files).map(([key, value]) => [key.replace(/^(\.\/)+/, ""), value]));
   const { program, diagnostics } = compile({ path: "main.nudg.json", text: JSON.stringify(source) }, (path) =>

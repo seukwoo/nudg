@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Presets:** `presets.press()`, `hover()`, `toggle()`, `toast()` return ready-made documents, so the simple case is one line with no file: `useNudg(presets.press())` or `playDoc(presets.toast(), element)`. `nudg preset <name>` prints one as a file to edit. `useNudg` compiles inline documents by content, so a preset call in render doesn't recompile or reset.
+- **Docs:** `simulate` and `plot` check the file; `render --html` and real-page tests check the app.
+
 ## 0.3.0
 
 Stage 1 continued: what the component guidelines (WAI-ARIA APG, Apple HIG, Material 3) need. A 0.3 runtime still reads 0.1 and 0.2 files.

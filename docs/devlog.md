@@ -216,3 +216,9 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Problem:** A slider thumb released mid-drag settled at the right place, but wobbled first (50 → 40 → 50).
 - **Cause:** Leaving a `follow` hands the input's velocity to the next motion, which is right for `nearest` (a flick should carry) but wrong for `commit` (the value is placed where it is).
 - **Resolution:** `commit` drops the velocity; the spec says a committed value is placed, not thrown. A conformance case releases while moving and expects the value to stay exactly.
+
+### The first review: "for this case, nudg had no advantage"
+- **Problem:** A review of the playsnack block button (a 6 px press in a React shell) found nudg's version (two JSON files, a hook, a CSS selector) more work than Framer Motion's `whileTap` one-liner, with the same spring quality, and noted that `simulate`/`plot` validate the file, not the app.
+- **Cause:** The first integration case was one where nudg's strengths (AI-editable definitions, many interactions sharing one motion library, hosts beyond the DOM) don't show, and its plumbing does. The review was right.
+- **Resolution:** Presets make the simple case one line (`useNudg(presets.press())`), with `nudg preset` to turn one into a file when the options run out; the docs now say plainly what the tools check. Expansion in playsnack stops until a case needs what nudg is for.
+- **Lesson:** Pick the first real-world case where the tool's distinctive value is visible, or the comparison will be made on the plumbing. And a library must be no worse than the one-liner alternative on the simplest case, whatever else it offers.

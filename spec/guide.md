@@ -103,6 +103,10 @@ Libraries in `examples/motion/` carry the platforms' published spring values: `a
 - Use a native name only when the user asks to match a platform preset exactly ("use iOS's snappy spring").
 - "Make it feel like Android / Material" or "like iOS": change the `import` line, keep the file.
 
+## Presets
+
+`presets.press()`, `hover()`, `toggle()`, `toast()` (in `@nudg/core` and `@nudg/core/react`) return ready-made documents for the common cases, so a plain press needs no file: `useNudg(presets.press({ scale: 0.96 }))`. When a user wants more than the options cover, write the file: `nudg preset press > press.nudg.json` prints the same document, and then edit it like any nudg file.
+
 ## Words to edits
 
 | Request | Edit |

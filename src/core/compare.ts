@@ -83,9 +83,7 @@ export function compare(a: Program, b: Program, options: SimulateOptions): Compa
     const fmtV = (v: number) => (FRACTIONAL.has(prop) ? v.toFixed(3) : v.toFixed(kind === "color" ? 1 : 2));
 
     let overshoot: [number, number] | undefined;
-    if (kind !== "color") {
-      overshoot = [overshootOf(simA2, key), overshootOf(simB, key)];
-    }
+    if (kind !== "color") overshoot = [sa.overshoot ?? 0, sb.overshoot ?? 0];
     const sizeVerdict = grade(maxDifference, scale);
     const timeVerdict = grade(timeDiff, THRESHOLDS.time);
     const verdict = strongest(sizeVerdict, timeVerdict);
@@ -147,15 +145,6 @@ function strongest(x: Perceptibility, y: Perceptibility): Perceptibility {
   return order[Math.max(order.indexOf(x), order.indexOf(y))];
 }
 
-/** How far a numeric property went past its final value, in the direction of travel. */
-function overshootOf(sim: Simulation, key: string): number {
-  const s = sim.summary[key];
-  const first = sim.samples[0].values[key] as number;
-  const final = s.final as number;
-  if (s.min === undefined || s.max === undefined) return 0;
-  return final >= first ? Math.max(0, s.max - final) : Math.max(0, final - s.min);
-}
-
 function colorDistance(a: string, b: string): number {
   const [l1, a1, b1] = hexToOklab(a);
   const [l2, a2, b2] = hexToOklab(b);
@@ -164,4 +153,43 @@ function colorDistance(a: string, b: string): number {
 
 function lastTime(sim: Simulation): number {
   return sim.samples[sim.samples.length - 1].t;
+}
+
+/**
+ * Frame times for A/B filmstrips: evenly spaced over the run, plus the moments that
+ * matter (each event, shortly after it, and where each property differs most), so the
+ * frames show what the verdict talks about. Returns the times and a caption per marked one.
+ */
+export function compareFrameTimes(c: Comparison, evenly = 6): { times: number[]; marks: Record<string, string> } {
+  const until = Math.max(c.a.samples[c.a.samples.length - 1].t, c.b.samples[c.b.samples.length - 1].t);
+  const times = new Set<number>();
+  const marks: Record<string, string> = {};
+  const add = (t: number, mark?: string) => {
+    const r = Math.round(Math.max(0, Math.min(until, t)) * 1000) / 1000;
+    times.add(r);
+    if (mark && !marks[String(r)]) marks[String(r)] = mark;
+  };
+  for (let i = 0; i < evenly; i++) add((until * i) / Math.max(1, evenly - 1));
+  for (const p of c.properties) {
+    if (p.verdict === "imperceptible" || p.maxDifference === 0) continue;
+    add(p.at, `${p.property} differs most`);
+  }
+  // Events: the moment itself and 80 ms after it, where a response is visible.
+  for (const t of eventTimesOf(c)) {
+    add(t);
+    add(t + 0.08);
+  }
+  return { times: [...times].sort((x, y) => x - y), marks };
+}
+
+/** Times at which A's state changed: an event or a timer did something. */
+function eventTimesOf(c: Comparison): number[] {
+  const out: number[] = [];
+  let last = c.a.samples[0]?.state.join("|");
+  for (const s of c.a.samples) {
+    const now = s.state.join("|");
+    if (now !== last) out.push(s.t);
+    last = now;
+  }
+  return out;
 }

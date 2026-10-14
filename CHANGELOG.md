@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Overshoot is measured per target leg.** The simulator reports `overshoot` per property as how far the value went past wherever it was heading at the time, so a press that goes 0 → 6 → 0 without bouncing reports 0 (it used to report the whole excursion); `compare` uses it. The runtime exposes `targets()`.
+- **`nudg compare --out compare.html`: a page that plays A and B side by side**, on the real markup, with the same events, looping, with live values, replay, press-both with a chosen hold, 1× / ¼× / ⅒× speed and pause. The runtime is inlined, so the file works offline. `nudg_compare` writes it next to the filmstrip whenever `html` is given and tells the person to open it. Stills can't show motion; this can.
+- **Compare filmstrips show the moments that matter:** where each property differs most, each event and 80 ms after it, captioned and outlined, on top of the evenly spaced frames.
+- **Plot** marks sub-pixel overshoot as `(<1px)`.
+- **Guide:** feel words (묵직하게, 쫀득하게, 탱글하게, 차분하게, 경쾌하게, 날렵하게) and the exaggerate-first tuning workflow. Usage notes that an MCP session keeps its version until it reconnects.
+
 ## 0.3.1
 
 - **`nudg compare` / `nudg_compare`:** two versions under the same events, for a person to judge. A perceptibility verdict first (imperceptible / subtle / clear, per property: max difference, overshoot, settle time), then real A/B filmstrips in rows (with the host HTML) or one graph with both curves (`plot` gained `against`). When nothing crosses perception it proposes an exaggerated version. The MCP instructions tell the AI to show it whenever it changes motion for a person.

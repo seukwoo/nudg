@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 // nudg CLI. Every command takes --json so an agent can read the result directly.
 
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, extname } from "node:path";
-import { compare } from "./core/compare.ts";
+import { compare, compareFrameTimes } from "./core/compare.ts";
 import { plot } from "./core/plot.ts";
 import { presets, type PresetName } from "./core/presets.ts";
 import { describeEvent, dragGesture, simulate, type SimulateOptions, type TimedEvent } from "./core/simulate.ts";
 import type { Diagnostic, Program } from "./core/types.ts";
 import { CHROME_HINT, findChrome, svgToPng } from "./node/chrome.ts";
 import { formatComparison, formatDiagnostic, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
+import { comparePage, readWithImports } from "./node/compare-page.ts";
 import { compilePath } from "./node/load.ts";
 import { serveMcp } from "./node/mcp.ts";
 import { frameTimes, renderFrames } from "./node/render.ts";
@@ -34,7 +35,7 @@ simulate and plot options
   --props <a,b,...>         Properties to report. Default: all.
 
   mcp                       Run the MCP server on stdio (tools: nudg_guide, nudg_validate,
-                            nudg_simulate, nudg_plot, nudg_render).
+                            nudg_simulate, nudg_plot, nudg_compare, nudg_render).
   preset <name> [--options '{"scale":0.9}']
                             Print a preset (press, hover, toggle, toast) as a nudg file,
                             to save and edit: nudg preset press > press.nudg.json
@@ -49,8 +50,10 @@ plot options
   --title <text>            Graph title. Default: the file name.
 
 compare options
-  --html <page.html>        Real markup: A/B filmstrip rows (PNG, needs Chrome). Otherwise a graph.
-  --out <file.png|svg>      Where to write the picture. Default: graph as SVG to stdout, or compare.png.
+  --html <page.html>        Real markup. With --out x.html: a page that plays A and B side by side
+                            in a loop with slow motion, for a person to judge (needs a browser, not
+                            Chrome). With --out x.png: A/B filmstrip rows (needs Chrome).
+  --out <file.html|png|svg> Where to write. Default: graph as SVG to stdout, or compare.png with --html.
   --at / --frames           Frame times, as for render.
   --labels <A,B>            Names for the two versions.
 
@@ -242,19 +245,21 @@ async function runCompare(args: Args, json: boolean): Promise<number> {
   const out = args.flags.get("out")?.at(-1);
   let picture: string | undefined;
 
-  if (html) {
+  if (html && out && extname(out).toLowerCase() === ".html") {
+    if (!existsSync(html)) fail(`File not found: ${html}`);
+    const untilBoth = Math.max(comparison.a.samples.at(-1)!.t, comparison.b.samples.at(-1)!.t);
+    writeFileSync(out, comparePage({ html: readFileSync(html, "utf8"), a: readWithImports(fileA), b: readWithImports(fileB), labels, events: options.events, until: untilBoth, start: options.start, reducedMotion: options.reducedMotion, headline: comparison.headline }));
+    picture = out;
+  } else if (html) {
     if (!existsSync(html)) fail(`File not found: ${html}`);
     const chrome = findChrome();
     if (!chrome) fail(`Filmstrips need a browser. ${CHROME_HINT} Or drop --html for a graph.`);
     let times = (args.flags.get("at") ?? []).map((raw) => parseSeconds(raw, "--at"));
-    if (times.length === 0) {
-      const frames = Number(args.flags.get("frames")?.at(-1) ?? 6);
-      const untilBoth = Math.max(comparison.a.samples.at(-1)!.t, comparison.b.samples.at(-1)!.t);
-      times = frameTimes(a.program!, { ...options, until: untilBoth }, frames);
-    }
+    let marks: Record<string, string> = {};
+    if (times.length === 0) ({ times, marks } = compareFrameTimes(comparison, Number(args.flags.get("frames")?.at(-1) ?? 6)));
     picture = out ?? "compare.png";
     if (extname(picture).toLowerCase() !== ".png") fail("With --html the picture is a PNG; use --out <file.png>.");
-    await renderFrames({ file: fileA, label: labels[0], variants: [{ file: fileB, label: labels[1] }], html, events: options.events, start: options.start, reducedMotion: options.reducedMotion, times, out: picture, chrome });
+    await renderFrames({ file: fileA, label: labels[0], variants: [{ file: fileB, label: labels[1] }], html, events: options.events, start: options.start, reducedMotion: options.reducedMotion, times, marks, out: picture, chrome });
   } else {
     const graph = plot(a.program!, { ...options, every: undefined, against: b.program!, labels, title: `${basename(fileA)} vs ${basename(fileB)}` });
     if (out && extname(out).toLowerCase() === ".png") {
@@ -276,7 +281,7 @@ async function runCompare(args: Args, json: boolean): Promise<number> {
     process.stdout.write(JSON.stringify({ ok: true, ...rest, summaryA: comparison.a.summary, summaryB: comparison.b.summary, picture }, null, 2) + "\n");
   } else {
     process.stdout.write(formatComparison(comparison, labels) + "\n");
-    if (picture) process.stdout.write(`\nwrote ${picture}\n`);
+    if (picture) process.stdout.write(`\nwrote ${picture}${picture.endsWith(".html") ? " — open it in a browser: both versions play side by side, with slow motion" : ""}\n`);
   }
   return 0;
 }

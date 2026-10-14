@@ -26,6 +26,8 @@ export interface RenderOptions {
   reducedMotion?: boolean;
   /** One frame per time, in seconds. */
   times: number[];
+  /** Extra caption text for some frame times, e.g. { 0.43: "largest difference" }. */
+  marks?: Record<string, string>;
   out: string;
   chrome: string;
   /** Device pixel ratio. Default 2. */
@@ -80,7 +82,7 @@ export async function renderFrames(options: RenderOptions): Promise<RenderResult
   // Only these folders are served, read-only, on 127.0.0.1, for the length of the render.
   const rows = [{ file, label: options.label ?? "A" }, ...(options.variants ?? []).map((v) => ({ file: resolve(v.file), label: v.label }))];
   const roots = [...new Set([process.cwd(), dirname(html), ...rows.map((row) => dirname(row.file))])];
-  const harness = buildHarness(readFileSync(html, "utf8"), html, rows, options.variants ? true : false, options.events, options.times, options.start, options.reducedMotion);
+  const harness = buildHarness(readFileSync(html, "utf8"), html, rows, options.variants ? true : false, options.events, options.times, options.start, options.reducedMotion, options.marks ?? {});
 
   const server = createServer((req, res) => {
     const path = decodeURIComponent(new URL(req.url ?? "/", "http://localhost").pathname);
@@ -129,14 +131,17 @@ export async function renderFrames(options: RenderOptions): Promise<RenderResult
   }
 }
 
-function buildHarness(page: string, htmlPath: string, rows: { file: string; label: string }[], labeled: boolean, events: TimedEvent[], times: number[], start?: string[], reducedMotion?: boolean): string {
+function buildHarness(page: string, htmlPath: string, rows: { file: string; label: string }[], labeled: boolean, events: TimedEvent[], times: number[], start?: string[], reducedMotion?: boolean, marks: Record<string, string> = {}): string {
   const head = /<head[^>]*>([\s\S]*?)<\/head>/i.exec(page)?.[1] ?? "";
   const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(page);
   const body = bodyMatch ? bodyMatch[1] : head ? "" : page;
   const noScripts = (s: string) => s.replace(/<script[\s\S]*?<\/script>/gi, "");
   const strip = (row: number) =>
     times
-      .map((t) => `<figure class="nudg-frame" data-row="${row}" data-t="${t}"><div class="nudg-stage">${noScripts(body)}</div><figcaption>${fmt(t)}s</figcaption></figure>`)
+      .map((t) => {
+        const mark = marks[String(t)] ?? marks[fmt(t)];
+        return `<figure class="nudg-frame${mark ? " nudg-marked" : ""}" data-row="${row}" data-t="${t}"><div class="nudg-stage">${noScripts(body)}</div><figcaption>${fmt(t)}s${mark ? `<br><em>${escapeHtml(mark)}</em>` : ""}</figcaption></figure>`;
+      })
       .join("\n");
   const frames = rows
     .map((row, i) => `<div class="nudg-row">${labeled ? `<div class="nudg-label">${escapeHtml(row.label)}</div>` : ""}<div class="nudg-strip">${strip(i)}</div></div>`)
@@ -153,11 +158,13 @@ ${noScripts(head)}
   html, body { margin: 0 !important; padding: 0 !important; min-height: 0 !important; width: max-content !important; }
   .nudg-rows { display: inline-flex; flex-direction: column; background: #fcfcfb; }
   .nudg-row { display: flex; align-items: center; }
-  .nudg-label { width: 28px; padding-left: 8px; font: 600 13px/1 ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; }
+  .nudg-label { min-width: 28px; padding: 0 12px 0 8px; font: 600 13px/1 ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; white-space: nowrap; }
   .nudg-strip { display: inline-flex; gap: 8px; padding: 8px; }
   .nudg-frame { margin: 0; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
   .nudg-stage { position: relative; }
   .nudg-frame figcaption { font: 12px/1.4 ui-monospace, "SF Mono", Menlo, monospace; color: #52514e; text-align: center; }
+  .nudg-frame figcaption em { font: 11px/1.3 ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; }
+  .nudg-marked .nudg-stage { outline: 2px solid #2a78d6; outline-offset: 2px; border-radius: 4px; }
 </style>
 </head>
 <body>

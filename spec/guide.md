@@ -111,7 +111,12 @@ Libraries in `examples/motion/` carry the platforms' published spring values: `a
 
 | Request | Edit |
 |---|---|
-| bouncier, more playful | raise `bounce` (e.g. 0.25 → 0.4) |
+| bouncier, more playful, 탱글하게 | raise `bounce` (e.g. 0.25 → 0.4) |
+| heavier, weightier, 묵직하게 | raise `duration` a little (e.g. 0.3 → 0.4) and lower `bounce` (e.g. 0.3 → 0.1): slower to settle, no spring-back |
+| chewy, 쫀득하게 | a little longer `duration` with a small `bounce` (0.15–0.25): it stretches, then lands |
+| calmer, 차분하게 | `bounce` 0 and a longer `duration` |
+| livelier, 경쾌하게 | shorter `duration`, a little more `bounce` |
+| crisper, 날렵하게 | shorter `duration`, `bounce` near 0.15 |
 | less bouncy, calmer, no overshoot | lower `bounce`; 0 for none |
 | faster, snappier | lower `duration` (e.g. 0.35 → 0.25) |
 | slower, softer, more relaxed | raise `duration`; optionally lower `bounce` |
@@ -127,7 +132,9 @@ Libraries in `examples/motion/` carry the platforms' published spring values: `a
 | keyboard support (arrows, Escape) | `target.key.arrowright` etc. in `when`; `step` for values, a `to` for states |
 | make it stay where I drop it | `"commit": ["prop"]` on the transition that leaves the `follow` |
 
-Change one thing at a time, then compare `nudg_plot` (overshoot `max`, `at rest` time) before and after.
+Change one thing at a time, then call `nudg_compare` with the version before and after and pass its headline on.
+
+**Tuning feel with a person:** small changes are often below what a display can show (under a device pixel, under about three frames), and the person can't judge what they can't see. When `nudg_compare` says *imperceptible* or *subtle*, show an **exaggerated version first** (about 2–3× the change) so the direction is obvious, get a yes or no on the direction, then dial it back to taste. Say what you did: "this is exaggerated so the direction is clear; the real change will be about a third of this."
 
 ## Tools
 
@@ -135,4 +142,4 @@ Change one thing at a time, then compare `nudg_plot` (overshoot `max`, `at rest`
 - `nudg_simulate` — send events at times, get states and values over time plus a per-property summary (`min`, `max`, `final`, `settledAt`). A whole drag is one item: `{ "drag": "track", "t": 0.1, "until": 0.3, "dx": 20 }`.
 - `nudg_plot` — a motion graph image: properties over time with events, targets, overshoot and settle times.
 - `nudg_render` — real frames of the component from the host page's markup and styles, as one filmstrip image.
-- `nudg_compare` — **call this whenever you change motion for a person**, with the version before and after. It says first whether anyone would notice (imperceptible / subtle / clear), then shows both side by side: real A/B filmstrips when the host page's `html` is given, otherwise both curves on one graph. Pass the headline on; if it proposes an exaggerated version, offer that. The person judges by looking, not by reading numbers.
+- `nudg_compare` — **call this whenever you change motion for a person**, with the version before and after. It says first whether anyone would notice (imperceptible / subtle / clear), then shows both side by side: real A/B filmstrips when the host page's `html` is given, otherwise both curves on one graph. With `html` it also writes `compare.html`, which plays both versions side by side in slow motion; tell the person to open it, since stills can't show motion. Pass the headline on; if it proposes an exaggerated version, offer that. The person judges by looking, not by reading numbers.

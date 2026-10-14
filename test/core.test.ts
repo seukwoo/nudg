@@ -232,3 +232,27 @@ test("plot can overlay a second version", async () => {
   assert.match(svg, /class="series against"/);
   assert.match(svg, />later</);
 });
+
+test("overshoot is measured per target leg, so a round trip without bounce reports 0", async () => {
+  const { presets } = await import("../src/core/presets.ts");
+  const doc = (release: object) => compile({ path: "p.nudg.json", text: JSON.stringify(presets.press({ y: 6, scale: 1, release })) }).program!;
+  const events = [{ t: 0, event: "button.down" }, { t: 0.3, event: "button.cancel" }];
+  const flat = simulate(doc({ duration: 0.6, bounce: 0 }), { events });
+  assert.equal(flat.summary["button.y"].overshoot, 0);
+  assert.ok(flat.summary["button.y"].max! > 5.9, "it did travel to 6 and back");
+  const bouncy = simulate(doc({ duration: 0.3, bounce: 0.35 }), { events });
+  assert.ok(bouncy.summary["button.y"].overshoot! > 0.2 && bouncy.summary["button.y"].overshoot! < 1, "the spring-back past 0 counts, the trip to 6 doesn't");
+});
+
+test("compare frame times include where the versions differ most", async () => {
+  const { compare, compareFrameTimes } = await import("../src/core/compare.ts");
+  const { presets } = await import("../src/core/presets.ts");
+  const doc = (release: object) => compile({ path: "p.nudg.json", text: JSON.stringify(presets.press({ y: 6, scale: 1, release })) }).program!;
+  const c = compare(doc({ duration: 0.3, bounce: 0.35 }), doc({ duration: 0.6, bounce: 0 }), { events: [{ t: 0, event: "button.down" }, { t: 0.3, event: "button.cancel" }] });
+  const { times, marks } = compareFrameTimes(c, 4);
+  const at = c.properties.find((p) => p.property === "button.y")!.at;
+  assert.ok(times.includes(Math.round(at * 1000) / 1000), "the largest-difference moment is a frame");
+  assert.ok(Object.values(marks).some((m) => m.includes("differs most")));
+  assert.ok(times.includes(0.3) && times.includes(0.38), "the event and 80 ms after it are frames");
+  assert.deepEqual(times, [...times].sort((x, y) => x - y));
+});

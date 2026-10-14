@@ -5,6 +5,9 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+/** How long one protocol call may take. Screenshots of a big page take a second; anything longer is a hang. */
+const CALL_TIMEOUT_MS = 30_000;
+
 export interface Browser {
   send(method: string, params?: Record<string, unknown>): Promise<any>;
   /** Subscribes to a protocol event, e.g. "Runtime.exceptionThrown" (enable its domain first). */
@@ -58,10 +61,25 @@ export async function launchBrowser(chrome: string): Promise<Browser> {
       else waiter.resolve(msg.result);
     };
 
+    // A call that never answers would hang a test run for hours; fail it instead.
     const send = (method: string, params: Record<string, unknown> = {}) =>
       new Promise<any>((resolve, reject) => {
         const id = ++nextId;
-        pending.set(id, { resolve, reject });
+        const timer = setTimeout(() => {
+          if (!pending.has(id)) return;
+          pending.delete(id);
+          reject(new Error(`Chrome did not answer ${method} within ${CALL_TIMEOUT_MS / 1000} s.`));
+        }, CALL_TIMEOUT_MS);
+        pending.set(id, {
+          resolve: (v) => {
+            clearTimeout(timer);
+            resolve(v);
+          },
+          reject: (e) => {
+            clearTimeout(timer);
+            reject(e);
+          },
+        });
         ws.send(JSON.stringify({ id, method, params }));
       });
 

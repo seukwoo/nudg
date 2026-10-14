@@ -243,6 +243,12 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 ### What the field report asked for next
 - The report's priority list: host truth first (a transition the file plays but the page never shows, because the element unmounts on click), then perceptual framing of numbers, then exit handling in the adapter, then feel words in the guide. This change covers the numbers, the frames and the words; host truth is the next tool.
 
+### A CI job that never ended
+- **Problem:** On the release commit, the Node 26 job sat in `npm test` for 14 minutes; the same code had passed in 42 s a few minutes earlier, and Node 24 passed beside it.
+- **Cause:** Not reproduced locally. The browser tests talk to Chrome over DevTools with no timeout on a call, so one lost answer (a crashed or frozen tab) waits forever; GitHub only gives up after six hours.
+- **Resolution:** Every protocol call now fails after 30 s with the method's name, so a hang becomes a failed test with a message. The run was cancelled and rerun.
+- **Lesson:** Anything that waits on another process needs a deadline, or a flake turns into a stuck pipeline.
+
 ### Host truth: measuring the page instead of trusting the file
 - **Problem:** Every tool so far verified the file. The field report's top item was a release spring the file played perfectly while the app never showed it: the block unmounted on click. Nothing in nudg could see that.
 - **Design:** `observe` drives the real page through Chrome DevTools (real pointer and key events, so React handlers, CSS transitions and navigation all run), and samples the element each frame: computed `transform` decomposed into translate, scale and rotation, plus `opacity`, size, and presence (re-querying the selector through open shadow roots, so an unmount or a remount is seen). The summary is in the file's terms (min, max, final, settled, overshoot), and the judgement reuses `compare`'s perceptibility thresholds. Overshoot on the page has no targets to measure against, so it is measured per leg between actions and plateaus; a leg that ends where it began reports none.

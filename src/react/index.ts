@@ -10,7 +10,10 @@ import { play, type Player } from "../dom/play.ts";
 export interface UseNudgOptions {
   /** Leaf state paths to start in instead of `initial`, e.g. ["on"] for a toggle that mounts checked. */
   state?: string[];
-  /** Files the document imports, by path relative to it, when passing a JSON object. */
+  /**
+   * Files the document imports, when passing a JSON object: `{ "./motion/brand.nudg.json": brand }`,
+   * keyed as the import is written (a leading "./" is optional).
+   */
   files?: Record<string, unknown>;
 }
 
@@ -71,8 +74,10 @@ export function useNudg(source: Program | object, options: UseNudgOptions = {}):
 
 function toProgram(source: Program | object, files: Record<string, unknown> = {}): Program {
   if ("machine" in source && (source as Program).properties instanceof Map) return source as Program;
+  // The compiler asks for normalized paths ("motion/brand.nudg.json"); accept keys as people write imports.
+  const byPath = new Map(Object.entries(files).map(([key, value]) => [key.replace(/^(\.\/)+/, ""), value]));
   const { program, diagnostics } = compile({ path: "main.nudg.json", text: JSON.stringify(source) }, (path) =>
-    path in files ? JSON.stringify(files[path]) : undefined,
+    byPath.has(path) ? JSON.stringify(byPath.get(path)) : undefined,
   );
   if (!program) {
     const lines = diagnostics.filter((d) => d.severity === "error").map((d) => `${d.code} at ${d.path}: ${d.message}${d.hint ? ` (${d.hint})` : ""}`);

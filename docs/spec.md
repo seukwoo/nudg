@@ -30,7 +30,7 @@ Worked out by expressing a toggle and a like button. See [`examples/`](../exampl
 
 A nudg file is strict JSON with the extension `.nudg.json`. Every platform already parses it, JSON Schema describes it, and LLMs write it reliably, so there is no parser to maintain and nothing new to learn. A friendlier syntax can be added later as sugar that compiles to the same model, but JSON stays the source of truth.
 
-A file may start with `"$schema": "https://unpkg.com/@nudg/core@0.2/spec/nudg-0.2.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
+A file may start with `"$schema": "https://unpkg.com/@nudg/core@0.3/spec/nudg-0.3.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
 
 JSON has no comments. Instead, any object may carry a `note` string. Runtimes ignore it. Unlike a comment, a note survives tools rewriting the file, and an AI can read it as part of the data.
 
@@ -216,3 +216,70 @@ A machine can list `when` next to `states` (or inside a region). It applies when
 ### Starting state
 
 The runtime can start in states other than `initial` (for a controlled component that mounts already on), without animating: `createRuntime(program, { state: ["on"] })`. Paths are the ones `state()` reports; regions not listed start at their `initial`.
+
+## Additions in 0.3 (draft)
+
+Stage 1 continued: what the platforms' component guidelines (WAI-ARIA Authoring Practices, Apple HIG, Material 3) need that 0.2 couldn't say. Worked out by expressing a slider, a tooltip, a dialog and an auto-hiding toast. A file that uses any of this declares `"nudg": "0.3"`; a 0.3 runtime also reads 0.1 and 0.2 files.
+
+```json
+{
+  "nudg": "0.3",
+  "targets": ["thumb", "track"],
+  "values": { "thumb.x": { "base": 0, "min": 0, "max": 200 } },
+  "animate": { "thumb.x": { "spring": { "duration": 0.3, "bounce": 0.1 } } },
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "when": {
+        "thumb.key.arrowright": { "step": { "thumb.x": 10 } },
+        "thumb.key.arrowleft": { "step": { "thumb.x": -10 } },
+        "thumb.key.home": { "step": { "thumb.x": -1000 } },
+        "thumb.key.end": { "step": { "thumb.x": 1000 } },
+        "thumb.dragstart": "dragging"
+      }
+    },
+    "dragging": {
+      "follow": { "thumb.x": "thumb.drag.x" },
+      "when": { "thumb.dragend": { "to": "idle", "commit": ["thumb.x"] } }
+    }
+  }
+}
+```
+
+### Keyboard events
+
+- `target.key.<name>` fires on each key press (including auto-repeat) while the target, or something inside it, has keyboard focus. Names are the web's `KeyboardEvent.key` values, lowercased, with `space` for the space bar: `space`, `enter`, `escape`, `tab`, `backspace`, `delete`, `arrowup`, `arrowdown`, `arrowleft`, `arrowright`, `home`, `end`, `pageup`, `pagedown`, single characters (`a`, `1`, `/`), and function keys (`f1`). The namespace stays open (decision 4).
+- When a transition handles a key, the adapter stops the browser's default for it (the page doesn't scroll on `space` or the arrows). Keys that no transition handles pass through.
+- A `tap` still comes from activation (a click, or Space/Enter on a native button), so a button needs no key transitions of its own.
+
+### Timers: `after`
+
+A transition keyed `after:<time>` fires that long after the state was entered, if the state is still active:
+
+```json
+"shown": { "set": { "toast.opacity": 1 }, "when": { "after:3s": "hidden", "toast.tap": "hidden" } }
+```
+
+- `<time>` is seconds or `ms`, as elsewhere (`after:3s`, `after:300ms`, `after:0.5`).
+- The timer is set when the state is entered and cleared when it is left, so re-entering (including a transition to itself) restarts it. It belongs to a state's own `when`; a machine-level `after` is an error, because "after 3 s in any state" has no single start.
+- Timers are part of the deterministic clock. A timer due at time `t` fires at exactly `t`: before any event sent at `t`, in order of due time (ties in file order), and even if the host only asks for a later time, in which case the runtime catches up first. Values that the firing changes start moving at `t`, not when the host asked.
+- While a timer is pending, the machine isn't at rest, so `settled` is false and a simulation keeps running until it fires.
+
+### `step` and `commit`: changing a value for good
+
+States say where, and so far nothing else could: every value had one base and the states' targets. A slider's thumb has to stay where the keys or the finger put it. Two transition operators change a property's **base value** itself:
+
+- `"step": { "thumb.x": 10 }` adds to the base (negative to subtract), clamped to the property's `min`/`max`. The value then travels to its new target with its usual motion. A transition may `step` without a `to`, staying in its state.
+- `"commit": ["thumb.x"]` makes the property's current value its new base, clamped, at the moment of the transition. Used when leaving a `follow`: the thumb stays under the finger instead of springing back. A committed value is placed, not thrown: the finger's velocity is dropped, so a thumb released mid-move doesn't wobble.
+- Both apply only to numeric properties with a plain base (not mapped). While a state `set`s the property, the base is hidden until that state is left.
+
+### Property bounds: `min` and `max`
+
+A value in `values` may be an object: `{ "base": 0, "min": 0, "max": 200 }`. `min` and `max` bound `step` and `commit`, are the default `range` of a `follow` on that property, and make a `set` outside them a validator error. `base` alone is the same as writing the number.
+
+### Reduced motion
+
+Some people ask the system to reduce motion (`prefers-reduced-motion`; WCAG 2.3.3). The format says nothing about it; the runtime does, as an option: `createRuntime(program, { reducedMotion: true })`.
+
+- Every spring and tween becomes a short linear tween (0.15 s), and kicks are ignored. States, transitions, timers and followed values are unchanged, so nothing functional depends on the setting.
+- The DOM adapter follows the system setting unless the option is passed explicitly; `simulate`, `plot` and `render` take `--reduced-motion`.

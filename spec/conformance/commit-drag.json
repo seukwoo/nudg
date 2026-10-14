@@ -1,0 +1,170 @@
+{
+  "conformance": "0.3",
+  "name": "commit: a released drag keeps its value as the new base, with no motion; bounds limit the follow",
+  "doc": {
+    "nudg": "0.3",
+    "targets": [
+      "thumb"
+    ],
+    "values": {
+      "thumb.x": {
+        "base": 0,
+        "min": 0,
+        "max": 100
+      }
+    },
+    "animate": {
+      "thumb.x": {
+        "spring": {
+          "duration": 0.3,
+          "bounce": 0
+        }
+      }
+    },
+    "initial": "idle",
+    "states": {
+      "idle": {
+        "when": {
+          "thumb.key.arrowright": {
+            "step": {
+              "thumb.x": 10
+            }
+          },
+          "thumb.key.arrowleft": {
+            "step": {
+              "thumb.x": -10
+            }
+          },
+          "thumb.key.end": {
+            "step": {
+              "thumb.x": 1000
+            }
+          },
+          "thumb.dragstart": "dragging"
+        }
+      },
+      "dragging": {
+        "follow": {
+          "thumb.x": "thumb.drag.x"
+        },
+        "when": {
+          "thumb.dragend": {
+            "to": "idle",
+            "commit": [
+              "thumb.x"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0.1,
+      "send": "thumb.dragstart"
+    },
+    {
+      "t": 0.15,
+      "input": "thumb.drag.x",
+      "value": 7.4
+    },
+    {
+      "t": 0.2,
+      "input": "thumb.drag.x",
+      "value": 14.8
+    },
+    {
+      "t": 0.25,
+      "input": "thumb.drag.x",
+      "value": 22.2
+    },
+    {
+      "t": 0.3,
+      "input": "thumb.drag.x",
+      "value": 29.6
+    },
+    {
+      "t": 0.35,
+      "input": "thumb.drag.x",
+      "value": 37.0
+    },
+    {
+      "t": 0.4,
+      "expect": {
+        "state": [
+          "dragging"
+        ],
+        "values": {
+          "thumb.x": 37.0
+        }
+      }
+    },
+    {
+      "t": 0.5,
+      "input": "thumb.drag.x",
+      "value": 130
+    },
+    {
+      "t": 0.5,
+      "expect": {
+        "values": {
+          "thumb.x": 100.0
+        }
+      }
+    },
+    {
+      "t": 0.6,
+      "input": "thumb.drag.x",
+      "value": 37
+    },
+    {
+      "t": 0.8,
+      "send": "thumb.dragend"
+    },
+    {
+      "t": 0.8,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "thumb.x": 37.0
+        }
+      }
+    },
+    {
+      "t": 0.9,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "thumb.x": 37.0
+        }
+      }
+    },
+    {
+      "t": 1.5,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "thumb.x": 37.0
+        }
+      }
+    },
+    {
+      "t": 1.5,
+      "send": "thumb.key.arrowright"
+    },
+    {
+      "t": 1.6,
+      "expect": {
+        "values": {
+          "thumb.x": 43.189416092
+        }
+      }
+    }
+  ]
+}

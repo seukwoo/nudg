@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Slider</title>
+  <style>
+    .slider { position: relative; width: 224px; height: 32px; }
+    .slider .track { position: absolute; top: 14px; left: 0; width: 224px; height: 4px; border-radius: 2px; background: #e4e4df; cursor: pointer; }
+    /* nudg sets the fill's width from the thumb's position. */
+    .slider .fill { position: absolute; top: 14px; left: 0; height: 4px; border-radius: 2px; background: #2563eb; pointer-events: none; }
+    /* WAI-ARIA slider pattern: the thumb is focusable and takes the arrow keys. */
+    .slider .thumb {
+      position: absolute;
+      top: 4px;
+      left: 0;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid #2563eb;
+      box-sizing: border-box;
+      cursor: grab;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .slider .thumb:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <div class="slider">
+    <div class="track" data-nudg="track"></div>
+    <div class="fill" data-nudg="fill"></div>
+    <div class="thumb" data-nudg="thumb" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="30"></div>
+  </div>
+  <!-- Host markup for slider.nudg.json. The app keeps aria-valuenow in step with the value. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./slider.nudg.json");
+    const thumb = document.querySelector("[role=slider]");
+    play(program, document.body, {
+      onFrame: (values) => thumb.setAttribute("aria-valuenow", String(Math.round(values["thumb.x"] / 2))),
+    });
+  </script>
+</body>
+</html>

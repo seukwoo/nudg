@@ -15,6 +15,8 @@ export interface UseNudgOptions {
    * keyed as the import is written (a leading "./" is optional).
    */
   files?: Record<string, unknown>;
+  /** Reduced motion (v0.3). Default: the system's prefers-reduced-motion setting. */
+  reducedMotion?: boolean;
 }
 
 export interface Nudg {
@@ -42,7 +44,7 @@ export function useNudg(source: Program | object, options: UseNudgOptions = {}):
   const [state, setState] = useState<string[]>(() => createRuntime(program, { state: options.state }).state());
 
   useIsomorphicLayoutEffect(() => {
-    const p = play(program, null, { state: options.state, onState: setState });
+    const p = play(program, null, { state: options.state, reducedMotion: options.reducedMotion, onState: setState });
     player.current = p;
     for (const [name, entry] of attached.current) entry.unbind = p.bind(name, entry.element);
     setState(p.runtime.state());

@@ -1,6 +1,6 @@
 {
   "name": "@nudg/core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "The interaction format your AI can nudge.",
   "keywords": [
     "animation",
@@ -41,7 +41,7 @@
       "types": "./dist/node/index.d.ts",
       "default": "./dist/node/index.js"
     },
-    "./schema.json": "./spec/nudg-0.2.schema.json",
+    "./schema.json": "./spec/nudg-0.3.schema.json",
     "./guide.md": "./spec/guide.md",
     "./motion/*": "./examples/motion/*",
     "./package.json": "./package.json"
@@ -55,12 +55,13 @@
   },
   "files": [
     "dist",
-    "spec/nudg-0.1.schema.json",
-    "spec/nudg-0.2.schema.json",
     "spec/guide.md",
     "examples/motion/apple.nudg.json",
     "examples/motion/material-expressive.nudg.json",
-    "examples/motion/material-standard.nudg.json"
+    "examples/motion/material-standard.nudg.json",
+    "spec/nudg-0.1.schema.json",
+    "spec/nudg-0.2.schema.json",
+    "spec/nudg-0.3.schema.json"
   ],
   "scripts": {
     "test": "node --test",

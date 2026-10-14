@@ -267,15 +267,16 @@
       "title": "Toast",
       "category": "feedback",
       "tags": [
+        "timer",
         "host-event",
         "spring",
         "tween"
       ],
       "html": "toast.html",
-      "summary": "The app shows and hides it. It rises with a soft spring while fading in; tapping dismisses it early.",
+      "summary": "The app shows it; it hides itself after 3 s (a timer, restarted by another show) or on tap. It rises with a soft spring while fading in.",
       "prompts": [
-        "Make the toast slide in from the right instead of from below.",
-        "Make it fade out slower than it fades in."
+        "Keep the toast up for 5 seconds instead of 3.",
+        "Make the toast slide in from the right instead of from below."
       ]
     },
     {
@@ -292,6 +293,60 @@
       "prompts": [
         "Make the shake shorter and sharper.",
         "Shake vertically instead of horizontally."
+      ]
+    },
+    {
+      "id": "slider",
+      "title": "Slider",
+      "category": "toggles",
+      "tags": [
+        "step",
+        "commit",
+        "drag",
+        "follow",
+        "keyboard",
+        "map"
+      ],
+      "html": "slider.html",
+      "summary": "Drag the thumb and it stays where you leave it; arrow keys move it a step, Home and End to the ends, all within the property's bounds. The fill is mapped from the thumb. WAI-ARIA slider pattern.",
+      "prompts": [
+        "Make the arrow keys move the thumb by half as much.",
+        "Let the thumb bounce a little more when it lands."
+      ]
+    },
+    {
+      "id": "tooltip",
+      "title": "Tooltip",
+      "category": "feedback",
+      "tags": [
+        "timer",
+        "hover",
+        "keyboard",
+        "tween"
+      ],
+      "html": "tooltip.html",
+      "summary": "Hover or focus the trigger and the tip appears after 500 ms, unless you leave first; Escape or leaving hides it. WAI-ARIA tooltip pattern.",
+      "prompts": [
+        "Show the tooltip sooner, after 200 ms.",
+        "Make it fade out slower than it fades in."
+      ]
+    },
+    {
+      "id": "dialog",
+      "title": "Dialog",
+      "category": "overlays",
+      "tags": [
+        "keyboard",
+        "host-event",
+        "map",
+        "tween",
+        "spring"
+      ],
+      "html": "dialog.html",
+      "summary": "A modal that scales and fades in over a scrim; Escape, the scrim or the button closes it. The scrim's opacity is mapped from the dialog's. WAI-ARIA dialog pattern.",
+      "prompts": [
+        "Open the dialog with more bounce.",
+        "Slide the dialog up from the bottom instead of scaling."
       ]
     }
   ]

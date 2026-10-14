@@ -38,12 +38,8 @@
     import { compileUrl, play } from "../dist/dom/index.js";
     const { program } = await compileUrl("./toast.nudg.json");
     const player = play(program, document.body);
-    let timer;
-    document.querySelector(".toast-show").addEventListener("click", () => {
-      player.send("host.show");
-      clearTimeout(timer);
-      timer = setTimeout(() => player.send("host.hide"), 2500);
-    });
+    // The file hides the toast itself after 3 s (after:3s); the app only shows it.
+    document.querySelector(".toast-show").addEventListener("click", () => player.send("host.show"));
   </script>
 </body>
 </html>

@@ -1,0 +1,34 @@
+{
+  "nudg": "0.3",
+  "note": "A tooltip that waits before it shows (WAI-ARIA tooltip pattern). Hovering or focusing the trigger starts a timer; the tip appears after 500 ms unless the pointer has left, and goes away as soon as it does, or on Escape.",
+  "targets": ["trigger", "tip"],
+  "values": { "tip.opacity": 0, "tip.y": 4, "tip.scale": 0.96 },
+  "animate": {
+    "tip.opacity": { "tween": { "duration": 0.12, "ease": "out" } },
+    "tip.y": { "spring": { "duration": 0.25, "bounce": 0.1 } },
+    "tip.scale": { "spring": { "duration": 0.25, "bounce": 0.1 } }
+  },
+  "initial": "hidden",
+  "states": {
+    "hidden": {
+      "when": { "trigger.hoverstart": "waiting", "trigger.focus": "waiting" }
+    },
+    "waiting": {
+      "when": {
+        "after:500ms": "shown",
+        "trigger.hoverend": "hidden",
+        "trigger.blur": "hidden",
+        "trigger.down": "hidden"
+      }
+    },
+    "shown": {
+      "set": { "tip.opacity": 1, "tip.y": 0, "tip.scale": 1 },
+      "when": {
+        "trigger.hoverend": "hidden",
+        "trigger.blur": "hidden",
+        "trigger.down": "hidden",
+        "trigger.key.escape": "hidden"
+      }
+    }
+  }
+}

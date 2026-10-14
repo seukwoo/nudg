@@ -127,6 +127,51 @@ test("playground: a typo gets a hint; a pasted file gets generic boxes", { skip 
   assert.equal(await browser.evaluate("document.getElementById('playground-stage').shadowRoot.querySelectorAll('.target').length"), 1);
 });
 
+test("keys, timers and commit on the site: slider arrows, tooltip delay, dialog Escape", { skip }, async () => {
+  const key = (sel: string, k: string) =>
+    browser.evaluate(`document.getElementById('detail-stage').shadowRoot.querySelector(${JSON.stringify(sel)}).dispatchEvent(new KeyboardEvent("keydown", { key: ${JSON.stringify(k)}, bubbles: true, cancelable: true }))`);
+  const tx = (sel: string) =>
+    browser.evaluate(`(() => { const t = document.getElementById('detail-stage').shadowRoot.querySelector(${JSON.stringify(sel)}).style.transform; const i = t.indexOf("translate(") + 10; return i > 9 ? Number(t.slice(i, t.indexOf("px", i))) : null; })()`);
+
+  await go("#example/slider");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent || undefined"), 5_000);
+  assert.equal(await tx("[data-nudg=thumb]"), 60);
+  const prevented = !(await key("[data-nudg=thumb]", "ArrowRight"));
+  assert.equal(prevented, true, "a handled key is prevented from scrolling the page");
+  await sleep(500);
+  assert.ok(Math.abs((await tx("[data-nudg=thumb]")) - 80) < 0.5, "ArrowRight stepped the thumb by 20");
+  await key("[data-nudg=thumb]", "End");
+  await sleep(500);
+  assert.ok(Math.abs((await tx("[data-nudg=thumb]")) - 200) < 0.5, "End clamps to max");
+  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('[role=slider]').getAttribute('aria-valuenow')"), "100");
+  const unhandled = await key("[data-nudg=thumb]", "a");
+  assert.equal(unhandled, true, "an unhandled key keeps its default");
+
+  await go("#example/tooltip");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent || undefined"), 5_000);
+  const [hx, hy] = await center("detail-stage", "[data-nudg=trigger]");
+  await browser.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: hx, y: hy });
+  await sleep(200);
+  assert.equal(await browser.evaluate("document.getElementById('detail-state').textContent"), "waiting");
+  await sleep(600);
+  assert.equal(await browser.evaluate("document.getElementById('detail-state').textContent"), "shown", "the timer fired and the site noticed");
+  await browser.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 5, y: 5 });
+  await sleep(200);
+  assert.equal(await browser.evaluate("document.getElementById('detail-state').textContent"), "hidden");
+
+  await go("#example/dialog");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent || undefined"), 5_000);
+  const [ox, oy] = await center("detail-stage", "[data-nudg=opener]");
+  await mouse("mousePressed", ox, oy);
+  await mouse("mouseReleased", ox, oy);
+  await sleep(300);
+  assert.equal(await browser.evaluate("document.getElementById('detail-state').textContent"), "open");
+  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.activeElement?.className"), "close", "focus moved into the dialog");
+  await key(".close", "Escape");
+  await sleep(300);
+  assert.equal(await browser.evaluate("document.getElementById('detail-state').textContent"), "closed");
+});
+
 test("bound elements carry the active state, so CSS can animate by state", { skip }, async () => {
   await go("#example/pull-to-refresh");
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent || undefined"), 5_000);

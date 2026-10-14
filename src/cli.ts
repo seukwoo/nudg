@@ -26,6 +26,7 @@ simulate and plot options
                             Sends down, dragstart, 60 input samples per second, up, dragend.
   --input <name=v@time>     One input sample, e.g. track.drag.x=12@0.2. Repeatable.
   --start <path,...>        Start in these states instead of initial, e.g. on.
+  --reduced-motion          Play as a reduced-motion user would see it (0.3).
   --until <seconds>         Last sample time. Default: when everything settles.
   --every <seconds>         Sample interval (simulate only). Default: 0.05.
   --props <a,b,...>         Properties to report. Default: all.
@@ -64,7 +65,7 @@ function parseArgs(argv: string[]): Args {
       continue;
     }
     const [name, inline] = arg.slice(2).split(/=(.*)/s, 2);
-    const boolean = name === "json" || name === "help";
+    const boolean = name === "json" || name === "help" || name === "reduced-motion";
     const value = boolean ? "" : (inline ?? argv[++i]);
     if (value === undefined) fail(`Option --${name} needs a value.`);
     flags.set(name, [...(flags.get(name) ?? []), value]);
@@ -148,6 +149,7 @@ function simulationOptions(args: Args, program: Program): SimulateOptions {
   return {
     events,
     start,
+    reducedMotion: args.flags.has("reduced-motion") || undefined,
     until: until === undefined ? undefined : parseSeconds(until, "--until"),
     every: every === undefined ? undefined : parseSeconds(every, "--every"),
     properties,
@@ -228,7 +230,7 @@ async function runRender(args: Args, json: boolean): Promise<number> {
   }
   times.sort((a, b) => a - b);
 
-  const result = await renderFrames({ file, html, events: options.events, start: options.start, times, out, chrome });
+  const result = await renderFrames({ file, html, events: options.events, start: options.start, reducedMotion: options.reducedMotion, times, out, chrome });
   if (json) {
     process.stdout.write(JSON.stringify({ ok: true, ...result }, null, 2) + "\n");
   } else {

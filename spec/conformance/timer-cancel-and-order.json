@@ -1,0 +1,95 @@
+{
+  "conformance": "0.3",
+  "name": "Timer: leaving the state cancels it; a timer due when an event arrives fires first, then the event",
+  "doc": {
+    "nudg": "0.3",
+    "targets": [
+      "toast"
+    ],
+    "values": {
+      "toast.y": 12,
+      "toast.opacity": 0
+    },
+    "animate": {
+      "toast.y": {
+        "spring": {
+          "duration": 0.4,
+          "bounce": 0.2
+        }
+      },
+      "toast.opacity": {
+        "tween": {
+          "duration": 0.2,
+          "ease": "linear"
+        }
+      }
+    },
+    "initial": "hidden",
+    "when": {
+      "host.show": "shown",
+      "host.hide": "hidden"
+    },
+    "states": {
+      "hidden": {},
+      "shown": {
+        "set": {
+          "toast.y": 0,
+          "toast.opacity": 1
+        },
+        "when": {
+          "after:500ms": "hidden",
+          "toast.tap": "hidden"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0.1,
+      "send": "host.show"
+    },
+    {
+      "t": 0.3,
+      "send": "toast.tap"
+    },
+    {
+      "t": 0.7,
+      "expect": {
+        "state": [
+          "hidden"
+        ],
+        "values": {
+          "toast.y": 12.125568279
+        }
+      }
+    },
+    {
+      "t": 1.0,
+      "send": "host.show"
+    },
+    {
+      "t": 1.5,
+      "send": "host.show"
+    },
+    {
+      "t": 1.6,
+      "expect": {
+        "state": [
+          "shown"
+        ],
+        "values": {
+          "toast.y": 0.000160966,
+          "toast.opacity": 1.0
+        }
+      }
+    },
+    {
+      "t": 2.1,
+      "expect": {
+        "state": [
+          "hidden"
+        ]
+      }
+    }
+  ]
+}

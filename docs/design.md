@@ -102,9 +102,10 @@ These are expensive to change later, so they are fixed early:
 ## Open questions
 
 - Transitions that cross machine levels (to a parent's sibling, into a nested state).
-- Keyboard events beyond focus (`space`, `enter`, arrow keys), and whether `click` covering keyboard activation is enough.
-- Layout (v0.3): measured positions and sizes (`{ "measure": "tab2.x" }` for a tab indicator), a natural size (`"auto"`) to collapse a row from, and `%` units.
-- Decay (fling, inertia) as a motion of its own, for scroll-like content without snap points (v0.3). Snapping is covered by `nearest`.
+- Layout (v0.4): measured positions and sizes (`{ "measure": "tab2.x" }` for a tab indicator), a natural size (`"auto"`) to collapse a row from, and `%` units.
+- Decay (fling, inertia) as a motion of its own, for scroll-like content without snap points (v0.4). Snapping is covered by `nearest`.
+- Reduced motion inside the format: a way for a file to say which properties must not be reduced (a progress bar's width), beyond the runtime's blanket option.
+- Discrete steps for `commit` (a slider that snaps to 10s), beyond `min`/`max`.
 - Nonlinear rubber banding that depends on the view's size, instead of the linear `overdrag` factor.
 - Continuous motion while a state is active (a spinner turning, a marquee): a rate-driven value, and how it hands off when the state is left (a rotation at 720° shouldn't unwind to 0). Today this is left to CSS through `data-nudg-state`.
 - `nearest` limited to neighbors of the current state (a carousel that moves one slide per swipe however hard the flick), instead of tuning `momentum` down.

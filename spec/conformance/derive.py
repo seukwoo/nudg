@@ -701,6 +701,258 @@ def validation_v02_cases():
     })
 
 
+# --- v0.3: timers, keyboard, step/commit, bounds, reduced motion ---------------
+
+
+def timer_cases():
+    doc = {
+        "nudg": "0.3",
+        "targets": ["toast"],
+        "values": {"toast.y": 12, "toast.opacity": 0},
+        "animate": {"toast.y": spring_json(0.4, 0.2), "toast.opacity": {"tween": {"duration": 0.2, "ease": "linear"}}},
+        "initial": "hidden",
+        "when": {"host.show": "shown", "host.hide": "hidden"},
+        "states": {
+            "hidden": {},
+            "shown": {"set": {"toast.y": 0, "toast.opacity": 1}, "when": {"after:500ms": "hidden", "toast.tap": "hidden"}},
+        },
+    }
+    # Shown at 0.1, so the timer fires at exactly 0.6 even though the host only looks at 0.65.
+    y, op = Prop(12), Prop(0)
+    steps = [{"t": 0.1, "send": "host.show"}]
+    y.retarget(0, spring(0.4, 0.2), 0.1)
+    op.retarget(1, tween(0.2, "linear"), 0.1)
+    steps.append({"t": 0.55, "expect": {"state": ["shown"], "values": {"toast.y": y.value(0.55), "toast.opacity": op.value(0.55)}}})
+    y.retarget(12, spring(0.4, 0.2), 0.6)
+    op.retarget(0, tween(0.2, "linear"), 0.6)
+    for t in (0.65, 0.8, 1.2):
+        steps.append({"t": t, "expect": {"state": ["hidden"], "values": {"toast.y": y.value(t), "toast.opacity": op.value(t)}}})
+    write("timer-fires", {
+        "conformance": "0.3",
+        "name": "Timer: after:500ms fires at exactly 0.6 s, even when the host only asks for a later time; values move from the due time",
+        "doc": doc,
+        "steps": steps,
+    })
+
+    # Re-entering the state (shown -> shown) restarts the timer: 0.1 + 0.3 -> fires at 0.8, not 0.6.
+    y, op = Prop(12), Prop(0)
+    steps = [{"t": 0.1, "send": "host.show"}]
+    y.retarget(0, spring(0.4, 0.2), 0.1)
+    op.retarget(1, tween(0.2, "linear"), 0.1)
+    steps.append({"t": 0.3, "send": "host.show"})
+    steps.append({"t": 0.7, "expect": {"state": ["shown"], "values": {"toast.y": y.value(0.7), "toast.opacity": op.value(0.7)}}})
+    y.retarget(12, spring(0.4, 0.2), 0.8)
+    op.retarget(0, tween(0.2, "linear"), 0.8)
+    steps.append({"t": 0.9, "expect": {"state": ["hidden"], "values": {"toast.y": y.value(0.9), "toast.opacity": op.value(0.9)}}})
+    write("timer-restart", {
+        "conformance": "0.3",
+        "name": "Timer: a transition to the same state restarts it",
+        "doc": doc,
+        "steps": steps,
+    })
+
+    # Leaving the state cancels the timer; a timer and an event due at the same time: the timer first.
+    y, op = Prop(12), Prop(0)
+    steps = [{"t": 0.1, "send": "host.show"}, {"t": 0.3, "send": "toast.tap"}]
+    y.retarget(0, spring(0.4, 0.2), 0.1)
+    op.retarget(1, tween(0.2, "linear"), 0.1)
+    y.retarget(12, spring(0.4, 0.2), 0.3)
+    op.retarget(0, tween(0.2, "linear"), 0.3)
+    steps.append({"t": 0.7, "expect": {"state": ["hidden"], "values": {"toast.y": y.value(0.7)}}})
+    steps.append({"t": 1.0, "send": "host.show"})
+    y.retarget(0, spring(0.4, 0.2), 1.0)
+    op.retarget(1, tween(0.2, "linear"), 1.0)
+    # At 1.5 the timer (due 1.5) hides it, then host.show at 1.5 shows it again from where it is.
+    y.retarget(12, spring(0.4, 0.2), 1.5)
+    op.retarget(0, tween(0.2, "linear"), 1.5)
+    y.retarget(0, spring(0.4, 0.2), 1.5)
+    op.retarget(1, tween(0.2, "linear"), 1.5)
+    steps.append({"t": 1.5, "send": "host.show"})
+    steps.append({"t": 1.6, "expect": {"state": ["shown"], "values": {"toast.y": y.value(1.6), "toast.opacity": op.value(1.6)}}})
+    steps.append({"t": 2.1, "expect": {"state": ["hidden"]}})
+    write("timer-cancel-and-order", {
+        "conformance": "0.3",
+        "name": "Timer: leaving the state cancels it; a timer due when an event arrives fires first, then the event",
+        "doc": doc,
+        "steps": steps,
+    })
+
+
+SLIDER = {
+    "nudg": "0.3",
+    "targets": ["thumb"],
+    "values": {"thumb.x": {"base": 0, "min": 0, "max": 100}},
+    "animate": {"thumb.x": spring_json(0.3, 0)},
+    "initial": "idle",
+    "states": {
+        "idle": {
+            "when": {
+                "thumb.key.arrowright": {"step": {"thumb.x": 10}},
+                "thumb.key.arrowleft": {"step": {"thumb.x": -10}},
+                "thumb.key.end": {"step": {"thumb.x": 1000}},
+                "thumb.dragstart": "dragging",
+            }
+        },
+        "dragging": {
+            "follow": {"thumb.x": "thumb.drag.x"},
+            "when": {"thumb.dragend": {"to": "idle", "commit": ["thumb.x"]}},
+        },
+    },
+}
+
+
+def step_commit_cases():
+    s = spring(0.3, 0)
+    # Keys step the base; a held key (repeats) keeps stepping; end clamps to max; left from max steps down.
+    x = Prop(0)
+    steps = [{"t": 0.1, "send": "thumb.key.arrowright"}]
+    x.retarget(10, s, 0.1)
+    steps.append({"t": 0.2, "expect": {"state": ["idle"], "values": {"thumb.x": x.value(0.2)}}})
+    steps.append({"t": 0.2, "send": "thumb.key.arrowright"})
+    x.retarget(20, s, 0.2)
+    steps.append({"t": 0.25, "send": "thumb.key.arrowright"})
+    x.retarget(30, s, 0.25)
+    steps.append({"t": 0.4, "expect": {"values": {"thumb.x": x.value(0.4)}}})
+    steps.append({"t": 1.0, "send": "thumb.key.end"})
+    x.retarget(100, s, 1.0)
+    steps.append({"t": 1.3, "expect": {"values": {"thumb.x": x.value(1.3)}}})
+    steps.append({"t": 2.0, "send": "thumb.key.arrowleft"})
+    x.retarget(90, s, 2.0)
+    steps.append({"t": 2.2, "expect": {"values": {"thumb.x": x.value(2.2)}}})
+    steps.append({"t": 2.2, "send": "thumb.key.space", "handled": False})
+    write("step-keys", {
+        "conformance": "0.3",
+        "name": "step: keys add to the base value, clamped to max; unhandled keys are reported",
+        "doc": SLIDER,
+        "steps": steps,
+    })
+
+    # Drag to 37 (follow bounded by min/max), release: commit keeps it there, at rest, with no motion.
+    x = Prop(0)
+    steps = [{"t": 0.1, "send": "thumb.dragstart"}]
+    history = [(0.1, 0.0)]
+    for i in range(1, 6):
+        t = round(0.1 + 0.05 * i, 6)
+        v = round(37 * i / 5, 6)
+        history.append((t, v))
+        steps.append({"t": t, "input": "thumb.drag.x", "value": v})
+    steps.append({"t": 0.4, "expect": {"state": ["dragging"], "values": {"thumb.x": 37.0}}})
+    # Past max: clamped by the property's bounds (the follow's default range, hard stop).
+    steps.append({"t": 0.5, "input": "thumb.drag.x", "value": 130})
+    steps.append({"t": 0.5, "expect": {"values": {"thumb.x": 100.0}}})
+    steps.append({"t": 0.6, "input": "thumb.drag.x", "value": 37})
+    steps.append({"t": 0.8, "send": "thumb.dragend"})
+    for t in (0.8, 0.9, 1.5):
+        steps.append({"t": t, "expect": {"state": ["idle"], "values": {"thumb.x": 37.0}}})
+    # Then a key steps from the committed base.
+    steps.append({"t": 1.5, "send": "thumb.key.arrowright"})
+    x.handoff(37.0, 0.0, 47, s, 1.5)
+    steps.append({"t": 1.6, "expect": {"values": {"thumb.x": x.value(1.6)}}})
+    write("commit-drag", {
+        "conformance": "0.3",
+        "name": "commit: a released drag keeps its value as the new base, with no motion; bounds limit the follow",
+        "doc": SLIDER,
+        "steps": steps,
+    })
+
+
+def commit_moving_case():
+    # Released while still moving: the value stays put (no velocity carried over), even past the bounds.
+    steps = [{"t": 0.1, "send": "thumb.dragstart"}]
+    for i in range(1, 6):
+        steps.append({"t": round(0.1 + 0.04 * i, 6), "input": "thumb.drag.x", "value": round(6 * i, 6)})
+    steps.append({"t": 0.3, "send": "thumb.dragend"})
+    for t in (0.3, 0.35, 0.5, 1.0):
+        steps.append({"t": t, "expect": {"state": ["idle"], "values": {"thumb.x": 30.0}}})
+    write("commit-moving", {
+        "conformance": "0.3",
+        "name": "commit: a value released while moving stays exactly where it was, with no velocity carried over",
+        "doc": SLIDER,
+        "steps": steps,
+    })
+
+
+def reduced_motion_cases():
+    # With reducedMotion, springs and tweens become 0.15 s linear tweens and kicks are ignored.
+    doc = {
+        "nudg": "0.3",
+        "targets": ["knob", "heart"],
+        "values": {"knob.x": 0, "heart.scale": 1},
+        "animate": {"knob.x": spring_json(0.35, 0.25)},
+        "initial": "off",
+        "states": {
+            "off": {"when": {"knob.tap": "on"}},
+            "on": {"set": {"knob.x": 20}, "enter": {"heart.scale": {"kick": 6, "spring": {"duration": 0.4, "bounce": 0.5}}}, "when": {"knob.tap": "off"}},
+        },
+    }
+    steps = [{"t": 0.1, "send": "knob.tap"}]
+    for t, v in ((0.1, 0.0), (0.175, 10.0), (0.25, 20.0), (0.5, 20.0)):
+        steps.append({"t": t, "expect": {"state": ["on"], "values": {"knob.x": v, "heart.scale": 1.0}}})
+    write("reduced-motion", {
+        "conformance": "0.3",
+        "name": "Reduced motion: every motion is a 0.15 s linear tween and kicks do nothing",
+        "doc": doc,
+        "reducedMotion": True,
+        "steps": steps,
+    })
+
+
+def validation_v03_cases():
+    def doc(**patch):
+        d = json.loads(json.dumps(SLIDER))
+        for k, v in patch.items():
+            d[k] = v
+        return d
+
+    out = []
+    d = doc()
+    d["nudg"] = "0.2"
+    out.append(("needs-version", d, [
+        ("needs-version", "/values/thumb.x"),
+        ("needs-version", "/states/idle/when/thumb.key.arrowright"),
+        ("needs-version", "/states/idle/when/thumb.key.arrowright/step"),
+        ("needs-version", "/states/idle/when/thumb.key.arrowleft"),
+        ("needs-version", "/states/idle/when/thumb.key.arrowleft/step"),
+        ("needs-version", "/states/idle/when/thumb.key.end"),
+        ("needs-version", "/states/idle/when/thumb.key.end/step"),
+        ("needs-version", "/states/dragging/when/thumb.dragend/commit"),
+    ]))
+    d = doc()
+    d["when"] = {"after:1s": "idle"}
+    out.append(("after-on-machine", d, [("after-on-machine", "/when/after:1s")]))
+    d = doc()
+    d["states"]["idle"]["when"]["after:soon"] = "dragging"
+    out.append(("invalid-after", d, [("invalid-after", "/states/idle/when/after:soon")]))
+    d = doc()
+    d["states"]["idle"]["when"]["thumb.key.arrowright"] = {"step": {"thumb.y": 10}}
+    out.append(("step-unknown-property", d, [("missing-base-value", "/states/idle/when/thumb.key.arrowright/step/thumb.y")]))
+    d = doc()
+    d["targets"].append("track")
+    d["values"]["track.color"] = "#000000"
+    d["states"]["idle"]["when"]["thumb.key.arrowright"] = {"step": {"track.color": 1}}
+    out.append(("step-on-color", d, [("invalid-step", "/states/idle/when/thumb.key.arrowright/step/track.color")]))
+    d = doc()
+    d["states"]["dragging"]["when"]["thumb.dragend"] = {"to": "idle", "commit": ["thumb.z"]}
+    out.append(("commit-unknown", d, [("unknown-property", "/states/dragging/when/thumb.dragend/commit/0")]))
+    d = doc()
+    d["states"]["idle"]["set"] = {"thumb.x": 150}
+    out.append(("out-of-range", d, [("out-of-range", "/states/idle/set/thumb.x")]))
+    d = doc()
+    d["values"]["thumb.x"] = {"base": 50, "min": 100, "max": 0}
+    out.append(("invalid-bounds", d, [("invalid-bounds", "/values/thumb.x")]))
+    d = doc()
+    d["values"]["thumb.x"] = {"min": 0, "max": 100}
+    out.append(("missing-base", d, [("missing-base", "/values/thumb.x")]))
+    d = doc()
+    d["states"]["idle"]["when"]["thumb.key.Shift+A"] = "dragging"
+    out.append(("invalid-key-name", d, [("invalid-event", "/states/idle/when/thumb.key.Shift+A")]))
+    write("validation-0.3", {
+        "conformance": "0.3",
+        "name": "Validator (0.3): each document produces exactly these errors (code and JSON pointer)",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 if __name__ == "__main__":
     toggle_cases()
     spring_form_cases()
@@ -711,4 +963,9 @@ if __name__ == "__main__":
     drag_cases()
     tabs_cases()
     validation_v02_cases()
+    timer_cases()
+    step_commit_cases()
+    commit_moving_case()
+    reduced_motion_cases()
+    validation_v03_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

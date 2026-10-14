@@ -203,3 +203,16 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 ### What the app needed that nudg didn't have
 - A reduced-motion mode (the app honors `prefers-reduced-motion`; the component falls back to its CSS press for now).
 - A mount/unmount pattern for toasts: a conditionally rendered element can't animate out. The app wraps the player in a component that unmounts after the exit; nudg could offer "settled" as React state to make that exact.
+
+## 2026-10-14: v0.3
+
+### A timer that had fired, in a state that said it hadn't
+- **Problem:** With the toast's `after:3s`, a simulation sample at 3.5 s showed opacity 0 but state `shown`.
+- **Cause:** Timers fire when the clock advances, which `sample(t)` does, but the sample row was built as `{ state: rt.state(), values: rt.sample(t) }`, so the state was read first. The conformance runner had the same order.
+- **Resolution:** Sample first, then read the state, in the simulator, the runner and the DOM adapter's frame loop (which now re-syncs the state attribute and `onState` after every sample). `state()` itself takes no time and reports the machine as of the last advance.
+- **Lesson:** Once time can change state on its own, every "read the state" must come after "advance the clock". Timers were the first feature where that order mattered.
+
+### Commit carried the finger's speed
+- **Problem:** A slider thumb released mid-drag settled at the right place, but wobbled first (50 → 40 → 50).
+- **Cause:** Leaving a `follow` hands the input's velocity to the next motion, which is right for `nearest` (a flick should carry) but wrong for `commit` (the value is placed where it is).
+- **Resolution:** `commit` drops the velocity; the spec says a committed value is placed, not thrown. A conformance case releases while moving and expects the value to stay exactly.

@@ -1,0 +1,103 @@
+{
+  "conformance": "0.3",
+  "name": "Reduced motion: every motion is a 0.15 s linear tween and kicks do nothing",
+  "doc": {
+    "nudg": "0.3",
+    "targets": [
+      "knob",
+      "heart"
+    ],
+    "values": {
+      "knob.x": 0,
+      "heart.scale": 1
+    },
+    "animate": {
+      "knob.x": {
+        "spring": {
+          "duration": 0.35,
+          "bounce": 0.25
+        }
+      }
+    },
+    "initial": "off",
+    "states": {
+      "off": {
+        "when": {
+          "knob.tap": "on"
+        }
+      },
+      "on": {
+        "set": {
+          "knob.x": 20
+        },
+        "enter": {
+          "heart.scale": {
+            "kick": 6,
+            "spring": {
+              "duration": 0.4,
+              "bounce": 0.5
+            }
+          }
+        },
+        "when": {
+          "knob.tap": "off"
+        }
+      }
+    }
+  },
+  "reducedMotion": true,
+  "steps": [
+    {
+      "t": 0.1,
+      "send": "knob.tap"
+    },
+    {
+      "t": 0.1,
+      "expect": {
+        "state": [
+          "on"
+        ],
+        "values": {
+          "knob.x": 0.0,
+          "heart.scale": 1.0
+        }
+      }
+    },
+    {
+      "t": 0.175,
+      "expect": {
+        "state": [
+          "on"
+        ],
+        "values": {
+          "knob.x": 10.0,
+          "heart.scale": 1.0
+        }
+      }
+    },
+    {
+      "t": 0.25,
+      "expect": {
+        "state": [
+          "on"
+        ],
+        "values": {
+          "knob.x": 20.0,
+          "heart.scale": 1.0
+        }
+      }
+    },
+    {
+      "t": 0.5,
+      "expect": {
+        "state": [
+          "on"
+        ],
+        "values": {
+          "knob.x": 20.0,
+          "heart.scale": 1.0
+        }
+      }
+    }
+  ]
+}

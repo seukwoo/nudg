@@ -53,6 +53,9 @@ export interface Property {
   /** For a mapped property, its value at the source's base. */
   base: Channels;
   map?: PropertyMap;
+  /** Bounds for step, commit and follow (v0.3); numeric properties only. */
+  min?: number;
+  max?: number;
 }
 
 /** A property tracking an input while a state is active (v0.2). */
@@ -63,10 +66,21 @@ export interface Follow {
 }
 
 export interface Transition {
-  /** The target state, unless `nearest` picks it. */
+  /** The target state, unless `nearest` picks it, or the transition only steps (v0.3). */
   to?: string;
   nearest?: { states: string[]; by: string; momentum: number };
   animate: Map<string, Motion>;
+  /** Added to each property's base value, clamped to its bounds (v0.3). */
+  step?: Map<string, number>;
+  /** Properties whose current value becomes their base value (v0.3). */
+  commit?: string[];
+}
+
+/** A transition that fires `delay` seconds after its state was entered (v0.3). */
+export interface Timer {
+  key: string;
+  delay: number;
+  transition: Transition;
 }
 
 export interface State {
@@ -75,6 +89,7 @@ export interface State {
   follow: Map<string, Follow>;
   enter: Map<string, SpringMotion>;
   when: Map<string, Transition>;
+  timers: Timer[];
   machine?: Machine;
 }
 

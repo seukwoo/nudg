@@ -1,8 +1,8 @@
 import type { PropertyKind } from "./types.ts";
 
 /** The newest format version; every listed version is read. */
-export const VERSION = "0.2";
-export const VERSIONS = ["0.1", "0.2"];
+export const VERSION = "0.3";
+export const VERSIONS = ["0.1", "0.2", "0.3"];
 
 /** Platform-neutral properties (design decision 1). Adapters translate them. */
 export const PROPERTIES: Record<string, PropertyKind> = {
@@ -39,6 +39,21 @@ export const EVENTS_0_2 = ["dragstart", "dragend", "hoverstart", "hoverend", "fo
 export const INPUTS = ["drag.x", "drag.y"];
 /** Event and target prefix for events the app sends: host.<name>. */
 export const HOST = "host";
+/** Named keys for target.key.<name> events (v0.3); single characters are also allowed. */
+export const KEY_NAMES = ["space", "enter", "escape", "tab", "backspace", "delete", "arrowup", "arrowdown", "arrowleft", "arrowright", "home", "end", "pageup", "pagedown"];
+export const KEY_NAME = /^(?:[a-z0-9]|[^\sA-Za-z0-9+]|f(?:[1-9]|1[0-2]))$/;
+/** Spellings people reach for, mapped to the nudg key name. */
+export const KEY_ALIASES: Record<string, string> = {
+  " ": "space",
+  spacebar: "space",
+  return: "enter",
+  esc: "escape",
+  del: "delete",
+  up: "arrowup",
+  down: "arrowdown",
+  left: "arrowleft",
+  right: "arrowright",
+};
 
 export const EVENT_ALIASES: Record<string, string> = {
   click: "tap",

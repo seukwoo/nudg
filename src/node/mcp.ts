@@ -59,6 +59,7 @@ const timing = {
     },
   },
   start: { type: "array", items: { type: "string" }, description: "Start in these states instead of initial, e.g. [\"on\"]." },
+  reducedMotion: { type: "boolean", description: "Play as a reduced-motion user would see it: short linear tweens, no kicks (0.3)." },
   until: { type: ["number", "string"], description: "Last time to look at. Default: when everything has come to rest." },
   properties: { type: "array", items: { type: "string" }, description: "Properties to report, e.g. [\"knob.x\"]. Default: all." },
 };
@@ -109,6 +110,7 @@ const TOOLS = [
         html: { type: "string", description: "Page with the component's markup and styles. Its scripts don't run." },
         events: timing.events,
         start: timing.start,
+        reducedMotion: timing.reducedMotion,
         at: { type: "array", items: { type: ["number", "string"] }, description: "Frame times. Default: evenly spaced until at rest." },
         frames: { type: "integer", minimum: 1, maximum: 60, description: "Number of evenly spaced frames when `at` is not given. Default 6." },
         until: timing.until,
@@ -256,7 +258,7 @@ async function renderTool(args: Json): Promise<ToolResult> {
   const out = optionalString(args.out, "out");
 
   const { result, png } = await withTempFileAsync("frames.png", async (path) => {
-    const result = await renderFrames({ file: resolve(file), html: resolve(html), events: options.events, start: options.start, times, out: path, chrome });
+    const result = await renderFrames({ file: resolve(file), html: resolve(html), events: options.events, start: options.start, reducedMotion: options.reducedMotion, times, out: path, chrome });
     return { result, png: readFileSync(path) };
   });
   if (out) writeFileSync(out, png);
@@ -321,7 +323,8 @@ function timingOptions(args: Json, program: Program): SimulateOptions {
     const unknown = properties.filter((p) => !program.properties.has(p));
     if (unknown.length) throw new ToolError(`Unknown properties: ${unknown.join(", ")}. This file has ${[...program.properties.keys()].join(", ")}.`);
   }
-  return { events, start, until: optionalTime(args.until, "until"), properties };
+  const reducedMotion = args.reducedMotion === undefined ? undefined : Boolean(args.reducedMotion);
+  return { events, start, reducedMotion, until: optionalTime(args.until, "until"), properties };
 }
 
 function time(raw: unknown, what: string): number {

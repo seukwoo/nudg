@@ -103,6 +103,27 @@ Libraries in `examples/motion/` carry the platforms' published spring values: `a
 - Use a native name only when the user asks to match a platform preset exactly ("use iOS's snappy spring").
 - "Make it feel like Android / Material" or "like iOS": change the `import` line, keep the file.
 
+## Semantic UI words
+
+When a person describes UI in natural language, prefer a standard mobile-first pattern over inventing one-off motion code. Use the word to infer expected parts, states, gestures and motion, then express them with ordinary nudg fields.
+
+| User says | Prefer |
+|---|---|
+| FAB, floating action button | primary floating action; targets `root`, `icon`, optional `label`; press feedback; optional hidden/expanded states |
+| tab, tabs, tab bar | selected state; `tab.*.tap` events; indicator `x` / `width`; keyboard support when focusable |
+| bottom sheet, sheet | `hidden`, `peek` / `expanded`; `sheet.dragstart`; `follow` on `y`; `nearest` snap; backdrop opacity mapped from sheet position |
+| toast, snackbar | `hidden` / `shown`; enter motion; `after:<time>` dismiss; optional action tap; exit presence in the host |
+| swipe row, swipe actions | `content.x` follows drag; action opacity maps from `content.x`; `nearest` open/closed or dismiss |
+| list, grid, card list | item press/hover, insertion/removal, reorder or responsive collection behavior; keep the item pattern separate from the collection layout |
+| carousel, pager | drag on content, snap to neighbor, page indicator, optional momentum limit |
+| switch, toggle | tap and drag; knob follows input; color maps from knob position; keyboard activation |
+| slider, range slider | drag, arrow keys with `step`, `commit` on release, value bounds |
+| dialog, modal, popover | present/dismiss, backdrop or anchor, focus/escape behavior, exit presence |
+| app bar, toolbar, command bar | actions tied to the current view; show/hide or collapse on scroll only when the host supplies that input |
+| bottom nav, navigation bar, navigation rail, drawer, side nav, GNB, LNB | navigation selection and indicator motion; do not treat navigation items as destructive actions |
+
+Pattern words are guidance, not core syntax yet. If a file needs the intent, put it in `note` and use stable target names (`sheet`, `backdrop`, `handle`, `content`, `action`, `indicator`) so the next edit can find the right part.
+
 ## Presets
 
 `presets.press()`, `hover()`, `toggle()`, `toast()` (in `@nudg/core` and `@nudg/core/react`) return ready-made documents for the common cases, so a plain press needs no file: `useNudg(presets.press({ scale: 0.96 }))`. When a user wants more than the options cover, write the file: `nudg preset press > press.nudg.json` prints the same document, and then edit it like any nudg file.

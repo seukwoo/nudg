@@ -382,7 +382,7 @@ async function observeTool(args: Json): Promise<ToolResult> {
   const view = { url, selector, summary: observation.summary, marks: observation.series.marks, errors: observation.errors };
   return {
     content: [text(formatObservation(view, judgement))],
-    structuredContent: { ok: true, url, selector, marks: observation.series.marks, summary: observation.summary, judgement: judgement as unknown as Json, file: fileSummary as unknown as Json } as Json,
+    structuredContent: { ok: true, url, selector, marks: observation.series.marks, summary: observation.summary, errors: observation.errors, judgement: judgement as unknown as Json, file: fileSummary as unknown as Json } as Json,
   };
 }
 

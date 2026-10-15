@@ -6,6 +6,7 @@ Thanks for your interest. nudg is early, and the most useful contributions right
 
 - **Design first, code second.** For a new feature or grammar change, open an issue describing the interaction you want to build and why the current format falls short. Grammar is expensive to change later, so it is settled in discussion before code.
 - **Open questions live in [the design doc](docs/design.md#open-questions).** If your change touches one, say which.
+- **Development priorities and status live in [the roadmap](docs/roadmap.md).** Update that plan when work is completed or priorities change.
 
 ## Setup
 
@@ -36,6 +37,7 @@ npm run build       # compiles to dist/, which is what the npm package ships
 |---|---|
 | [`docs/spec.md`](docs/spec.md) | The format: grammar, motion model, and how values resolve. |
 | [`docs/design.md`](docs/design.md) | Principles, scope, design decisions, and open questions. |
+| [`docs/roadmap.md`](docs/roadmap.md) | Development priorities, stage status, and completion criteria. |
 | [`docs/usage.md`](docs/usage.md) | The CLI, the MCP server, the React and DOM adapters, and the platform motion libraries. |
 | [`docs/devlog.md`](docs/devlog.md) | Development log: problems met while building nudg, their causes, and how they were resolved. |
 | [`spec/`](spec/) | JSON Schemas for editors and LLM structured output, and [`guide.md`](spec/guide.md), the format on one page for AI agents (served by the `nudg_guide` tool). The validator checks more than the schemas (references, base values, motion names). |

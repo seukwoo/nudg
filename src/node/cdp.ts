@@ -25,9 +25,19 @@ export async function launchBrowser(chrome: string): Promise<Browser> {
     { stdio: "ignore" },
   );
   // Wait for Chrome to exit before removing its profile; it writes until it's gone.
-  const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
-  // A missing or unrunnable executable is an asynchronous 'error', which would otherwise crash the process.
-  const failed = new Promise<never>((_, reject) => child.once("error", (e) => reject(new Error(`Could not start Chrome at ${chrome}: ${e.message}`))));
+  let resolveExited!: () => void;
+  const exited = new Promise<void>((resolve) => (resolveExited = resolve));
+  child.once("exit", () => resolveExited());
+  // A missing or unrunnable executable is an asynchronous 'error', which would otherwise crash
+  // the process. It also never exits, and the polls below must stop at once.
+  const gone = new AbortController();
+  const failed = new Promise<never>((_, reject) =>
+    child.once("error", (e) => {
+      resolveExited();
+      gone.abort();
+      reject(new Error(`Could not start Chrome at ${chrome}: ${e.message}`));
+    }),
+  );
   failed.catch(() => {});
   const cleanup = async () => {
     child.kill();
@@ -40,13 +50,18 @@ export async function launchBrowser(chrome: string): Promise<Browser> {
   };
 
   try {
-    const port = await Promise.race([failed, waitFor(() => readFileSync(join(profile, "DevToolsActivePort"), "utf8").split("\n")[0], 15_000)]);
+    const port = await Promise.race([failed, waitFor(() => readFileSync(join(profile, "DevToolsActivePort"), "utf8").split("\n")[0], 15_000, 50, gone.signal)]);
     const targets = await Promise.race([
       failed,
-      waitFor(async () => {
-        const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
-        return list.find((t: { type: string }) => t.type === "page");
-      }, 15_000),
+      waitFor(
+        async () => {
+          const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
+          return list.find((t: { type: string }) => t.type === "page");
+        },
+        15_000,
+        50,
+        gone.signal,
+      ),
     ]);
 
     const ws = new WebSocket(targets.webSocketDebuggerUrl);
@@ -110,11 +125,11 @@ export async function launchBrowser(chrome: string): Promise<Browser> {
   }
 }
 
-/** Retries `fn` until it returns a value or the timeout passes. */
-export async function waitFor<T>(fn: () => T | Promise<T>, timeoutMs: number, intervalMs = 50): Promise<NonNullable<T>> {
+/** Retries `fn` until it returns a value or the timeout passes; an aborted `signal` stops it early. */
+export async function waitFor<T>(fn: () => T | Promise<T>, timeoutMs: number, intervalMs = 50, signal?: AbortSignal): Promise<NonNullable<T>> {
   const deadline = Date.now() + timeoutMs;
   let lastError: unknown;
-  while (Date.now() < deadline) {
+  while (Date.now() < deadline && !signal?.aborted) {
     try {
       const value = await fn();
       if (value !== undefined && value !== null && value !== "") return value as NonNullable<T>;

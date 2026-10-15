@@ -1,6 +1,6 @@
 # nudg — working notes for Claude
 
-Read README.md first; it is the landing page people see on GitHub, so keep it short and visual. The vision, principles, scope, design decisions and open questions are in docs/design.md, the grammar is in docs/spec.md, and the tools and adapters are in docs/usage.md.
+Read README.md first; it is the landing page people see on GitHub, so keep it short and visual. Development priorities and status are maintained in [docs/roadmap.md](docs/roadmap.md). The vision, principles, scope, design decisions and open questions are in docs/design.md, the grammar is in docs/spec.md, and the tools and adapters are in docs/usage.md.
 
 ## Conventions
 
@@ -10,11 +10,13 @@ Read README.md first; it is the landing page people see on GitHub, so keep it sh
 - Design first, code second. Settle scope and grammar through discussion before scaffolding. Open questions go into docs/design.md; don't paper over them with assumptions.
 - `main` is protected: every change goes through a branch and a pull request, CI must pass, and history stays linear (merge with `gh pr merge --rebase`). Open the PR, then wait for the user's go-ahead before merging.
 
-## Next step
+## Development plan
 
-Format v0.1–v0.3 are in docs/spec.md (drag, `follow`, `nearest`, `map`, machine-level `when`, hover/focus/host/key events, `after` timers, `step`/`commit`, reduced motion), with JSON Schemas, a conformance suite, the TypeScript core, DOM and React adapters, presets, platform motion libraries, an examples site, and a CLI + MCP server (`validate`, `simulate`, `plot`, `render`, `compare`, `observe`, `preset`, `mcp`). Published on npm as `@nudg/core` (the bare name `nudg` is blocked by npm's similar-name filter; the CLI command is still `nudg`); `npm publish` is done by the user, who owns the npm account.
+Read [docs/roadmap.md](docs/roadmap.md) for the current baseline, next work and completion criteria. Keep the queue there so this file does not retain completed tasks as next steps. Open technical choices stay in [docs/design.md](docs/design.md#open-questions); settle them when a concrete case requires a decision.
 
-The current thesis (docs/devlog.md, "the second review"): the format is already good for an AI to write; the value to build is letting the person judge a change in two seconds. Judge tools so far: `compare` (verdict first, marked A/B filmstrips, a `compare.html` page that plays both side by side in slow motion) and `observe` (host truth: the real page tapped and measured, judged against the file). Next, to agree with the user first: exit/presence handling in the adapter (keep an element until its motion settles), a live A/B view in the examples site, then v0.4 grammar (layout measurement for a tab indicator, `auto` sizes, `%` units, decay) when a case forces it. nudg stays independent of the user's other projects (no dependency either way); findings from using it elsewhere go to the devlog. Settle open questions only when a case forces them.
+The judge workflow is grounded in docs/devlog.md ("the second review"): the person should be able to see and judge a change quickly. nudg stays independent of the user's other projects; findings from using it elsewhere go to the devlog and inform the roadmap.
+
+The npm package is `@nudg/core` (the bare name `nudg` is blocked by npm's similar-name filter; the CLI command is still `nudg`). `npm publish` is done by the user, who owns the npm account.
 
 ## Working rules for the code
 

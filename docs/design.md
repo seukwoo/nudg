@@ -53,7 +53,9 @@ Any platform that can set a property and send an event can run nudg. A new platf
 
 ## Scope
 
-### Where it starts: web UI micro-interactions
+See [Roadmap](roadmap.md) for the current development plan. This page explains the shape of the product; the roadmap tracks the order in which that shape should become real.
+
+### Where it starts: mobile-first UI interactions
 
 A micro-interaction is a small, self-contained UI moment with one job: trigger → rules (state) → feedback (motion). Examples:
 
@@ -65,19 +67,41 @@ A micro-interaction is a small, self-contained UI moment with one job: trigger �
 - A tab indicator that slides to the selected tab
 - A toast that slides in and out
 
+The first implementation target is the web because it is easiest to install, test and show, but the interaction model is mobile-first. Modern web products are already designed with touch, bottom navigation, sheets, snackbars, cards, swipe rows and responsive grids in mind. Starting from mobile-quality patterns makes the behavior portable to web today and native later.
+
 This is the first target because the gap is real: full animation tools are overkill here, and CSS alone gets messy once state is involved. It is also where people building with AI coding tools are the most numerous, and the pieces are small enough to polish to a high bar.
+
+### Semantic patterns
+
+Natural-language UI work breaks down when every request is re-inferred into fresh code. One agent may make a good Material-style FAB; the next may make an absolute-positioned button with no press feedback, state, or accessibility story. nudg should give those common words a standard starting point.
+
+A semantic pattern maps a human UI noun to the parts, states, events and motion a designer or mobile engineer would expect:
+
+| Word | Expected behavior |
+|---|---|
+| `fab` | a primary floating action with press feedback, optional extended label or expand/collapse |
+| `tab-bar` / `tabs` | selected state, indicator motion, focus and keyboard support where relevant |
+| `bottom-sheet` / `sheet` | enter/exit, backdrop, drag handle, snap points, dismiss |
+| `toast` / `snackbar` | enter, timer, optional action, dismiss, exit presence |
+| `swipe-row` | horizontal drag, reveal action, threshold, close or dismiss |
+| `list` / `grid` | item insertion, removal, reorder and responsive collection behavior |
+| `dialog` / `popover` | present, dismiss, backdrop or anchor, focus return |
+| `switch` / `slider` | tap, drag, keyboard step, committed value and reduced-motion behavior |
+
+These patterns should begin as presets, examples and guide rules before they become format fields. The core format stays small; a pattern library can compile a familiar word into ordinary nudg states and motions. The important contract is:
+
+```
+human UI words
+  -> semantic pattern
+  -> states, events, targets and motion
+  -> compare / observe
+```
+
+The first pattern vocabulary is intentionally mobile-heavy: FAB, tab bar, bottom navigation, navigation rail, drawer, app bar, sheet, snackbar, toast, card, list, grid, carousel, switch, slider, dialog, popover, chip, badge, progress, pull-to-refresh and swipe actions. Web and enterprise names such as GNB, LNB, side nav, breadcrumb, data table and tree view are also useful aliases when the host app is broader than mobile.
 
 ### Where it grows
 
-The format is designed for the whole range from day one. Implementation starts at stage 0.
-
-| Stage | Scope | Examples | Needs |
-|---|---|---|---|
-| 0 | Single element | Toggle, button, like | States, transitions, springs; DOM adapter |
-| 1 | Component | Tabs, accordion, swipe row, carousel | Coordinating several targets, gestures; React adapter |
-| 2 | Screens and flows | Onboarding, modals, screen transitions | Nested states, data inputs, composing machines |
-| 3 | Native | iOS, Android | SwiftUI and Compose adapters, or code generation |
-| 4 | Standalone content | Physics, canvas, game-like scenes | Own rendering, physics |
+The scope grows from single elements to components, screens and flows, native hosts, and eventually exploratory standalone content. Semantic patterns carry familiar interaction intent through component and screen work. The original numbered stages and their current status are maintained in the [roadmap](roadmap.md#product-stages).
 
 ### What nudg is not
 
@@ -98,13 +122,18 @@ These are expensive to change later, so they are fixed early:
 7. **Units: all supported, with a default.** A bare number is a *logical unit*. On every major platform this is already the same size: a CSS `px`, an iOS `pt`, and an Android `dp` are all density-independent logical units. `px`, `pt`, and `dp` are accepted as aliases for it. `%` is relative. Other units can arrive through the extension rule.
 8. **Targets are bound by name.** A nudg file refers to targets by name (`knob`, `track`) and never knows what they are on a given platform. The host registers which of its views each name means, for example `bind("knob", element)`. On the web, `data-nudg="knob"` attributes bind automatically. The validator and runtime report names that are used but never bound, and the reverse.
 9. **Strings are never code.** A string is always a name (a state, a motion, a target path) or a value (`"#4ADE80"`, `"300ms"`); the only free text is `note`. Computation is always an object with one operator key (`map`, `follow`, `nearest`, ...), from a small closed set that grows only when a real interaction needs it. There is no expression language, so a reader (or an AI) never has to guess whether a string is a formula or a sentence, and the validator can check every operator precisely.
+10. **Semantic patterns compile to primitives.** Words like `fab`, `bottom-sheet`, `swipe-row` and `toast` are product vocabulary, not new runtime magic. They should be represented first as presets, recipes and guide rules that produce ordinary targets, states, events and motion. Only promote a pattern concern into the core format when several patterns need the same lower-level capability.
 
 ## Open questions
 
+These are unresolved design choices. Scheduling and completion status live in the [roadmap](roadmap.md); examples of possible syntax below are proposals.
+
 - Transitions that cross machine levels (to a parent's sibling, into a nested state).
 - A final state in the grammar (`"final": true`, as in statecharts) to say "this state means the component is gone". Today the host names exit states in the adapter options (`exit: "hidden"`), because mounting and unmounting are the host's lifecycle; a file-level marker would let the tools (`observe`, the guide) know it too.
-- Layout (v0.4): measured positions and sizes (`{ "measure": "tab2.x" }` for a tab indicator), a natural size (`"auto"`) to collapse a row from, and `%` units.
-- Decay (fling, inertia) as a motion of its own, for scroll-like content without snap points (v0.4). Snapping is covered by `nearest`.
+- Layout: measured positions and sizes (`{ "measure": "tab2.x" }` for a tab indicator), a natural size (`"auto"`) to collapse a row from, and `%` units.
+- Pattern metadata: whether files should eventually declare a role such as `"role": "bottom-sheet"` or whether roles remain external recipe metadata.
+- Pattern aliases and locale: how to map common design words such as FAB, snackbar, toast, tabs, tab bar, bottom nav, GNB, LNB and side nav without making the core format depend on one design system's names.
+- Decay (fling, inertia) as a motion of its own, for scroll-like content without snap points. Snapping is covered by `nearest`.
 - Reduced motion inside the format: a way for a file to say which properties must not be reduced (a progress bar's width), beyond the runtime's blanket option.
 - Discrete steps for `commit` (a slider that snaps to 10s), beyond `min`/`max`.
 - Nonlinear rubber banding that depends on the view's size, instead of the linear `overdrag` factor.

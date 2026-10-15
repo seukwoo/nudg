@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // nudg CLI. Every command takes --json so an agent can read the result directly.
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, extname, join } from "node:path";
 import { compare, compareFrameTimes } from "./core/compare.ts";
@@ -11,6 +11,7 @@ import { describeEvent, dragGesture, simulate, type SimulateOptions, type TimedE
 import type { Diagnostic, Program } from "./core/types.ts";
 import { CHROME_HINT, findChrome, openInBrowser, svgToPng } from "./node/chrome.ts";
 import { snapshotElement } from "./node/snapshot.ts";
+import { materializeRevision } from "./node/git.ts";
 import { formatComparison, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
 import { comparePage, lastRuntimeInlined, readWithImports } from "./node/compare-page.ts";
 import { compilePath } from "./node/load.ts";
@@ -46,6 +47,9 @@ simulate and plot options
   compare <a> <b>           Two versions under the same events: says first whether a person
                             would notice the difference, then shows it. --html gives real A/B
                             filmstrips in rows; without it, both curves on one graph.
+  compare <file> --before <rev>
+                            The same, against the file as it was at a git revision (HEAD,
+                            HEAD~1, a branch): no copy of the "before" to keep around.
   render <file>             Draw real frames of the component with headless Chrome, as one
                             filmstrip PNG. Uses the page's markup and styles; its scripts don't run.
   observe <url|page.html>   Host truth: open the real page (scripts and all) in headless Chrome,
@@ -254,8 +258,21 @@ function runPlot(args: Args, json: boolean): number {
 }
 
 async function runCompare(args: Args, json: boolean): Promise<number> {
-  const [fileA, fileB] = args.positional;
-  if (!fileA || !fileB || args.positional.length !== 2) fail("compare takes exactly two files: the current version and the changed one.");
+  const before = args.flags.get("before")?.at(-1);
+  let fileA: string;
+  let fileB: string;
+  if (before) {
+    if (args.positional.length !== 1) fail("compare --before <rev> takes one file: the changed one; the revision supplies the other.");
+    fileB = args.positional[0];
+    try {
+      fileA = materializeRevision(fileB, before, mkdtempSync(join(tmpdir(), "nudg-before-")));
+    } catch (e) {
+      fail((e as Error).message);
+    }
+  } else {
+    [fileA, fileB] = args.positional;
+    if (!fileA || !fileB || args.positional.length !== 2) fail("compare takes exactly two files: the current version and the changed one (or one file with --before <rev>).");
+  }
   const a = load(fileA);
   const b = load(fileB);
   for (const [file, result] of [[fileA, a], [fileB, b]] as const) {
@@ -266,7 +283,7 @@ async function runCompare(args: Args, json: boolean): Promise<number> {
     }
   }
   const options = simulationOptions(args, a.program!);
-  const labels = (args.flags.get("labels")?.at(-1)?.split(",").map((s) => s.trim()) ?? ["A", "B"]) as [string, string];
+  const labels = (args.flags.get("labels")?.at(-1)?.split(",").map((s) => s.trim()) ?? (before ? [before, "now"] : ["A", "B"])) as [string, string];
   const comparison = compare(a.program!, b.program!, options);
   let html = args.flags.get("html")?.at(-1);
   let out = args.flags.get("out")?.at(-1);

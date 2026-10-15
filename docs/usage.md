@@ -73,6 +73,14 @@ A clear change: knob.x moves up to 2.1 units differently, settles 0.23 s later, 
 
 With `--html`, the frames aren't only evenly spaced: the moments the verdict talks about are always included and captioned (where each property differs most, each event and 80 ms after it), so the side-by-side shows what the sentence says.
 
+**Against the last commit.** The "before" is usually what git already has:
+
+```sh
+nudg compare block-press.nudg.json --before HEAD --send button.tap@0.1 --url http://localhost:5173/ --open
+```
+
+`--before <rev>` (HEAD, HEAD~1, a branch, a tag) reads the file and its imports as they were at that revision, so there is no copy to make or clean up; the labels become the revision and "now". Over MCP: `file` with `before`, or `{ file, rev }` on either side.
+
 **From the running app.** When the component lives in an app, there is no host page to point at. Give `compare` the app instead:
 
 ```sh

@@ -15,6 +15,7 @@ import type { Program } from "../core/types.ts";
 import { VERSION } from "../core/vocabulary.ts";
 import { CHROME_HINT, findChrome, openInBrowser, svgToPng } from "./chrome.ts";
 import { snapshotElement } from "./snapshot.ts";
+import { materializeRevision } from "./git.ts";
 import { formatComparison, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./format.ts";
 import { comparePage, lastRuntimeInlined, readWithImports } from "./compare-page.ts";
 import { compilePath } from "./load.ts";
@@ -41,6 +42,7 @@ class ToolError extends Error {}
 
 const source = {
   file: { type: "string", description: "Path to a .nudg.json file, relative to the working directory." },
+  rev: { type: "string", description: "With `file`: read it as it was at this git revision (HEAD, HEAD~1, a branch) instead of from disk, imports included." },
   source: { type: "string", description: "The file's JSON text, to check before writing it. Imports resolve relative to `path`, or the working directory." },
   path: { type: "string", description: "With `source`: where the text would live, for resolving imports and labeling." },
 };
@@ -112,9 +114,11 @@ const TOOLS = [
     inputSchema: {
       type: "object",
       properties: {
-        a: { type: "object", description: "The current version: { file } or { source, path? }.", properties: source },
-        b: { type: "object", description: "The changed version: { file } or { source, path? }.", properties: source },
+        a: { type: "object", description: "The current version: { file }, { file, rev } (at a git revision) or { source, path? }. Not needed with `before`.", properties: source },
+        b: { type: "object", description: "The changed version: { file }, { file, rev } or { source, path? }. Not needed with `before`.", properties: source },
         labels: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 2, description: "Names for the two versions, default [\"A\", \"B\"]." },
+        before: { type: "string", description: "Shorthand with `file`: compare the file at this git revision (HEAD, HEAD~1, a branch) with the file on disk; a and b are then not needed. Labels default to the revision and \"now\"." },
+        file: { type: "string", description: "With `before`: the file to compare across revisions." },
         url: { type: "string", description: "The running app's URL (or a local page). The component is snapshotted from it, styles and all, so no html file is needed: real A/B filmstrips, and the side-by-side page, on the real thing. Needs Chrome; a and b as files." },
         selector: { type: "string", description: "With url: which element to snapshot. Default: the smallest element holding every bound target (a toggle's track with its knob)." },
         open: { type: "boolean", description: "Open the side-by-side page in the person's browser once written. Default true (NUDG_OPEN=false turns it off)." },
@@ -125,7 +129,7 @@ const TOOLS = [
         ...timing,
         out: { type: "string", description: "Also save the picture here (.png; .svg for the graph)." },
       },
-      required: ["a", "b"],
+      required: [],
     },
     annotations: { readOnlyHint: false },
   },
@@ -307,10 +311,27 @@ async function plotTool(args: Json): Promise<ToolResult> {
 }
 
 async function compareTool(args: Json): Promise<ToolResult> {
-  if (typeof args.a !== "object" || args.a === null || typeof args.b !== "object" || args.b === null) throw new ToolError("`a` and `b` are required: { file } or { source }.");
+  // `before` is the shorthand: a = the file at that revision, b = the file on disk.
+  const before = optionalString(args.before, "before");
+  if (before) {
+    const file = requiredString(args.file, "file (with before)");
+    args = { ...args, a: { file, rev: before }, b: { file } };
+  }
+  if (typeof args.a !== "object" || args.a === null || typeof args.b !== "object" || args.b === null) throw new ToolError("`a` and `b` are required: { file } or { source }, or `file` with `before`.");
+  // A version at a git revision becomes files in a temp folder, so every tool reads it like any other.
+  const fromRev = (side: Json, name: string): Json => {
+    if (typeof side.rev !== "string") return side;
+    const file = requiredString(side.file, `${name}.file (with rev)`);
+    try {
+      return { ...side, file: materializeRevision(file, side.rev, mkdtempSync(join(tmpdir(), "nudg-rev-"))), rev: undefined };
+    } catch (e) {
+      throw new ToolError((e as Error).message);
+    }
+  };
+  args = { ...args, a: fromRev(args.a as Json, "a"), b: fromRev(args.b as Json, "b") };
   const a = loadProgram(args.a as Json);
   const b = loadProgram(args.b as Json);
-  const labels = (Array.isArray(args.labels) && args.labels.length === 2 ? args.labels.map(String) : ["A", "B"]) as [string, string];
+  const labels = (Array.isArray(args.labels) && args.labels.length === 2 ? args.labels.map(String) : before ? [before, "now"] : ["A", "B"]) as [string, string];
   const options = timingOptions(args, a.program);
   const comparison = compare(a.program, b.program, options);
   const text0 = `${labels[0]}: ${a.label}  ${labels[1]}: ${b.label}\n\n${formatComparison(comparison, labels)}`;

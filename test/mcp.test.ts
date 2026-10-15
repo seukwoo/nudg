@@ -104,6 +104,16 @@ test("compare returns a verdict and a picture", { skip: chrome ? false : "no Chr
   assert.ok(strip.content.some((c: any) => c.type === "image"), "a filmstrip with both rows");
 });
 
+test("compare with before: the file at a git revision against the file on disk, no copy", async () => {
+  const result = await call("nudg_compare", { file: "examples/toggle.nudg.json", before: "HEAD", events: [{ event: "track.tap", t: 0.05 }] });
+  assert.equal(result.isError, undefined, result.content[0].text);
+  assert.match(result.content[0].text, /^HEAD: .*  now: examples\/toggle\.nudg\.json/);
+  assert.match(result.content[0].text, /behave identically/);
+  const bad = await call("nudg_compare", { file: "examples/toggle.nudg.json", before: "nope", events: [] });
+  assert.equal(bad.isError, true);
+  assert.match(bad.content[0].text, /No revision "nope"/);
+});
+
 test("compare from a running page: url snapshots the component and writes the page without opening it", { skip: chrome ? false : "no Chrome found" }, async () => {
   const result = await call("nudg_compare", { a: { file: "examples/toggle.nudg.json" }, b: { file: "examples/toggle-press.nudg.json" }, url: "examples/toggle.html", events: [{ event: "track.tap", t: 0.05 }], open: false, at: [0, 0.3] });
   assert.equal(result.isError, undefined, result.content[0].text);

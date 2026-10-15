@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Presence</title>
+  <style>
+    .toast { position: absolute; left: 20px; top: 60px; padding: 10px 14px; border-radius: 10px; background: #1c1c1a; color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="toast" data-nudg="toast">Saved</div>
+  <script type="module">
+    import { compileUrl, play } from "../../../dist/dom/index.js";
+    const { program } = await compileUrl("../../../examples/toast.nudg.json");
+    const toast = document.querySelector(".toast");
+    window.__log = [];
+    const player = play(program, document.body, {
+      state: ["shown"],
+      exit: "hidden",
+      onExit: () => {
+        window.__log.push(["exit", performance.now()]);
+        toast.remove();
+      },
+      onState: (s) => window.__log.push(["state", performance.now(), s.join(" ")]),
+    });
+    window.__player = player;
+  </script>
+</body>
+</html>

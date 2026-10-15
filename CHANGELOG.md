@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Exits (presence).** The DOM adapter takes `{ exit: "hidden", onExit }` and exposes `player.present()`; `useNudg` takes the same options and returns `present`. Once the machine has entered an exit state from elsewhere and every value has come to rest, `present` turns false and `onExit` fires once: that is when to remove the element, so the exit motion is seen instead of cut off by an unmount (the case `nudg observe` reports as "never shown"). The toast example's host page uses it.
+
 ## 0.4.0
 
 The package moves to 0.4 for two new judge tools; the format stays 0.3 (`"nudg": "0.3"`), and the v0.4 grammar (layout measurement, decay) is still ahead.

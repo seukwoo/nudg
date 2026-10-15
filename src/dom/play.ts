@@ -23,6 +23,15 @@ export interface PlayOptions {
   reducedMotion?: boolean;
   /** Called with the values after every frame they're applied, e.g. to keep aria-valuenow in step. */
   onFrame?: (values: Record<string, Value>) => void;
+  /**
+   * States that mean the component is gone, e.g. "hidden". Once the machine has entered
+   * one from elsewhere and every value has come to rest, `present()` turns false and
+   * `onExit` is called: that is when to remove the element, not before, or the exit
+   * motion never shows. Leaving the state again makes it present again.
+   */
+  exit?: string | string[];
+  /** Called once each time the component has fully exited (see `exit`). */
+  onExit?: () => void;
 }
 
 export interface Player {
@@ -41,6 +50,8 @@ export interface Player {
   bind(name: string, element: Element): () => void;
   /** Manual clock: applies the values at time `t` (seconds). */
   render(t: number): void;
+  /** False once the machine has exited (see `exit` in the options) and settled. */
+  present(): boolean;
   destroy(): void;
 }
 
@@ -110,6 +121,26 @@ export function play(program: Program, root: ParentNode | null = document, optio
     }
   }
 
+  // Presence: the host keeps the element until the exit motion has played.
+  const exits = new Set(typeof options.exit === "string" ? [options.exit] : (options.exit ?? []));
+  const inExit = () => runtime.state().some((path) => exits.has(path) || exits.has(path.split("/").pop()!));
+  let present = true;
+  // Only an exit entered from somewhere else counts; mounting in "hidden" hasn't exited anything.
+  let armed = exits.size > 0 && !inExit();
+  function syncPresence(t: number) {
+    if (exits.size === 0) return;
+    if (!inExit()) {
+      armed = true;
+      present = true;
+      return;
+    }
+    if (armed && present && runtime.settled(t)) {
+      present = false;
+      armed = false;
+      options.onExit?.();
+    }
+  }
+
   let lastValues: Record<string, Value> = {};
   function apply(values: Record<string, Value>) {
     lastValues = values;
@@ -123,6 +154,7 @@ export function play(program: Program, root: ParentNode | null = document, optio
     apply(runtime.sample(t));
     syncState(); // timers may have fired while time advanced
     if (!runtime.settled(t)) frame = requestAnimationFrame(tick);
+    else syncPresence(t);
   }
 
   // The active states, on every bound element, so CSS can style by state:
@@ -145,6 +177,8 @@ export function play(program: Program, root: ParentNode | null = document, optio
     if (manual) apply(runtime.sample(manualTime));
     else if (!frame) frame = requestAnimationFrame(tick);
     syncState();
+    // An exit with nothing left to move is complete at once; otherwise the ticks finish it.
+    syncPresence(now());
   }
 
   function send(event: string): boolean {
@@ -295,11 +329,15 @@ export function play(program: Program, root: ParentNode | null = document, optio
     input,
     bind,
     values: () => lastValues,
+    present() {
+      return present;
+    },
     render(t) {
       if (!manual) throw new Error("render(t) needs { clock: \"manual\" }.");
       manualTime = t;
       apply(runtime.sample(t));
       syncState();
+      if (runtime.settled(t)) syncPresence(t);
     },
     destroy() {
       cancelAnimationFrame(frame);

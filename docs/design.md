@@ -102,6 +102,7 @@ These are expensive to change later, so they are fixed early:
 ## Open questions
 
 - Transitions that cross machine levels (to a parent's sibling, into a nested state).
+- A final state in the grammar (`"final": true`, as in statecharts) to say "this state means the component is gone". Today the host names exit states in the adapter options (`exit: "hidden"`), because mounting and unmounting are the host's lifecycle; a file-level marker would let the tools (`observe`, the guide) know it too.
 - Layout (v0.4): measured positions and sizes (`{ "measure": "tab2.x" }` for a tab indicator), a natural size (`"auto"`) to collapse a row from, and `%` units.
 - Decay (fling, inertia) as a motion of its own, for scroll-like content without snap points (v0.4). Snapping is covered by `nearest`.
 - Reduced motion inside the format: a way for a file to say which properties must not be reduced (a progress bar's width), beyond the runtime's blanket option.

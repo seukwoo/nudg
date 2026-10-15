@@ -37,9 +37,14 @@
   <script type="module">
     import { compileUrl, play } from "../dist/dom/index.js";
     const { program } = await compileUrl("./toast.nudg.json");
-    const player = play(program, document.body);
-    // The file hides the toast itself after 3 s (after:3s); the app only shows it.
-    document.querySelector(".toast-show").addEventListener("click", () => player.send("host.show"));
+    const toast = document.querySelector(".toast");
+    // The file hides the toast itself after 3 s (after:3s); the app only shows it. The app
+    // takes the element out of the way only once "hidden" has settled, so the exit plays.
+    const player = play(program, document.body, { exit: "hidden", onExit: () => (toast.style.visibility = "hidden") });
+    document.querySelector(".toast-show").addEventListener("click", () => {
+      toast.style.visibility = "";
+      player.send("host.show");
+    });
   </script>
 </body>
 </html>

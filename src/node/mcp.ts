@@ -13,7 +13,8 @@ import { plot } from "../core/plot.ts";
 import { dragGesture, simulate, type SimulateOptions, type TimedEvent } from "../core/simulate.ts";
 import type { Program } from "../core/types.ts";
 import { VERSION } from "../core/vocabulary.ts";
-import { CHROME_HINT, findChrome, svgToPng } from "./chrome.ts";
+import { CHROME_HINT, findChrome, openInBrowser, svgToPng } from "./chrome.ts";
+import { snapshotElement } from "./snapshot.ts";
 import { formatComparison, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./format.ts";
 import { comparePage, lastRuntimeInlined, readWithImports } from "./compare-page.ts";
 import { compilePath } from "./load.ts";
@@ -114,7 +115,10 @@ const TOOLS = [
         a: { type: "object", description: "The current version: { file } or { source, path? }.", properties: source },
         b: { type: "object", description: "The changed version: { file } or { source, path? }.", properties: source },
         labels: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 2, description: "Names for the two versions, default [\"A\", \"B\"]." },
-        html: { type: "string", description: "The host page with the component's markup. Gives real A/B filmstrips (needs Chrome) and writes a page the person should open: both versions playing side by side in a loop, with slow motion. Stills can't show feel; that page can. With html, a and b must both be files on disk (write the edited version first)." },
+        url: { type: "string", description: "The running app's URL (or a local page). The component is snapshotted from it, styles and all, so no html file is needed: real A/B filmstrips, and the side-by-side page, on the real thing. Needs Chrome; a and b as files." },
+        selector: { type: "string", description: "With url: which element to snapshot. Default: the smallest element holding every bound target (a toggle's track with its knob)." },
+        open: { type: "boolean", description: "Open the side-by-side page in the person's browser once written. Default true (NUDG_OPEN=false turns it off)." },
+        html: { type: "string", description: "The host page with the component's markup, when there is no running app. Gives real A/B filmstrips (needs Chrome) and writes a page the person should open: both versions playing side by side in a loop, with slow motion. Stills can't show feel; that page can. With html, a and b must both be files on disk (write the edited version first)." },
         page: { type: "string", description: "Where to write that page. Default: next to `out` as .html, else in the temp folder." },
         at: { type: "array", items: { type: ["number", "string"] }, description: "Frame times for the filmstrips." },
         frames: { type: "integer", minimum: 1, maximum: 60, description: "Evenly spaced frames when `at` is not given. Default 6." },
@@ -313,13 +317,25 @@ async function compareTool(args: Json): Promise<ToolResult> {
   const { a: _a, b: _b, ...structured } = comparison;
   const out = optionalString(args.out, "out");
   const chrome = findChrome();
-  const html = optionalString(args.html, "html");
+  let html = optionalString(args.html, "html");
+  const url = optionalString(args.url, "url");
+  const notes: string[] = [];
+  let snapshotPath: string | undefined;
+  if (url) {
+    // From the running app: snapshot the component into a temp host page, then it's the html case.
+    if (!chrome) throw new ToolError(`url needs a browser to snapshot the page. ${CHROME_HINT}`);
+    const snap = await snapshotElement({ url, selector: optionalString(args.selector, "selector"), targets: a.program.targets, chrome });
+    snapshotPath = join(tmpdir(), "nudg-snapshot.html");
+    writeFileSync(snapshotPath, snap.html);
+    html = snapshotPath;
+    notes.push(`Snapshot of ${snap.selector} from ${url}: ${snap.fidelity.elements} elements, ${snap.fidelity.declarations} style declarations inlined.`, ...snap.notes);
+  }
 
   if (html) {
     if (!chrome) throw new ToolError(`Filmstrips need a browser. ${CHROME_HINT} Drop html for a graph.`);
     const fileA = typeof (args.a as Json).file === "string" ? ((args.a as Json).file as string) : undefined;
     const fileB = typeof (args.b as Json).file === "string" ? ((args.b as Json).file as string) : undefined;
-    if (!fileA || !fileB) throw new ToolError("With html, pass both versions as files (the harness loads them from disk).");
+    if (!fileA || !fileB) throw new ToolError(`With ${url ? "url" : "html"}, pass both versions as files (the harness loads them from disk).`);
     const at = Array.isArray(args.at) ? args.at.map((t, i) => time(t, `at[${i}]`)) : [];
     const frames = args.frames === undefined ? 6 : Number(args.frames);
     const chosen = at.length ? { times: [...at].sort((x, y) => x - y), marks: {} } : compareFrameTimes(comparison, frames);
@@ -332,8 +348,10 @@ async function compareTool(args: Json): Promise<ToolResult> {
     const pagePath = resolve(optionalString(args.page, "page") ?? (out ? out.replace(/\.[^.]*$/, "") + ".html" : join(tmpdir(), "nudg-compare.html")));
     const untilBoth2 = Math.max(comparison.a.samples.at(-1)!.t, comparison.b.samples.at(-1)!.t);
     writeFileSync(pagePath, comparePage({ html: readFileSync(resolve(html), "utf8"), a: readWithImports(fileA), b: readWithImports(fileB), labels, events: options.events, until: untilBoth2, start: options.start, reducedMotion: options.reducedMotion, headline: comparison.headline }));
-    const openIt = `${lastRuntimeInlined ? "" : "\n\n(The runtime isn't built here, so the page loads @nudg/core from unpkg; run npm run build for an offline page.)"}\n\nFor the person: open ${pagePath} in a browser. Both versions play side by side in a loop, with ¼× and ⅒× slow motion and live values; stills can't show feel, that page can. Tell them to open it and judge there.`;
-    return { content: [text(text0 + (out ? `\nsaved ${out}` : "") + openIt), { type: "image", data: png.toString("base64"), mimeType: "image/png" }], structuredContent: { ...(structured as unknown as Json), page: pagePath } };
+    const wantOpen = args.open === undefined ? true : Boolean(args.open);
+    const opened = wantOpen ? openInBrowser(pagePath) : false;
+    const openIt = `${lastRuntimeInlined ? "" : "\n\n(The runtime isn't built here, so the page loads @nudg/core from unpkg; run npm run build for an offline page.)"}${notes.length ? `\n\n${notes.join("\n")}` : ""}\n\n${opened ? `Opened ${pagePath} in the person's browser: left is now, right is the change, both playing in a loop with ¼× and ⅒× slow motion. Tell them to look there and judge; say what the headline says in one sentence.` : `For the person: open ${pagePath} in a browser. Both versions play side by side in a loop, with ¼× and ⅒× slow motion and live values; stills can't show feel, that page can. Tell them to open it and judge there.`}`;
+    return { content: [text(text0 + (out ? `\nsaved ${out}` : "") + openIt), { type: "image", data: png.toString("base64"), mimeType: "image/png" }], structuredContent: { ...(structured as unknown as Json), page: pagePath, opened, snapshot: snapshotPath, notes } };
   }
 
   const graph = plot(a.program, { ...options, against: b.program, labels, title: `${a.label} vs ${b.label}` });

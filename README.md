@@ -162,7 +162,7 @@ An agent can't watch an animation, so nudg tells it what happened, in text and i
 | `simulate` | States and values over time for a list of events: "the knob overshoots to 20.57 and is at rest from 0.84 s". |
 | `plot` | A motion graph of every property, like the one below. |
 | `render` | Real frames of your component, captured in a headless browser. |
-| `compare` | Before and after under the same tap: whether a person would notice, then both side by side, and a page that plays them in slow motion. |
+| `compare` | Before and after under the same tap: whether a person would notice, then both side by side, and a page that plays them in slow motion. Point it at the running app and it opens in your browser. |
 | `observe` | Host truth: the real page, tapped and measured every frame, judged against the file. "The element left the page at 0.18 s; the release is never shown." |
 
 The examples site's playground has the same judge view live: **Compare with original** plays the original beside your edit, a tap on either reaches both, slow motion is a select, and the verdict updates as you type.

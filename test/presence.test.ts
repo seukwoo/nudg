@@ -59,3 +59,28 @@ test("present() and onExit: once per exit, not on mount in the exit state, true 
     close();
   }
 });
+
+test("bind() marks the element with data-nudg so a snapshot can find ref-bound targets", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const { launchBrowser, waitFor } = await import("../src/node/cdp.ts");
+  const { serveIfLocal } = await import("../src/node/observe.ts");
+  const { url, close } = await serveIfLocal("test/fixtures/host/presence.html");
+  const browser = await launchBrowser(chrome!);
+  try {
+    await browser.send("Page.navigate", { url });
+    await waitFor(() => browser.evaluate("window.__player ? 'ready' : ''"), 15_000);
+    const result = await browser.evaluate(`(async () => {
+      const { compileUrl, play } = await import("../../../dist/dom/index.js");
+      const { program } = await compileUrl("../../../examples/toast.nudg.json");
+      const el = document.createElement("div");
+      document.body.append(el);
+      const p = play(program, null, { bind: { toast: el } });
+      const marked = el.getAttribute("data-nudg");
+      p.destroy();
+      return { marked, after: el.getAttribute("data-nudg") };
+    })()`);
+    assert.deepEqual(result, { marked: "toast", after: null });
+  } finally {
+    await browser.close();
+    close();
+  }
+});

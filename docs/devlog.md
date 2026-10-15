@@ -249,6 +249,11 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Resolution:** Every protocol call now fails after 30 s with the method's name, so a hang becomes a failed test with a message. The run was cancelled and rerun.
 - **Lesson:** Anything that waits on another process needs a deadline, or a flake turns into a stuck pipeline.
 
+### One tool call from "heavier" to the before/after on screen
+- **Problem:** With 0.5.1 the judge loop still took three turns in a real app: the AI had to know the host html file, copy the "before", and tell the person a path in /tmp. A design panel (three proposals, three judges) scored "compare from the running app" first because it is the only step that cuts turns directly.
+- **Design:** `snapshotElement` opens the app in Chrome, finds the smallest element that contains every bound target (a toggle's track with its knob), clones it with computed styles inlined (minus what nudg animates: transform, opacity, transitions, animations), and reports what it can't carry: pseudo-elements, web fonts, targets missing from the page. The compare page is built from that snapshot as if it were a host file, and `open` launches the person's browser. For React, where targets are bound by ref, the adapter now writes `data-nudg` on bind so the snapshot can find them.
+- **Lesson:** Fidelity is reported, not assumed: a snapshot that silently dropped a ::before would make the person judge the wrong thing. And "one turn" is a measurable target; the next cut is the "before" (a git revision), not more pixels.
+
 ### The Node 26 job hangs after the tests pass
 - **Problem:** Twice now the Node 26 CI job sat in `npm test` for over eight minutes while Node 24 passed beside it in a minute, once on a commit with no observe code at all. The 30 s per-call Chrome timeout added after the first time did not help, which means no call was hanging: the tests had finished and the process would not exit.
 - **Cause:** Not pinned down on the runner, but the shape is an open handle after the browser tests (a DevTools WebSocket or a Chrome child that lingers) keeping the event loop alive, which Node 26 treats differently from Node 24. The test runner then waits forever, and GitHub only gives up after six hours.

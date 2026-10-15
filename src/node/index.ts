@@ -1,4 +1,6 @@
-export { findChrome, svgToPng } from "./chrome.ts";
+export { findChrome, openInBrowser, svgToPng } from "./chrome.ts";
+export { snapshotElement } from "./snapshot.ts";
+export type { Snapshot, SnapshotOptions } from "./snapshot.ts";
 export { compilePath } from "./load.ts";
 export { serveMcp } from "./mcp.ts";
 export { ACTIONS, checkAction, observe } from "./observe.ts";

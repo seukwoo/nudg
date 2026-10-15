@@ -104,6 +104,16 @@ test("compare returns a verdict and a picture", { skip: chrome ? false : "no Chr
   assert.ok(strip.content.some((c: any) => c.type === "image"), "a filmstrip with both rows");
 });
 
+test("compare from a running page: url snapshots the component and writes the page without opening it", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const result = await call("nudg_compare", { a: { file: "examples/toggle.nudg.json" }, b: { file: "examples/toggle-press.nudg.json" }, url: "examples/toggle.html", events: [{ event: "track.tap", t: 0.05 }], open: false, at: [0, 0.3] });
+  assert.equal(result.isError, undefined, result.content[0].text);
+  assert.match(result.content[0].text, /Snapshot of \[data-nudg="track"\] from examples\/toggle\.html: 2 elements/);
+  assert.match(result.content[0].text, /For the person: open/);
+  assert.equal(result.structuredContent.opened, false);
+  assert.ok(String(result.structuredContent.page).endsWith(".html"));
+  assert.ok(result.content.some((c: any) => c.type === "image"));
+});
+
 test("observe judges the real page against the file", { skip: chrome ? false : "no Chrome found" }, async () => {
   const result = await call("nudg_observe", { url: "test/fixtures/host/unmount.html", selector: "#btn", file: "examples/button-press.nudg.json", actions: [{ action: "tap", t: 0.1 }], settle: 0.5 });
   assert.equal(result.isError, undefined, result.content[0].text);

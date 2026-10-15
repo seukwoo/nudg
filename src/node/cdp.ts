@@ -26,6 +26,9 @@ export async function launchBrowser(chrome: string): Promise<Browser> {
   );
   // Wait for Chrome to exit before removing its profile; it writes until it's gone.
   const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
+  // A missing or unrunnable executable is an asynchronous 'error', which would otherwise crash the process.
+  const failed = new Promise<never>((_, reject) => child.once("error", (e) => reject(new Error(`Could not start Chrome at ${chrome}: ${e.message}`))));
+  failed.catch(() => {});
   const cleanup = async () => {
     child.kill();
     await Promise.race([exited, new Promise((r) => setTimeout(r, 3000))]);
@@ -37,11 +40,14 @@ export async function launchBrowser(chrome: string): Promise<Browser> {
   };
 
   try {
-    const port = await waitFor(() => readFileSync(join(profile, "DevToolsActivePort"), "utf8").split("\n")[0], 15_000);
-    const targets = await waitFor(async () => {
-      const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
-      return list.find((t: { type: string }) => t.type === "page");
-    }, 15_000);
+    const port = await Promise.race([failed, waitFor(() => readFileSync(join(profile, "DevToolsActivePort"), "utf8").split("\n")[0], 15_000)]);
+    const targets = await Promise.race([
+      failed,
+      waitFor(async () => {
+        const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
+        return list.find((t: { type: string }) => t.type === "page");
+      }, 15_000),
+    ]);
 
     const ws = new WebSocket(targets.webSocketDebuggerUrl);
     await new Promise((resolve, reject) => {

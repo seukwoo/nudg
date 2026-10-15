@@ -51,9 +51,11 @@ export function formatComparison(c: Comparison, labels: [string, string] = ["A",
 }
 
 /** What the page did, property by property, then the judgement against the file if there is one. */
-export function formatObservation(o: { url: string; selector: string; summary: HostSummary; marks: { t: number; action: string }[] }, judgement?: HostJudgement): string {
+export function formatObservation(o: { url: string; selector: string; summary: HostSummary; marks: { t: number; action: string }[]; errors?: string[] }, judgement?: HostJudgement): string {
   const lines: string[] = [];
   if (judgement) lines.push(judgement.headline, "");
+  // A page that threw is the first thing to know; a still element below it is a symptom.
+  if (o.errors?.length) lines.push(`The page threw: ${o.errors[0].split("\n")[0]}${o.errors.length > 1 ? ` (and ${o.errors.length - 1} more)` : ""}`, "");
   lines.push(`${o.selector} on ${o.url}, after ${o.marks.map((m) => `${m.action} at ${m.t.toFixed(2)}s`).join(", ") || "no actions"}:`);
   const moved = Object.entries(o.summary.properties).filter(([, p]) => p.changed);
   const shown = moved.filter(([k]) => !(k === "scaleX" || k === "scaleY") || !(o.summary.properties.scale?.changed));

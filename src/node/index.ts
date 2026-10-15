@@ -1,7 +1,9 @@
 export { findChrome, svgToPng } from "./chrome.ts";
 export { compilePath } from "./load.ts";
 export { serveMcp } from "./mcp.ts";
-export { ACTIONS, observe } from "./observe.ts";
+export { ACTIONS, checkAction, observe } from "./observe.ts";
+export { comparePage, readWithImports } from "./compare-page.ts";
+export type { ComparePageOptions } from "./compare-page.ts";
 export type { HostAction, Observation, ObserveOptions } from "./observe.ts";
 export { frameTimes, renderFrames } from "./render.ts";
 export type { RenderedFrame, RenderOptions, RenderResult } from "./render.ts";

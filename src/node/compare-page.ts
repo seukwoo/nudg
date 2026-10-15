@@ -16,6 +16,9 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
  * page then works offline, from any folder, with the exact runtime that judged it. From
  * a clone without a build, it falls back to unpkg at the package version.
  */
+/** Whether the last page inlined the runtime, or had to point at unpkg (a clone without a build). */
+export let lastRuntimeInlined = true;
+
 function runtimeImportMap(): Record<string, string> {
   const dist = join(ROOT, "dist");
   const files = new Map<string, string>();
@@ -42,8 +45,10 @@ function runtimeImportMap(): Record<string, string> {
     } catch {
       // unpkg's "latest" is fine.
     }
+    lastRuntimeInlined = false;
     return { "@nudg/core/dom": `https://unpkg.com/@nudg/core@${version}/dist/dom/index.js` };
   }
+  lastRuntimeInlined = true;
   const map: Record<string, string> = {};
   for (const path of needed) {
     const code = files.get(path)!.replace(/from\s+"(\.{1,2}\/[^"]+)"/g, (_, spec: string) => `from "nudg:/${resolveRelative(path, spec)}"`);
@@ -145,7 +150,7 @@ ${noScripts(head)}
   .nudg-values { margin-top: 8px; font: 12px ui-monospace, "SF Mono", Menlo, monospace; color: #52514e; font-variant-numeric: tabular-nums; white-space: pre-wrap; }
   @media (max-width: 640px) { .nudg-stages { grid-template-columns: 1fr; } }
 </style>
-<script type="importmap">${JSON.stringify({ imports: importMap })}</script>
+<script type="importmap">${js({ imports: importMap })}</script>
 </head>
 <body>
 <div class="nudg-compare">
@@ -175,13 +180,13 @@ ${noScripts(head)}
 </div>
 <script type="module">
   const { playDoc } = await import("@nudg/core/dom");
-  const A = ${JSON.stringify(o.a)};
-  const B = ${JSON.stringify(o.b)};
-  const events = ${JSON.stringify(events)};
-  const until = ${JSON.stringify(o.until)};
-  const start = ${JSON.stringify(o.start ?? null)};
-  const reducedMotion = ${JSON.stringify(o.reducedMotion ?? false)};
-  const pressTarget = ${JSON.stringify(pressTarget)};
+  const A = ${js(o.a)};
+  const B = ${js(o.b)};
+  const events = ${js(events)};
+  const until = ${js(o.until)};
+  const start = ${js(o.start ?? null)};
+  const reducedMotion = ${js(o.reducedMotion ?? false)};
+  const pressTarget = ${js(pressTarget)};
   let speed = 1, paused = false, t = 0, last = 0, next = 0, players = [], raf = 0, script = events, hold = 0.3, loopUntil = until;
   const timeEl = document.getElementById("time"), bar = document.getElementById("bar");
   const valueEls = [document.getElementById("values-a"), document.getElementById("values-b")];
@@ -233,11 +238,30 @@ ${noScripts(head)}
 </html>`;
 }
 
-/** The document's first target, for the "press both" button. */
+/** JSON for inside a <script>: "</script>" and "<!--" in a note must not end the element. */
+function js(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+}
+
+/**
+ * The target a press on the page is for: the first target (in file order) whose
+ * down/up/tap the document handles anywhere, read from the raw JSON. In a toggle that
+ * is the track, not the knob. Null when nothing is pressable, and the button is left out.
+ */
 function firstTarget(text: string): string | null {
   try {
     const doc = JSON.parse(text);
-    return Array.isArray(doc.targets) && typeof doc.targets[0] === "string" ? doc.targets[0] : null;
+    const targets: string[] = Array.isArray(doc.targets) ? doc.targets.filter((t: unknown) => typeof t === "string") : [];
+    const handled = new Set<string>();
+    const walk = (node: unknown) => {
+      if (!node || typeof node !== "object") return;
+      for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+        if (key === "when" && value && typeof value === "object") for (const event of Object.keys(value as object)) handled.add(event);
+        walk(value);
+      }
+    };
+    walk(doc);
+    return targets.find((t) => ["down", "up", "tap"].some((e) => handled.has(`${t}.${e}`))) ?? null;
   } catch {
     return null;
   }

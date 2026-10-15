@@ -4,7 +4,7 @@ The CLI, the MCP server, the React and DOM adapters, and the platform motion lib
 
 ## CLI
 
-`nudg validate`, `simulate`, `plot` and `render` are the same tools an agent gets over MCP. Every command takes `--json` for machine-readable output, and `nudg --help` lists all options. From a clone, run `node src/cli.ts` in place of `npx nudg`.
+`nudg validate`, `simulate`, `plot`, `render`, `compare`, `observe` and `preset` are the same tools an agent gets over MCP. Every command takes `--json` for machine-readable output, and `nudg --help` lists all options. From a clone, run `node src/cli.ts` in place of `npx nudg`.
 
 ### validate
 
@@ -79,7 +79,7 @@ Stills can't show motion. For the person, write a page instead:
 nudg compare toggle.nudg.json toggle-bouncier.nudg.json --send track.tap@0.05 --html toggle.html --out compare.html
 ```
 
-`compare.html` plays A and B side by side on the real markup, with the same events, in a loop, with the live values under each. Buttons: replay the events, **press both** (a tap on both at once, with a 0.3 s or 1 s hold), speed 1× / ¼× / ⅒×, pause. The stages also respond to your own taps and drags. The runtime is inlined, so the file works offline and from any folder.
+`compare.html` plays A and B side by side on the real markup, with the same events, in a loop, with the live values under each. Buttons: replay the events, **press both** (a tap on both at once on the first target the file lets you press, with a 0.3 s or 1 s hold), speed 1× / ¼× / ⅒×, pause. The stages also respond to your own taps and drags. The runtime is inlined from the package's build, so the file works offline and from any folder; from a clone, run `npm run build` first, or the page loads the runtime from unpkg.
 
 Each property gets a verdict: **imperceptible** (under a device pixel at 1×, or under about three frames), **subtle**, or **clear**. When nothing crosses the threshold it says so and proposes the next turn: look at an exaggerated version first, then dial it back. With `--html` the picture is real A/B filmstrips in two rows, same markup, same moments; without it, both curves on one graph (solid A, dashed B). `--labels now,bouncier` names the rows.
 
@@ -102,7 +102,7 @@ The element left the page at 0.18s, mid-motion: what the file plays after that i
   the element left the page at 0.18s
 ```
 
-With `--file` it judges the page against the file under the same actions, at the times they actually happened: **played** as the file says, **differs** (a CSS transition on the same property, a re-render that resets the element, a stale build), **never shown** (the element unmounted mid-motion), or **nothing moved** (the element isn't bound, or the actions don't reach it). The exit code is 1 unless the page played the file. `--select` defaults to `[data-nudg="<the file's first target>"]`; `--send` overrides the derived events; `--settle` and `--warmup` set how long to measure after the last action and how long to let the page start; `--viewport 390x844` sets the window.
+With `--file` it judges the page against the file under the same actions, at the times they actually happened: **played** as the file says, **differs** (a CSS transition on the same property, a re-render that resets the element, a stale build), **never shown** (the element unmounted mid-motion; one that leaves after the motion settled is fine), **nothing moved** (the element isn't bound, or the actions don't reach it), or **unmeasured** (nothing of the target could be measured; colors can't be yet). The actions become the file's events on the first target that handles them (a toggle's track, not its knob); `--on <target>` overrides that, `--send` overrides the events. `--select` defaults to `[data-nudg="<the file's first animated target>"]`; `--settle` and `--warmup` set how long to measure after the last action and how long to let the page start; `--viewport 390x844` sets the window. Exit codes: 0 the page played the file, 1 it didn't, 2 it couldn't be observed (no element, no Chrome, bad options). If the page threw, the report says so first.
 
 ### preset
 
@@ -123,7 +123,7 @@ Prints a preset (`press`, `hover`, `toggle`, `toast`) as a nudg file. The same p
 | `nudg_validate` | Diagnostics with codes, JSON pointers and fix hints. Takes a `file`, or `source` to check text before writing it. |
 | `nudg_simulate` | States and values over time for a list of events, with a per-property summary. |
 | `nudg_plot` | A motion graph image. |
-| `nudg_compare` | Two versions under the same events: a perceptibility verdict first (imperceptible / subtle / clear, per property), then real A/B filmstrips (with `html`) or one graph with both curves. With `html` it also writes `compare.html`, a page that plays both side by side in slow motion, and tells the person to open it. Proposes an exaggerated version when nothing would be noticed. |
+| `nudg_compare` | Two versions under the same events: a perceptibility verdict first (imperceptible / subtle / clear, per property), then real A/B filmstrips (with `html`; both versions as files) or one graph with both curves. With `html` it also writes the side-by-side page (its path is in the result; `page` chooses it) and tells the person to open it. Proposes an exaggerated version when nothing would be noticed. |
 | `nudg_render` | Real frames of the component as a filmstrip image, from the host page (needs Chrome). |
 | `nudg_observe` | Host truth: opens the running page, performs actions, measures the element every frame, and judges what the page showed against the file (played / differs / never shown / nothing moved). |
 

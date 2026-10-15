@@ -48,7 +48,7 @@ export interface Player {
   readonly unbound: string[];
   /** [data-nudg] names under the root that the file doesn't declare. */
   readonly unknown: string[];
-  /** Sends an event now, as if it came from input (e.g. "host.check"). */
+  /** Sends an event now, as if it came from input (e.g. "host.check"). False once destroyed. */
   send(event: string): boolean;
   /** The values last applied to the elements. */
   values(): Record<string, Value>;
@@ -193,7 +193,9 @@ export function play(program: Program, root: ParentNode | null = document, optio
     syncPresence(now());
   }
 
+  let destroyed = false;
   function send(event: string, fromDom = false): boolean {
+    if (destroyed) return false;
     const t = now();
     const handled = runtime.send(event, t);
     if (fromDom) options.onEvent?.({ event }, t);
@@ -202,6 +204,7 @@ export function play(program: Program, root: ParentNode | null = document, optio
   }
 
   function input(name: string, value: number): boolean {
+    if (destroyed) return false;
     const used = runtime.input(name, value, now());
     changed();
     return used;
@@ -361,6 +364,7 @@ export function play(program: Program, root: ParentNode | null = document, optio
       if (runtime.settled(t)) syncPresence(t);
     },
     destroy() {
+      destroyed = true;
       cancelAnimationFrame(frame);
       for (const unbind of [...cleanups.values()]) unbind();
       window.removeEventListener("pointermove", onMove, true);

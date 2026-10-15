@@ -211,10 +211,27 @@ test("playground compare: the original plays beside the edit, a tap reaches both
   assert.deepEqual(states, ["on", "on"], "the tap reached both stages");
   const verdict = await browser.evaluate("document.getElementById('playground-verdict').textContent");
   assert.match(verdict, /change/, verdict);
-  // Slow motion remounts both; the interaction so far still stands, so the verdict stays.
-  await browser.evaluate("const s = document.getElementById('playground-speed'); s.value = '0.25'; s.dispatchEvent(new Event('change'))");
+  // Slow motion remounts both; the interaction so far still stands, so the verdict stays,
+  // and a second tap after the remount lands later on the same timeline, not on top of the first.
+  await browser.evaluate("(() => { const s = document.getElementById('playground-speed'); s.value = '0.25'; s.dispatchEvent(new Event('change')); })()");
   await sleep(400);
   assert.match(await browser.evaluate("document.getElementById('playground-verdict').textContent"), /A clear change/);
+  await browser.evaluate("document.getElementById('playground-stage').shadowRoot.querySelector('[data-nudg=track]').click()");
+  await sleep(700);
+  assert.match(await browser.evaluate("document.getElementById('playground-verdict').textContent"), /A clear change/, "two taps on one timeline still differ");
+  // The remount started both at "off" again; the tap switched both on.
+  assert.deepEqual(await browser.evaluate("[document.getElementById('playground-state').textContent, document.getElementById('playground-state-a').textContent]"), ["on", "on"]);
+  // Switching the example clears the session.
+  await browser.evaluate("(() => { const p = document.getElementById('playground-example'); p.value = 'dialog'; p.dispatchEvent(new Event('change')); })()");
+  await sleep(700);
+  assert.match(await browser.evaluate("document.getElementById('playground-verdict').textContent"), /Interact with either stage/);
+  // No horizontal overflow on a phone in compare mode.
+  await browser.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await sleep(300);
+  assert.ok((await browser.evaluate("document.documentElement.scrollWidth")) <= 390, "no horizontal scroll at 390px");
+  await browser.send("Emulation.clearDeviceMetricsOverride");
+  await browser.evaluate("(() => { const p = document.getElementById('playground-example'); p.value = 'toggle'; p.dispatchEvent(new Event('change')); })()");
+  await sleep(700);
   // Reset clears it.
   await browser.evaluate("document.getElementById('playground-reset').click()");
   assert.match(await browser.evaluate("document.getElementById('playground-verdict').textContent"), /Interact with either stage/);

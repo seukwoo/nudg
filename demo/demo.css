@@ -210,7 +210,8 @@ main { padding: 32px 32px 64px; min-width: 0; }
 .verdict[data-verdict="subtle"] { border-left: 3px solid #d97706; }
 .verdict[data-verdict="imperceptible"] { border-left: 3px solid var(--muted); }
 #playground-compare[aria-pressed="true"] { border-color: var(--text); }
-.playground-tools { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; color: var(--muted); font-size: 13px; }
+.playground-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; color: var(--muted); font-size: 13px; }
+.playground > div { min-width: 0; }
 .playground-tools select { font: 13px ui-sans-serif, system-ui, sans-serif; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--text); }
 textarea {
   width: 100%;

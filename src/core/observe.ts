@@ -5,6 +5,7 @@
 
 import { THRESHOLDS, type Perceptibility } from "./compare.ts";
 import type { PropertySummary, Simulation } from "./simulate.ts";
+import type { Machine, Program } from "./types.ts";
 
 /** What the host reports per frame. `present` is false once the element left the page. */
 export interface HostSample {
@@ -37,6 +38,8 @@ export interface HostSummary {
   remountedAt?: number;
   /** Sample spacing actually achieved, for the reader's sense of resolution. */
   frameInterval: number;
+  /** When the observation ended (the last sample). */
+  until: number;
 }
 
 /** A value is at rest once it stays within this of its final value: the runtime's own rest threshold, above the page's 0.001 rounding. */
@@ -50,10 +53,11 @@ const FRACTIONAL = new Set(["scale", "scaleX", "scaleY", "opacity"]);
  * happened, so the file can be simulated under what the page went through. A tap is a
  * down, an up and a tap; hover and leave are hoverstart and hoverend; key:x is key.x.
  */
-export function actionsToEvents(target: string, marks: HostMark[]): { t: number; event: string }[] {
+export function actionsToEvents(targetOf: string | ((action: string) => string), marks: HostMark[]): { t: number; event: string }[] {
   const out: { t: number; event: string }[] = [];
   for (const m of marks) {
     const a = m.action;
+    const target = typeof targetOf === "function" ? targetOf(a) : targetOf;
     if (a === "down") out.push({ t: m.t, event: `${target}.down` });
     else if (a === "up") out.push({ t: m.t, event: `${target}.up` }, { t: m.t, event: `${target}.tap` });
     else if (a === "tap") out.push({ t: m.t, event: `${target}.down` }, { t: m.t, event: `${target}.up` }, { t: m.t, event: `${target}.tap` });
@@ -62,6 +66,45 @@ export function actionsToEvents(target: string, marks: HostMark[]): { t: number;
     else if (a.startsWith("key:")) out.push({ t: m.t, event: `${target}.key.${a.slice(4) === " " ? "space" : a.slice(4).toLowerCase()}` });
   }
   return out;
+}
+
+/** Every event name the program handles, in any state. */
+export function handledEvents(program: Program): Set<string> {
+  const out = new Set<string>();
+  const walk = (machine: Machine) => {
+    if (machine.kind === "regions") {
+      for (const region of machine.regions.values()) walk(region);
+      return;
+    }
+    for (const key of machine.when.keys()) out.add(key);
+    for (const state of machine.states.values()) {
+      for (const key of state.when.keys()) out.add(key);
+      if (state.machine) walk(state.machine);
+    }
+  };
+  walk(program.machine);
+  return out;
+}
+
+/** The file events a page action stands for, without the target. */
+function eventsForAction(action: string): string[] {
+  if (action === "down" || action === "up" || action === "tap") return ["down", "up", "tap"];
+  if (action === "hover") return ["hoverstart"];
+  if (action === "leave") return ["hoverend"];
+  if (action.startsWith("key:")) return [`key.${action.slice(4) === " " ? "space" : action.slice(4).toLowerCase()}`];
+  return [];
+}
+
+/**
+ * Which target an action is for: the first target (in file order) that handles any of
+ * the events the action produces. In a toggle the knob moves but the track is tapped;
+ * the file says so, and this reads it. Falls back to the first property's target.
+ */
+export function actionTarget(program: Program, action: string): string {
+  const handled = handledEvents(program);
+  const wanted = eventsForAction(action);
+  for (const target of program.targets) if (wanted.some((e) => handled.has(`${target}.${e}`))) return target;
+  return [...program.properties.keys()][0]?.split(".")[0] ?? program.targets[0];
 }
 
 /** Summarizes what the page did with each property, in the same terms as a file's simulation. */
@@ -101,7 +144,7 @@ export function summarizeHost(series: HostSeries): HostSummary {
   }
   const ts = present.map((s) => s.t);
   const frameInterval = ts.length > 1 ? (ts[ts.length - 1] - ts[0]) / (ts.length - 1) : 0;
-  const out: HostSummary = { properties, still, frameInterval };
+  const out: HostSummary = { properties, still, frameInterval, until: ts.length ? ts[ts.length - 1] : 0 };
   if (series.unmountedAt !== undefined) out.unmountedAt = series.unmountedAt;
   if (series.remountedAt !== undefined) out.remountedAt = series.remountedAt;
   return out;
@@ -127,7 +170,9 @@ function overshootOf(points: readonly (readonly [number, number])[], rest: numbe
   }
   for (const t of cuts) {
     const i = points.findIndex((p) => p[0] >= t);
-    if (i > 0) anchors.push(i);
+    // An action lands on a resting value most of the time; one that lands mid-motion
+    // (a release on the bounce) doesn't start a new leg, or the bounce would be cut in two.
+    if (i > 0 && Math.abs(points[i][1] - points[i - 1][1]) <= rest) anchors.push(i);
   }
   anchors.push(points.length - 1);
   const order = [...new Set(anchors)].sort((a, b) => a - b);
@@ -152,7 +197,7 @@ function overshootOf(points: readonly (readonly [number, number])[], rest: numbe
 const HOST_TIME = { imperceptible: 0.1, subtle: 0.25 };
 
 export interface HostJudgement {
-  verdict: "played" | "differs" | "never-shown" | "nothing-moved";
+  verdict: "played" | "differs" | "never-shown" | "nothing-moved" | "unmeasured";
   headline: string;
   /** Per file property that the page could measure. */
   properties: { property: string; measured: string; summary: string; verdict: Perceptibility }[];
@@ -192,7 +237,8 @@ export function judgeHost(file: Simulation, host: HostSummary, options: { target
     const scale = FRACTIONAL.has(prop) ? THRESHOLDS.fraction : THRESHOLDS.position;
     const fmtV = (v: number) => (FRACTIONAL.has(prop) ? v.toFixed(3) : v.toFixed(1));
     const extent = Math.max(Math.abs(f.min - h.min!), Math.abs(f.max - h.max!));
-    const timeDiff = f.settledAt !== undefined && h.settledAt !== undefined ? Math.abs(f.settledAt - h.settledAt) : 0;
+    // A page still moving after the file came to rest is late by at least the rest of the observation.
+    const timeDiff = f.settledAt !== undefined && h.settledAt !== undefined ? Math.abs(f.settledAt - h.settledAt) : f.settledAt !== undefined && h.settledAt === undefined ? Math.max(0, host.until - f.settledAt) : 0;
     const sizeVerdict = grade(extent, scale);
     const timeVerdict = grade(timeDiff, HOST_TIME);
     const verdict = strongest(sizeVerdict, timeVerdict);
@@ -201,7 +247,7 @@ export function judgeHost(file: Simulation, host: HostSummary, options: { target
     else {
       parts.push(`range ${fmtV(f.min)}…${fmtV(f.max)} → page ${fmtV(h.min!)}…${fmtV(h.max!)}${extent > 0 ? ` (${sizeVerdict})` : ""}`);
       if (f.settledAt !== undefined && h.settledAt !== undefined && timeDiff > 0) parts.push(`at rest ${f.settledAt.toFixed(2)}s → page ${h.settledAt.toFixed(2)}s (${timeVerdict})`);
-      else if (h.settledAt === undefined) parts.push("page still moving at the end");
+      else if (h.settledAt === undefined) parts.push(`page still moving at the end${f.settledAt !== undefined ? `, file at rest from ${f.settledAt.toFixed(2)}s (${timeVerdict})` : ""}`);
       if ((f.overshoot ?? 0) >= 0.5 * (FRACTIONAL.has(prop) ? 0.01 : 1) || (h.overshoot ?? 0) >= 0.5 * (FRACTIONAL.has(prop) ? 0.01 : 1)) parts.push(`overshoot ${fmtV(f.overshoot ?? 0)} → page ${fmtV(h.overshoot ?? 0)}`);
     }
     const v: Perceptibility = f.max - f.min > 0 && !h.changed ? "clear" : verdict;
@@ -209,8 +255,22 @@ export function judgeHost(file: Simulation, host: HostSummary, options: { target
     properties.push({ property: key, measured, summary: `${key}: ${parts.join("; ")}.`, verdict: v });
   }
 
-  const unmounted = host.unmountedAt !== undefined;
-  if (unmounted) {
+  const measurable = properties.filter((p) => !p.summary.includes("doesn't expose"));
+  if (measurable.length === 0) {
+    const exposes = Object.keys(host.properties).filter((k) => k !== "scaleX" && k !== "scaleY");
+    return {
+      verdict: "unmeasured",
+      headline: `Nothing of ${options.target ?? "the file"} could be measured: the file animates ${fileKeys.join(", ") || "nothing"}; the page exposes ${exposes.join(", ") || "nothing"}.`,
+      properties,
+      suggestion: "Check the target name and the selector; colors can't be measured yet.",
+    };
+  }
+
+  // An exit that was allowed to finish is fine; one cut short is the classic "never shown".
+  const fileSettle = Math.max(...fileKeys.map((k) => file.summary[k].settledAt ?? Infinity), 0);
+  const cutShort = host.unmountedAt !== undefined && (host.unmountedAt < fileSettle - 0.05 || Object.values(host.properties).some((p) => p.changed && (p.settledAt === undefined || p.settledAt > host.unmountedAt!)));
+  const leftAfter = host.unmountedAt !== undefined && !cutShort ? ` The element left the page at ${host.unmountedAt.toFixed(2)}s, after the motion had settled.` : "";
+  if (cutShort) {
     const when = host.unmountedAt!.toFixed(2);
     const movedBefore = Object.values(host.properties).some((p) => p.changed);
     return {
@@ -232,12 +292,12 @@ export function judgeHost(file: Simulation, host: HostSummary, options: { target
     };
   }
   if (worst === "imperceptible") {
-    return { verdict: "played", headline: "The page plays what the file says: no difference a person would see.", properties };
+    return { verdict: "played", headline: `The page plays what the file says: no difference a person would see.${leftAfter}`, properties };
   }
   const top = [...properties].sort((a, b) => rank(b.verdict) - rank(a.verdict))[0];
   return {
     verdict: "differs",
-    headline: `The page differs from the file (${worst}): ${top.summary.replace(/\.$/, "")}.`,
+    headline: `The page differs from the file (${worst}): ${top.summary.replace(/\.$/, "")}.${leftAfter}`,
     properties,
     suggestion: worst === "clear" ? "Something on the page overrides or delays the motion: a CSS transition on the same property, a re-render that resets the element, or a stale build of the file." : undefined,
   };

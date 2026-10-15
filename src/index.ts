@@ -5,7 +5,7 @@ export type { Runtime, Value } from "./core/runtime.ts";
 export { compare, compareFrameTimes, THRESHOLDS } from "./core/compare.ts";
 export type { Comparison, Perceptibility, PropertyDifference } from "./core/compare.ts";
 export { plot } from "./core/plot.ts";
-export { actionsToEvents, decomposeMatrix, judgeHost, measuredName, summarizeHost } from "./core/observe.ts";
+export { actionTarget, actionsToEvents, decomposeMatrix, handledEvents, judgeHost, measuredName, summarizeHost } from "./core/observe.ts";
 export type { HostJudgement, HostMark, HostSample, HostSeries, HostSummary } from "./core/observe.ts";
 export type { Plot, PlotOptions } from "./core/plot.ts";
 export { presets, press, hover, toggle, toast } from "./core/presets.ts";

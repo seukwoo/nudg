@@ -60,16 +60,17 @@ const HOOKS = {
     });
     input?.addEventListener("input", () => player.send("host.valid"));
   },
-  toast(player, root) {
-    let timer;
+  // App timers follow the player's clock (`speed`), and die with the player.
+  toast(player, root, { after }) {
+    let cancel;
     root.querySelector(".toast-show")?.addEventListener("click", () => {
       player.send("host.show");
-      clearTimeout(timer);
-      timer = setTimeout(() => player.send("host.hide"), 2500);
+      cancel?.();
+      cancel = after(2500, () => player.send("host.hide"));
     });
   },
-  "pull-to-refresh": (player) => ({
-    onState: (state) => state.includes("refreshing") && setTimeout(() => player.send("host.done"), 1500),
+  "pull-to-refresh": (player, root, { after }) => ({
+    onState: (state) => state.includes("refreshing") && after(1500, () => player.send("host.done")),
   }),
   // WAI-ARIA dialog: focus moves into the dialog when it opens and back to the opener when it closes.
   dialog: (player, root) => ({
@@ -101,6 +102,20 @@ function mount(stage, program, content, { hook, onState, onEvent, speed } = {}) 
 
   const start = () => {
     let late;
+    let alive = true;
+    const timers = new Set();
+    // setTimeout in player time: scaled by speed, cleared when this player goes.
+    const after = (ms, fn) => {
+      const id = setTimeout(() => {
+        timers.delete(id);
+        if (alive) fn();
+      }, ms / (speed ?? 1));
+      timers.add(id);
+      return () => {
+        clearTimeout(id);
+        timers.delete(id);
+      };
+    };
     const player = play(program, root, {
       onState: (state) => {
         onState?.(state);
@@ -110,9 +125,10 @@ function mount(stage, program, content, { hook, onState, onEvent, speed } = {}) 
       onEvent,
       speed,
     });
-    // App events the hook sends count as interaction too, so compare mode can mirror them.
-    const forHook = onEvent ? { ...player, send: (event) => { onEvent({ event }, player.now()); return player.send(event); } } : player;
-    const extra = hook?.(forHook, root);
+    // App events the hook sends count as interaction too, so compare mode can mirror them;
+    // a hook that outlives its player (a timer) sends nothing.
+    const forHook = { ...player, send: (event) => { if (!alive) return false; onEvent?.({ event }, player.now()); return player.send(event); } };
+    const extra = hook?.(forHook, root, { after });
     if (extra) late = extra;
     // WAI-ARIA switch pattern: the app keeps aria-checked in step with the state.
     const switches = root.querySelectorAll("[role=switch]");
@@ -123,20 +139,26 @@ function mount(stage, program, content, { hook, onState, onEvent, speed } = {}) 
       sync(player.runtime.state());
     }
     onState?.(player.runtime.state());
-    return player;
+    const stop = () => {
+      alive = false;
+      for (const id of timers) clearTimeout(id);
+      timers.clear();
+      player.destroy();
+    };
+    return { player, stop };
   };
-  let player = start();
+  let current = start();
   return {
     get player() {
-      return player;
+      return current.player;
     },
     /** Back to the initial state, with fresh markup: the host page's own reset. */
     reset() {
-      player.destroy();
+      current.stop();
       root.innerHTML = root.innerHTML;
-      player = start();
+      current = start();
     },
-    destroy: () => player.destroy(),
+    destroy: () => current.stop(),
   };
 }
 
@@ -345,7 +367,7 @@ document.getElementById("playground-copy").addEventListener("click", (e) => copy
 document.getElementById("playground-reset").addEventListener("click", () => {
   live.get("playground")?.reset();
   live.get("playground-a")?.reset();
-  session.length = 0;
+  clearSession();
   showVerdict();
 });
 let playgroundSeed = "toggle";
@@ -358,9 +380,21 @@ const pgSpeed = document.getElementById("playground-speed");
 const pgVerdict = document.getElementById("playground-verdict");
 let compareOn = false;
 let speed = 1;
-/** The interaction so far, as events on a shared clock, for the verdict. */
+/** The interaction so far, as events on one timeline, for the verdict. */
 const session = [];
 let verdictTimer = 0;
+// Players restart their clocks at every remount (an edit, a speed change); the session
+// keeps one timeline by offsetting each mount after the last recorded moment.
+let sessionBase = 0;
+let sessionLast = 0;
+function newTimeline() {
+  sessionBase = session.length ? sessionLast + 0.5 : 0;
+}
+function clearSession() {
+  session.length = 0;
+  sessionBase = 0;
+  sessionLast = 0;
+}
 
 function setCompare(on) {
   compareOn = on;
@@ -370,7 +404,7 @@ function setCompare(on) {
   document.getElementById("playground-label-b").hidden = !on;
   document.getElementById("playground-speed-label").hidden = !on;
   pgVerdict.hidden = !on;
-  session.length = 0;
+  clearSession();
   showVerdict();
 }
 pgCompare.addEventListener("click", () => {
@@ -390,7 +424,9 @@ function mirror(other) {
       if ("event" in item) target.send(item.event);
       else target.input(item.input, item.value);
     }
-    session.push({ ...item, t });
+    const at = sessionBase + t;
+    sessionLast = Math.max(sessionLast, at);
+    session.push({ ...item, t: at });
     clearTimeout(verdictTimer);
     verdictTimer = setTimeout(showVerdict, 400);
   };
@@ -408,10 +444,12 @@ function showVerdict() {
     pgVerdict.textContent = "Interact with either stage; both get it. Then the verdict appears here: would a person notice the difference?";
     return;
   }
-  const t0 = session[0].t;
-  const events = session.map((e) => ({ ...e, t: Math.max(0, e.t - t0) + 0.05 }));
+  // The last 10 s of interaction, so a long session stays cheap to simulate.
+  const recent = session.filter((e) => e.t >= sessionLast - 10);
+  const t0 = recent[0].t;
+  const events = recent.map((e) => ({ ...e, t: Math.max(0, e.t - t0) + 0.05 }));
   try {
-    const result = compare(compared.a, compared.b, { events, until: Math.min(10, events.at(-1).t + 4) });
+    const result = compare(compared.a, compared.b, { events, until: events.at(-1).t + 4 });
     pgVerdict.textContent = result.headline + (result.suggestion ? ` ${result.suggestion}` : "");
     pgVerdict.dataset.verdict = result.verdict;
   } catch (e) {
@@ -427,6 +465,7 @@ async function seedPlayground(id) {
   if (!ex) return;
   const [{ source }, content] = await Promise.all([load(ex), page(ex.html)]);
   playgroundContent = content;
+  if (playgroundLoaded !== id) clearSession();
   playgroundLoaded = id;
   pgSource.value = source;
   pgPicker.value = id;
@@ -456,6 +495,7 @@ async function updatePlayground() {
   live.get("playground")?.destroy();
   live.get("playground-a")?.destroy();
   live.delete("playground-a");
+  newTimeline();
   compared = { a: null, b: program ?? null };
   if (!program) {
     showVerdict();

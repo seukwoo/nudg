@@ -36,6 +36,8 @@ export interface Observation {
   selector: string;
   series: HostSeries;
   summary: HostSummary;
+  /** Exceptions the page threw while observed; a still element with an error here is a broken page, not a missing binding. */
+  errors: string[];
 }
 
 const KEYS: Record<string, { key: string; code: string; keyCode: number }> = {
@@ -49,9 +51,14 @@ const KEYS: Record<string, { key: string; code: string; keyCode: number }> = {
   arrowdown: { key: "ArrowDown", code: "ArrowDown", keyCode: 40 },
   home: { key: "Home", code: "Home", keyCode: 36 },
   end: { key: "End", code: "End", keyCode: 35 },
+  backspace: { key: "Backspace", code: "Backspace", keyCode: 8 },
+  delete: { key: "Delete", code: "Delete", keyCode: 46 },
+  pageup: { key: "PageUp", code: "PageUp", keyCode: 33 },
+  pagedown: { key: "PageDown", code: "PageDown", keyCode: 34 },
+  ...Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`f${i + 1}`, { key: `F${i + 1}`, code: `F${i + 1}`, keyCode: 112 + i }])),
 };
 
-export const ACTIONS = "down, up, tap (down, held 80 ms, up), hover, leave, or key:<name> (escape, enter, space, tab, arrow keys, home, end)";
+export const ACTIONS = "down, up, tap (down, held 80 ms, up), hover, leave, or key:<name> (a letter, or escape, enter, space, tab, arrow keys, home, end, pageup, pagedown, backspace, delete, f1-f12: every key the format names)";
 
 /** How long a tap holds the pointer down, in seconds: a finger's quick tap. */
 export const TAP_HOLD = 0.08;
@@ -80,32 +87,48 @@ export async function observe(options: ObserveOptions): Promise<Observation> {
     await browser.send("Runtime.enable");
     const errors: string[] = [];
     browser.on("Runtime.exceptionThrown", (p) => errors.push(p.exceptionDetails?.exception?.description ?? p.exceptionDetails?.text ?? "page error"));
+    let navigatedTo: string | undefined;
+    let loaded = false;
+    browser.on("Page.frameNavigated", (p) => {
+      if (loaded && !p.frame?.parentId) navigatedTo = p.frame?.url;
+    });
     await browser.send("Page.navigate", { url });
     await waitFor(() => browser.evaluate(`document.readyState === "complete" ? "ready" : ""`), 20_000);
+    loaded = true;
     await new Promise((r) => setTimeout(r, (options.warmup ?? 0.5) * 1000));
     const found = await browser.evaluate(`(${deepQuery.toString()})(${JSON.stringify(options.selector)}) !== null`);
     if (!found) throw new Error(`No element matches ${JSON.stringify(options.selector)} on ${options.url}.${errors.length ? ` The page threw: ${errors[0]}` : ""}`);
 
     await browser.evaluate(`window.__nudgObserve = (${observer.toString()})(${JSON.stringify(options.selector)}, ${deepQuery.toString()}, ${decomposeMatrix.toString()})`);
+    // A page that navigates away (a link, a router, a form) has no observer any more; say so.
+    const inPage = async (expression: string, during: string) => {
+      if (navigatedTo !== undefined) throw new Error(`The page navigated to ${navigatedTo} during "${during}", so the element could not be measured further.`);
+      try {
+        return await browser.evaluate(expression);
+      } catch (e) {
+        if (navigatedTo !== undefined) throw new Error(`The page navigated to ${navigatedTo} during "${during}", so the element could not be measured further.`);
+        throw e;
+      }
+    };
     const started = Date.now();
     for (const a of actions) {
       const wait = started + a.t * 1000 - Date.now();
       if (wait > 0) await new Promise((r) => setTimeout(r, wait));
       if (a.action === "tap") {
         // A finger's tap: down, a short hold, up. Marked as both, so the file sees the same two moments.
-        const center = await browser.evaluate(`window.__nudgObserve.mark("down")`);
+        const center = await inPage(`window.__nudgObserve.mark("down")`, "down");
         await perform(browser, "down", center);
         await new Promise((r) => setTimeout(r, TAP_HOLD * 1000));
-        await browser.evaluate(`window.__nudgObserve.mark("up")`);
+        await inPage(`window.__nudgObserve.mark("up")`, "up");
         await perform(browser, "up", center);
         continue;
       }
-      const center = await browser.evaluate(`window.__nudgObserve.mark(${JSON.stringify(a.action)})`);
+      const center = await inPage(`window.__nudgObserve.mark(${JSON.stringify(a.action)})`, a.action);
       await perform(browser, a.action, center);
     }
     await new Promise((r) => setTimeout(r, (options.settle ?? 1.5) * 1000));
-    const series: HostSeries = await browser.evaluate("window.__nudgObserve.stop()");
-    return { url: options.url, selector: options.selector, series, summary: summarizeHost(series) };
+    const series: HostSeries = await inPage("window.__nudgObserve.stop()", "the settle time");
+    return { url: options.url, selector: options.selector, series, summary: summarizeHost(series), errors };
   } finally {
     await browser.close();
     closeServer();
@@ -171,9 +194,11 @@ function observer(selector: string, find: (s: string) => Element | null, decompo
     }
     const cs = getComputedStyle(el);
     let m: [number, number, number, number, number, number] = [1, 0, 0, 1, 0, 0];
-    const nums = cs.transform.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/g)?.map(Number);
-    if (cs.transform.startsWith("matrix3d") && nums && nums.length === 16) m = [nums[0], nums[1], nums[4], nums[5], nums[12], nums[13]];
-    else if (cs.transform.startsWith("matrix(") && nums && nums.length === 6) m = nums as typeof m;
+    // Only the argument list: the "3" in "matrix3d" is not a number.
+    const args = /^matrix(3d)?\((.*)\)$/.exec(cs.transform);
+    const nums = args?.[2].split(",").map(Number);
+    if (args?.[1] && nums && nums.length === 16) m = [nums[0], nums[1], nums[4], nums[5], nums[12], nums[13]];
+    else if (args && !args[1] && nums && nums.length === 6) m = nums as typeof m;
     const d = decompose(m);
     const h = el as HTMLElement;
     const round = (v: number) => Math.round(v * 1000) / 1000;

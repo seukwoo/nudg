@@ -10,12 +10,12 @@ import { describeEvent, dragGesture, simulate, type SimulateOptions, type TimedE
 import type { Diagnostic, Program } from "./core/types.ts";
 import { CHROME_HINT, findChrome, svgToPng } from "./node/chrome.ts";
 import { formatComparison, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
-import { comparePage, readWithImports } from "./node/compare-page.ts";
+import { comparePage, lastRuntimeInlined, readWithImports } from "./node/compare-page.ts";
 import { compilePath } from "./node/load.ts";
 import { serveMcp } from "./node/mcp.ts";
 import { frameTimes, renderFrames } from "./node/render.ts";
 import { ACTIONS, checkAction, observe, type HostAction } from "./node/observe.ts";
-import { actionsToEvents, judgeHost } from "./core/observe.ts";
+import { actionTarget, actionsToEvents, judgeHost } from "./core/observe.ts";
 
 const USAGE = `nudg <command> [options]
 
@@ -67,8 +67,11 @@ observe options
                             [data-nudg="<the file's first target>"].
   --do <action@time>        An action on it: down, up, tap, hover, leave, or key:<name>, e.g.
                             tap@0.1 or key:escape@0.5. Repeatable. The page's own handlers run.
-  --file <x.nudg.json>      The file the page should be playing. Its events default to the actions
-                            at the times they happened; --send overrides them.
+  --file <x.nudg.json>      The file the page should be playing. Its events default to the actions,
+                            on the first target that handles them (a toggle's track, not its
+                            knob), at the times they happened; --send overrides them.
+  --on <target>             Which target the actions are for, when the file's choice is wrong.
+                            Exit codes: 0 played, 1 the page didn't play the file, 2 couldn't observe.
   --settle <seconds>        How long to keep measuring after the last action. Default: 1.5.
   --warmup <seconds>        How long to let the page's scripts start first. Default: 0.5.
   --viewport <w>x<h>        Window size, e.g. 390x844 for a phone.
@@ -259,6 +262,7 @@ async function runCompare(args: Args, json: boolean): Promise<number> {
   const comparison = compare(a.program!, b.program!, options);
   const html = args.flags.get("html")?.at(-1);
   const out = args.flags.get("out")?.at(-1);
+  if (out && extname(out).toLowerCase() === ".html" && !html) fail("--out x.html writes the side-by-side page and needs --html <page.html> with the component's markup. For a graph, write .svg or .png.");
   let picture: string | undefined;
 
   if (html && out && extname(out).toLowerCase() === ".html") {
@@ -298,6 +302,7 @@ async function runCompare(args: Args, json: boolean): Promise<number> {
   } else {
     process.stdout.write(formatComparison(comparison, labels) + "\n");
     if (picture) process.stdout.write(`\nwrote ${picture}${picture.endsWith(".html") ? " — open it in a browser: both versions play side by side, with slow motion" : ""}\n`);
+    if (picture?.endsWith(".html") && !lastRuntimeInlined) process.stdout.write("note: the runtime isn't built here, so the page loads @nudg/core from unpkg; run npm run build for an offline page\n");
   }
   return 0;
 }
@@ -318,7 +323,9 @@ async function runObserve(args: Args, json: boolean): Promise<number> {
   }
   const target = program ? [...program.properties.keys()][0]?.split(".")[0] : undefined;
   const selector = args.flags.get("select")?.at(-1) ?? (target ? `[data-nudg="${target}"]` : undefined);
-  if (!selector) fail("observe needs --select <css> (or --file, whose first target names the element).");
+  if (!selector) fail("observe needs --select <css> (or --file, whose first animated target names the element).");
+  const on = args.flags.get("on")?.at(-1);
+  if (on && program && !program.targets.includes(on)) fail(`--on ${on}: the file has no such target (it has ${program.targets.join(", ")}).`);
   const actions: HostAction[] = (args.flags.get("do") ?? []).map((raw) => {
     const at = raw.lastIndexOf("@");
     if (at <= 0) fail(`--do expects action@time, e.g. tap@0.1, got "${raw}".`);
@@ -338,22 +345,28 @@ async function runObserve(args: Args, json: boolean): Promise<number> {
     if (!m) fail(`--viewport expects <w>x<h>, e.g. 390x844, got "${vp}".`);
     return { width: Number(m[1]), height: Number(m[2]) };
   })() : undefined;
-  const observation = await observe({ url, selector, actions, chrome, settle: settle ? parseSeconds(settle, "--settle") : undefined, warmup: warmup ? parseSeconds(warmup, "--warmup") : undefined, viewport });
+  let observation;
+  try {
+    observation = await observe({ url, selector, actions, chrome, settle: settle ? parseSeconds(settle, "--settle") : undefined, warmup: warmup ? parseSeconds(warmup, "--warmup") : undefined, viewport });
+  } catch (e) {
+    fail(`couldn't observe: ${(e as Error).message}`);
+  }
 
   let judgement;
   let simulation;
   if (program) {
     const options = simulationOptions(args, program);
-    if (options.events.length === 0) options.events = actionsToEvents(target!, observation.series.marks);
+    if (options.events.length === 0) options.events = actionsToEvents((action) => on ?? actionTarget(program, action), observation.series.marks);
     const last = observation.series.samples.at(-1)?.t ?? 0;
     simulation = simulate(program, { ...options, until: options.until ?? Math.max(last, options.events.at(-1)?.t ?? 0) });
     judgement = judgeHost(simulation, observation.summary, { target });
   }
   if (json) {
-    process.stdout.write(JSON.stringify({ ok: true, url, selector, marks: observation.series.marks, summary: observation.summary, unmountedAt: observation.series.unmountedAt, judgement, file: simulation ? { events: simulation.samples.length ? undefined : undefined, summary: simulation.summary } : undefined, samples: observation.series.samples }, null, 2) + "\n");
+    process.stdout.write(JSON.stringify({ ok: true, url, selector, marks: observation.series.marks, summary: observation.summary, unmountedAt: observation.series.unmountedAt, errors: observation.errors, judgement, file: simulation ? { summary: simulation.summary } : undefined, samples: observation.series.samples }, null, 2) + "\n");
   } else {
-    process.stdout.write(formatObservation({ url, selector, summary: observation.summary, marks: observation.series.marks }, judgement) + "\n");
+    process.stdout.write(formatObservation({ url, selector, summary: observation.summary, marks: observation.series.marks, errors: observation.errors }, judgement) + "\n");
   }
+  if (judgement?.verdict === "unmeasured") return 2;
   return judgement && judgement.verdict !== "played" ? 1 : 0;
 }
 
@@ -422,4 +435,4 @@ if (command === "mcp") {
   await serveMcp();
   process.exit(0);
 }
-fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, preset, mcp.`);
+fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, observe, preset, mcp.`);

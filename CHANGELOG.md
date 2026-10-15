@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+Fixes from a review of the judge tools (every item reproduced before it was fixed):
+
+- **observe:** 3D transforms (`matrix3d`, from `translateZ` and the like) were read as identity, so such elements measured as never moving. Actions now go to the first target that handles them (a toggle's track), with `--on` / `on` to override; the measured element stays the first animated target. A page still moving after the file came to rest is no longer "played"; an element that leaves after its motion settled is no longer "never shown"; a target nothing of which can be measured is **unmeasured** instead of "played". The page's own exceptions are reported first. A page that navigates away during an action says so. All of the format's key names work in `key:<name>`. Exit codes: 0 played, 1 not played, 2 couldn't observe. Overshoot legs are cut at an action only when the value was at rest there.
+- **compare:** `--out x.html` without `--html` is an error instead of an SVG with the wrong extension; a `</script>` inside a note no longer breaks the page; "press both" presses the first target the file lets you press; a clone without a build is told the page loads the runtime from unpkg. `nudg_compare` says that `html` needs both versions as files.
+- **Chrome:** a Chrome path that can't be started rejects with a message instead of crashing the process.
+- **Adapter:** a destroyed player ignores late `send`/`input` calls (a hook's timer firing after a remount).
+- **Site:** the compare session keeps one timeline across edits and speed changes (a second tap no longer collapses onto the first); switching the example clears it; app timers in hooks follow the player's speed and die with the player; the last 10 s of interaction are simulated instead of dropping events after 10 s; the tools row wraps on phones; the verdict is announced to assistive tech.
+- **Exports:** `comparePage`, `readWithImports`, `checkAction` from `@nudg/core/node`; `actionTarget`, `handledEvents` from `@nudg/core`.
+
 ## 0.5.0
 
 Adapters only; the format stays 0.3.

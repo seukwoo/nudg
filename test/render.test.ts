@@ -91,3 +91,15 @@ test("compare page plays both versions offline, with press-both and slow motion"
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("compare page survives </script> in a note and presses the target the file lets you press", async () => {
+  const { comparePage, readWithImports } = await import("../src/node/compare-page.ts");
+  const a = readWithImports(join(root, "examples/toggle.nudg.json"));
+  const b = { ...a, text: a.text.replace('"note": "', '"note": "see the </script> tag <!-- here -->; ') };
+  assert.notEqual(a.text, b.text);
+  const page = comparePage({ html: readFileSync(join(root, "examples/toggle.html"), "utf8"), a, b, labels: ["A", "B"], events: [{ t: 0.05, event: "track.tap" }], until: 1, headline: "x" });
+  assert.ok(!/<\/script>\s*tag/.test(page), "the note's </script> must not end the module");
+  assert.ok(page.includes("\\u003c/script>"));
+  // The toggle's knob moves but the track is tapped: press both goes to the track.
+  assert.ok(page.includes('const pressTarget = "track"'));
+});

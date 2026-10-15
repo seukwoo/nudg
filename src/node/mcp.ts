@@ -8,14 +8,14 @@ import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { compile, type CompileResult } from "../core/compile.ts";
 import { compare, compareFrameTimes } from "../core/compare.ts";
-import { actionsToEvents, judgeHost } from "../core/observe.ts";
+import { actionTarget, actionsToEvents, judgeHost } from "../core/observe.ts";
 import { plot } from "../core/plot.ts";
 import { dragGesture, simulate, type SimulateOptions, type TimedEvent } from "../core/simulate.ts";
 import type { Program } from "../core/types.ts";
 import { VERSION } from "../core/vocabulary.ts";
 import { CHROME_HINT, findChrome, svgToPng } from "./chrome.ts";
 import { formatComparison, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./format.ts";
-import { comparePage, readWithImports } from "./compare-page.ts";
+import { comparePage, lastRuntimeInlined, readWithImports } from "./compare-page.ts";
 import { compilePath } from "./load.ts";
 import { ACTIONS, checkAction, observe, type HostAction } from "./observe.ts";
 import { frameTimes, renderFrames } from "./render.ts";
@@ -114,7 +114,7 @@ const TOOLS = [
         a: { type: "object", description: "The current version: { file } or { source, path? }.", properties: source },
         b: { type: "object", description: "The changed version: { file } or { source, path? }.", properties: source },
         labels: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 2, description: "Names for the two versions, default [\"A\", \"B\"]." },
-        html: { type: "string", description: "The host page with the component's markup. Gives real A/B filmstrips (needs Chrome) and writes a page the person should open: both versions playing side by side in a loop, with slow motion. Stills can't show feel; that page can." },
+        html: { type: "string", description: "The host page with the component's markup. Gives real A/B filmstrips (needs Chrome) and writes a page the person should open: both versions playing side by side in a loop, with slow motion. Stills can't show feel; that page can. With html, a and b must both be files on disk (write the edited version first)." },
         page: { type: "string", description: "Where to write that page. Default: next to `out` as .html, else in the temp folder." },
         at: { type: "array", items: { type: ["number", "string"] }, description: "Frame times for the filmstrips." },
         frames: { type: "integer", minimum: 1, maximum: 60, description: "Evenly spaced frames when `at` is not given. Default 6." },
@@ -162,7 +162,8 @@ const TOOLS = [
           minItems: 1,
         },
         file: source.file,
-        events: { ...timing.events, description: "The file's events to judge against. Default: the actions, as the file's events, at the times they actually happened." },
+        on: { type: "string", description: "Which of the file's targets the actions are for. Default: the first target that handles them (a toggle's track, not its knob)." },
+        events: { ...timing.events, description: "The file's events to judge against. Default: the actions, as the file's events on `on`, at the times they actually happened." },
         start: timing.start,
         reducedMotion: timing.reducedMotion,
         settle: { type: ["number", "string"], description: "Seconds to keep measuring after the last action. Default 1.5." },
@@ -331,7 +332,7 @@ async function compareTool(args: Json): Promise<ToolResult> {
     const pagePath = resolve(optionalString(args.page, "page") ?? (out ? out.replace(/\.[^.]*$/, "") + ".html" : join(tmpdir(), "nudg-compare.html")));
     const untilBoth2 = Math.max(comparison.a.samples.at(-1)!.t, comparison.b.samples.at(-1)!.t);
     writeFileSync(pagePath, comparePage({ html: readFileSync(resolve(html), "utf8"), a: readWithImports(fileA), b: readWithImports(fileB), labels, events: options.events, until: untilBoth2, start: options.start, reducedMotion: options.reducedMotion, headline: comparison.headline }));
-    const openIt = `\n\nFor the person: open ${pagePath} in a browser. Both versions play side by side in a loop, with ¼× and ⅒× slow motion and live values; stills can't show feel, that page can. Tell them to open it and judge there.`;
+    const openIt = `${lastRuntimeInlined ? "" : "\n\n(The runtime isn't built here, so the page loads @nudg/core from unpkg; run npm run build for an offline page.)"}\n\nFor the person: open ${pagePath} in a browser. Both versions play side by side in a loop, with ¼× and ⅒× slow motion and live values; stills can't show feel, that page can. Tell them to open it and judge there.`;
     return { content: [text(text0 + (out ? `\nsaved ${out}` : "") + openIt), { type: "image", data: png.toString("base64"), mimeType: "image/png" }], structuredContent: { ...(structured as unknown as Json), page: pagePath } };
   }
 
@@ -370,13 +371,15 @@ async function observeTool(args: Json): Promise<ToolResult> {
   let fileSummary;
   if (program) {
     const options = timingOptions(args, program);
-    if (options.events.length === 0) options.events = actionsToEvents(target!, observation.series.marks);
+    const on = optionalString(args.on, "on");
+    if (on && !program.targets.includes(on)) throw new ToolError(`on: the file has no target "${on}" (it has ${program.targets.join(", ")}).`);
+    if (options.events.length === 0) options.events = actionsToEvents((action) => on ?? actionTarget(program, action), observation.series.marks);
     const last = observation.series.samples.at(-1)?.t ?? 0;
     const sim = simulate(program, { ...options, until: options.until ?? Math.max(last, options.events.at(-1)?.t ?? 0) });
     judgement = judgeHost(sim, observation.summary, { target });
     fileSummary = sim.summary;
   }
-  const view = { url, selector, summary: observation.summary, marks: observation.series.marks };
+  const view = { url, selector, summary: observation.summary, marks: observation.series.marks, errors: observation.errors };
   return {
     content: [text(formatObservation(view, judgement))],
     structuredContent: { ok: true, url, selector, marks: observation.series.marks, summary: observation.summary, judgement: judgement as unknown as Json, file: fileSummary as unknown as Json } as Json,

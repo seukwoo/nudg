@@ -2,7 +2,7 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { actionsToEvents, decomposeMatrix, judgeHost, summarizeHost, type HostSeries } from "../src/core/observe.ts";
+import { actionTarget, actionsToEvents, decomposeMatrix, judgeHost, summarizeHost, type HostSeries } from "../src/core/observe.ts";
 import { simulate } from "../src/core/simulate.ts";
 import { findChrome } from "../src/node/chrome.ts";
 import { compilePath } from "../src/node/load.ts";
@@ -101,4 +101,63 @@ test("observe judges a page that plays the file as played", { skip: chrome ? fal
   const j = judgeHost(sim, o.summary, { target: "button" });
   assert.equal(j.verdict, "played", j.headline + "\n" + j.properties.map((p) => p.summary).join("\n"));
   assert.ok(Math.abs(o.summary.properties.scale.min! - 0.94) < 0.005);
+});
+
+test("judgeHost: still moving after the file settled is not played; leaving after settling is not never-shown; nothing measurable is unmeasured", () => {
+  const { program } = compilePath("examples/button-press.nudg.json");
+  const sim = simulate(program!, { events: [{ t: 0.1, event: "button.down" }, { t: 0.5, event: "button.up" }], until: 1.2 });
+  // The page's release is a slow linear transition that is still going at the end.
+  const slow: [number, number][] = [];
+  for (let i = 0; i <= 72; i++) {
+    const t = i / 60;
+    slow.push([t, t < 0.1 ? 1 : t < 0.2 ? 1 - (t - 0.1) * 0.6 : t < 0.5 ? 0.94 : 0.94 + Math.min(1, (t - 0.5) / 1.5) * 0.06]);
+  }
+  const late = judgeHost(sim, summarizeHost(series(slow, [{ t: 0.1, action: "down" }, { t: 0.5, action: "up" }])), { target: "button" });
+  assert.equal(late.verdict, "differs", late.headline);
+  assert.match(late.headline, /still moving at the end/);
+
+  // The toast plays its exit fully, then the host removes it: fine.
+  const toast = compilePath("examples/toast.nudg.json").program!;
+  const tsim = simulate(toast, { events: [{ t: 0.1, event: "host.show" }], until: 4.6 });
+  const pts: [number, number][] = [];
+  for (let i = 0; i <= 4.6 * 60; i++) {
+    const t = i / 60;
+    pts.push([t, tsim.samples.reduce((best, s) => (Math.abs(s.t - t) < Math.abs(best.t - t) ? s : best)).values["toast.y"] as number]);
+  }
+  const after = judgeHost(tsim, summarizeHost({ samples: pts.map(([t, y]) => ({ t, present: t < 4.3, values: (t < 4.3 ? { y } : {}) as Record<string, number> })), marks: [{ t: 0.1, action: "hover" }], unmountedAt: 4.3 }), { target: "toast" });
+  assert.notEqual(after.verdict, "never-shown", after.headline);
+  assert.match(after.headline, /left the page at 4\.30s, after the motion had settled/);
+
+  // Wrong target: nothing to measure, say so instead of "played".
+  const none = judgeHost(sim, summarizeHost(series(slow, [])), { target: "btn" });
+  assert.equal(none.verdict, "unmeasured");
+});
+
+test("actionTarget reads which target a tap is for", () => {
+  const toggle = compilePath("examples/toggle.nudg.json").program!;
+  assert.equal(actionTarget(toggle, "tap"), "track");
+  const press = compilePath("examples/button-press.nudg.json").program!;
+  assert.equal(actionTarget(press, "down"), "button");
+  assert.deepEqual(actionsToEvents((a) => actionTarget(toggle, a), [{ t: 0.1, action: "down" }, { t: 0.18, action: "up" }]).map((e) => e.event), ["track.down", "track.up", "track.tap"]);
+});
+
+test("observe reads a 3D transform (matrix3d) correctly", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const o = await observe({ url: "test/fixtures/host/press-3d.html", selector: "#btn", actions: [{ t: 0.1, action: "down" }, { t: 0.5, action: "up" }], chrome: chrome!, settle: 0.6 });
+  assert.equal(o.summary.properties.scale.changed, true);
+  assert.ok(Math.abs(o.summary.properties.scale.min! - 0.9) < 0.01, `min ${o.summary.properties.scale.min}`);
+});
+
+test("observe says when the page navigated away, and reports a page that threw", { skip: chrome ? false : "no Chrome found" }, async () => {
+  await assert.rejects(
+    observe({ url: "test/fixtures/host/navigates.html", selector: "#btn", actions: [{ t: 0.1, action: "down" }, { t: 0.4, action: "up" }], chrome: chrome!, settle: 0.3 }),
+    /navigated to about:blank during "up"/,
+  );
+  const o = await observe({ url: "test/fixtures/host/throws.html", selector: "#btn", actions: [{ t: 0.1, action: "tap" }], chrome: chrome!, settle: 0.3 });
+  assert.equal(o.errors.length, 1);
+  assert.match(o.errors[0], /E_UNKNOWN_EVENT/);
+});
+
+test("launchBrowser rejects, not crashes, when Chrome can't start", async () => {
+  const { launchBrowser } = await import("../src/node/cdp.ts");
+  await assert.rejects(launchBrowser("/nonexistent/chrome"), /Could not start Chrome at \/nonexistent\/chrome/);
 });

@@ -184,7 +184,7 @@ Interactive animation usually lives in binary files made in a dedicated studio. 
 
 ## Status
 
-**Early, and moving.** Version 0.3 is [on npm](https://www.npmjs.com/package/@nudg/core) with taps, hovers, drags and throws, keyboard events, timers, sliders that keep their value, values derived from other values, a reduced-motion mode, and adapters for the DOM and React. The format may still change before 1.0; see the [changelog](CHANGELOG.md).
+**Early, and moving.** Version 0.5 (format 0.3) is [on npm](https://www.npmjs.com/package/@nudg/core) with taps, hovers, drags and throws, keyboard events, timers, sliders that keep their value, values derived from other values, a reduced-motion mode, and adapters for the DOM and React. The format may still change before 1.0; see the [changelog](CHANGELOG.md).
 
 | Stage | Scope | Examples | |
 |---|---|---|---|

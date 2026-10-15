@@ -19,7 +19,7 @@
 
 </div>
 
-nudg describes a UI interaction in a small JSON file next to your component: its states, the events that move between them, and the motion in between. Your AI coding tool edits the file, nudg checks the edit, and a tiny runtime plays it in your app.
+nudg describes a UI interaction in a small JSON file next to your component: its states, the events that move between them, and the motion in between. Your AI coding tool edits the file and checks its own edit through nudg's [MCP tools](#your-ai-checks-its-own-work-over-mcp), and a tiny runtime plays it in your app.
 
 ## Say "bouncier", see before and after, judge
 
@@ -104,10 +104,16 @@ See [platform motion](docs/usage.md#native-feel-on-every-platform) for every nam
 npm install @nudg/core
 ```
 
-Give your AI agent the nudg tools over MCP. This is for Claude Code; any MCP client can run the same command:
+Give your AI agent the nudg tools over MCP. In Claude Code:
 
 ```sh
 claude mcp add nudg -- npx -y @nudg/core mcp
+```
+
+Other MCP clients, such as Cursor or Claude Desktop, take the same command in their config:
+
+```json
+{ "mcpServers": { "nudg": { "command": "npx", "args": ["-y", "@nudg/core", "mcp"] } } }
 ```
 
 Or use the CLI yourself:
@@ -139,22 +145,55 @@ playDoc(presets.toast({ duration: 3 }), document.querySelector(".toast"));
 
 When the options aren't enough, `nudg preset press > press.nudg.json` writes the same document as a file, and from there it's yours to edit, or your AI's.
 
-## Your AI checks its own work
+## Your AI checks its own work, over MCP
 
-An agent can't watch an animation, so nudg tells it what happened, in text and in pictures:
+An agent can't watch an animation, so nudg's MCP server tells it what happened, in text and in pictures:
 
-| Tool | What the agent gets |
+| MCP tool | What the agent gets |
 |---|---|
-| `validate` | Each problem with a stable code, a JSON pointer, and a hint that says how to fix it. |
-| `simulate` | States and values over time for a list of events: "the knob overshoots to 20.57 and is at rest from 0.84 s". |
-| `plot` | A motion graph of every property, like the one below. |
-| `render` | Real frames of your component, captured in a headless browser. |
-| `compare` | Before and after under the same tap: whether a person would notice, then both side by side, and a page that plays them in slow motion. |
-| `observe` | Host truth: the real page, tapped and measured every frame, judged against the file. "The element left the page at 0.18 s; the release is never shown." |
+| `nudg_guide` | The format on one page, including which field to change for "bouncier", "snappier", and so on. |
+| `nudg_validate` | Each problem with a stable code, a JSON pointer, and a hint that says how to fix it. It can check text before it's written. |
+| `nudg_simulate` | States and values over time for a list of events: "the knob overshoots to 20.57 and is at rest from 0.84 s". |
+| `nudg_plot` | A motion graph of every property, like the one below. |
+| `nudg_render` | Real frames of your component, captured in a headless browser. |
+| `nudg_compare` | Before and after under the same tap: whether a person would notice, then both side by side, and a page that plays them in slow motion. |
+| `nudg_observe` | Host truth: the real page, tapped and measured every frame, judged against the file. "The element left the page at 0.18 s; the release is never shown." |
+
+Every tool is also a CLI command (`nudg validate`, `nudg compare`, ...) for you and your CI.
 
 <img alt="nudg plot output: the knob's position and the track's color over time, tapped twice" src="docs/media/toggle-plot.svg" width="760">
 
 <sub>`nudg plot` output for the toggle, tapped again while still moving. The spring turns around smoothly instead of restarting.</sub>
+
+### What a session looks like
+
+You ask for a feel, and the agent edits, checks, and tells you what changed. The session is illustrative; every tool result is real output.
+
+> **You:** Make the toggle bouncier.
+
+```
+● nudg_guide
+  bouncier, more playful → raise `bounce` (e.g. 0.25 → 0.4)
+
+● Edit toggle.nudg.json   "bounciness": 0.6
+
+● nudg_validate
+  toggle.nudg.json: 1 error
+    error unknown-key at /animate/knob.x/spring/bounciness
+      Unknown key "bounciness".
+      hint: Allowed here: duration, bounce, response, dampingFraction, stiffness, ...
+
+● Edit toggle.nudg.json   "bounce": 0.6
+
+● nudg_validate
+  toggle.nudg.json: ok
+
+● nudg_compare   before vs after, track.tap @ 0.1s
+  A clear change: knob.x moves up to 5.9 units differently, settles 0.68 s later,
+  overshoot 0.6 → 5.1 units.
+```
+
+> **Agent:** Done: `bounce` 0.25 → 0.6. The knob now overshoots by about 5 units instead of 0.6 and settles in 1.5 s instead of 0.8 s, a difference you'll clearly see. Want it a little calmer?
 
 ## How it works
 
@@ -182,7 +221,7 @@ Interactive animation usually lives in binary files made in a dedicated studio. 
 
 ## Status
 
-**Early, and moving.** Version 0.3 is [on npm](https://www.npmjs.com/package/@nudg/core) with taps, hovers, drags and throws, keyboard events, timers, sliders that keep their value, values derived from other values, a reduced-motion mode, and adapters for the DOM and React. The format may still change before 1.0; see the [changelog](CHANGELOG.md).
+**Early, and moving.** Format 0.3 is [on npm](https://www.npmjs.com/package/@nudg/core) in `@nudg/core` 0.4, with taps, hovers, drags and throws, keyboard events, timers, sliders that keep their value, values derived from other values, a reduced-motion mode, and adapters for the DOM and React. The format may still change before 1.0; see the [changelog](CHANGELOG.md).
 
 | Stage | Scope | Examples | |
 |---|---|---|---|

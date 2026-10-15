@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.1
 
 Fixes from a review of the judge tools (every item reproduced before it was fixed):
 

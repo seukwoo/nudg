@@ -98,6 +98,19 @@ nudg ships the platforms' own motion as libraries in the same format: SwiftUI's 
 
 See [platform motion](docs/usage.md#native-feel-on-every-platform) for every name and value.
 
+## UI words become standard interactions
+
+People don't usually ask for `duration: 0.35` and `bounce: 0.2`. They say "make this a FAB", "use tabs", "show it as a bottom sheet", "let the row swipe to delete", or "make the toast feel more iOS". nudg is built to make those words map to reusable interaction patterns instead of one-off code guesses.
+
+The direction is mobile-first: patterns such as `fab`, `tab-bar`, `bottom-sheet`, `toast` / `snackbar`, `swipe-row`, `carousel`, `switch`, `slider`, `dialog`, `list` and `grid` should come with expected parts, states, gestures and platform motion. The host still owns the markup and layout; nudg supplies the interaction behavior that an AI can edit and a person can judge.
+
+```txt
+human UI words
+  -> semantic pattern
+  -> states, events, targets and motion
+  -> compare / observe
+```
+
 ## Get started
 
 ```sh
@@ -186,19 +199,14 @@ Interactive animation usually lives in binary files made in a dedicated studio. 
 
 **Early, and moving.** Version 0.5 (format 0.3) is [on npm](https://www.npmjs.com/package/@nudg/core) with taps, hovers, drags and throws, keyboard events, timers, sliders that keep their value, values derived from other values, a reduced-motion mode, and adapters for the DOM and React. The format may still change before 1.0; see the [changelog](CHANGELOG.md).
 
-| Stage | Scope | Examples | |
-|---|---|---|---|
-| 0 | Single element | Toggle, button, like | Done |
-| 1 | Component | Swipe row, carousel, bottom sheet, tabs | Done, except layout measurement for tab indicators (next) |
-| 2 | Screens and flows | Onboarding, modals, screen transitions | Planned |
-| 3 | Native | iOS and Android | Planned |
-| 4 | Standalone content | Physics, canvas, game-like scenes | Planned |
+The [roadmap](docs/roadmap.md) tracks development priorities and stage status, from component interactions through screens and flows, native adapters and exploratory standalone content. Mobile-first semantic patterns build on that progression.
 
 ## Documentation
 
 - [The nudg format](docs/spec.md): the full grammar.
 - [Using nudg](docs/usage.md): the CLI, the MCP server, the React and DOM adapters, and platform motion.
 - [Design](docs/design.md): principles, scope, decisions, and open questions.
+- [Roadmap](docs/roadmap.md): the development plan, current status and completion criteria.
 - [Guide for AI agents](spec/guide.md): the format on one page.
 - [Development log](docs/devlog.md): problems met while building nudg, and how they were resolved.
 

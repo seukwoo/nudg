@@ -100,6 +100,8 @@ export async function observe(options: ObserveOptions): Promise<Observation> {
     if (!found) throw new Error(`No element matches ${JSON.stringify(options.selector)} on ${options.url}.${errors.length ? ` The page threw: ${errors[0]}` : ""}`);
 
     await browser.evaluate(`window.__nudgObserve = (${observer.toString()})(${JSON.stringify(options.selector)}, ${deepQuery.toString()}, ${decomposeMatrix.toString()})`);
+    // A redirect during warmup landed on the page we're now observing; only later navigations count.
+    navigatedTo = undefined;
     // A page that navigates away (a link, a router, a form) has no observer any more; say so.
     const inPage = async (expression: string, during: string) => {
       if (navigatedTo !== undefined) throw new Error(`The page navigated to ${navigatedTo} during "${during}", so the element could not be measured further.`);

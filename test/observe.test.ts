@@ -157,7 +157,14 @@ test("observe says when the page navigated away, and reports a page that threw",
   assert.match(o.errors[0], /E_UNKNOWN_EVENT/);
 });
 
-test("launchBrowser rejects, not crashes, when Chrome can't start", async () => {
+test("launchBrowser rejects, not crashes, when Chrome can't start, and does so at once", async () => {
   const { launchBrowser } = await import("../src/node/cdp.ts");
+  const t0 = Date.now();
   await assert.rejects(launchBrowser("/nonexistent/chrome"), /Could not start Chrome at \/nonexistent\/chrome/);
+  assert.ok(Date.now() - t0 < 1500, `rejected after ${Date.now() - t0} ms`);
+});
+
+test("a redirect during warmup is not a navigation during the actions", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const o = await observe({ url: "test/fixtures/host/redirect.html", selector: "#btn", actions: [{ t: 0.1, action: "down" }, { t: 0.5, action: "up" }], chrome: chrome!, settle: 0.6, warmup: 0.6 });
+  assert.ok(Math.abs(o.summary.properties.scale.min! - 0.9) < 0.01, `min ${o.summary.properties.scale.min}`);
 });

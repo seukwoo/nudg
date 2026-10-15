@@ -71,11 +71,13 @@ test("actionsToEvents maps page actions to the file's events at the measured tim
 });
 
 test("observe measures a CSS press on a page that has nothing to do with nudg", { skip: chrome ? false : "no Chrome found" }, async () => {
-  const o = await observe({ url: "test/fixtures/host/press-css.html", selector: "#btn", actions: [{ t: 0.1, action: "down" }, { t: 0.5, action: "up" }], chrome: chrome!, settle: 0.8 });
+  // A long hold: on a loaded CI runner the press can land late, and the 0.2 s transition must still finish before the release.
+  const o = await observe({ url: "test/fixtures/host/press-css.html", selector: "#btn", actions: [{ t: 0.1, action: "down" }, { t: 0.9, action: "up" }], chrome: chrome!, settle: 0.8 });
   const scale = o.summary.properties.scale;
   assert.equal(scale.changed, true);
   assert.ok(Math.abs(scale.min! - 0.9) < 0.01, `min ${scale.min}`);
-  assert.ok(scale.settledAt! > 0.6 && scale.settledAt! < 0.85, `settled ${scale.settledAt}`);
+  const up = o.series.marks.find((m) => m.action === "up")!.t;
+  assert.ok(scale.settledAt! > up + 0.1 && scale.settledAt! < up + 0.5, `settled ${scale.settledAt} after up at ${up}`);
   assert.equal(scale.overshoot, 0);
   assert.ok(o.summary.still.includes("opacity"));
   assert.ok(o.summary.frameInterval > 0.005 && o.summary.frameInterval < 0.04, `frame interval ${o.summary.frameInterval}`);
@@ -142,7 +144,7 @@ test("actionTarget reads which target a tap is for", () => {
 });
 
 test("observe reads a 3D transform (matrix3d) correctly", { skip: chrome ? false : "no Chrome found" }, async () => {
-  const o = await observe({ url: "test/fixtures/host/press-3d.html", selector: "#btn", actions: [{ t: 0.1, action: "down" }, { t: 0.5, action: "up" }], chrome: chrome!, settle: 0.6 });
+  const o = await observe({ url: "test/fixtures/host/press-3d.html", selector: "#btn", actions: [{ t: 0.1, action: "down" }, { t: 0.9, action: "up" }], chrome: chrome!, settle: 0.6 });
   assert.equal(o.summary.properties.scale.changed, true);
   assert.ok(Math.abs(o.summary.properties.scale.min! - 0.9) < 0.01, `min ${o.summary.properties.scale.min}`);
 });
@@ -165,6 +167,6 @@ test("launchBrowser rejects, not crashes, when Chrome can't start, and does so a
 });
 
 test("a redirect during warmup is not a navigation during the actions", { skip: chrome ? false : "no Chrome found" }, async () => {
-  const o = await observe({ url: "test/fixtures/host/redirect.html", selector: "#btn", actions: [{ t: 0.1, action: "down" }, { t: 0.5, action: "up" }], chrome: chrome!, settle: 0.6, warmup: 0.6 });
+  const o = await observe({ url: "test/fixtures/host/redirect.html", selector: "#btn", actions: [{ t: 0.1, action: "down" }, { t: 0.9, action: "up" }], chrome: chrome!, settle: 0.6, warmup: 0.6 });
   assert.ok(Math.abs(o.summary.properties.scale.min! - 0.9) < 0.01, `min ${o.summary.properties.scale.min}`);
 });

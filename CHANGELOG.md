@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Compare from the running app.** `nudg compare --url <app> [--select css] [--open]` and `nudg_compare` with `url` / `selector` / `open`: the component is snapshotted from the page (the smallest element holding every bound target, computed styles inlined, scripts dropped), the filmstrip and the side-by-side page are made from that snapshot, and the page opens in the person's browser (MCP default; `NUDG_OPEN=false` turns it off). The report says what the snapshot couldn't carry. The DOM adapter now marks every bound element with `data-nudg`, so targets bound by ref (React) are found too. `openInBrowser` and `snapshotElement` from `@nudg/core/node`.
+
 ## 0.5.1
 
 Fixes from a review of the judge tools (every item reproduced before it was fixed):

@@ -2,7 +2,7 @@
 // works without it, and says how to point at one.
 
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -17,6 +17,23 @@ const CANDIDATES = [
 const ON_PATH = ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "microsoft-edge"];
 
 export const CHROME_HINT = "Install Chrome or Chromium, or set NUDG_CHROME to its executable.";
+
+/**
+ * Opens a file or URL in the person's default browser. Never throws; false when it
+ * couldn't, or when NUDG_OPEN=false (CI, a headless box, a person who'd rather not).
+ */
+export function openInBrowser(target: string): boolean {
+  if (/^(false|0|no)$/i.test(process.env.NUDG_OPEN ?? "")) return false;
+  try {
+    const [cmd, args] = process.platform === "darwin" ? ["open", [target]] : process.platform === "win32" ? ["cmd", ["/c", "start", "", target]] : ["xdg-open", [target]];
+    const child = spawn(cmd, args, { stdio: "ignore", detached: true });
+    child.on("error", () => {});
+    child.unref();
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export function findChrome(): string | undefined {
   const fromEnv = process.env.NUDG_CHROME;

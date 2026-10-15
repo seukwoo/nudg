@@ -260,6 +260,10 @@ export function play(program: Program, root: ParentNode | null = document, optio
       ],
     ];
     for (const [type, fn] of listeners) el.addEventListener(type, fn);
+    // Mark the element with its name, so a snapshot of the page (and observe's default
+    // selector) can find targets bound by ref as well as by attribute.
+    const marked = !el.hasAttribute("data-nudg");
+    if (marked) el.setAttribute("data-nudg", name);
     const style = (el as HTMLElement).style;
     const touchAction = style?.touchAction;
     // Let a drag reach us instead of scrolling the page.
@@ -269,6 +273,7 @@ export function play(program: Program, root: ParentNode | null = document, optio
 
     const unbind = () => {
       el.removeAttribute("data-nudg-state");
+      if (marked) el.removeAttribute("data-nudg");
       for (const [type, fn] of listeners) el.removeEventListener(type, fn);
       if (draggable.has(name) && style) style.touchAction = touchAction;
       elements.get(name)?.delete(el);

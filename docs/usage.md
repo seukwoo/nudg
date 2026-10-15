@@ -73,6 +73,14 @@ A clear change: knob.x moves up to 2.1 units differently, settles 0.23 s later, 
 
 With `--html`, the frames aren't only evenly spaced: the moments the verdict talks about are always included and captioned (where each property differs most, each event and 80 ms after it), so the side-by-side shows what the sentence says.
 
+**From the running app.** When the component lives in an app, there is no host page to point at. Give `compare` the app instead:
+
+```sh
+nudg compare block-press.nudg.json block-press-heavier.nudg.json --send button.tap@0.1 --url http://localhost:5173/ --open
+```
+
+It snapshots the component from the page (the smallest element holding every bound target, styles inlined; `--select` picks another), writes the side-by-side page from that snapshot, and `--open` opens it. The report says what the snapshot couldn't carry (pseudo-elements, web fonts) and which targets weren't on the page. Over MCP the same is `url`, `selector` and `open` (default on; `NUDG_OPEN=false` turns it off), so one tool call ends with the before/after playing in the person's browser.
+
 Stills can't show motion. For the person, write a page instead:
 
 ```sh

@@ -2,13 +2,15 @@
 // nudg CLI. Every command takes --json so an agent can read the result directly.
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, extname } from "node:path";
+import { tmpdir } from "node:os";
+import { basename, extname, join } from "node:path";
 import { compare, compareFrameTimes } from "./core/compare.ts";
 import { plot } from "./core/plot.ts";
 import { presets, type PresetName } from "./core/presets.ts";
 import { describeEvent, dragGesture, simulate, type SimulateOptions, type TimedEvent } from "./core/simulate.ts";
 import type { Diagnostic, Program } from "./core/types.ts";
-import { CHROME_HINT, findChrome, svgToPng } from "./node/chrome.ts";
+import { CHROME_HINT, findChrome, openInBrowser, svgToPng } from "./node/chrome.ts";
+import { snapshotElement } from "./node/snapshot.ts";
 import { formatComparison, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
 import { comparePage, lastRuntimeInlined, readWithImports } from "./node/compare-page.ts";
 import { compilePath } from "./node/load.ts";
@@ -55,6 +57,12 @@ plot options
   --title <text>            Graph title. Default: the file name.
 
 compare options
+  --url <url|page.html>     The running app (or a local page, served from the working directory):
+                            the component is snapshotted from it, styles and all, and the
+                            side-by-side page is written from that. No --html needed.
+  --select <css>            Which element to snapshot. Default: the smallest element holding
+                            every bound target (a toggle's track with its knob).
+  --open                    Open the page in the browser once written.
   --html <page.html>        Real markup. With --out x.html: a page that plays A and B side by side
                             in a loop with slow motion, for a person to judge (needs a browser, not
                             Chrome). With --out x.png: A/B filmstrip rows (needs Chrome).
@@ -101,7 +109,7 @@ function parseArgs(argv: string[]): Args {
       continue;
     }
     const [name, inline] = arg.slice(2).split(/=(.*)/s, 2);
-    const boolean = name === "json" || name === "help" || name === "reduced-motion";
+    const boolean = name === "json" || name === "help" || name === "reduced-motion" || name === "open";
     const value = boolean ? "" : (inline ?? argv[++i]);
     if (value === undefined) fail(`Option --${name} needs a value.`);
     flags.set(name, [...(flags.get(name) ?? []), value]);
@@ -260,15 +268,35 @@ async function runCompare(args: Args, json: boolean): Promise<number> {
   const options = simulationOptions(args, a.program!);
   const labels = (args.flags.get("labels")?.at(-1)?.split(",").map((s) => s.trim()) ?? ["A", "B"]) as [string, string];
   const comparison = compare(a.program!, b.program!, options);
-  const html = args.flags.get("html")?.at(-1);
-  const out = args.flags.get("out")?.at(-1);
-  if (out && extname(out).toLowerCase() === ".html" && !html) fail("--out x.html writes the side-by-side page and needs --html <page.html> with the component's markup. For a graph, write .svg or .png.");
+  let html = args.flags.get("html")?.at(-1);
+  let out = args.flags.get("out")?.at(-1);
+  const url = args.flags.get("url")?.at(-1);
+  let snapshotHtml: string | undefined;
+  const notes: string[] = [];
+  if (url) {
+    // From the running app: snapshot the component, then it's the --html case with a page as the deliverable.
+    if (html) fail("--url snapshots the component from the page; drop --html.");
+    const chrome = findChrome();
+    if (!chrome) fail(`--url needs a browser to snapshot the page. ${CHROME_HINT}`);
+    let snap;
+    try {
+      snap = await snapshotElement({ url, selector: args.flags.get("select")?.at(-1), targets: a.program!.targets, chrome });
+    } catch (e) {
+      fail(`couldn't snapshot ${url}: ${(e as Error).message}`);
+    }
+    snapshotHtml = snap.html;
+    html = url;
+    out ??= join(tmpdir(), "nudg-compare.html");
+    if (extname(out).toLowerCase() !== ".html") fail("With --url the deliverable is the side-by-side page; use --out <file.html> or leave --out out.");
+    notes.push(`snapshot of ${snap.selector}: ${snap.fidelity.elements} elements, ${snap.fidelity.declarations} style declarations inlined`, ...snap.notes);
+  }
+  if (out && extname(out).toLowerCase() === ".html" && !html) fail("--out x.html writes the side-by-side page and needs --html <page.html> with the component's markup, or --url <the running app>. For a graph, write .svg or .png.");
   let picture: string | undefined;
 
   if (html && out && extname(out).toLowerCase() === ".html") {
-    if (!existsSync(html)) fail(`File not found: ${html}`);
+    if (!snapshotHtml && !existsSync(html)) fail(`File not found: ${html}`);
     const untilBoth = Math.max(comparison.a.samples.at(-1)!.t, comparison.b.samples.at(-1)!.t);
-    writeFileSync(out, comparePage({ html: readFileSync(html, "utf8"), a: readWithImports(fileA), b: readWithImports(fileB), labels, events: options.events, until: untilBoth, start: options.start, reducedMotion: options.reducedMotion, headline: comparison.headline }));
+    writeFileSync(out, comparePage({ html: snapshotHtml ?? readFileSync(html, "utf8"), a: readWithImports(fileA), b: readWithImports(fileB), labels, events: options.events, until: untilBoth, start: options.start, reducedMotion: options.reducedMotion, headline: comparison.headline }));
     picture = out;
   } else if (html) {
     if (!existsSync(html)) fail(`File not found: ${html}`);
@@ -296,12 +324,14 @@ async function runCompare(args: Args, json: boolean): Promise<number> {
     }
   }
 
+  const opened = picture?.endsWith(".html") && args.flags.has("open") ? openInBrowser(picture) : false;
   if (json) {
     const { a: _a, b: _b, ...rest } = comparison;
-    process.stdout.write(JSON.stringify({ ok: true, ...rest, summaryA: comparison.a.summary, summaryB: comparison.b.summary, picture }, null, 2) + "\n");
+    process.stdout.write(JSON.stringify({ ok: true, ...rest, summaryA: comparison.a.summary, summaryB: comparison.b.summary, picture, opened, notes }, null, 2) + "\n");
   } else {
     process.stdout.write(formatComparison(comparison, labels) + "\n");
-    if (picture) process.stdout.write(`\nwrote ${picture}${picture.endsWith(".html") ? " — open it in a browser: both versions play side by side, with slow motion" : ""}\n`);
+    for (const n of notes) process.stdout.write(`note: ${n}\n`);
+    if (picture) process.stdout.write(`\nwrote ${picture}${picture.endsWith(".html") ? (opened ? " — opened in your browser: left is now, right is the change" : " — open it in a browser: both versions play side by side, with slow motion") : ""}\n`);
     if (picture?.endsWith(".html") && !lastRuntimeInlined) process.stdout.write("note: the runtime isn't built here, so the page loads @nudg/core from unpkg; run npm run build for an offline page\n");
   }
   return 0;

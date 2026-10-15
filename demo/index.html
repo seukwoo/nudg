@@ -67,6 +67,7 @@
             <div class="actions">
               <button type="button" id="detail-copy">Copy JSON</button>
               <button type="button" id="detail-open">Open in playground</button>
+              <button type="button" id="detail-compare">Compare in playground</button>
             </div>
             <h2>Try with your AI</h2>
             <p class="small">With the nudg MCP server registered, paste one of these into Claude Code (or any MCP client) in a project that has this file.</p>
@@ -88,15 +89,26 @@
           <h1>Playground</h1>
           <p>Edit the file and interact with the stage. Try <code>"bounce": 0.6</code>, or misspell a key to see the validator's hint. Paste any nudg file: targets without markup get a labeled box each.</p>
         </header>
-        <div class="playground">
-          <div>
-            <div class="stage stage-large" id="playground-stage"></div>
-            <div class="stage-foot"><span class="state" id="playground-state"></span><button type="button" class="reset" id="playground-reset" title="Back to the initial state">Reset</button></div>
+        <div class="playground" id="playground">
+          <div class="stages">
+            <div class="stage-a" id="playground-a" hidden>
+              <div class="stage-label">original</div>
+              <div class="stage stage-large" id="playground-stage-a"></div>
+              <div class="stage-foot"><span class="state" id="playground-state-a"></span></div>
+            </div>
+            <div>
+              <div class="stage-label" id="playground-label-b" hidden>edited</div>
+              <div class="stage stage-large" id="playground-stage"></div>
+              <div class="stage-foot"><span class="state" id="playground-state"></span><button type="button" class="reset" id="playground-reset" title="Back to the initial state">Reset</button></div>
+            </div>
+            <p class="verdict" id="playground-verdict" hidden></p>
           </div>
           <div>
             <div class="playground-tools">
               <label>Example <select id="playground-example"></select></label>
               <button type="button" id="playground-copy">Copy JSON</button>
+              <button type="button" id="playground-compare" aria-pressed="false" title="Play the original beside your edit; interact with either and both get it">Compare with original</button>
+              <label id="playground-speed-label" hidden>Speed <select id="playground-speed"><option value="1">1×</option><option value="0.25">¼×</option><option value="0.1">⅒×</option></select></label>
             </div>
             <textarea id="playground-source" spellcheck="false" aria-label="nudg source"></textarea>
             <ul class="diagnostics" id="playground-diagnostics"></ul>

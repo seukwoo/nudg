@@ -32,6 +32,14 @@ export interface PlayOptions {
   exit?: string | string[];
   /** Called once each time the component has fully exited (see `exit`). */
   onExit?: () => void;
+  /**
+   * Called for every event and input sample the adapter itself produces from the DOM
+   * (not for `send` and `input` calls), with the player's time: to mirror one player's
+   * interaction onto another, or to record a session for `nudg simulate`.
+   */
+  onEvent?: (item: { event: string } | { input: string; value: number }, t: number) => void;
+  /** Time scale for the real-time clock: 0.25 plays everything, timers included, at quarter speed. Default 1. */
+  speed?: number;
 }
 
 export interface Player {
@@ -48,6 +56,8 @@ export interface Player {
   input(name: string, value: number): boolean;
   /** Binds one more element to a target. Returns a function that unbinds it. */
   bind(name: string, element: Element): () => void;
+  /** The player's current time in seconds: scaled real time, or the last rendered time on a manual clock. */
+  now(): number;
   /** Manual clock: applies the values at time `t` (seconds). */
   render(t: number): void;
   /** False once the machine has exited (see `exit` in the options) and settled. */
@@ -88,10 +98,12 @@ export function play(program: Program, root: ParentNode | null = document, optio
   const manual = options.clock === "manual";
   const start = performance.now();
   const draggable = dragTargets(program);
+  const speed = options.speed ?? 1;
+  if (!(speed > 0)) throw new RangeError("`speed` must be greater than 0.");
   let manualTime = 0;
   let frame = 0;
   let lastState = runtime.state().join("\n");
-  const now = () => (manual ? manualTime : (performance.now() - start) / 1000);
+  const now = () => (manual ? manualTime : ((performance.now() - start) / 1000) * speed);
 
   // Which properties each target has, so we only write the styles the file owns.
   const byTarget = new Map<string, string[]>();
@@ -181,8 +193,10 @@ export function play(program: Program, root: ParentNode | null = document, optio
     syncPresence(now());
   }
 
-  function send(event: string): boolean {
-    const handled = runtime.send(event, now());
+  function send(event: string, fromDom = false): boolean {
+    const t = now();
+    const handled = runtime.send(event, t);
+    if (fromDom) options.onEvent?.({ event }, t);
     changed();
     return handled;
   }
@@ -192,6 +206,9 @@ export function play(program: Program, root: ParentNode | null = document, optio
     changed();
     return used;
   }
+
+  /** An event the DOM produced, as opposed to one the host sent. */
+  const emit = (event: string) => send(event, true);
 
   // Pointer input. A press released outside its element is a cancel, not an up. A
   // press that travels past the slop becomes a drag; a drag never ends in a tap.
@@ -215,27 +232,27 @@ export function play(program: Program, root: ParentNode | null = document, optio
         (e) => {
           const p = e as PointerEvent;
           pressed.set(name, { pointer: p.pointerId, x: p.clientX, y: p.clientY, dragging: false });
-          send(`${name}.down`);
+          emit(`${name}.down`);
         },
       ],
       [
         "click",
         () => {
           if (suppressTap.delete(name)) return;
-          send(`${name}.tap`);
+          emit(`${name}.tap`);
         },
       ],
-      ["pointerenter", (e) => (e as PointerEvent).pointerType !== "touch" && send(`${name}.hoverstart`)],
-      ["pointerleave", (e) => (e as PointerEvent).pointerType !== "touch" && send(`${name}.hoverend`)],
-      ["focus", () => send(`${name}.focus`)],
-      ["blur", () => send(`${name}.blur`)],
+      ["pointerenter", (e) => (e as PointerEvent).pointerType !== "touch" && emit(`${name}.hoverstart`)],
+      ["pointerleave", (e) => (e as PointerEvent).pointerType !== "touch" && emit(`${name}.hoverend`)],
+      ["focus", () => emit(`${name}.focus`)],
+      ["blur", () => emit(`${name}.blur`)],
       [
         "keydown",
         (e) => {
           // Only keys the file listens for, so the page keeps its own behavior for the rest.
           const event = `${name}.key.${keyName((e as KeyboardEvent).key)}`;
           if (!keyEvents.has(event)) return;
-          if (send(event)) e.preventDefault();
+          if (emit(event)) e.preventDefault();
         },
       ],
     ];
@@ -268,10 +285,13 @@ export function play(program: Program, root: ParentNode | null = document, optio
         // Inputs measure travel since the press, so the first sample catches the value
         // up with the pointer instead of leaving it behind by the slop.
         press.dragging = true;
-        send(`${name}.dragstart`);
+        emit(`${name}.dragstart`);
       }
-      runtime.input(`${name}.drag.x`, p.clientX - press.x, now());
-      runtime.input(`${name}.drag.y`, p.clientY - press.y, now());
+      const t = now();
+      runtime.input(`${name}.drag.x`, p.clientX - press.x, t);
+      runtime.input(`${name}.drag.y`, p.clientY - press.y, t);
+      options.onEvent?.({ input: `${name}.drag.x`, value: p.clientX - press.x }, t);
+      options.onEvent?.({ input: `${name}.drag.y`, value: p.clientY - press.y }, t);
       changed();
     }
   };
@@ -286,8 +306,8 @@ export function play(program: Program, root: ParentNode | null = document, optio
       // composedPath sees into shadow roots, where e.target is retargeted to the host.
       const released = (e.composedPath?.()[0] ?? e.target) as Node;
       const inside = [...(elements.get(name) ?? [])].some((el) => el.contains(released));
-      send(`${name}.${!cancelled && inside ? "up" : "cancel"}`);
-      if (press.dragging) send(`${name}.dragend`);
+      emit(`${name}.${!cancelled && inside ? "up" : "cancel"}`);
+      if (press.dragging) emit(`${name}.dragend`);
       if (dragged) {
         // The browser may still fire a click for this press; it isn't a tap.
         suppressTap.add(name);
@@ -332,6 +352,7 @@ export function play(program: Program, root: ParentNode | null = document, optio
     present() {
       return present;
     },
+    now,
     render(t) {
       if (!manual) throw new Error("render(t) needs { clock: \"manual\" }.");
       manualTime = t;

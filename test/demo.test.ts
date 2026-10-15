@@ -195,3 +195,32 @@ test("bound elements carry the active state, so CSS can animate by state", { ski
 test("no page errors were thrown", { skip }, () => {
   assert.deepEqual(errors, []);
 });
+
+test("playground compare: the original plays beside the edit, a tap reaches both, and the verdict speaks", { skip }, async () => {
+  await go("#example/toggle");
+  await browser.evaluate("document.getElementById('detail-compare').click()");
+  await waitFor(() => browser.evaluate("location.hash === '#playground' && !document.getElementById('playground-a').hidden && document.getElementById('playground-stage-a').shadowRoot?.querySelector('[data-nudg=track]') ? 'ready' : ''"), 5_000);
+  assert.equal(await browser.evaluate("document.getElementById('playground').classList.contains('compare')"), true);
+  assert.match(await browser.evaluate("document.getElementById('playground-verdict').textContent"), /Interact with either stage/);
+  // Make the edit bouncier, then tap the edited stage: the original must follow.
+  await browser.evaluate(`(() => { const t = document.getElementById("playground-source"); t.value = t.value.replace(/"bounce":\\s*[\\d.]+/, '"bounce": 0.7'); t.dispatchEvent(new Event("input")); })()`);
+  await sleep(500);
+  await browser.evaluate("document.getElementById('playground-stage').shadowRoot.querySelector('[data-nudg=track]').click()");
+  await waitFor(() => browser.evaluate("document.getElementById('playground-verdict').dataset.verdict || ''"), 5_000);
+  const states = await browser.evaluate("[document.getElementById('playground-state').textContent, document.getElementById('playground-state-a').textContent]");
+  assert.deepEqual(states, ["on", "on"], "the tap reached both stages");
+  const verdict = await browser.evaluate("document.getElementById('playground-verdict').textContent");
+  assert.match(verdict, /change/, verdict);
+  // Slow motion remounts both; the interaction so far still stands, so the verdict stays.
+  await browser.evaluate("const s = document.getElementById('playground-speed'); s.value = '0.25'; s.dispatchEvent(new Event('change'))");
+  await sleep(400);
+  assert.match(await browser.evaluate("document.getElementById('playground-verdict').textContent"), /A clear change/);
+  // Reset clears it.
+  await browser.evaluate("document.getElementById('playground-reset').click()");
+  assert.match(await browser.evaluate("document.getElementById('playground-verdict').textContent"), /Interact with either stage/);
+  // Back to plain mode: one stage again.
+  await browser.evaluate("document.getElementById('playground-compare').click()");
+  await sleep(300);
+  assert.equal(await browser.evaluate("document.getElementById('playground-a').hidden"), true);
+  assert.deepEqual(errors, []);
+});

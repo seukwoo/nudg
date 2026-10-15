@@ -19,6 +19,13 @@ export interface UseNudgOptions {
   files?: Record<string, unknown>;
   /** Reduced motion (v0.3). Default: the system's prefers-reduced-motion setting. */
   reducedMotion?: boolean;
+  /**
+   * States that mean the component is gone, e.g. "hidden". `present` turns false once the
+   * machine has entered one and every value has come to rest, and `onExit` is called:
+   * render null then, or remove the item from its list, and the exit motion gets to play.
+   */
+  exit?: string | string[];
+  onExit?: () => void;
 }
 
 export interface Nudg {
@@ -28,6 +35,8 @@ export interface Nudg {
   state: string[];
   /** Sends an event now, e.g. send("host.check"). */
   send(event: string): boolean;
+  /** False once the component has exited (see `exit`); true again if it is shown again. */
+  present: boolean;
 }
 
 const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -46,9 +55,24 @@ export function useNudg(source: Program | object, options: UseNudgOptions = {}):
   const refs = useRef(new Map<string, (element: Element | null) => void>());
   // The first render knows the starting states without touching the DOM.
   const [state, setState] = useState<string[]>(() => createRuntime(program, { state: options.state }).state());
+  const [present, setPresent] = useState(true);
+  const onExit = useRef(options.onExit);
+  onExit.current = options.onExit;
 
   useIsomorphicLayoutEffect(() => {
-    const p = play(program, null, { state: options.state, reducedMotion: options.reducedMotion, onState: setState });
+    const p = play(program, null, {
+      state: options.state,
+      reducedMotion: options.reducedMotion,
+      onState: (s) => {
+        setState(s);
+        if (p.present()) setPresent(true);
+      },
+      exit: options.exit,
+      onExit: () => {
+        setPresent(false);
+        onExit.current?.();
+      },
+    });
     player.current = p;
     for (const [name, entry] of attached.current) entry.unbind = p.bind(name, entry.element);
     setState(p.runtime.state());
@@ -75,7 +99,7 @@ export function useNudg(source: Program | object, options: UseNudgOptions = {}):
   }, []);
 
   const send = useCallback((event: string) => player.current?.send(event) ?? false, []);
-  return { bind, state, send };
+  return { bind, state, send, present };
 }
 
 function isProgram(source: Program | object): source is Program {

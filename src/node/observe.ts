@@ -213,7 +213,7 @@ function observer(selector: string, find: (s: string) => Element | null, decompo
 }
 
 /** A local .html path is served from the working directory on 127.0.0.1 for the length of the observation. */
-async function serveIfLocal(target: string): Promise<{ url: string; close(): void }> {
+export async function serveIfLocal(target: string): Promise<{ url: string; close(): void }> {
   if (/^https?:\/\//.test(target)) return { url: target, close() {} };
   const path = resolve(target);
   if (!existsSync(path)) throw new Error(`File not found: ${target}`);

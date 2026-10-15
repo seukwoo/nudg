@@ -2,6 +2,8 @@ export { compile, didYouMean } from "./core/compile.ts";
 export type { CompileResult, ReadFile, Source } from "./core/compile.ts";
 export { createRuntime } from "./core/runtime.ts";
 export type { Runtime, Value } from "./core/runtime.ts";
+export { compare, compareFrameTimes, THRESHOLDS } from "./core/compare.ts";
+export type { Comparison, Perceptibility, PropertyDifference } from "./core/compare.ts";
 export { plot } from "./core/plot.ts";
 export { actionsToEvents, decomposeMatrix, judgeHost, measuredName, summarizeHost } from "./core/observe.ts";
 export type { HostJudgement, HostMark, HostSample, HostSeries, HostSummary } from "./core/observe.ts";

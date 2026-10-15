@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Exits (presence).** The DOM adapter takes `{ exit: "hidden", onExit }` and exposes `player.present()`; `useNudg` takes the same options and returns `present`. Once the machine has entered an exit state from elsewhere and every value has come to rest, `present` turns false and `onExit` fires once: that is when to remove the element, so the exit motion is seen instead of cut off by an unmount (the case `nudg observe` reports as "never shown"). The toast example's host page uses it.
+- **Live A/B in the playground.** "Compare with original" plays the example beside the edit on the same markup; interacting with either stage sends the same events to both, a speed select gives ¼× and ⅒× slow motion, and the perceptibility verdict (core `compare`, in the browser) updates after each interaction and each edit. "Compare in playground" on every example page opens it. The DOM adapter gained `onEvent` (events and inputs the adapter produced from the DOM, for mirroring or recording), `speed` (a time scale for the real-time clock, timers included) and `player.now()`; `@nudg/core` exports `compare`.
 
 ## 0.4.0
 

@@ -5,6 +5,7 @@
 // styles can't collide with each other or with this site.
 
 import { compileText, compileUrl, play } from "../dist/dom/index.js";
+import { compare } from "../dist/index.js";
 
 const catalog = await fetch("../examples/index.json").then((r) => r.json());
 const examples = catalog.examples;
@@ -92,7 +93,7 @@ const STAGE_STYLE = `
  * Plays a program on a stage. `content` is { style, markup }; when the markup lacks
  * some target, every target gets a labeled box instead.
  */
-function mount(stage, program, content, { hook, onState } = {}) {
+function mount(stage, program, content, { hook, onState, onEvent, speed } = {}) {
   const root = stage.shadowRoot ?? stage.attachShadow({ mode: "open" });
   const names = new Set([...new DOMParser().parseFromString(`<div>${content.markup}</div>`, "text/html").querySelectorAll("[data-nudg]")].map((el) => el.dataset.nudg));
   const covered = program.targets.every((t) => names.has(t));
@@ -106,8 +107,12 @@ function mount(stage, program, content, { hook, onState } = {}) {
         late?.onState?.(state);
       },
       onFrame: (values) => late?.onFrame?.(values),
+      onEvent,
+      speed,
     });
-    const extra = hook?.(player, root);
+    // App events the hook sends count as interaction too, so compare mode can mirror them.
+    const forHook = onEvent ? { ...player, send: (event) => { onEvent({ event }, player.now()); return player.send(event); } } : player;
+    const extra = hook?.(forHook, root);
     if (extra) late = extra;
     // WAI-ARIA switch pattern: the app keeps aria-checked in step with the state.
     const switches = root.querySelectorAll("[role=switch]");
@@ -318,6 +323,12 @@ async function renderDetail(id) {
   document.getElementById("detail-reset").onclick = () => live.get(ex.id)?.reset();
   document.getElementById("detail-open").onclick = () => {
     playgroundSeed = ex.id;
+    setCompare(false);
+    location.hash = "#playground";
+  };
+  document.getElementById("detail-compare").onclick = () => {
+    playgroundSeed = ex.id;
+    setCompare(true);
     location.hash = "#playground";
   };
 }
@@ -331,8 +342,82 @@ const pgState = document.getElementById("playground-state");
 for (const ex of examples) pgPicker.append(new Option(`${ex.id}.nudg.json`, ex.id));
 pgPicker.addEventListener("change", () => seedPlayground(pgPicker.value));
 document.getElementById("playground-copy").addEventListener("click", (e) => copyText(e.currentTarget, pgSource.value));
-document.getElementById("playground-reset").addEventListener("click", () => live.get("playground")?.reset());
+document.getElementById("playground-reset").addEventListener("click", () => {
+  live.get("playground")?.reset();
+  live.get("playground-a")?.reset();
+  session.length = 0;
+  showVerdict();
+});
 let playgroundSeed = "toggle";
+
+// Compare mode: the original plays beside the edit; interacting with either sends the
+// same events to both, and the verdict (core `compare`, in the browser) says whether a
+// person would notice the difference.
+const pgCompare = document.getElementById("playground-compare");
+const pgSpeed = document.getElementById("playground-speed");
+const pgVerdict = document.getElementById("playground-verdict");
+let compareOn = false;
+let speed = 1;
+/** The interaction so far, as events on a shared clock, for the verdict. */
+const session = [];
+let verdictTimer = 0;
+
+function setCompare(on) {
+  compareOn = on;
+  pgCompare.setAttribute("aria-pressed", String(on));
+  document.getElementById("playground").classList.toggle("compare", on);
+  document.getElementById("playground-a").hidden = !on;
+  document.getElementById("playground-label-b").hidden = !on;
+  document.getElementById("playground-speed-label").hidden = !on;
+  pgVerdict.hidden = !on;
+  session.length = 0;
+  showVerdict();
+}
+pgCompare.addEventListener("click", () => {
+  setCompare(!compareOn);
+  updatePlayground();
+});
+pgSpeed.addEventListener("change", () => {
+  speed = Number(pgSpeed.value);
+  updatePlayground();
+});
+
+/** Records one stage's interaction and forwards it to the other, without echo. */
+function mirror(other) {
+  return (item, t) => {
+    const target = live.get(other)?.player;
+    if (target) {
+      if ("event" in item) target.send(item.event);
+      else target.input(item.input, item.value);
+    }
+    session.push({ ...item, t });
+    clearTimeout(verdictTimer);
+    verdictTimer = setTimeout(showVerdict, 400);
+  };
+}
+
+let compared = { a: null, b: null };
+function showVerdict() {
+  if (!compareOn) return;
+  pgVerdict.removeAttribute("data-verdict");
+  if (!compared.a || !compared.b) {
+    pgVerdict.textContent = "Fix the file to compare.";
+    return;
+  }
+  if (session.length === 0) {
+    pgVerdict.textContent = "Interact with either stage; both get it. Then the verdict appears here: would a person notice the difference?";
+    return;
+  }
+  const t0 = session[0].t;
+  const events = session.map((e) => ({ ...e, t: Math.max(0, e.t - t0) + 0.05 }));
+  try {
+    const result = compare(compared.a, compared.b, { events, until: Math.min(10, events.at(-1).t + 4) });
+    pgVerdict.textContent = result.headline + (result.suggestion ? ` ${result.suggestion}` : "");
+    pgVerdict.dataset.verdict = result.verdict;
+  } catch (e) {
+    pgVerdict.textContent = `Couldn't compare: ${e.message}`;
+  }
+}
 let playgroundContent = { style: "", markup: "" };
 let playgroundLoaded = null;
 let pgPending = 0;
@@ -368,9 +453,24 @@ async function updatePlayground() {
         )
       : [el("li", { class: "ok" }, "No problems. Interact with the stage.")]),
   );
-  if (!program) return;
   live.get("playground")?.destroy();
-  live.set("playground", mount(pgStage, program, playgroundContent, { hook: HOOKS[playgroundLoaded], onState: (s) => (pgState.textContent = s.join("  ")) }));
+  live.get("playground-a")?.destroy();
+  live.delete("playground-a");
+  compared = { a: null, b: program ?? null };
+  if (!program) {
+    showVerdict();
+    return;
+  }
+  if (compareOn) {
+    const original = byId.get(playgroundLoaded) ? (await load(byId.get(playgroundLoaded))).program : null;
+    compared.a = original;
+    if (original) {
+      const stateA = document.getElementById("playground-state-a");
+      live.set("playground-a", mount(document.getElementById("playground-stage-a"), original, playgroundContent, { hook: HOOKS[playgroundLoaded], onState: (s) => (stateA.textContent = s.join("  ")), onEvent: mirror("playground"), speed }));
+    }
+  }
+  live.set("playground", mount(pgStage, program, playgroundContent, { hook: HOOKS[playgroundLoaded], onState: (s) => (pgState.textContent = s.join("  ")), onEvent: compareOn ? mirror("playground-a") : undefined, speed: compareOn ? speed : 1 }));
+  showVerdict();
 }
 
 pgSource.addEventListener("input", () => {

@@ -199,6 +199,17 @@ main { padding: 32px 32px 64px; min-width: 0; }
 
 /* Playground. */
 .playground { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 24px; align-items: start; }
+/* Compare mode: both stages in a row above the editor, so the judge sees them side by side. */
+.playground.compare { grid-template-columns: 1fr; }
+.playground.compare .stages { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.playground.compare .stages .verdict { grid-column: 1 / -1; }
+.stage-label { margin-bottom: 6px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+.verdict { margin: 4px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--code-bg); font-size: 14px; }
+.verdict:empty { display: none; }
+.verdict[data-verdict="clear"] { border-left: 3px solid #2563eb; }
+.verdict[data-verdict="subtle"] { border-left: 3px solid #d97706; }
+.verdict[data-verdict="imperceptible"] { border-left: 3px solid var(--muted); }
+#playground-compare[aria-pressed="true"] { border-color: var(--text); }
 .playground-tools { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; color: var(--muted); font-size: 13px; }
 .playground-tools select { font: 13px ui-sans-serif, system-ui, sans-serif; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--text); }
 textarea {
@@ -229,4 +240,5 @@ textarea {
   .lnb-foot { margin: 0; flex-direction: row; width: 100%; }
   main { padding: 20px 16px 48px; }
   .detail, .playground { grid-template-columns: 1fr; }
+  .playground.compare .stages { grid-template-columns: 1fr; }
 }

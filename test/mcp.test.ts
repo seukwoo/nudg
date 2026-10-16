@@ -2,7 +2,7 @@
 
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { after, before, test } from "node:test";
 import { findChrome } from "../src/node/chrome.ts";
@@ -25,7 +25,8 @@ function request(method: string, params: Record<string, unknown> = {}): Promise<
 const call = (name: string, args: Record<string, unknown>) => request("tools/call", { name, arguments: args }).then((m) => m.result);
 
 before(async () => {
-  server = spawn(process.execPath, [`${root}src/cli.ts`, "mcp"], { cwd: root, stdio: ["pipe", "pipe", "inherit"] });
+  // Never open the person's browser from a test run.
+  server = spawn(process.execPath, [`${root}src/cli.ts`, "mcp"], { cwd: root, stdio: ["pipe", "pipe", "inherit"], env: { ...process.env, NUDG_OPEN: "false" } });
   let buffer = "";
   server.stdout!.on("data", (chunk) => {
     buffer += chunk;
@@ -99,23 +100,50 @@ test("compare returns a verdict and a picture", { skip: chrome ? false : "no Chr
   assert.match(result.content[0].text, /clear change/);
   assert.equal(result.structuredContent.verdict, "clear");
   assert.ok(result.content.some((c: any) => c.type === "image"));
-  const strip = await call("nudg_compare", { a: { file: "examples/toggle.nudg.json" }, b: { file: "examples/toggle-press.nudg.json" }, html: "examples/toggle.html", events: [{ event: "track.tap", t: 0.05 }], at: [0, 0.3] });
-  assert.equal(strip.isError, undefined, strip.content[0].text);
-  assert.ok(strip.content.some((c: any) => c.type === "image"), "a filmstrip with both rows");
+  const bouncier = `${root}examples/toggle-bouncier.tmp.nudg.json`;
+  writeFileSync(bouncier, JSON.stringify(b));
+  try {
+    const strip = await call("nudg_compare", { a: { file: "examples/toggle.nudg.json" }, b: { file: "examples/toggle-bouncier.tmp.nudg.json" }, html: "examples/toggle.html", events: [{ event: "track.tap", t: 0.05 }], at: [0, 0.3] });
+    assert.equal(strip.isError, undefined, strip.content[0].text);
+    assert.equal(strip.structuredContent.opened, false, "tests never open the person's browser");
+    assert.ok(strip.content.some((c: any) => c.type === "image"), "a filmstrip with both rows");
+  } finally {
+    rmSync(bouncier, { force: true });
+  }
 });
 
 test("compare with before: the file at a git revision against the file on disk, no copy", async () => {
   const result = await call("nudg_compare", { file: "examples/toggle.nudg.json", before: "HEAD", events: [{ event: "track.tap", t: 0.05 }] });
   assert.equal(result.isError, undefined, result.content[0].text);
-  assert.match(result.content[0].text, /^HEAD: .*  now: examples\/toggle\.nudg\.json/);
+  assert.match(result.content[0].text, /^HEAD: examples\/toggle\.nudg\.json @ HEAD  now: examples\/toggle\.nudg\.json/, "labels and names a person can read, not temp paths");
   assert.match(result.content[0].text, /behave identically/);
+  // Identical versions with a page requested: nothing is rendered or opened.
+  const same = await call("nudg_compare", { file: "examples/toggle.nudg.json", before: "HEAD", html: "examples/toggle.html", events: [{ event: "track.tap", t: 0.05 }] });
+  assert.equal(same.isError, undefined, same.content[0].text);
+  assert.match(same.content[0].text, /No page was opened: the two versions behave identically/);
+  assert.ok(!same.content.some((c: any) => c.type === "image"));
+  // rev on one side only labels that side.
+  const onB = await call("nudg_compare", { a: { file: "examples/toggle-press.nudg.json" }, b: { file: "examples/toggle.nudg.json", rev: "HEAD" }, events: [{ event: "track.tap", t: 0.05 }] });
+  assert.match(onB.content[0].text, /^A: examples\/toggle-press\.nudg\.json  HEAD: examples\/toggle\.nudg\.json @ HEAD/);
+  const both = await call("nudg_compare", { file: "examples/toggle.nudg.json", before: "HEAD", a: { file: "x" }, events: [] });
+  assert.equal(both.isError, true);
+  assert.match(both.content[0].text, /not both/);
   const bad = await call("nudg_compare", { file: "examples/toggle.nudg.json", before: "nope", events: [] });
   assert.equal(bad.isError, true);
   assert.match(bad.content[0].text, /No revision "nope"/);
 });
 
 test("compare from a running page: url snapshots the component and writes the page without opening it", { skip: chrome ? false : "no Chrome found" }, async () => {
-  const result = await call("nudg_compare", { a: { file: "examples/toggle.nudg.json" }, b: { file: "examples/toggle-press.nudg.json" }, url: "examples/toggle.html", events: [{ event: "track.tap", t: 0.05 }], open: false, at: [0, 0.3] });
+  const base = JSON.parse(readFileSync(`${root}examples/toggle.nudg.json`, "utf8"));
+  base.animate["knob.x"].spring.bounce = 0.7;
+  const bouncier = `${root}examples/toggle-bouncier.tmp.nudg.json`;
+  writeFileSync(bouncier, JSON.stringify(base));
+  let result;
+  try {
+    result = await call("nudg_compare", { a: { file: "examples/toggle.nudg.json" }, b: { file: "examples/toggle-bouncier.tmp.nudg.json" }, url: "examples/toggle.html", events: [{ event: "track.tap", t: 0.05 }], open: false, at: [0, 0.3] });
+  } finally {
+    rmSync(bouncier, { force: true });
+  }
   assert.equal(result.isError, undefined, result.content[0].text);
   assert.match(result.content[0].text, /Snapshot of \[data-nudg="track"\] from examples\/toggle\.html: 2 elements/);
   assert.match(result.content[0].text, /For the person: open/);

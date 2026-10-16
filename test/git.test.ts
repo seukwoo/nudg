@@ -2,12 +2,15 @@
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
+import { findChrome } from "../src/node/chrome.ts";
 import { materializeRevision } from "../src/node/git.ts";
+
+const chrome = findChrome();
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const git = (dir: string, ...args: string[]) => execFileSync("git", ["-C", dir, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
@@ -20,7 +23,8 @@ function scratchRepo(): string {
   git(dir, "config", "user.name", "t");
   mkdirSync(join(dir, "ui", "motion"), { recursive: true });
   writeFileSync(join(dir, "ui", "motion", "brand.nudg.json"), readFileSync(join(root, "examples", "motion", "brand.nudg.json")));
-  writeFileSync(join(dir, "ui", "like.nudg.json"), readFileSync(join(root, "examples", "like.nudg.json"), "utf8").replace('"./motion/brand.nudg.json"', '"./motion/brand.nudg.json"'));
+  writeFileSync(join(dir, "ui", "like.nudg.json"), readFileSync(join(root, "examples", "like.nudg.json"), "utf8"));
+  writeFileSync(join(dir, "ui", "like.html"), readFileSync(join(root, "examples", "like.html"), "utf8"));
   git(dir, "add", ".");
   git(dir, "commit", "-q", "-m", "before");
   // The edit on disk is in the imported motion library: a much bigger, slower pop. The
@@ -52,6 +56,7 @@ test("materializeRevision writes the file and its imports as they were at the re
 
 test("nudg compare --before HEAD compares the edit on disk with the committed version", () => {
   const dir = scratchRepo();
+  const beforeDirs = readdirSync(tmpdir()).filter((n) => n.startsWith("nudg-before-")).length;
   try {
     const stdout = execFileSync(process.execPath, [join(root, "src/cli.ts"), "compare", "ui/like.nudg.json", "--before", "HEAD", "--send", "heart.tap@0.05", "--json"], { cwd: dir, encoding: "utf8" });
     const result = JSON.parse(stdout);
@@ -63,6 +68,18 @@ test("nudg compare --before HEAD compares the edit on disk with the committed ve
       () => execFileSync(process.execPath, [join(root, "src/cli.ts"), "compare", "ui/like.nudg.json", "--before", "nope", "--send", "heart.tap@0.05"], { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }),
       (e: { status: number; stderr: string }) => e.status === 2 && /No revision "nope"/.test(e.stderr),
     );
+    assert.throws(
+      () => execFileSync(process.execPath, [join(root, "src/cli.ts"), "compare", "ui/like.nudg.json", "--before", "--send", "heart.tap@0.05"], { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }),
+      (e: { status: number; stderr: string }) => e.status === 2 && /--before needs a value/.test(e.stderr),
+    );
+    // The before's imports live in a temp folder; the filmstrip harness must serve them too.
+    if (chrome) {
+      const png = join(dir, "strip.png");
+      const out = execFileSync(process.execPath, [join(root, "src/cli.ts"), "compare", "ui/like.nudg.json", "--before", "HEAD", "--send", "heart.tap@0.05", "--html", "ui/like.html", "--out", png], { cwd: dir, encoding: "utf8", env: { ...process.env, NUDG_OPEN: "false" } });
+      assert.match(out, /A clear change/);
+      assert.ok(existsSync(png));
+    }
+    assert.equal(readdirSync(tmpdir()).filter((n) => n.startsWith("nudg-before-")).length, beforeDirs, "no materialized folder left behind");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

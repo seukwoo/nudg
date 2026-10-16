@@ -21,7 +21,7 @@ test("snapshotElement: the smallest element holding every target, styles inlined
   assert.match(snap.markup, /background-color: rgb\(209, 213, 219\)/, "the track's color came along");
   assert.ok(!/style="[^"]*transform:/.test(snap.markup), "transform is the file's to drive");
   assert.ok(!snap.markup.includes("<script"));
-  assert.ok(snap.html.includes("<base href="));
+  assert.match(snap.html, /<base href="file:\/\/.*\/examples\/toggle\.html">/, "a local page's resources resolve from the file, not a closed port");
   assert.equal(snap.fidelity.elements, 2);
   await assert.rejects(snapshotElement({ url: "examples/toggle.html", targets: ["nothing"], chrome: chrome! }), /None of \[data-nudg="nothing"\] is on the page/);
 });
@@ -57,4 +57,33 @@ test("openInBrowser respects NUDG_OPEN=false and never throws", () => {
     if (before === undefined) delete process.env.NUDG_OPEN;
     else process.env.NUDG_OPEN = before;
   }
+});
+
+test("snapshot: body-wide targets get a wrapper, a positioned target its container, shadow roots a declarative template, and notes say what was dropped", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const wide = await snapshotElement({ url: "test/fixtures/host/snapshot-cases.html", targets: ["a", "b"], chrome: chrome! });
+  assert.equal(wide.selector, "body");
+  assert.ok(wide.markup.startsWith("<div"), "never a <body> inside the compare page");
+  assert.ok(!wide.markup.includes("<body") && !wide.markup.includes("<iframe"), "no body, no probe iframe");
+  assert.match(wide.markup, /background-color: rgb\(34, 34, 34\)/, "the body's own styles ride on the wrapper");
+  assert.ok(wide.notes.some((n) => /whole body was snapshotted/.test(n)), wide.notes.join("\n"));
+
+  const toast = await snapshotElement({ url: "test/fixtures/host/snapshot-cases.html", targets: ["toast"], chrome: chrome! });
+  assert.equal(toast.selector, "#box", "climbed to the containing block");
+  assert.ok(toast.notes.some((n) => /positioned absolute; snapshotted its container #box/.test(n)), toast.notes.join("\n"));
+  assert.ok(toast.notes.some((n) => /depend on state/.test(n)), "state and hover rules are reported");
+
+  // Targets inside a shadow root: the smallest holder is the track inside it, styles from the shadow sheet inlined.
+  const card = await snapshotElement({ url: "test/fixtures/host/snapshot-cases.html", targets: ["track", "knob"], chrome: chrome! });
+  assert.deepEqual(card.unbound, []);
+  assert.equal(card.selector, '[data-nudg="track"]');
+  assert.match(card.markup, /data-nudg="knob"[^>]*style="[^"]*background-color: rgb\(1, 2, 3\)/, "the shadow stylesheet became inline styles");
+  assert.ok(!card.notes.some((n) => /outside/.test(n)), card.notes.join("\n"));
+  // The host itself selected: its shadow tree travels as a declarative template.
+  const host = await snapshotElement({ url: "test/fixtures/host/snapshot-cases.html", selector: "#card", targets: ["track", "knob"], chrome: chrome! });
+  assert.ok(host.markup.includes('<template shadowrootmode="open">'), host.markup.slice(0, 300));
+  assert.ok(!host.notes.some((n) => /outside/.test(n)), host.notes.join("\n"));
+});
+
+test("snapshot: a dev server that is down is named, not blamed on the bindings", { skip: chrome ? false : "no Chrome found" }, async () => {
+  await assert.rejects(snapshotElement({ url: "http://127.0.0.1:59999/", targets: ["x"], chrome: chrome! }), /Could not load http:\/\/127\.0\.0\.1:59999\/: net::ERR_\w+\. Is the dev server running\?/);
 });

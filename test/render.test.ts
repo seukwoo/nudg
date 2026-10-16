@@ -103,3 +103,19 @@ test("compare page survives </script> in a note and presses the target the file 
   // The toggle's knob moves but the track is tapped: press both goes to the track.
   assert.ok(page.includes('const pressTarget = "track"'));
 });
+
+test("readWithImports keys nested imports the way the page's compiler asks for them", async () => {
+  const { readWithImports } = await import("../src/node/compare-page.ts");
+  const dir = mkdtempSync(join(tmpdir(), "nudg-imports-"));
+  try {
+    const { mkdirSync, writeFileSync } = await import("node:fs");
+    mkdirSync(join(dir, "ui", "motion"), { recursive: true });
+    writeFileSync(join(dir, "ui", "motion", "base.nudg.json"), JSON.stringify({ nudg: "0.1", motions: { snappy: { spring: { duration: 0.3, bounce: 0.2 } } } }));
+    writeFileSync(join(dir, "ui", "motion", "brand.nudg.json"), JSON.stringify({ nudg: "0.1", import: ["./base.nudg.json"], motions: { pop: { kick: 6, spring: { duration: 0.4, bounce: 0.5 } } } }));
+    writeFileSync(join(dir, "ui", "like.nudg.json"), JSON.stringify({ nudg: "0.1", import: ["./motion/brand.nudg.json"], targets: ["heart"], values: { "heart.scale": 1 }, animate: { "heart.scale": "snappy" }, initial: "idle", states: { idle: { when: { "heart.tap": "liked" } }, liked: { enter: { "heart.scale": "pop" }, when: { "heart.tap": "idle" } } } }));
+    const read = readWithImports(join(dir, "ui", "like.nudg.json"));
+    assert.deepEqual(Object.keys(read.files).sort(), ["motion/base.nudg.json", "motion/brand.nudg.json"]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

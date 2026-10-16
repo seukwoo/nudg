@@ -33,6 +33,8 @@ export interface Comparison {
   headline: string;
   /** The next turn the tool proposes, if any. */
   suggestion?: string;
+  /** True when nothing differs under these events: nothing to show a person. */
+  identical: boolean;
 }
 
 /**
@@ -114,7 +116,7 @@ export function compare(a: Program, b: Program, options: SimulateOptions): Compa
   } else {
     headline = `A clear change: ${describeLargest(clear)}.`;
   }
-  return { a: simA2, b: simB, properties, verdict, headline, suggestion };
+  return { a: simA2, b: simB, properties, verdict, headline, suggestion, identical: changed.length === 0 };
 }
 
 /** The property that decides the verdict, as a clause: what moves differently and what settles later. */

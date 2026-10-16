@@ -54,7 +54,7 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 ### Many spring APIs, one spring
 - **Problem:** iOS, Android and web libraries each describe springs differently, and the user wanted platform-specific motion to be expressible.
 - **Resolution:** One physical spring with four accepted parameter forms (`duration` + `bounce` by default), all converting exactly to stiffness, damping and mass. Fit-to-duration springs are rejected because they aren't a single physical spring.
-- **Follow-up:** `tension` / `friction` (seen in design tools, including ProtoPie's curve docs, which the user shared as a reference) mean different things in different tools. They are rejected with a hint rather than guessed. The classic named curve families (`out-cubic`, `in-out-back`, ...) were added because designers and AIs already use those names.
+- **Follow-up:** `tension` / `friction` (seen in design tools) mean different things in different tools. They are rejected with a hint rather than guessed. The classic named curve families (`out-cubic`, `in-out-back`, ...) were added because designers and AIs already use those names.
 
 ### Platform-native feel versus identical motion
 - **Problem:** Should one file move identically everywhere, or feel native on each platform?

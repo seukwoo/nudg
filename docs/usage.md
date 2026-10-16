@@ -266,6 +266,34 @@ const dialogMotion = nudgTransition(myDialogMotion);    // once, outside render
 ```
 
 The file shows on `host.show` and hides on `host.hide` into its `hidden` state; `presets.appear()` also answers `host.open` / `host.closed`, so the same file works with both bridges. When the defaults are enough, you don't need nudg; it's for when you want to tune the feel, go beyond the catalog, or share one motion file across platforms.
+## React Native adapter
+
+The same files and the same core run in React Native: `@nudg/core/native` writes values to `Animated` values that your views' styles read, so nothing re-renders while things move.
+
+```tsx
+import { Animated, Pressable } from "react-native";
+import { presets, useNudg } from "@nudg/core/native";
+
+const toggle = presets.toggle({ colors: ["#d1d5db", "#4ade80"] });
+
+function Toggle() {
+  const { bind, state } = useNudg(toggle);
+  return (
+    <Pressable {...bind("track").press}>
+      <Animated.View style={[styles.track, bind("track").style]}>
+        <Animated.View style={[styles.knob, bind("knob").style]} />
+      </Animated.View>
+    </Pressable>
+  );
+}
+```
+
+- `bind(name)` gives a target its animated `style` (x, y, rotation and scale as a transform; opacity, width, height; color as background), `press` handlers for a `Pressable` (`down`, `up`, `tap`), and `onLayout`, which reports its box for `measure` (0.4).
+- `send("host.show")`, `state`, `present` and the `exit` / `onExit` options work as in React. Reduce Motion follows the system setting unless `reducedMotion` is passed.
+- Not yet: drag (a `PanResponder` bridge), keys, and the native driver; values are written from JavaScript each frame, which is fine for UI motion and is the next thing to move to Reanimated for heavy screens.
+- Checked on an Android emulator through Expo Go: the toggle springs and recolors, and a held button scales to 0.96.
+
+For other hosts (a canvas, a game loop), `createPlayer(program, { host: { now, frame }, onFrame })` from `@nudg/core` is the same loop without any platform: you give it a clock and a frame scheduler, it gives you values.
 
 ## DOM adapter
 

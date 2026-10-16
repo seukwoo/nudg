@@ -8,6 +8,12 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 
 ## 2026-10-13: Format design (v0.1)
 
+### Not web-only: React Native first, because the core already runs there
+- **Problem:** The user asked why nudg was still web-only. The honest answer was order, not design: the core has no platform APIs and a language-neutral conformance suite, but every native host costs a port, an adapter and tooling. Xcode couldn't be installed yet (it needs a newer macOS), so iOS work waits.
+- **Resolution:** React Native runs JavaScript, so the core runs unchanged. A platform-free `createPlayer` (the runtime plus its frame loop, with the clock and scheduler supplied by the host) carries the loop and presence logic out of the DOM adapter; `@nudg/core/native` writes values into `Animated` values. Checked on an Android emulator (Pixel 8 image, Expo Go): the toggle springs and recolors; a held button measures 323 px against 337 px at rest, the press preset's 0.96.
+- **Two things on the way:** Expo Go couldn't reach Metro on the LAN address from the emulator; `adb reverse tcp:8081 tcp:8081` and `exp://127.0.0.1:8081` fixed it. And `avdmanager` from Homebrew ignores the SDK root; the command-line tools have to be installed inside the SDK.
+- **Lesson:** "Any platform" was a claim until a phone ran a file. The cheapest proof was the host that runs the existing core, not a port.
+
 ### Which syntax: JSON, a JSON superset, or a DSL
 - **Problem:** The format has to be easy for an AI to write correctly, easy to diff, and cheap to support on every platform.
 - **Resolution:** Plain, strict JSON (`*.nudg.json`). Every platform already parses it, JSON Schema describes it, and LLMs write it reliably. JSON5 was the first recommendation (comments, trailing commas), but plain JSON won because it needs no extra parser anywhere. A DSL would read best, but an AI would have to learn it.

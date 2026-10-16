@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Snapshot cases</title>
+  <style>
+    body { margin: 0; padding: 40px; background: #222; display: flex; gap: 20px; min-height: 100vh; }
+    header, footer { padding: 8px; background: #fff; }
+    .box { position: relative; width: 240px; height: 120px; background: #eee; }
+    .toast { position: absolute; left: 50%; bottom: 10px; width: 160px; padding: 8px; background: #1c1c1a; color: #fff; }
+    .toast[data-nudg-state~="shown"] { outline: 2px solid red; }
+    .toast:hover { background: #000; }
+  </style>
+</head>
+<body>
+  <header><div data-nudg="a">A</div></header>
+  <footer><div data-nudg="b">B</div></footer>
+  <div class="box" id="box"><div class="toast" data-nudg="toast">Saved</div></div>
+  <x-card id="card"></x-card>
+  <script>
+    customElements.define("x-card", class extends HTMLElement {
+      connectedCallback() {
+        const root = this.attachShadow({ mode: "open" });
+        root.innerHTML = '<style>.knob { width: 20px; height: 20px; background: rgb(1, 2, 3); }</style><div class="track" data-nudg="track"><div class="knob" data-nudg="knob"></div></div>';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 // read them like any other files. No copy to make, no second file to keep around.
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 
 /**
@@ -14,8 +14,8 @@ import { basename, dirname, join, relative, resolve, sep } from "node:path";
 export function materializeRevision(file: string, rev: string, dir: string): string {
   // Real paths on both sides: git reports the repository root with symlinks resolved
   // (/private/var on macOS). The file itself may not exist on disk any more.
-  const abs = join(realpathSync(dirname(resolve(file))), basename(file));
-  const root = realpathSync(repoRoot(dirname(abs)));
+  const abs = realExisting(resolve(file));
+  const root = realpathSync(repoRoot(existingAncestor(dirname(abs))));
   const rel = relative(root, abs).split(sep).join("/");
   if (rel.startsWith("..")) throw new Error(`${file} is outside the git repository at ${root}.`);
   const written = new Set<string>();
@@ -43,6 +43,24 @@ export function materializeRevision(file: string, rev: string, dir: string): str
   if (text === undefined) throw new Error(`${rel} does not exist at ${rev}${rev === "HEAD" ? " (is it committed?)" : ""}.`);
   visit(rel, text);
   return join(dir, rel);
+}
+
+/** The path with its nearest existing ancestor resolved; the rest (a moved folder, a deleted file) kept as written. */
+function realExisting(path: string): string {
+  const parts: string[] = [];
+  let dir = path;
+  while (!existsSync(dir)) {
+    parts.unshift(basename(dir));
+    const parent = dirname(dir);
+    if (parent === dir) return path;
+    dir = parent;
+  }
+  return join(realpathSync(dir), ...parts);
+}
+
+function existingAncestor(dir: string): string {
+  while (!existsSync(dir) && dirname(dir) !== dir) dir = dirname(dir);
+  return dir;
 }
 
 function repoRoot(from: string): string {

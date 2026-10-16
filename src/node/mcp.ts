@@ -121,7 +121,7 @@ const TOOLS = [
         file: { type: "string", description: "With `before`: the file to compare across revisions." },
         url: { type: "string", description: "The running app's URL (or a local page). The component is snapshotted from it, styles and all, so no html file is needed: real A/B filmstrips, and the side-by-side page, on the real thing. Needs Chrome; a and b as files." },
         selector: { type: "string", description: "With url: which element to snapshot. Default: the smallest element holding every bound target (a toggle's track with its knob)." },
-        open: { type: "boolean", description: "Open the side-by-side page in the person's browser once written. Default true (NUDG_OPEN=false turns it off)." },
+        open: { type: "boolean", description: "Open the side-by-side page in the person's browser. Default: once per session; later calls rewrite the same page and the open tab shows it after a reload. true forces a new tab, false never opens (NUDG_OPEN=false also turns it off)." },
         html: { type: "string", description: "The host page with the component's markup, when there is no running app. Gives real A/B filmstrips (needs Chrome) and writes a page the person should open: both versions playing side by side in a loop, with slow motion. Stills can't show feel; that page can. With html, a and b must both be files on disk (write the edited version first)." },
         page: { type: "string", description: "Where to write that page. Default: next to `out` as .html, else in the temp folder." },
         at: { type: "array", items: { type: ["number", "string"] }, description: "Frame times for the filmstrips." },
@@ -310,10 +310,26 @@ async function plotTool(args: Json): Promise<ToolResult> {
   };
 }
 
+/** Pages this server already opened in the person's browser: one tab per page, not one per call. */
+const openedPages = new Set<string>();
+/** This server's own folder for pages and snapshots, so sessions don't overwrite each other and one tab stays valid. */
+let sessionDir: string | undefined;
+const sessionPath = (name: string) => join((sessionDir ??= mkdtempSync(join(tmpdir(), "nudg-session-"))), name);
+
 async function compareTool(args: Json): Promise<ToolResult> {
+  const revDirs: string[] = [];
+  try {
+    return await compareToolInner(args, revDirs);
+  } finally {
+    for (const dir of revDirs) rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+async function compareToolInner(args: Json, revDirs: string[]): Promise<ToolResult> {
   // `before` is the shorthand: a = the file at that revision, b = the file on disk.
   const before = optionalString(args.before, "before");
   if (before) {
+    if (args.a !== undefined || args.b !== undefined) throw new ToolError("Use `file` with `before`, or `a` and `b`, not both.");
     const file = requiredString(args.file, "file (with before)");
     args = { ...args, a: { file, rev: before }, b: { file } };
   }
@@ -322,16 +338,22 @@ async function compareTool(args: Json): Promise<ToolResult> {
   const fromRev = (side: Json, name: string): Json => {
     if (typeof side.rev !== "string") return side;
     const file = requiredString(side.file, `${name}.file (with rev)`);
+    const dir = mkdtempSync(join(tmpdir(), "nudg-rev-"));
+    revDirs.push(dir);
     try {
-      return { ...side, file: materializeRevision(file, side.rev, mkdtempSync(join(tmpdir(), "nudg-rev-"))), rev: undefined };
+      return { ...side, file: materializeRevision(file, side.rev, dir), rev: undefined, label: `${file} @ ${side.rev}` };
     } catch (e) {
       throw new ToolError((e as Error).message);
     }
   };
+  const revA = typeof (args.a as Json).rev === "string" ? String((args.a as Json).rev) : undefined;
+  const revB = typeof (args.b as Json).rev === "string" ? String((args.b as Json).rev) : undefined;
   args = { ...args, a: fromRev(args.a as Json, "a"), b: fromRev(args.b as Json, "b") };
   const a = loadProgram(args.a as Json);
   const b = loadProgram(args.b as Json);
-  const labels = (Array.isArray(args.labels) && args.labels.length === 2 ? args.labels.map(String) : before ? [before, "now"] : ["A", "B"]) as [string, string];
+  if (typeof (args.a as Json).label === "string") a.label = (args.a as Json).label as string;
+  if (typeof (args.b as Json).label === "string") b.label = (args.b as Json).label as string;
+  const labels = (Array.isArray(args.labels) && args.labels.length === 2 ? args.labels.map(String) : revA || revB ? [revA ?? "A", revB ?? "now"] : ["A", "B"]) as [string, string];
   const options = timingOptions(args, a.program);
   const comparison = compare(a.program, b.program, options);
   const text0 = `${labels[0]}: ${a.label}  ${labels[1]}: ${b.label}\n\n${formatComparison(comparison, labels)}`;
@@ -345,13 +367,17 @@ async function compareTool(args: Json): Promise<ToolResult> {
   if (url) {
     // From the running app: snapshot the component into a temp host page, then it's the html case.
     if (!chrome) throw new ToolError(`url needs a browser to snapshot the page. ${CHROME_HINT}`);
-    const snap = await snapshotElement({ url, selector: optionalString(args.selector, "selector"), targets: a.program.targets, chrome });
-    snapshotPath = join(tmpdir(), "nudg-snapshot.html");
+    const snap = await snapshotElement({ url, selector: optionalString(args.selector, "selector"), targets: [...new Set([...a.program.targets, ...b.program.targets])], chrome });
+    snapshotPath = sessionPath("snapshot.html");
     writeFileSync(snapshotPath, snap.html);
     html = snapshotPath;
     notes.push(`Snapshot of ${snap.selector} from ${url}: ${snap.fidelity.elements} elements, ${snap.fidelity.declarations} style declarations inlined.`, ...snap.notes);
   }
 
+  if (html && comparison.identical) {
+    // Nothing a person could judge; don't render, write or open anything.
+    return { content: [text(`${text0}${notes.length ? `\n\n${notes.join("\n")}` : ""}\n\nNo page was opened: the two versions behave identically under these events, so there is nothing to look at.`)], structuredContent: { ...(structured as unknown as Json), notes } };
+  }
   if (html) {
     if (!chrome) throw new ToolError(`Filmstrips need a browser. ${CHROME_HINT} Drop html for a graph.`);
     const fileA = typeof (args.a as Json).file === "string" ? ((args.a as Json).file as string) : undefined;
@@ -361,18 +387,29 @@ async function compareTool(args: Json): Promise<ToolResult> {
     const frames = args.frames === undefined ? 6 : Number(args.frames);
     const chosen = at.length ? { times: [...at].sort((x, y) => x - y), marks: {} } : compareFrameTimes(comparison, frames);
     const { png } = await withTempFileAsync("compare.png", async (path) => {
-      await renderFrames({ file: resolve(fileA), label: labels[0], variants: [{ file: resolve(fileB), label: labels[1] }], html: resolve(html), events: options.events, start: options.start, reducedMotion: options.reducedMotion, times: chosen.times, marks: chosen.marks, out: path, chrome });
+      await renderFrames({ file: resolve(fileA), label: labels[0], variants: [{ file: resolve(fileB), label: labels[1] }], html: resolve(html), events: options.events, start: options.start, reducedMotion: options.reducedMotion, times: chosen.times, marks: chosen.marks, out: path, chrome, roots: revDirs });
       return { png: readFileSync(path) };
     });
     if (out) writeFileSync(out, png);
     // The page goes next to --out when there is one, else into the temp folder: never into the project unasked.
-    const pagePath = resolve(optionalString(args.page, "page") ?? (out ? out.replace(/\.[^.]*$/, "") + ".html" : join(tmpdir(), "nudg-compare.html")));
+    const pagePath = resolve(optionalString(args.page, "page") ?? (out ? out.replace(/\.[^.]*$/, "") + ".html" : sessionPath("compare.html")));
     const untilBoth2 = Math.max(comparison.a.samples.at(-1)!.t, comparison.b.samples.at(-1)!.t);
     writeFileSync(pagePath, comparePage({ html: readFileSync(resolve(html), "utf8"), a: readWithImports(fileA), b: readWithImports(fileB), labels, events: options.events, until: untilBoth2, start: options.start, reducedMotion: options.reducedMotion, headline: comparison.headline }));
-    const wantOpen = args.open === undefined ? true : Boolean(args.open);
+    // Open once per page per server session: the same path is rewritten on every call, and a
+    // tab already open shows the new comparison after a reload. `open: true` forces another tab.
+    const openArg = args.open === undefined ? undefined : args.open === true || args.open === "true" ? true : false;
+    const alreadyOpen = openedPages.has(pagePath);
+    const wantOpen = openArg === true || (openArg === undefined && !alreadyOpen);
     const opened = wantOpen ? openInBrowser(pagePath) : false;
-    const openIt = `${lastRuntimeInlined ? "" : "\n\n(The runtime isn't built here, so the page loads @nudg/core from unpkg; run npm run build for an offline page.)"}${notes.length ? `\n\n${notes.join("\n")}` : ""}\n\n${opened ? `Opened ${pagePath} in the person's browser: left is now, right is the change, both playing in a loop with ¼× and ⅒× slow motion. Tell them to look there and judge; say what the headline says in one sentence.` : `For the person: open ${pagePath} in a browser. Both versions play side by side in a loop, with ¼× and ⅒× slow motion and live values; stills can't show feel, that page can. Tell them to open it and judge there.`}`;
-    return { content: [text(text0 + (out ? `\nsaved ${out}` : "") + openIt), { type: "image", data: png.toString("base64"), mimeType: "image/png" }], structuredContent: { ...(structured as unknown as Json), page: pagePath, opened, snapshot: snapshotPath, notes } };
+    if (opened) openedPages.add(pagePath);
+    const sides = `left is ${labels[0]} (before), right is ${labels[1]} (the change)`;
+    const where = opened
+      ? `Opened ${pagePath} in the person's browser: ${sides}, both playing in a loop with ¼× and ⅒× slow motion. Tell them to look there and judge; say what the headline says in one sentence.`
+      : alreadyOpen && openArg === undefined
+        ? `The page at ${pagePath} was rewritten; the tab opened earlier shows this comparison after a reload (${sides}). Tell the person to reload it, or pass open: true for a new tab.`
+        : `For the person: open ${pagePath} in a browser. Both versions play side by side in a loop, with ¼× and ⅒× slow motion and live values; stills can't show feel, that page can. Tell them to open it and judge there (${sides}).`;
+    const openIt = `${lastRuntimeInlined ? "" : "\n\n(The runtime isn't built here, so the page loads @nudg/core from unpkg; run npm run build for an offline page.)"}${notes.length ? `\n\n${notes.join("\n")}` : ""}\n\n${where}`;
+    return { content: [text(text0 + (out ? `\nsaved ${out}` : "") + openIt), { type: "image", data: png.toString("base64"), mimeType: "image/png" }], structuredContent: { ...(structured as unknown as Json), page: pagePath, opened, reused: alreadyOpen && !opened, snapshot: snapshotPath, notes } };
   }
 
   const graph = plot(a.program, { ...options, against: b.program, labels, title: `${a.label} vs ${b.label}` });

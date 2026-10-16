@@ -30,6 +30,8 @@ export interface RenderOptions {
   marks?: Record<string, string>;
   out: string;
   chrome: string;
+  /** More folders to serve read-only, for files (and their imports) outside the working directory. */
+  roots?: string[];
   /** Device pixel ratio. Default 2. */
   scale?: number;
 }
@@ -81,7 +83,7 @@ export async function renderFrames(options: RenderOptions): Promise<RenderResult
   const html = resolve(options.html);
   // Only these folders are served, read-only, on 127.0.0.1, for the length of the render.
   const rows = [{ file, label: options.label ?? "A" }, ...(options.variants ?? []).map((v) => ({ file: resolve(v.file), label: v.label }))];
-  const roots = [...new Set([process.cwd(), dirname(html), ...rows.map((row) => dirname(row.file))])];
+  const roots = [...new Set([process.cwd(), dirname(html), ...rows.map((row) => dirname(row.file)), ...(options.roots ?? []).map((r) => resolve(r))])];
   const harness = buildHarness(readFileSync(html, "utf8"), html, rows, options.variants ? true : false, options.events, options.times, options.start, options.reducedMotion, options.marks ?? {});
 
   const server = createServer((req, res) => {

@@ -87,7 +87,7 @@ nudg compare block-press.nudg.json --before HEAD --send button.tap@0.1 --url htt
 nudg compare block-press.nudg.json block-press-heavier.nudg.json --send button.tap@0.1 --url http://localhost:5173/ --open
 ```
 
-It snapshots the component from the page (the smallest element holding every bound target, styles inlined; `--select` picks another), writes the side-by-side page from that snapshot, and `--open` opens it. The report says what the snapshot couldn't carry (pseudo-elements, web fonts) and which targets weren't on the page. Over MCP the same is `url`, `selector` and `open` (default on; `NUDG_OPEN=false` turns it off), so one tool call ends with the before/after playing in the person's browser.
+It snapshots the component from the page (the smallest element holding every bound target, styles inlined; `--select` picks another), writes the side-by-side page from that snapshot, and `--open` opens it. The report says what the snapshot couldn't carry (pseudo-elements, web fonts) and which targets weren't on the page. Over MCP the same is `url`, `selector` and `open`, so one tool call ends with the before/after playing in the person's browser. The page opens once per session; later comparisons rewrite the same page and the open tab shows them after a reload (`open: true` forces a new tab, `open: false` or `NUDG_OPEN=false` never opens). Two versions that behave identically open nothing.
 
 Stills can't show motion. For the person, write a page instead:
 

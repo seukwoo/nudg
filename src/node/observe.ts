@@ -92,7 +92,8 @@ export async function observe(options: ObserveOptions): Promise<Observation> {
     browser.on("Page.frameNavigated", (p) => {
       if (loaded && !p.frame?.parentId) navigatedTo = p.frame?.url;
     });
-    await browser.send("Page.navigate", { url });
+    const nav = await browser.send("Page.navigate", { url });
+    if (nav?.errorText) throw new Error(`Could not load ${options.url}: ${nav.errorText}. Is the dev server running?`);
     await waitFor(() => browser.evaluate(`document.readyState === "complete" ? "ready" : ""`), 20_000);
     loaded = true;
     await new Promise((r) => setTimeout(r, (options.warmup ?? 0.5) * 1000));

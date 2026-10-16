@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // nudg CLI. Every command takes --json so an agent can read the result directly.
 
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, extname, join } from "node:path";
 import { compare, compareFrameTimes } from "./core/compare.ts";
@@ -115,7 +115,7 @@ function parseArgs(argv: string[]): Args {
     const [name, inline] = arg.slice(2).split(/=(.*)/s, 2);
     const boolean = name === "json" || name === "help" || name === "reduced-motion" || name === "open";
     const value = boolean ? "" : (inline ?? argv[++i]);
-    if (value === undefined) fail(`Option --${name} needs a value.`);
+    if (value === undefined || (!boolean && (value === "" || value.startsWith("--")))) fail(`Option --${name} needs a value.`);
     flags.set(name, [...(flags.get(name) ?? []), value]);
   }
   return { positional, flags };
@@ -258,15 +258,31 @@ function runPlot(args: Args, json: boolean): number {
 }
 
 async function runCompare(args: Args, json: boolean): Promise<number> {
+  try {
+    return await compareCommand(args, json);
+  } finally {
+    // The materialized "before" is read during the run and never needed after it.
+    if (beforeDirToClean) rmSync(beforeDirToClean, { recursive: true, force: true });
+    beforeDirToClean = undefined;
+  }
+}
+
+let beforeDirToClean: string | undefined;
+
+async function compareCommand(args: Args, json: boolean): Promise<number> {
   const before = args.flags.get("before")?.at(-1);
   let fileA: string;
   let fileB: string;
+  let beforeDir: string | undefined;
   if (before) {
     if (args.positional.length !== 1) fail("compare --before <rev> takes one file: the changed one; the revision supplies the other.");
     fileB = args.positional[0];
+    beforeDir = mkdtempSync(join(tmpdir(), "nudg-before-"));
     try {
-      fileA = materializeRevision(fileB, before, mkdtempSync(join(tmpdir(), "nudg-before-")));
+      fileA = materializeRevision(fileB, before, beforeDir);
+      beforeDirToClean = beforeDir;
     } catch (e) {
+      rmSync(beforeDir, { recursive: true, force: true });
       fail((e as Error).message);
     }
   } else {
@@ -310,6 +326,12 @@ async function runCompare(args: Args, json: boolean): Promise<number> {
   if (out && extname(out).toLowerCase() === ".html" && !html) fail("--out x.html writes the side-by-side page and needs --html <page.html> with the component's markup, or --url <the running app>. For a graph, write .svg or .png.");
   let picture: string | undefined;
 
+  if (comparison.identical && url) {
+    // Nothing to show a person; say so instead of opening a page with two identical stages.
+    process.stdout.write(formatComparison(comparison, labels) + "\n");
+    for (const n of notes) process.stdout.write(`note: ${n}\n`);
+    return 0;
+  }
   if (html && out && extname(out).toLowerCase() === ".html") {
     if (!snapshotHtml && !existsSync(html)) fail(`File not found: ${html}`);
     const untilBoth = Math.max(comparison.a.samples.at(-1)!.t, comparison.b.samples.at(-1)!.t);
@@ -324,7 +346,11 @@ async function runCompare(args: Args, json: boolean): Promise<number> {
     if (times.length === 0) ({ times, marks } = compareFrameTimes(comparison, Number(args.flags.get("frames")?.at(-1) ?? 6)));
     picture = out ?? "compare.png";
     if (extname(picture).toLowerCase() !== ".png") fail("With --html the picture is a PNG; use --out <file.png>.");
-    await renderFrames({ file: fileA, label: labels[0], variants: [{ file: fileB, label: labels[1] }], html, events: options.events, start: options.start, reducedMotion: options.reducedMotion, times, marks, out: picture, chrome });
+    try {
+      await renderFrames({ file: fileA, label: labels[0], variants: [{ file: fileB, label: labels[1] }], html, events: options.events, start: options.start, reducedMotion: options.reducedMotion, times, marks, out: picture, chrome, roots: beforeDir ? [beforeDir] : [] });
+    } catch (e) {
+      fail(`couldn't render the filmstrip: ${(e as Error).message}`);
+    }
   } else {
     const graph = plot(a.program!, { ...options, every: undefined, against: b.program!, labels, title: `${basename(fileA)} vs ${basename(fileB)}` });
     if (out && extname(out).toLowerCase() === ".png") {
@@ -348,7 +374,7 @@ async function runCompare(args: Args, json: boolean): Promise<number> {
   } else {
     process.stdout.write(formatComparison(comparison, labels) + "\n");
     for (const n of notes) process.stdout.write(`note: ${n}\n`);
-    if (picture) process.stdout.write(`\nwrote ${picture}${picture.endsWith(".html") ? (opened ? " — opened in your browser: left is now, right is the change" : " — open it in a browser: both versions play side by side, with slow motion") : ""}\n`);
+    if (picture) process.stdout.write(`\nwrote ${picture}${picture.endsWith(".html") ? (opened ? ` — opened in your browser: left is ${labels[0]} (before), right is ${labels[1]} (the change)` : " — open it in a browser: both versions play side by side, with slow motion") : ""}\n`);
     if (picture?.endsWith(".html") && !lastRuntimeInlined) process.stdout.write("note: the runtime isn't built here, so the page loads @nudg/core from unpkg; run npm run build for an offline page\n");
   }
   return 0;

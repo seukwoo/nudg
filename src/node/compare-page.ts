@@ -99,7 +99,8 @@ export function readWithImports(file: string): { text: string; files: Record<str
     for (const spec of Array.isArray(doc.import) ? doc.import : []) {
       if (typeof spec !== "string") continue;
       const abs = resolve(dirname(from), spec);
-      const key = spec.replace(/^(\.\/)+/, "");
+      // Keyed the way the page's compiler asks for it: relative to the root file, through nested imports.
+      const key = relative(dirname(path), abs).split(sep).join("/");
       if (key in files) continue;
       try {
         files[key] = readFileSync(abs, "utf8");
@@ -194,8 +195,14 @@ ${noScripts(head)}
   function mount(withScript) {
     script = withScript; loopUntil = withScript === events ? until : hold + 1.2;
     for (const p of players) p.destroy();
-    players = [["stage-a", A], ["stage-b", B]].map(([id, v]) =>
-      playDoc(JSON.parse(v.text), document.getElementById(id), { clock: "manual", files: v.files, state: start ?? undefined, reducedMotion }));
+    players = [["stage-a", A], ["stage-b", B]].map(([id, v]) => {
+      try {
+        return playDoc(JSON.parse(v.text), document.getElementById(id), { clock: "manual", files: v.files, state: start ?? undefined, reducedMotion });
+      } catch (e) {
+        document.getElementById(id).innerHTML = '<pre style="white-space:pre-wrap;font:12px ui-monospace,Menlo,monospace;color:#b91c1c;margin:0">' + String(e.message).replace(/</g, "&lt;") + "</pre>";
+        return { render() {}, send() {}, input() {}, values: () => ({}), destroy() {} };
+      }
+    });
     t = 0; next = 0; last = performance.now();
     for (const p of players) p.render(0);
   }

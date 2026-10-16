@@ -1,0 +1,69 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "Nudg-arm64-apple-macosx-debug.module": ["<Nudg-arm64-apple-macosx-debug.module>"]
+  "NudgSwiftUI-arm64-apple-macosx-debug.module": ["<NudgSwiftUI-arm64-apple-macosx-debug.module>"]
+  "PackageStructure": ["<PackageStructure>"]
+  "main": ["<Nudg-arm64-apple-macosx-debug.module>","<NudgSwiftUI-arm64-apple-macosx-debug.module>"]
+  "test": ["<Nudg-arm64-apple-macosx-debug.module>","<NudgSwiftUI-arm64-apple-macosx-debug.module>"]
+default: "main"
+nodes:
+  "/Users/scott.l/Documents/nudg/swift/Sources/Nudg/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/scott.l/Documents/nudg/swift/Sources/NudgSwiftUI/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Math.swift","/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Program.swift","/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Runtime.swift"]
+    outputs: ["/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/sources"]
+    description: "Write auxiliary file /Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/sources"
+
+  "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/scott.l/Documents/nudg/swift/Sources/NudgSwiftUI/Nudg+SwiftUI.swift"]
+    outputs: ["/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/sources"]
+    description: "Write auxiliary file /Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/sources"
+
+  "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Library/Developer/CommandLineTools/usr/bin/swiftc"]
+    outputs: ["/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"
+
+  "<Nudg-arm64-apple-macosx-debug.module>":
+    tool: phony
+    inputs: ["/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Math.swift.o","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Program.swift.o","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Runtime.swift.o","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules/Nudg.swiftmodule"]
+    outputs: ["<Nudg-arm64-apple-macosx-debug.module>"]
+
+  "<NudgSwiftUI-arm64-apple-macosx-debug.module>":
+    tool: phony
+    inputs: ["/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/Nudg+SwiftUI.swift.o","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules/NudgSwiftUI.swiftmodule"]
+    outputs: ["<NudgSwiftUI-arm64-apple-macosx-debug.module>"]
+
+  "C.Nudg-arm64-apple-macosx-debug.module":
+    tool: shell
+    inputs: ["/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Math.swift","/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Program.swift","/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Runtime.swift","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/sources"]
+    outputs: ["/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Math.swift.o","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Program.swift.o","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Runtime.swift.o","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules/Nudg.swiftmodule"]
+    description: "Compiling Swift Module 'Nudg' (3 sources)"
+    args: ["/Library/Developer/CommandLineTools/usr/bin/swiftc","-module-name","Nudg","-emit-dependencies","-emit-module","-emit-module-path","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules/Nudg.swiftmodule","-output-file-map","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/sources","-I","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j14","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-emit-objc-header","-emit-objc-header-path","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/include/Nudg-Swift.h","-swift-version","5","-I","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-L","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-plugin-path","/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing","-sdk","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-g","-Xcc","-isysroot","-Xcc","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-Xcc","-fPIC","-Xcc","-g","-package-name","nudg"]
+
+  "C.NudgSwiftUI-arm64-apple-macosx-debug.module":
+    tool: shell
+    inputs: ["/Users/scott.l/Documents/nudg/swift/Sources/NudgSwiftUI/Nudg+SwiftUI.swift","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules/Nudg.swiftmodule","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/sources"]
+    outputs: ["/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/Nudg+SwiftUI.swift.o","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules/NudgSwiftUI.swiftmodule"]
+    description: "Compiling Swift Module 'NudgSwiftUI' (1 sources)"
+    args: ["/Library/Developer/CommandLineTools/usr/bin/swiftc","-module-name","NudgSwiftUI","-emit-dependencies","-emit-module","-emit-module-path","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules/NudgSwiftUI.swiftmodule","-output-file-map","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/sources","-I","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j14","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-emit-objc-header","-emit-objc-header-path","/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/include/NudgSwiftUI-Swift.h","-swift-version","5","-I","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-L","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-plugin-path","/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing","-sdk","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-g","-Xcc","-isysroot","-Xcc","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-Xcc","-fPIC","-Xcc","-g","-package-name","nudg"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/scott.l/Documents/nudg/swift/Sources/Nudg/","/Users/scott.l/Documents/nudg/swift/Sources/NudgSwiftUI/","/Users/scott.l/Documents/nudg/Package.swift","/Users/scott.l/Documents/nudg/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+

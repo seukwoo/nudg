@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/primary.swiftdeps"
+  },
+  "/Users/scott.l/Documents/nudg/swift/Sources/NudgSwiftUI/Nudg+SwiftUI.swift": {
+    "dependencies": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/Nudg+SwiftUI.d",
+    "object": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/Nudg+SwiftUI.swift.o",
+    "swiftmodule": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/Nudg+SwiftUI~partial.swiftmodule",
+    "swift-dependencies": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/Nudg+SwiftUI.swiftdeps",
+    "diagnostics": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/Nudg+SwiftUI.dia"
+  }
+}

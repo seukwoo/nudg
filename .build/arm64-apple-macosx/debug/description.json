@@ -1,0 +1,401 @@
+{
+  "builtTestProducts" : [
+
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.Nudg-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Library/Developer/CommandLineTools/usr/bin/swiftc",
+      "fileList" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/sources",
+      "importPath" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Math.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Program.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Runtime.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "Nudg",
+      "moduleOutputPath" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules/Nudg.swiftmodule",
+      "objects" : [
+        "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Math.swift.o",
+        "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Program.swift.o",
+        "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Runtime.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j14",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/include/Nudg-Swift.h",
+        "-swift-version",
+        "5",
+        "-I",
+        "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+        "-L",
+        "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+        "-plugin-path",
+        "/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "nudg"
+      ],
+      "outputFileMapPath" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Math.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Program.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Runtime.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules/Nudg.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Math.swift",
+        "/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Program.swift",
+        "/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Runtime.swift"
+      ],
+      "tempsPath" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.NudgSwiftUI-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Library/Developer/CommandLineTools/usr/bin/swiftc",
+      "fileList" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/sources",
+      "importPath" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/swift/Sources/NudgSwiftUI/Nudg+SwiftUI.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules/Nudg.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "NudgSwiftUI",
+      "moduleOutputPath" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules/NudgSwiftUI.swiftmodule",
+      "objects" : [
+        "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/Nudg+SwiftUI.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j14",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/include/NudgSwiftUI-Swift.h",
+        "-swift-version",
+        "5",
+        "-I",
+        "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+        "-L",
+        "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+        "-plugin-path",
+        "/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "nudg"
+      ],
+      "outputFileMapPath" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/Nudg+SwiftUI.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules/NudgSwiftUI.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/scott.l/Documents/nudg/swift/Sources/NudgSwiftUI/Nudg+SwiftUI.swift"
+      ],
+      "tempsPath" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "Nudg" : [
+      "/Library/Developer/CommandLineTools/usr/bin/swiftc",
+      "-module-name",
+      "Nudg",
+      "-package-name",
+      "nudg",
+      "-c",
+      "/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Math.swift",
+      "/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Program.swift",
+      "/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Runtime.swift",
+      "-I",
+      "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j14",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/include/Nudg-Swift.h",
+      "-swift-version",
+      "5",
+      "-I",
+      "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+      "-L",
+      "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+      "-plugin-path",
+      "/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "nudg",
+      "-driver-use-frontend-path",
+      "/Library/Developer/CommandLineTools/usr/bin/swiftc"
+    ],
+    "NudgSwiftUI" : [
+      "/Library/Developer/CommandLineTools/usr/bin/swiftc",
+      "-module-name",
+      "NudgSwiftUI",
+      "-package-name",
+      "nudg",
+      "-c",
+      "/Users/scott.l/Documents/nudg/swift/Sources/NudgSwiftUI/Nudg+SwiftUI.swift",
+      "-I",
+      "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j14",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/include/NudgSwiftUI-Swift.h",
+      "-swift-version",
+      "5",
+      "-I",
+      "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+      "-L",
+      "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+      "-plugin-path",
+      "/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "nudg",
+      "-driver-use-frontend-path",
+      "/Library/Developer/CommandLineTools/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "Nudg" : [
+
+    ],
+    "NudgSwiftUI" : [
+      "Nudg"
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Math.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Program.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Runtime.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/sources"
+    },
+    "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/scott.l/Documents/nudg/swift/Sources/NudgSwiftUI/Nudg+SwiftUI.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/NudgSwiftUI.build/sources"
+    },
+    "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Library/Developer/CommandLineTools/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"
+    }
+  }
+}

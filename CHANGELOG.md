@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.7.0
+
+Format 0.4 (layout as input), a motion critique, usage sharing, bridges to component libraries, and the first runtimes beyond the web: React Native, Swift with SwiftUI, Kotlin with Jetpack Compose. The same file plays on all of them.
 
 - **Kotlin runtime and Jetpack Compose adapter** (`kotlin/`). The runtime (plain JVM, no dependencies) reads compiled programs and passes the whole conformance suite; `Modifier.nudg`, `nudgPress`, `nudgLayout` and `rememberNudg` for Compose, reading values in graphics layer, layout and draw blocks. A demo app plays the toggle and press examples; checked on an Android emulator. CI runs the Kotlin suite.
 - **Swift runtime and SwiftUI adapter** (`swift/`). The runtime reads compiled programs and passes the whole conformance suite; `NudgSwiftUI` gives `.nudg(model, "knob")`, `.nudgPress`, `.nudgLayout` and a `NudgModel` driven by `TimelineView`. CI runs the suite on macOS and renders a toggle with SwiftUI's `ImageRenderer`.

@@ -31,7 +31,7 @@ The original stage numbers remain useful when reading the spec and changelog. Se
 
 ## Now: Meet People Where Their Components Are
 
-Status: the web bridges are in (unreleased): `watch` for libraries that show state as attributes (shadcn/ui and Radix, Headless UI, React Aria, Ark) and `nudgTransition` for transition slots (MUI, Ant Design, React Bootstrap). Beyond the web (unreleased): React Native (the JavaScript core as is), and Swift and Kotlin runtimes that read compiled programs (`nudg compile`) and pass the whole conformance suite, with SwiftUI and Jetpack Compose adapters. The same file plays on all of them; Android was checked on an emulator, SwiftUI by rendering, and an iOS simulator run waits for Xcode. Next: drag and keys on the native adapters, and package distribution (Swift Package, Maven). Then a coverage map by trigger × response × structure instead of component counts, continuous app inputs (`host.<name>` values: a microphone level, a tilt), and examples for its empty cells.
+Status: the web bridges are in (unreleased): `watch` for libraries that show state as attributes (shadcn/ui and Radix, Headless UI, React Aria, Ark) and `nudgTransition` for transition slots (MUI, Ant Design, React Bootstrap). Beyond the web (unreleased): React Native (the JavaScript core as is), and Swift and Kotlin runtimes that read compiled programs (`nudg compile`) and pass the whole conformance suite, with SwiftUI and Jetpack Compose adapters. The same file plays on all of them; Android was checked on an emulator, SwiftUI by rendering, and an iOS simulator run waits for Xcode. Drag and keys now work on the native adapters too (unreleased). Next: package distribution (Swift Package, Maven). Then a coverage map by trigger × response × structure instead of component counts, continuous app inputs (`host.<name>` values: a microphone level, a tilt), and examples for its empty cells.
 
 ## Then: Prove the Workflow in Playsnack
 
@@ -106,7 +106,7 @@ Done when: a user can adopt nudg in a production web/React component and trust t
 
 Goal: make the same interaction intent portable beyond web.
 
-- SwiftUI and Jetpack Compose: first adapters are in; next, gestures, keys and distribution.
+- SwiftUI and Jetpack Compose: adapters with press, drag and keys are in; next, distribution.
 - A portable core, possibly Rust/WASM/FFI, if maintaining multiple runtimes becomes expensive.
 - Native-specific host guidance for focus, accessibility, gesture systems, and reduced motion.
 - Flutter or React Native if dogfooding points there.

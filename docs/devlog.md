@@ -8,6 +8,11 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 
 ## 2026-10-13: Format design (v0.1)
 
+### One set of pointer rules, three languages
+- **Problem:** The native adapters only pressed and tapped, so the drag examples (toggle, swipe row, sheet) were web-only, and each platform's gesture system would have drifted from the web's rules on its own.
+- **Resolution:** the DOM adapter's rules became a small `PointerTracker` (press, 4-unit slop, `dragstart`, travel measured from the press, `up` or `cancel`, `dragend`, no tap after a drag), written once per language: TypeScript for React Native (on `PanResponder`), Swift for SwiftUI (on `DragGesture`), Kotlin for Compose (on `awaitEachGesture`). The Swift and Kotlin conformance runners got a pointer case: a 30-unit drag turns the drag toggle on, with no tap. On the Android emulator, both React Native and Compose turn the toggle on and off by dragging, and an 8 px (3 dp) nudge stays under the slop and taps.
+- **Lesson:** Behavior that lives in an adapter needs its own conformance case, or each platform quietly invents its own version of it.
+
 ### Third runtime: Kotlin and Compose in an afternoon, again
 - **Resolution:** the Kotlin runtime is a port of the Swift one onto the same compiled programs, with a 60-line JSON reader so it has no dependencies. It passed all 24 behavior cases on the first run; dropping the first-report snap failed 2, as in Swift. The Compose adapter reads values inside `graphicsLayer`, `layout` and `drawBehind` blocks, so frames never recompose. On the Android emulator the toggle springs on and recolors and a held button measures 319 px against 333 px at rest (0.96).
 - **Two snags:** the current Compose BOM requires compiling against Android 37 (`checkDebugAarMetadata` failed on 36), and GitHub runners set `ANDROID_HOME`, so the Android modules are included only when `kotlin/local.properties` names an SDK; CI runs the pure-JVM conformance job.

@@ -13,7 +13,7 @@ import type { Diagnostic, Program } from "./core/types.ts";
 import { CHROME_HINT, findChrome, openInBrowser, svgToPng } from "./node/chrome.ts";
 import { snapshotElement } from "./node/snapshot.ts";
 import { materializeRevision } from "./node/git.ts";
-import { clearLog, formatSummary as formatLogSummary, logPath, readLog, record, summarize } from "./node/log.ts";
+import { clearLog, formatSummary as formatLogSummary, logPath, readLog, record, shareableSummary, shareUrl, summarize } from "./node/log.ts";
 import { installSkill, SKILL } from "./node/skill.ts";
 import { formatComparison, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
 import { comparePage, lastRuntimeInlined, readWithImports } from "./node/compare-page.ts";
@@ -22,6 +22,15 @@ import { serveMcp } from "./node/mcp.ts";
 import { frameTimes, renderFrames } from "./node/render.ts";
 import { ACTIONS, checkAction, observe, type HostAction } from "./node/observe.ts";
 import { actionTarget, actionsToEvents, judgeHost } from "./core/observe.ts";
+
+/** The package version, for what --share reports. */
+const VERSION_PKG: string = (() => {
+  try {
+    return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
+  } catch {
+    return "unknown";
+  }
+})();
 
 const USAGE = `nudg <command> [options]
 
@@ -44,10 +53,11 @@ simulate and plot options
   --every <seconds>         Sample interval (simulate only). Default: 0.05.
   --props <a,b,...>         Properties to report. Default: all.
 
-  log [--json|--path|--clear]
+  log [--json|--path|--clear|--share]
                             What the judge loop looked like on this machine: compares,
                             verdicts, rounds per change. Local only (~/.nudg/log.jsonl);
                             NUDG_LOG=off turns logging off, NUDG_LOG=<file> moves it.
+                            --share opens a prefilled GitHub issue with counts only.
   skill [--user|--print]    Install a Claude Code skill that teaches the agent the loop,
                             for this project (default) or for every project (--user).
   mcp                       Run the MCP server on stdio (tools: nudg_guide, nudg_validate,
@@ -124,7 +134,7 @@ function parseArgs(argv: string[]): Args {
       continue;
     }
     const [name, inline] = arg.slice(2).split(/=(.*)/s, 2);
-    const boolean = ["json", "help", "reduced-motion", "open", "clear", "path", "print", "user"].includes(name);
+    const boolean = ["json", "help", "reduced-motion", "open", "clear", "path", "print", "user", "share"].includes(name);
     const value = boolean ? "" : (inline ?? argv[++i]);
     if (value === undefined || (!boolean && (value === "" || value.startsWith("--")))) fail(`Option --${name} needs a value.`);
     flags.set(name, [...(flags.get(name) ?? []), value]);
@@ -549,6 +559,18 @@ if (command === "log") {
     process.exit(0);
   }
   const summary = summarize(readLog(path));
+  if (args.flags.has("share")) {
+    if (summary.compare.calls + summary.observe.calls === 0) {
+      process.stdout.write("Nothing to share yet: the log has no compare or observe calls.\n");
+      process.exit(0);
+    }
+    const shared = shareableSummary(summary, VERSION_PKG);
+    const url = shareUrl(shared);
+    process.stdout.write(`This is everything that would be shared (counts only, nothing about your app):\n\n${JSON.stringify(shared, null, 2)}\n\n`);
+    const opened = openInBrowser(url);
+    process.stdout.write(opened ? "Opened a prefilled GitHub issue in your browser; read it, then submit. Thank you.\n" : `Open this to file it as a GitHub issue:\n${url}\n`);
+    process.exit(0);
+  }
   process.stdout.write(json ? JSON.stringify({ path: path ?? null, ...summary }, null, 2) + "\n" : formatLogSummary(summary, path) + "\n");
   process.exit(0);
 }

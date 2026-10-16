@@ -146,3 +146,38 @@ export function formatSummary(s: LogSummary, path: string | undefined): string {
     "The log stays on this machine. To share it, attach the file or `nudg log --json` to an issue.",
   ].join("\n");
 }
+
+/**
+ * What `nudg log --share` sends: counts only. No paths, file names, URLs, headlines or
+ * property names, so nothing about the person's app leaves with it.
+ */
+export function shareableSummary(s: LogSummary, version: string): Record<string, unknown> {
+  return {
+    nudg: version,
+    node: process.versions.node,
+    platform: process.platform,
+    days: s.from && s.to ? Math.max(1, Math.round((Date.parse(s.to) - Date.parse(s.from)) / 86_400_000) + 1) : 0,
+    sessions: s.sessions,
+    changes: s.rounds.changes,
+    roundsPerChange: { median: s.rounds.median, max: s.rounds.max, histogram: s.rounds.histogram },
+    compare: { calls: s.compare.calls, verdicts: s.compare.verdicts, pagesOpened: s.compare.opened, errors: s.compare.errors, nothingToSee: s.wasted },
+    observe: { calls: s.observe.calls, verdicts: s.observe.verdicts, errors: s.observe.errors },
+    validate: s.validate,
+  };
+}
+
+/** A prefilled GitHub issue for the shared summary; the person reads it and submits. */
+export function shareUrl(summary: Record<string, unknown>): string {
+  const body = [
+    "Usage summary from `nudg log --share`. Counts only: no file names, paths, URLs or code.",
+    "",
+    "```json",
+    JSON.stringify(summary, null, 2),
+    "```",
+    "",
+    "Anything that took many rounds, or a verdict that was wrong? (optional)",
+    "",
+  ].join("\n");
+  const params = new URLSearchParams({ title: `Usage log: ${summary.changes} changes, median ${(summary.roundsPerChange as { median: number }).median} rounds`, labels: "usage-log", body });
+  return `https://github.com/seukwoo/nudg/issues/new?${params.toString()}`;
+}

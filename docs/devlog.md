@@ -8,6 +8,11 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 
 ## 2026-10-13: Format design (v0.1)
 
+### Third runtime: Kotlin and Compose in an afternoon, again
+- **Resolution:** the Kotlin runtime is a port of the Swift one onto the same compiled programs, with a 60-line JSON reader so it has no dependencies. It passed all 24 behavior cases on the first run; dropping the first-report snap failed 2, as in Swift. The Compose adapter reads values inside `graphicsLayer`, `layout` and `drawBehind` blocks, so frames never recompose. On the Android emulator the toggle springs on and recolors and a held button measures 319 px against 333 px at rest (0.96).
+- **Two snags:** the current Compose BOM requires compiling against Android 37 (`checkDebugAarMetadata` failed on 36), and GitHub runners set `ANDROID_HOME`, so the Android modules are included only when `kotlin/local.properties` names an SDK; CI runs the pure-JVM conformance job.
+- **Lesson:** With a conformance suite and a compiled format, each new platform is a port, not a design problem; the work moves to each platform's adapter idioms.
+
 ### Not web-only: React Native first, because the core already runs there
 - **Problem:** The user asked why nudg was still web-only. The honest answer was order, not design: the core has no platform APIs and a language-neutral conformance suite, but every native host costs a port, an adapter and tooling. Xcode couldn't be installed yet (it needs a newer macOS), so iOS work waits.
 - **Resolution:** React Native runs JavaScript, so the core runs unchanged. A platform-free `createPlayer` (the runtime plus its frame loop, with the clock and scheduler supplied by the host) carries the loop and presence logic out of the DOM adapter; `@nudg/core/native` writes values into `Animated` values. Checked on an Android emulator (Pixel 8 image, Expo Go): the toggle springs and recolors; a held button measures 323 px against 337 px at rest, the press preset's 0.96.

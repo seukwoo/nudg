@@ -59,3 +59,16 @@ jobs:
       - name: SwiftUI renders a nudg toggle
         working-directory: swift
         run: swift run NudgSwiftUICheck ../spec/conformance/programs/toggle-tap.program.json "$RUNNER_TEMP"
+
+  kotlin:
+    # The Kotlin runtime (JVM and Android) must pass the same conformance suite.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Conformance suite on the Kotlin runtime
+        working-directory: kotlin
+        run: ./gradlew :conformance:run --args="../spec/conformance" --no-daemon -q

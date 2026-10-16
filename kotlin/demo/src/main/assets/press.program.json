@@ -1,0 +1,86 @@
+{
+ "nudgProgram": 1,
+ "version": "0.3",
+ "targets": [
+  "button"
+ ],
+ "properties": [
+  {
+   "key": "button.scale",
+   "kind": "number",
+   "base": [
+    1
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "button.scale",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 438.6490844928604,
+    "damping": 27.22713633111154,
+    "mass": 1
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "up",
+  "states": [
+   {
+    "name": "up",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [
+     {
+      "event": "button.down",
+      "animate": [
+       {
+        "key": "button.scale",
+        "motion": {
+         "kind": "spring",
+         "stiffness": 2741.5567780803776,
+         "damping": 104.71975511965978,
+         "mass": 1
+        }
+       }
+      ],
+      "to": "down"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "down",
+    "set": [
+     {
+      "key": "button.scale",
+      "value": [
+       0.96
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [
+     {
+      "event": "button.up",
+      "animate": [],
+      "to": "up"
+     },
+     {
+      "event": "button.cancel",
+      "animate": [],
+      "to": "up"
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

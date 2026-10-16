@@ -324,6 +324,23 @@ struct Toggle: View {
 - The runtime passes the whole conformance suite from `spec/conformance/programs/` (`swift run NudgConformance ../spec/conformance`), and CI also renders a toggle with SwiftUI's `ImageRenderer` and checks the knob is where the runtime says.
 - Not yet: drag gestures and keys in the SwiftUI adapter, an iOS simulator check (needs Xcode), Swift Package distribution outside this repository.
 
+## Kotlin and Jetpack Compose
+
+The Kotlin runtime (`kotlin/nudg`, plain JVM, no dependencies) reads compiled programs like the Swift one, and `kotlin/compose` is the Jetpack Compose adapter.
+
+```kotlin
+val toggle = rememberNudg(Program.decode(assets.open("toggle.program.json").bufferedReader().readText()))
+
+Box(Modifier.size(52.dp, 32.dp).nudg(toggle, "track").nudgPress(toggle, "track").padding(4.dp)) {
+    Box(Modifier.size(24.dp).nudg(toggle, "knob").background(Color.White, CircleShape))
+}
+```
+
+- `Modifier.nudg(state, "knob")` reads values inside a graphics layer (offset in dp, rotation, scale, opacity), a layout block (width, height) and a draw block (color), so a frame redraws or relayouts what moves and never recomposes. `nudgPress` sends `down`, `up` or `cancel`, and `tap`; `nudgLayout` (before `nudg` in the chain) reports the untransformed box for `measure`.
+- `state.send("host.show")`, `state.state`, and a `reducedMotion` flag.
+- The runtime passes the whole conformance suite (`./gradlew :conformance:run`, also in CI). The `demo` app (`./gradlew :demo:installDebug`, with `sdk.dir` in `kotlin/local.properties`) plays the web examples' toggle and press; checked on an Android emulator.
+- Not yet: drag and keys in Compose, Maven distribution.
+
 ## DOM adapter
 
 ```js

@@ -1,6 +1,7 @@
 // Plain-text views of diagnostics and simulations, shared by the CLI and MCP server.
 
 import type { Comparison } from "../core/compare.ts";
+import type { CritiqueFinding } from "../core/critique.ts";
 import type { HostJudgement, HostSummary } from "../core/observe.ts";
 import { describeEvent, type Simulation } from "../core/simulate.ts";
 import type { Diagnostic } from "../core/types.ts";
@@ -75,5 +76,13 @@ export function formatObservation(o: { url: string; selector: string; summary: H
     for (const p of judgement.properties) lines.push(`  ${p.summary}`);
     if (judgement.suggestion) lines.push("", judgement.suggestion);
   }
+  return lines.join("\n");
+}
+
+/** The critique as a reviewer would say it: warnings first, each with where, why and how to fix. */
+export function formatCritique(label: string, findings: CritiqueFinding[], transitions: number): string {
+  if (findings.length === 0) return `${label}: nothing to change. ${transitions} transitions checked against the platforms' motion guidelines.`;
+  const lines = [`${label}: ${findings.filter((f) => f.severity === "warning").length} warnings, ${findings.filter((f) => f.severity === "suggestion").length} suggestions (${transitions} transitions checked).`, ""];
+  for (const f of findings) lines.push(`${f.severity} ${f.code} at ${f.path}: ${f.message}`, `  fix: ${f.hint}`, `  from: ${f.source}`);
   return lines.join("\n");
 }

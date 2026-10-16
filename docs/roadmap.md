@@ -36,6 +36,7 @@ Goal: find the cases where nudg is plainly better than ad hoc code or a one-line
 - Use nudg in playsnack where the interaction has real state: snack/toast presence, dismiss, drag, timers, shared motion libraries, or before/after tuning.
 - Keep the simple case competitive with presets (`press`, `hover`, `toggle`, `toast`) and avoid adding plumbing for interactions that don't need nudg yet.
 - Let evidence accumulate without asking anyone: a local judge log (`nudg log`, rounds per change) that users can attach to issues, and a Claude Code skill so agents run the loop unprompted. Field validation is open to whoever uses nudg; the roadmap does not wait on a particular app.
+- Know what good motion is: `nudg critique` checks every transition against the platforms' motion guidelines and accessibility rules, so the agent fixes the obvious before the person looks (unreleased).
 - Harden the judge loop: after an AI changes motion, it should validate, compare, and show a live A/B page without being asked. Done for the first steps (unreleased): `nudg_compare` takes the running app's `url`, snapshots the component and opens the before/after in the browser, and `before: "HEAD"` supplies the old version from git so nothing is copied. Next: record one real playsnack session as a "turns: N" case.
 - Improve `observe` from field reports, because the real app is the source of truth.
 - Add examples that show the say -> see -> judge loop, not only static JSON snippets.

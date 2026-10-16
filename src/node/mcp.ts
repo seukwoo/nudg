@@ -10,6 +10,7 @@ import { compile, type CompileResult } from "../core/compile.ts";
 import { compare, compareFrameTimes } from "../core/compare.ts";
 import { createRuntime } from "../core/runtime.ts";
 import { actionTarget, actionsToEvents, judgeHost } from "../core/observe.ts";
+import { critique } from "../core/critique.ts";
 import { plot } from "../core/plot.ts";
 import { dragGesture, simulate, type SimulateOptions, type TimedEvent } from "../core/simulate.ts";
 import type { Program } from "../core/types.ts";
@@ -18,7 +19,7 @@ import { CHROME_HINT, findChrome, openInBrowser, svgToPng } from "./chrome.ts";
 import { snapshotElement } from "./snapshot.ts";
 import { materializeRevision } from "./git.ts";
 import { readLog, record, shareableSummary, shareUrl, struggle, summarize, logPath } from "./log.ts";
-import { formatComparison, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./format.ts";
+import { formatComparison, formatCritique, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./format.ts";
 import { comparePage, lastRuntimeInlined, readWithImports } from "./compare-page.ts";
 import { compilePath } from "./load.ts";
 import { ACTIONS, checkAction, observe, type HostAction } from "./observe.ts";
@@ -38,7 +39,7 @@ const PACKAGE_VERSION: string = (() => {
 
 const INSTRUCTIONS = `nudg files (*.nudg.json) describe UI interactions: states, events, and spring or tween motion.
 If you haven't written one before, call nudg_guide first. After any edit, call nudg_validate and apply its hints until it reports no errors.
-When you change motion for a person to judge, call nudg_compare with the version before and after: it says first whether the difference is perceptible, then shows both side by side (real A/B filmstrips when the host page's HTML is given). Pass its headline on to the person; if it suggests an exaggerated version, offer that. When nudg_compare says a change has taken several rounds, ask the person once whether they'd share what made it hard; if they agree, call nudg_share with their words and give them the link (they submit it; never claim it was sent). Use nudg_simulate for numbers, nudg_plot for one version's graph, nudg_render for one version's frames. The file says what should happen; nudg_observe says what the real page showed: after wiring a file into an app, or when the person says it doesn't look right, call it with the running page's URL and the file, and report what it found (a page that never shows the motion, an element that unmounts mid-motion, a CSS transition fighting the spring).`;
+When you change motion for a person to judge, call nudg_compare with the version before and after: it says first whether the difference is perceptible, then shows both side by side (real A/B filmstrips when the host page's HTML is given). Pass its headline on to the person; if it suggests an exaggerated version, offer that. When nudg_compare says a change has taken several rounds, ask the person once whether they'd share what made it hard; if they agree, call nudg_share with their words and give them the link (they submit it; never claim it was sent). After writing or changing a file, call nudg_critique once and fix its warnings: it checks the motion against the platforms' guidelines (too slow, late press feedback, invisible, bouncy fades, slow exits). Use nudg_simulate for numbers, nudg_plot for one version's graph, nudg_render for one version's frames. The file says what should happen; nudg_observe says what the real page showed: after wiring a file into an app, or when the person says it doesn't look right, call it with the running page's URL and the file, and report what it found (a page that never shows the motion, an element that unmounts mid-motion, a CSS transition fighting the spring).`;
 
 type Json = Record<string, unknown>;
 type Content = { type: "text"; text: string } | { type: "image"; data: string; mimeType: string };
@@ -165,6 +166,13 @@ const TOOLS = [
       required: ["file", "html"],
     },
     annotations: { readOnlyHint: false },
+  },
+  {
+    name: "nudg_critique",
+    title: "Critique the motion",
+    description: "Whether the motion is good, not only valid. Plays every transition from rest and checks it against the platforms' motion guidelines and accessibility rules: transitions that take too long, press feedback that arrives late, changes nobody can see, fades that bounce, exits slower than entrances, auto-dismiss too short to read, dialogs that can't be closed with Escape. Each finding has a JSON pointer, a fix and its source. Call it once after writing or changing a file, and fix the warnings before showing the person.",
+    inputSchema: { type: "object", properties: { ...source } },
+    annotations: { readOnlyHint: true },
   },
   {
     name: "nudg_share",
@@ -315,6 +323,11 @@ async function runTool(name: string, args: Json): Promise<ToolResult> {
         return await compareTool(args);
       case "nudg_observe":
         return await observeTool(args);
+      case "nudg_critique": {
+        const { program, label } = loadProgram(args);
+        const { findings, transitions } = critique(program);
+        return { content: [text(formatCritique(label, findings, transitions.length))], structuredContent: { findings, transitions: transitions.length } as unknown as Json };
+      }
       case "nudg_share": {
         const summary = summarize(readLog());
         if (summary.compare.calls + summary.observe.calls === 0) return { content: [text("Nothing to share yet: the log has no compare or observe calls" + (logPath() ? "." : " (logging is off: NUDG_LOG=off)."))] };

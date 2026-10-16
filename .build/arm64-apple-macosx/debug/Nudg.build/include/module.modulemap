@@ -1,0 +1,3 @@
+module Nudg {
+    header "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/include/Nudg-Swift.h"
+}

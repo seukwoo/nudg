@@ -205,9 +205,10 @@ The [roadmap](docs/roadmap.md) tracks development priorities and stage status, f
 ## Documentation
 
 - [The nudg format](docs/spec.md): the full grammar.
-- [Using nudg](docs/usage.md): the CLI, the MCP server, the React and DOM adapters, and platform motion.
+- [Using nudg](docs/usage.md): the CLI, the MCP server, the adapters (DOM, React, React Native, SwiftUI, Compose), and platform motion.
 - [Design](docs/design.md): principles, scope, decisions, and open questions.
 - [Roadmap](docs/roadmap.md): the development plan, current status and completion criteria.
+- [Coverage](docs/coverage.md): what the format can express, by trigger, response and structure, and where it runs.
 - [Guide for AI agents](spec/guide.md): the format on one page.
 - [Development log](docs/devlog.md): problems met while building nudg, and how they were resolved.
 

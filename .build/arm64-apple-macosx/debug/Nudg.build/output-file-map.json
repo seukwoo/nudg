@@ -1,0 +1,26 @@
+{
+  "": {
+    "swift-dependencies": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/primary.swiftdeps"
+  },
+  "/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Math.swift": {
+    "dependencies": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Math.d",
+    "object": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Math.swift.o",
+    "swiftmodule": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Math~partial.swiftmodule",
+    "swift-dependencies": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Math.swiftdeps",
+    "diagnostics": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Math.dia"
+  },
+  "/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Program.swift": {
+    "dependencies": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Program.d",
+    "object": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Program.swift.o",
+    "swiftmodule": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Program~partial.swiftmodule",
+    "swift-dependencies": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Program.swiftdeps",
+    "diagnostics": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Program.dia"
+  },
+  "/Users/scott.l/Documents/nudg/swift/Sources/Nudg/Runtime.swift": {
+    "dependencies": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Runtime.d",
+    "object": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Runtime.swift.o",
+    "swiftmodule": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Runtime~partial.swiftmodule",
+    "swift-dependencies": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Runtime.swiftdeps",
+    "diagnostics": "/Users/scott.l/Documents/nudg/.build/arm64-apple-macosx/debug/Nudg.build/Runtime.dia"
+  }
+}

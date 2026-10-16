@@ -124,13 +124,44 @@ These are expensive to change later, so they are fixed early:
 9. **Strings are never code.** A string is always a name (a state, a motion, a target path) or a value (`"#4ADE80"`, `"300ms"`); the only free text is `note`. Computation is always an object with one operator key (`map`, `follow`, `nearest`, ...), from a small closed set that grows only when a real interaction needs it. There is no expression language, so a reader (or an AI) never has to guess whether a string is a formula or a sentence, and the validator can check every operator precisely.
 10. **Semantic patterns compile to primitives.** Words like `fab`, `bottom-sheet`, `swipe-row` and `toast` are product vocabulary, not new runtime magic. They should be represented first as presets, recipes and guide rules that produce ordinary targets, states, events and motion. Only promote a pattern concern into the core format when several patterns need the same lower-level capability.
 
+## Proposal: layout as input (format 0.4)
+
+Status: proposed, not implemented. Settles the open question "Layout: measured positions and sizes". The cases that force it: a tab or segmented indicator that must sit under a label whose width depends on its text and the font, an accordion that collapses from its natural height, a bottom sheet whose snap points depend on the screen, a swipe row whose actions are as wide as their labels. Today every example hard-codes these numbers (`segmented` assumes 72 px segments).
+
+**The core never measures.** Measuring is the host's job, like the pointer: the adapter reports each bound target's layout as inputs, the same kind of value as `drag.x`, and the core reads them. This keeps decisions 3 (deterministic clock), 6 (core and renderers separate) and 9 (no expressions) intact, and the conformance suite can state layouts as given numbers.
+
+**Inputs.** For every bound target the host supplies `target.layout.x`, `target.layout.y`, `target.layout.width`, `target.layout.height` (the untransformed box, in logical units, in one coordinate space per player: whatever motion nudg applies is not part of the layout) and `target.layout.naturalWidth`, `target.layout.naturalHeight` (the size the content needs when unconstrained; what CSS calls `auto`). The host reports them on bind and whenever they change (resize, font load, content change).
+
+**One new operator, `measure`,** usable wherever a number is: in `values`, in a state's `set`, and as a `nearest` target. Its value names a target and a measurement:
+
+```json
+"states": {
+  "second": { "set": { "indicator.x": { "measure": "seg2.x" }, "indicator.width": { "measure": "seg2.width" } } }
+}
+```
+
+- **Position (`x`, `y`) aligns.** `{ "measure": "seg2.x" }` on `indicator.x` is the translation that puts the indicator's box where seg2's box is: `seg2.layout.x - indicator.layout.x`. That is what a tab indicator, a highlight, or a shared-element move needs, and it never depends on which coordinate space the host chose.
+- **Size (`width`, `height`, `naturalWidth`, `naturalHeight`) is the size.** `{ "measure": "content.naturalHeight" }` on `content.height` opens an accordion to exactly its content.
+- **Arithmetic is not added.** An inset, a gap or a fraction (half a sheet) is the next case to settle; the likely shape is `{ "measure": "sheet.height", "times": 0.5, "plus": -16 }`, two fixed fields, not an expression language. Not in the first cut.
+- **Relayout retargets.** When a measured input changes while the value is resting on it, the value moves to the new target with the property's motion, as if a state set it. A window resize slides the indicator; it doesn't jump.
+- **Before the first report** a measured value is its property's base value, and the runtime reports which measurements it is still waiting for, the same way it reports unbound targets.
+- **`%` units** become `{ "measure": "parent.width", "times": 0.5 }` once `times` exists; no separate unit system.
+
+**Tools.** `simulate`, `plot`, `compare` and the conformance suite take a layout table (`--layout seg2.x=72,seg2.width=88`, or `layout` in the MCP tools); `render` and `observe` measure the real page. The validator checks the target exists, the measurement name, and that `x`/`y` only measure into position properties.
+
+**Adapters.** The DOM adapter measures with offsets (untransformed) and natural size with scroll size, and reports again from a `ResizeObserver`. React needs nothing new. A native adapter reports the view frame.
+
+**What it does not do.** No layout engine, no FLIP of arbitrary reflows (Motion's `layout` prop animates any layout change; nudg animates the properties a file names toward measured targets). A list reorder or a shared-element screen transition is stage 2 and builds on this, not the other way around.
+
+**First cut, in order:** `measure` for `x`/`width` in `set` and `values` with retargeting; `segmented` and a new `tabs` example without hard-coded widths; `naturalHeight` and an `accordion` that opens to its content; then `nearest` over measured targets for a bottom sheet. Each with conformance cases in `derive.py` first.
+
 ## Open questions
 
 These are unresolved design choices. Scheduling and completion status live in the [roadmap](roadmap.md); examples of possible syntax below are proposals.
 
 - Transitions that cross machine levels (to a parent's sibling, into a nested state).
 - A final state in the grammar (`"final": true`, as in statecharts) to say "this state means the component is gone". Today the host names exit states in the adapter options (`exit: "hidden"`), because mounting and unmounting are the host's lifecycle; a file-level marker would let the tools (`observe`, the guide) know it too.
-- Layout: measured positions and sizes (`{ "measure": "tab2.x" }` for a tab indicator), a natural size (`"auto"`) to collapse a row from, and `%` units.
+- Layout: see [the proposal above](#proposal-layout-as-input-format-04). Still open: arithmetic on measurements (`times`, `plus`) and measuring across players.
 - Pattern metadata: whether files should eventually declare a role such as `"role": "bottom-sheet"` or whether roles remain external recipe metadata.
 - Pattern aliases and locale: how to map common design words such as FAB, snackbar, toast, tabs, tab bar, bottom nav, GNB, LNB and side nav without making the core format depend on one design system's names.
 - Decay (fling, inertia) as a motion of its own, for scroll-like content without snap points. Snapping is covered by `nearest`.

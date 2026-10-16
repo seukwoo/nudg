@@ -243,6 +243,30 @@ function Toast({ onGone }: { onGone: () => void }) {
 
 `present` turns false once the machine has entered an `exit` state and every value has come to rest; `onExit` fires then, once. For a list of toasts, the parent removes the item in `onExit`, not when it decides to dismiss: dismissing is an event (`send("host.hide")`, or the file's own timer), removal is the consequence. Showing the component again (an event that leaves the exit state) makes `present` true again.
 
+## With component libraries
+
+nudg doesn't replace your components; it gives the ones you already use their motion. Two bridges cover most libraries:
+
+**State attributes** (shadcn/ui and Radix, Headless UI, React Aria, Ark, native controls). These libraries show their state on the element. With `watch: true`, nudg follows it: `data-state="open"` becomes `host.open`, `aria-expanded` becomes `host.expanded` / `host.collapsed`, `aria-checked` becomes `host.checked` / `host.unchecked` / `host.mixed`, `aria-selected` and `aria-pressed` likewise. The library keeps the behavior, focus and accessibility; the file does the motion.
+
+```tsx
+import * as Switch from "@radix-ui/react-switch";
+const sw = useNudg(switchMotion, { watch: true });   // the file switches on host.checked / host.unchecked
+<Switch.Root ref={sw.bind("track")}><Switch.Thumb ref={sw.bind("knob")} /></Switch.Root>
+```
+
+For content a library unmounts when closed (a Radix dialog), pass `forceMount`, and hide it when nudg says it's gone: `useNudg(presets.appear(), { watch: true, exit: "hidden" })` and `style={{ visibility: present ? undefined : "hidden" }}`.
+
+**Transition slots** (MUI, and libraries on the react-transition-group contract: Ant Design, React Bootstrap). `nudgTransition(file)` is a transition component: the library tells it when to show and hide, nudg plays the file (default `presets.appear()`), and the element stays mounted until the exit has settled.
+
+```tsx
+import { nudgTransition } from "@nudg/core/react";
+const dialogMotion = nudgTransition(myDialogMotion);    // once, outside render
+<Dialog open={open} slots={{ transition: dialogMotion }} />   // MUI 7+; TransitionComponent= before
+```
+
+The file shows on `host.show` and hides on `host.hide` into its `hidden` state; `presets.appear()` also answers `host.open` / `host.closed`, so the same file works with both bridges. When the defaults are enough, you don't need nudg; it's for when you want to tune the feel, go beyond the catalog, or share one motion file across platforms.
+
 ## DOM adapter
 
 ```js

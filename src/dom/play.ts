@@ -40,6 +40,16 @@ export interface PlayOptions {
   onEvent?: (item: { event: string } | { input: string; value: number }, t: number) => void;
   /** Time scale for the real-time clock: 0.25 plays everything, timers included, at quarter speed. Default 1. */
   speed?: number;
+  /**
+   * Follow the state a component library already shows on the bound elements, and send
+   * it as app events: `data-state="open"` becomes `host.open` (Radix, shadcn/ui, Ark),
+   * `aria-expanded`, `aria-checked`, `aria-selected` and `aria-pressed` become
+   * `host.expanded` / `host.collapsed`, `host.checked` / `host.unchecked` / `host.mixed`,
+   * `host.selected` / `host.unselected`, `host.pressed` / `host.unpressed` (Headless UI,
+   * React Aria, native controls). The library keeps the behavior; nudg does the motion.
+   * The state at bind time is sent too, so content that mounts open animates in.
+   */
+  watch?: boolean;
 }
 
 export interface Player {
@@ -274,8 +284,10 @@ export function play(program: Program, root: ParentNode | null = document, optio
     applyTo(name, runtime.sample(now()), [el]);
     reflectState([el]);
     onLayoutBind?.(name, el);
+    const unwatch = options.watch ? watchState(el, (event) => send(event)) : undefined;
 
     const unbind = () => {
+      unwatch?.();
       el.removeAttribute("data-nudg-state");
       if (marked) el.removeAttribute("data-nudg");
       for (const [type, fn] of listeners) el.removeEventListener(type, fn);
@@ -500,4 +512,32 @@ function measureElement(el: Element, what: string): number | undefined {
       return el.scrollHeight;
   }
   return undefined;
+}
+
+/** The attributes component libraries use to show state, and the app events they become. */
+const WATCHED: Record<string, (value: string) => string | undefined> = {
+  "data-state": (v) => (/^[a-z][a-z0-9_-]*$/i.test(v) ? `host.${v}` : undefined),
+  "aria-expanded": (v) => (v === "true" ? "host.expanded" : v === "false" ? "host.collapsed" : undefined),
+  "aria-checked": (v) => (v === "true" ? "host.checked" : v === "false" ? "host.unchecked" : v === "mixed" ? "host.mixed" : undefined),
+  "aria-selected": (v) => (v === "true" ? "host.selected" : v === "false" ? "host.unselected" : undefined),
+  "aria-pressed": (v) => (v === "true" ? "host.pressed" : v === "false" ? "host.unpressed" : undefined),
+};
+
+/** Sends the library's state now and on every change. Returns a function that stops watching. */
+function watchState(el: Element, send: (event: string) => void): () => void {
+  const last = new Map<string, string | null>();
+  const check = (attr: string) => {
+    const value = el.getAttribute(attr);
+    if (last.get(attr) === value) return;
+    last.set(attr, value);
+    const event = value === null ? undefined : WATCHED[attr](value);
+    if (event) send(event);
+  };
+  for (const attr of Object.keys(WATCHED)) check(attr);
+  if (typeof MutationObserver !== "function") return () => {};
+  const observer = new MutationObserver((records) => {
+    for (const r of records) if (r.attributeName) check(r.attributeName);
+  });
+  observer.observe(el, { attributes: true, attributeFilter: Object.keys(WATCHED) });
+  return () => observer.disconnect();
 }

@@ -249,6 +249,12 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Resolution:** Every protocol call now fails after 30 s with the method's name, so a hang becomes a failed test with a message. The run was cancelled and rerun.
 - **Lesson:** Anything that waits on another process needs a deadline, or a flake turns into a stuck pipeline.
 
+### Why use nudg next to MUI at all
+- **Problem:** The user asked the founding question: MUI and its peers already animate their components, so why add nudg? A component count (MUI lists 52, about 30 with interaction) also made the 20 examples look thin.
+- **Answer we settled on:** when a library's defaults are enough, nudg isn't needed, and the docs now say so. nudg earns its place when the feel has to be tuned (MUI's motion is fixed-curve CSS transitions spread across theme and overrides; no springs, no interruption, no judge), when the interaction is outside the catalog (a thrown sheet, a swipe row), and across platforms. So nudg sits on top of libraries, not instead of them. Interactions are combinations, so coverage is measured by trigger × response × structure, not by component count.
+- **Resolution:** two bridges cover most of the web's popular libraries without one adapter each: state attributes (`watch`: `data-state`, `aria-*`) for Radix, shadcn/ui, Headless UI, React Aria, Ark; and a react-transition-group style component (`nudgTransition`) for MUI's transition slot, Ant Design, React Bootstrap. The browser test bundles real MUI 9 and Radix with esbuild. MUI 9 had dropped the `TransitionComponent` prop the design assumed; it silently used its own Fade until the test caught it, and the docs now name `slots.transition`.
+- **Lesson:** Integration claims need the real library in the test, not a stand-in that follows the documented contract from an older version.
+
 ### Critique: from "is it visible" to "is it good"
 - **Problem:** The judge tools said whether a change was visible and whether the page played it, never whether the motion was good. Motion's MotionScore and Lottie's accessibility audit do say so; nudg's agent had no such reviewer.
 - **Design:** `critique` plays every transition of every leaf state from rest on fresh runtimes, measures 90% time and settle time per property, and checks seven rules sourced from Material 3 motion, Apple HIG, WCAG 2.2.1/2.2.2 and the WAI-ARIA dialog pattern. Findings are warnings or suggestions with a pointer, a fix and a source, never errors.

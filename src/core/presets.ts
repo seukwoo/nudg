@@ -178,5 +178,41 @@ export function toast(options: ToastOptions = {}): NudgDocument {
   };
 }
 
-export const presets = { press, hover, toggle, toast };
+export interface AppearOptions {
+  target?: string;
+  /** The scale it grows from, default 0.96. */
+  scale?: number;
+  /** Logical units below its resting place it rises from, default 8. */
+  rise?: number;
+  motion?: SpringOptions;
+}
+
+/**
+ * Something that appears and goes: a dialog, a menu, a popover. Shown by host.show or
+ * host.open (a library's data-state="open"), hidden by host.hide or host.closed. It
+ * scales and rises in with a spring, fades with a tween, and leaves a little faster.
+ */
+export function appear(options: AppearOptions = {}): NudgDocument {
+  const t = options.target ?? "content";
+  const s = spring(options.motion ?? {}, 0.3, 0.15);
+  return {
+    nudg: "0.3",
+    note: "presets.appear(): shown by host.show or host.open, hidden by host.hide or host.closed. Save this file to change more than the options cover.",
+    targets: [t],
+    values: { [`${t}.scale`]: options.scale ?? 0.96, [`${t}.y`]: options.rise ?? 8, [`${t}.opacity`]: 0 },
+    animate: {
+      [`${t}.scale`]: s,
+      [`${t}.y`]: s,
+      [`${t}.opacity`]: { tween: { duration: 0.15, ease: "out" } },
+    },
+    initial: "hidden",
+    when: { "host.show": "shown", "host.open": "shown", "host.hide": "hidden", "host.closed": "hidden" },
+    states: {
+      hidden: {},
+      shown: { set: { [`${t}.scale`]: 1, [`${t}.y`]: 0, [`${t}.opacity`]: 1 } },
+    },
+  };
+}
+
+export const presets = { press, hover, toggle, toast, appear };
 export type PresetName = keyof typeof presets;

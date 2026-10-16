@@ -65,7 +65,7 @@
     "spec/nudg-0.4.schema.json"
   ],
   "scripts": {
-    "test": "NUDG_LOG=off NUDG_OPEN=false node --test --test-force-exit --test-concurrency=3",
+    "test": "NUDG_LOG=off NUDG_OPEN=false node --test --test-force-exit --test-concurrency=3 \"test/*.test.ts\"",
     "typecheck": "tsc && tsc -p tsconfig.core.json",
     "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
     "prepack": "npm run build",
@@ -74,10 +74,17 @@
     "nudg": "node src/cli.ts"
   },
   "devDependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/material": "^9.5.0",
+    "@radix-ui/react-dialog": "^1.3.1",
+    "@radix-ui/react-switch": "^1.4.1",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "ajv": "^8.20.0",
+    "esbuild": "^0.25.10",
     "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "typescript": "^7.0.2"
   },
   "publishConfig": {

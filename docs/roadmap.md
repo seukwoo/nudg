@@ -29,7 +29,11 @@ The original stage numbers remain useful when reading the spec and changelog. Se
 | 3 | Native | iOS and Android; SwiftUI and Compose adapters or code generation | Planned |
 | 4 | Standalone content | Physics, canvas, game-like scenes; host rendering and physics integration | Exploratory |
 
-## Now: Prove the Workflow in Playsnack
+## Now: Meet People Where Their Components Are
+
+Status: the web bridges are in (unreleased): `watch` for libraries that show state as attributes (shadcn/ui and Radix, Headless UI, React Aria, Ark) and `nudgTransition` for transition slots (MUI, Ant Design, React Bootstrap). Next: a React Native adapter (the JavaScript core runs as is), then SwiftUI and Jetpack Compose runtimes checked against the conformance suite. Then a coverage map by trigger × response × structure instead of component counts, continuous app inputs (`host.<name>` values: a microphone level, a tilt), and examples for its empty cells.
+
+## Then: Prove the Workflow in Playsnack
 
 Goal: find the cases where nudg is plainly better than ad hoc code or a one-line animation helper.
 

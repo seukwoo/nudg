@@ -7,6 +7,8 @@ import { join } from "node:path";
 
 /** How long one protocol call may take. Screenshots of a big page take a second; anything longer is a hang. */
 const CALL_TIMEOUT_MS = 30_000;
+/** How long Chrome may take to start. Generous: test files run in parallel and each starts its own. */
+const LAUNCH_TIMEOUT_MS = 60_000;
 
 export interface Browser {
   send(method: string, params?: Record<string, unknown>): Promise<any>;
@@ -50,7 +52,8 @@ export async function launchBrowser(chrome: string): Promise<Browser> {
   };
 
   try {
-    const port = await Promise.race([failed, waitFor(() => readFileSync(join(profile, "DevToolsActivePort"), "utf8").split("\n")[0], 15_000, 50, gone.signal)]);
+    // A busy CI runner with several Chromes starting at once can take well over 15 s to write the port.
+    const port = await Promise.race([failed, waitFor(() => readFileSync(join(profile, "DevToolsActivePort"), "utf8").split("\n")[0], LAUNCH_TIMEOUT_MS, 50, gone.signal)]);
     const targets = await Promise.race([
       failed,
       waitFor(

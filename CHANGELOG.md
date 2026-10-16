@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.6.0
+
+The judge loop in one call from a real app: compare against the running page and against git. Format stays 0.3.
 
 - **Review fixes for the two features below** (each reproduced first): the MCP page opens once per server session instead of a new tab per call, identical versions open nothing, labels and names are readable (`file @ HEAD`, never a temp path), the result says which side is which from the labels, `open` must be `true`/`false`, pages live in a per-session folder so sessions don't overwrite each other, materialized revisions are removed after use, `before` with `a`/`b` is an error, snapshot targets come from both versions, the filmstrip harness serves a materialized revision's imports, nested imports play on the compare page, the compare page shows a compile error on its stage instead of staying blank, a down dev server is named instead of "targets not on the page", and the test suite never opens a browser. Snapshot: body-wide targets get a wrapper instead of a `<body>` that merged into the compare page, a positioned target brings its container, shadow roots become declarative templates with their styles inlined, a local page's resources resolve from the file, and notes report state-dependent rules, `<use>` references outside the element, and targets outside the chosen element. Git: a moved folder gets a real message; `--before` without a value is an error.
 - **The "before" from git.** `nudg compare <file> --before HEAD` (or any revision) and `nudg_compare` with `file` + `before`, or `{ file, rev }` on either side: the old version and its imports are read from the repository, so there is no copy to make or clean up. Labels default to the revision and "now".

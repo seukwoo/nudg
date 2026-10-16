@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Drag and keys beyond the web.** One set of pointer rules (`PointerTracker`: press, 4-unit slop, `dragstart`, travel inputs, `dragend`, no tap after a drag) in TypeScript, Swift and Kotlin. React Native: `bind(name).gesture`. SwiftUI: `.nudgPress` drags too, and `.nudgKeys`. Compose: `nudgPress` drags too, and `nudgKeys`. The Swift and Kotlin conformance runners check a drag that turns the drag toggle on; React Native and Compose were checked on the Android emulator.
+- **Install outside npm.** A root `Package.swift` makes the Swift runtime and SwiftUI adapter installable by this repository's URL (Swift Package Manager); `jitpack.yml` and Maven publications make the Kotlin runtime and Compose adapter installable as `com.github.seukwoo.nudg:nudg` / `:compose` from a release tag. Both checked with separate consumer projects (by path and from the local Maven repository); the first tagged release proves the remote paths.
 
 ## 0.7.0
 

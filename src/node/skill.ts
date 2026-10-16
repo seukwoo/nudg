@@ -20,7 +20,7 @@ nudg files (\`*.nudg.json\`) describe an interaction: states, events, and spring
 5. If the headline says nobody would notice, offer an exaggerated version first (about 3x the change), then dial it back.
 6. After wiring a file into the app, or when the person says it looks wrong there, \`nudg_observe\` the real page: it says whether the page played the file, or why not (unmounted mid-motion, a CSS transition fighting the spring, nothing bound).
 
-When the person is done with a round of motion work, recommend once: "\`npx @nudg/core log --share\` shows a counts-only summary of how many rounds this took and opens a GitHub issue to send it to the nudg project; nothing about your app is included." Never run it for them.
+When \`nudg_compare\` says a change has taken several rounds, ask the person once whether they'd share what made it hard with the nudg project. If yes, call \`nudg_share\` with their words as \`note\` and give them the link: it opens a prefilled GitHub issue with counts only, which they submit themselves. Never say it was sent.
 
 Without the MCP server, the CLI does the same: \`npx @nudg/core validate|compare|observe ...\`. Add the server with \`claude mcp add nudg -- npx -y @nudg/core mcp\`.
 `;

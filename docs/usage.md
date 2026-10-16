@@ -147,7 +147,7 @@ nudg log --json     # the same, for an issue or a script
 
 Every `compare`, `observe` and `validate`, from the CLI or the MCP server, appends one line to `~/.nudg/log.jsonl`: the tool, the files, the verdict, whether a page opened. `nudg log` summarizes it, above all **rounds per change**: how many times the same file was compared again within 15 minutes before the work moved on. One round means the person judged the change at the first look. It also counts rounds that showed nothing anyone could see. The log never leaves the machine on its own; `NUDG_LOG=off` turns it off, `NUDG_LOG=<file>` moves it, `nudg log --clear` empties it.
 
-To help the project, `nudg log --share` prints exactly what it would share (counts only: rounds per change, verdicts, tool calls, nudg and Node versions; no file names, paths, URLs or code) and opens a prefilled GitHub issue for you to read and submit. That is how nudg learns whether the loop takes one round or five.
+To help the project, `nudg log --share` prints exactly what it would share (counts only: rounds per change, verdicts, tool calls, nudg and Node versions; no file names, paths, URLs or code) and opens a prefilled GitHub issue for you to read and submit. That is how nudg learns whether the loop takes one round or five. When a change reaches three rounds, nudg asks right then (the CLI prints the command; over MCP the agent asks and `nudg_share` gives the person the link with their note): those are the changes the project most needs to hear about. `--note "..."` adds a line in your words.
 
 ### skill
 
@@ -170,6 +170,7 @@ Installs a Claude Code skill that teaches the agent the loop: validate, compare 
 | `nudg_plot` | A motion graph image. |
 | `nudg_compare` | Two versions under the same events: a perceptibility verdict first (imperceptible / subtle / clear, per property), then real A/B filmstrips (with `html`; both versions as files) or one graph with both curves. With `html` it also writes the side-by-side page (its path is in the result; `page` chooses it) and tells the person to open it. Proposes an exaggerated version when nothing would be noticed. |
 | `nudg_render` | Real frames of the component as a filmstrip image, from the host page (needs Chrome). |
+| `nudg_share` | Prepares a counts-only usage summary and a prefilled GitHub issue link, with the person's note, for them to submit. Sends nothing by itself. |
 | `nudg_observe` | Host truth: opens the running page, performs actions, measures the element every frame, and judges what the page showed against the file (played / differs / never shown / nothing moved). |
 
 To use it from Claude Code (paths relative to the project the agent works in):

@@ -125,3 +125,53 @@ test("the CLI suggests sharing at most once a week, and only after three judged 
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("a change that reaches three rounds asks once, and nudg_share builds the link with the person's note", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "nudg-log-"));
+  const log = join(dir, "log.jsonl");
+  try {
+    const round = () => cli(log, "compare", "examples/toggle.nudg.json", "examples/toggle-press.nudg.json", "--send", "track.down@0.05");
+    assert.doesNotMatch(round(), /taken \d rounds/);
+    assert.doesNotMatch(round(), /taken \d rounds/);
+    assert.match(round(), /This change has taken 3 rounds[\s\S]*nudg log --share --note/);
+    assert.doesNotMatch(round(), /taken \d rounds/, "asked once per change");
+    const shared = cli(log, "log", "--share", "--note", "the press verdict said invisible but I could see it");
+    const url = decodeURIComponent(shared.match(/https:\S+/)![0].replace(/\+/g, " "));
+    assert.match(url, /In the person's words:\n\n> the press verdict said invisible but I could see it/);
+
+    // Over MCP: the third compare of the same file tells the agent to ask; nudg_share returns the link.
+    const server = spawn(process.execPath, [join(root, "src/cli.ts"), "mcp"], { cwd: root, stdio: ["pipe", "pipe", "inherit"], env: { ...process.env, NUDG_LOG: log, NUDG_OPEN: "false" } });
+    try {
+      const replies = new Map<number, any>();
+      let buffer = "";
+      server.stdout!.on("data", (c) => {
+        buffer += c;
+        let i: number;
+        while ((i = buffer.indexOf("\n")) >= 0) {
+          const m = JSON.parse(buffer.slice(0, i));
+          replies.set(m.id, m);
+          buffer = buffer.slice(i + 1);
+        }
+      });
+      const call = async (id: number, name: string, args: object) => {
+        server.stdin!.write(JSON.stringify({ jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: args } }) + "\n");
+        for (let i = 0; i < 600 && !replies.has(id); i++) await new Promise((r) => setTimeout(r, 50));
+        return replies.get(id).result;
+      };
+      server.stdin!.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "0" } } }) + "\n");
+      const args = { a: { file: "examples/toggle.nudg.json" }, b: { file: "examples/toggle-drag.nudg.json" }, events: [{ event: "track.tap", t: 0.05 }] };
+      await call(2, "nudg_compare", args);
+      await call(3, "nudg_compare", args);
+      const third = await call(4, "nudg_compare", args);
+      assert.match(third.content[0].text, /This change has now taken 3 rounds[\s\S]*call nudg_share/);
+      const share = await call(5, "nudg_share", { note: "bounce felt off" });
+      assert.match(share.content[0].text, /Give the person this link/);
+      assert.match(decodeURIComponent(share.structuredContent.url.replace(/\+/g, " ")), /> bounce felt off/);
+      assert.ok(!/examples|toggle/.test(decodeURIComponent(share.structuredContent.url)), "nothing about the app in the link");
+    } finally {
+      server.kill();
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

@@ -17,7 +17,7 @@ import { VERSION } from "../core/vocabulary.ts";
 import { CHROME_HINT, findChrome, openInBrowser, svgToPng } from "./chrome.ts";
 import { snapshotElement } from "./snapshot.ts";
 import { materializeRevision } from "./git.ts";
-import { record } from "./log.ts";
+import { readLog, record, shareableSummary, shareUrl, struggle, summarize, logPath } from "./log.ts";
 import { formatComparison, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./format.ts";
 import { comparePage, lastRuntimeInlined, readWithImports } from "./compare-page.ts";
 import { compilePath } from "./load.ts";
@@ -27,9 +27,18 @@ import { frameTimes, renderFrames } from "./render.ts";
 const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const GUIDE = resolve(dirname(fileURLToPath(import.meta.url)), "../../spec/guide.md");
 
+/** The package version, for what nudg_share reports. */
+const PACKAGE_VERSION: string = (() => {
+  try {
+    return JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "package.json"), "utf8")).version;
+  } catch {
+    return "unknown";
+  }
+})();
+
 const INSTRUCTIONS = `nudg files (*.nudg.json) describe UI interactions: states, events, and spring or tween motion.
 If you haven't written one before, call nudg_guide first. After any edit, call nudg_validate and apply its hints until it reports no errors.
-When you change motion for a person to judge, call nudg_compare with the version before and after: it says first whether the difference is perceptible, then shows both side by side (real A/B filmstrips when the host page's HTML is given). Pass its headline on to the person; if it suggests an exaggerated version, offer that. When the person says a round of motion work is done, suggest once that they run \`npx @nudg/core log --share\`: it shows a counts-only summary of how many rounds the changes took (nothing about their app) and opens a GitHub issue to submit, which is how nudg improves. Don't run it for them. Use nudg_simulate for numbers, nudg_plot for one version's graph, nudg_render for one version's frames. The file says what should happen; nudg_observe says what the real page showed: after wiring a file into an app, or when the person says it doesn't look right, call it with the running page's URL and the file, and report what it found (a page that never shows the motion, an element that unmounts mid-motion, a CSS transition fighting the spring).`;
+When you change motion for a person to judge, call nudg_compare with the version before and after: it says first whether the difference is perceptible, then shows both side by side (real A/B filmstrips when the host page's HTML is given). Pass its headline on to the person; if it suggests an exaggerated version, offer that. When nudg_compare says a change has taken several rounds, ask the person once whether they'd share what made it hard; if they agree, call nudg_share with their words and give them the link (they submit it; never claim it was sent). Use nudg_simulate for numbers, nudg_plot for one version's graph, nudg_render for one version's frames. The file says what should happen; nudg_observe says what the real page showed: after wiring a file into an app, or when the person says it doesn't look right, call it with the running page's URL and the file, and report what it found (a page that never shows the motion, an element that unmounts mid-motion, a CSS transition fighting the spring).`;
 
 type Json = Record<string, unknown>;
 type Content = { type: "text"; text: string } | { type: "image"; data: string; mimeType: string };
@@ -158,6 +167,13 @@ const TOOLS = [
     annotations: { readOnlyHint: false },
   },
   {
+    name: "nudg_share",
+    title: "Share usage with the nudg project",
+    description: "Prepares a counts-only summary of this machine's nudg log (rounds per change, verdicts, tool calls, versions; no file names, paths, URLs or code) and a link to a prefilled GitHub issue the person can read and submit. Sends nothing by itself. Call it only when the person agreed to share, typically after nudg_compare said a change took several rounds; pass their words as `note`.",
+    inputSchema: { type: "object", properties: { note: { type: "string", description: "What the person said made it hard, in their words. Optional." } } },
+    annotations: { readOnlyHint: true },
+  },
+  {
     name: "nudg_observe",
     title: "Observe the real page",
     description: "Host truth. Opens the real page (its scripts run) in headless Chrome, performs actions on the element as a finger or a key would, measures it every frame (translate, scale, rotation, opacity, size, and whether it is still there), and says what the page actually showed. With `file`, judges the page against the file under the same actions: played as the file says, differs, never shown (the element left the page), or nothing moved. Needs a local Chrome.",
@@ -248,6 +264,16 @@ async function handle(message: Json): Promise<Json | undefined> {
 async function callTool(name: string, args: Json): Promise<ToolResult> {
   const result = await runTool(name, args);
   logCall(name, args, result);
+  if (name === "nudg_compare" && !result.isError) {
+    // A change that keeps needing rounds is the one the project most needs to hear about.
+    const file = typeof args.file === "string" ? args.file : (args.b as Json | undefined)?.file;
+    const hard = typeof file === "string" ? struggle(file) : undefined;
+    if (hard && result.content[0]?.type === "text") {
+      result.content[0] = text(
+        `${result.content[0].text}\n\nThis change has now taken ${hard.rounds} rounds (${hard.verdicts.join(", ")}). Ask the person once, briefly: would they share with the nudg project what made it hard? If yes, call nudg_share with their words as \`note\` and give them the link it returns; they submit it themselves. If no, drop it.`,
+      );
+    }
+  }
   return result;
 }
 
@@ -289,6 +315,17 @@ async function runTool(name: string, args: Json): Promise<ToolResult> {
         return await compareTool(args);
       case "nudg_observe":
         return await observeTool(args);
+      case "nudg_share": {
+        const summary = summarize(readLog());
+        if (summary.compare.calls + summary.observe.calls === 0) return { content: [text("Nothing to share yet: the log has no compare or observe calls" + (logPath() ? "." : " (logging is off: NUDG_LOG=off)."))] };
+        const shared = shareableSummary(summary, PACKAGE_VERSION);
+        const note = optionalString(args.note, "note");
+        const url = shareUrl(shared, note);
+        return {
+          content: [text(`Give the person this link; it opens a prefilled GitHub issue they can read and submit (nothing is sent until they do):\n${url}\n\nIt contains only:\n${JSON.stringify(shared, null, 2)}${note ? `\n\nand their note: "${note}"` : ""}`)],
+          structuredContent: { url, summary: shared, note: note ?? null } as unknown as Json,
+        };
+      }
     }
     throw new ToolError(`Unknown tool: ${name}`);
   } catch (e) {

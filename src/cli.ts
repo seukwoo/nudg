@@ -13,7 +13,7 @@ import type { Diagnostic, Program } from "./core/types.ts";
 import { CHROME_HINT, findChrome, openInBrowser, svgToPng } from "./node/chrome.ts";
 import { snapshotElement } from "./node/snapshot.ts";
 import { materializeRevision } from "./node/git.ts";
-import { clearLog, formatSummary as formatLogSummary, logPath, readLog, record, shareableSummary, shareTip, shareUrl, summarize } from "./node/log.ts";
+import { clearLog, formatSummary as formatLogSummary, logPath, readLog, record, shareableSummary, shareTip, shareUrl, struggle, summarize } from "./node/log.ts";
 import { installSkill, SKILL } from "./node/skill.ts";
 import { formatComparison, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
 import { comparePage, lastRuntimeInlined, readWithImports } from "./node/compare-page.ts";
@@ -57,7 +57,8 @@ simulate and plot options
                             What the judge loop looked like on this machine: compares,
                             verdicts, rounds per change. Local only (~/.nudg/log.jsonl);
                             NUDG_LOG=off turns logging off, NUDG_LOG=<file> moves it.
-                            --share opens a prefilled GitHub issue with counts only.
+                            --share opens a prefilled GitHub issue with counts only;
+                            --note "..." adds a line in your words.
   skill [--user|--print]    Install a Claude Code skill that teaches the agent the loop,
                             for this project (default) or for every project (--user).
   mcp                       Run the MCP server on stdio (tools: nudg_guide, nudg_validate,
@@ -299,7 +300,11 @@ async function runCompare(args: Args, json: boolean): Promise<number> {
   try {
     const code = await compareCommand(args, json);
     if (!json) {
-      const tip = shareTip();
+      // A change that keeps needing rounds is the most useful thing to hear about.
+      const hard = args.positional.length ? struggle(args.positional.at(-1)!) : undefined;
+      const tip = hard
+        ? `This change has taken ${hard.rounds} rounds. If something made it hard (a verdict that was off, a word that didn't map), please tell the project:\n  nudg log --share --note "what made it take ${hard.rounds} rounds"\nIt sends counts and your note, nothing about your app, as an issue you submit yourself.`
+        : shareTip();
       if (tip) process.stdout.write(`\n${tip}\n`);
     }
     return code;
@@ -570,7 +575,8 @@ if (command === "log") {
       process.exit(0);
     }
     const shared = shareableSummary(summary, VERSION_PKG);
-    const url = shareUrl(shared);
+    const note = args.flags.get("note")?.at(-1);
+    const url = shareUrl(shared, note);
     process.stdout.write(`This is everything that would be shared (counts only, nothing about your app):\n\n${JSON.stringify(shared, null, 2)}\n\n`);
     const opened = openInBrowser(url);
     process.stdout.write(opened ? "Opened a prefilled GitHub issue in your browser; read it, then submit. Thank you.\n" : `Open this to file it as a GitHub issue:\n${url}\n`);

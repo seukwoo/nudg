@@ -92,18 +92,64 @@ public struct NudgTarget: ViewModifier {
   }
 }
 
-/** Sends down, up and tap for a target, the way the DOM adapter does. */
+/**
+ * Press and drag for a target, by the same rules as the web: down, up and tap; for
+ * targets the file drags, dragstart, drag.x / drag.y and dragend, with a 4-point slop.
+ */
 public struct NudgPress: ViewModifier {
   @ObservedObject var model: NudgModel
   let name: String
-  @SwiftUI.State private var pressed = false
+  @SwiftUI.State private var tracker: PointerTracker?
 
   public func body(content: Content) -> some View {
     content.gesture(
       DragGesture(minimumDistance: 0)
-        .onChanged { _ in if !pressed { pressed = true; model.send("\(name).down") } }
-        .onEnded { _ in pressed = false; model.send("\(name).up"); model.send("\(name).tap") }
+        .onChanged { g in
+          if tracker == nil {
+            let t = PointerTracker(target: name, draggable: model.runtime.program.draggableTargets.contains(name), send: { model.send($0) }, input: { model.input($0, $1) })
+            t.down(0, 0)
+            tracker = t
+          }
+          tracker?.move(Double(g.translation.width), Double(g.translation.height))
+        }
+        .onEnded { _ in
+          tracker?.up()
+          tracker = nil
+        }
     )
+  }
+}
+
+/** Keys while the view has focus: `target.key.<name>` for the keys the file listens for. */
+public struct NudgKeys: ViewModifier {
+  @ObservedObject var model: NudgModel
+  let name: String
+
+  public func body(content: Content) -> some View {
+    content.focusable().onKeyPress { press in
+      let key: String
+      switch press.key {
+      case .leftArrow: key = "arrowleft"
+      case .rightArrow: key = "arrowright"
+      case .upArrow: key = "arrowup"
+      case .downArrow: key = "arrowdown"
+      case .escape: key = "escape"
+      case .return: key = "enter"
+      case .space: key = "space"
+      case .tab: key = "tab"
+      case .home: key = "home"
+      case .end: key = "end"
+      case .pageUp: key = "pageup"
+      case .pageDown: key = "pagedown"
+      case .delete: key = "backspace"
+      case .deleteForward: key = "delete"
+      default: key = nudgKeyName(press.characters)
+      }
+      let event = "\(name).key.\(key)"
+      guard model.runtime.program.handledEvents.contains(event) else { return .ignored }
+      model.send(event)
+      return .handled
+    }
   }
 }
 
@@ -130,6 +176,7 @@ public struct NudgLayout: ViewModifier {
 public extension View {
   func nudg(_ model: NudgModel, _ name: String) -> some View { modifier(NudgTarget(model: model, name: name)) }
   func nudgPress(_ model: NudgModel, _ name: String) -> some View { modifier(NudgPress(model: model, name: name)) }
+  func nudgKeys(_ model: NudgModel, _ name: String) -> some View { modifier(NudgKeys(model: model, name: name)) }
   func nudgLayout(_ model: NudgModel, _ name: String, in space: CoordinateSpace = .global) -> some View { modifier(NudgLayout(model: model, name: name, space: space)) }
 }
 

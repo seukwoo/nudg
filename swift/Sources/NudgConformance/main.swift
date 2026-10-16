@@ -58,5 +58,22 @@ for file in files {
   }
 }
 
+// The pointer rules, on the drag toggle: a drag of 30 units to the right turns it on.
+do {
+  let program = try Program.decode(Data(contentsOf: dir.appendingPathComponent("programs/drag-flick.program.json")))
+  let rt = try Runtime(program)
+  var t = 0.0
+  var log: [String] = []
+  let tracker = PointerTracker(target: "track", draggable: program.draggableTargets.contains("track"),
+    send: { log.append($0); _ = try? rt.send($0, at: t) }, input: { _ = try? rt.input($0, $1, at: t) })
+  tracker.down(100, 50)
+  for i in 1...6 { t += 1.0 / 60; tracker.move(100 + Double(i) * 5, 50) }
+  tracker.up()
+  _ = try rt.sample(t + 2)
+  let ok = rt.state() == ["on"] && log == ["track.down", "track.dragstart", "track.up", "track.dragend"]
+  if ok { passed += 1; print("ok    pointer: a 30-unit drag turns the drag toggle on, with no tap") }
+  else { failures.append("pointer"); print("FAIL  pointer: state \(rt.state()), events \(log)") }
+}
+
 print("\n\(passed) passed, \(failures.count) failed")
 exit(failures.isEmpty ? 0 : 1)

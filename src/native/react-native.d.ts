@@ -16,4 +16,17 @@ declare module "react-native" {
     nativeEvent: { layout: { x: number; y: number; width: number; height: number } };
   }
   export const AccessibilityInfo: { isReduceMotionEnabled(): Promise<boolean> };
+  export interface PanResponderGestureState { dx: number; dy: number }
+  export interface PanResponderInstance { panHandlers: Record<string, unknown> }
+  export const PanResponder: {
+    create(config: {
+      onStartShouldSetPanResponder?: () => boolean;
+      onMoveShouldSetPanResponder?: () => boolean;
+      onPanResponderGrant?: (e: unknown, g: PanResponderGestureState) => void;
+      onPanResponderMove?: (e: unknown, g: PanResponderGestureState) => void;
+      onPanResponderRelease?: (e: unknown, g: PanResponderGestureState) => void;
+      onPanResponderTerminate?: (e: unknown, g: PanResponderGestureState) => void;
+      onPanResponderTerminationRequest?: () => boolean;
+    }): PanResponderInstance;
+  };
 }

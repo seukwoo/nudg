@@ -1,0 +1,130 @@
+{
+ "nudgProgram": 1,
+ "version": "0.2",
+ "targets": [
+  "tab1",
+  "tab2",
+  "tab3",
+  "indicator"
+ ],
+ "properties": [
+  {
+   "key": "indicator.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "indicator.opacity",
+   "kind": "number",
+   "base": [
+    1
+   ],
+   "map": {
+    "source": "indicator.x",
+    "from": [
+     0,
+     50,
+     100
+    ],
+    "to": [
+     [
+      1
+     ],
+     [
+      0.5
+     ],
+     [
+      1
+     ]
+    ]
+   }
+  }
+ ],
+ "animate": [
+  {
+   "key": "indicator.x",
+   "motion": {
+    "kind": "tween",
+    "duration": 0.2,
+    "ease": "linear"
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "first",
+  "states": [
+   {
+    "name": "first",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [],
+    "timers": []
+   },
+   {
+    "name": "second",
+    "set": [
+     {
+      "key": "indicator.x",
+      "value": [
+       50
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [],
+    "timers": []
+   },
+   {
+    "name": "third",
+    "set": [
+     {
+      "key": "indicator.x",
+      "value": [
+       100
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [
+     {
+      "event": "tab3.tap",
+      "animate": [],
+      "to": "first"
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": [
+   {
+    "event": "tab1.tap",
+    "animate": [],
+    "to": "first"
+   },
+   {
+    "event": "tab2.tap",
+    "animate": [],
+    "to": "second"
+   },
+   {
+    "event": "tab3.tap",
+    "animate": [],
+    "to": "third"
+   },
+   {
+    "event": "host.reset",
+    "animate": [],
+    "to": "first"
+   }
+  ]
+ }
+}

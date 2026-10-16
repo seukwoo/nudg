@@ -322,3 +322,7 @@ For each bound target the host reports `target.layout.x`, `.y`, `.width`, `.heig
 
 `invalid-measure` (not `target.measurement`, an unknown measurement, a position into another axis or a size property, or a color property), `unknown-target`, and `needs-version` below 0.4. The conformance cases `layout-*.json` and `validation-0.4.json` define the behavior.
 
+## Compiled programs (for native runtimes)
+
+`nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 1`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms.
+

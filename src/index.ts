@@ -3,6 +3,7 @@ export type { CompileResult, ReadFile, Source } from "./core/compile.ts";
 export { createRuntime } from "./core/runtime.ts";
 export { createPlayer, toProgram } from "./core/player.ts";
 export type { HeadlessOptions, HeadlessPlayer, PlayerHost } from "./core/player.ts";
+export { programFromJson, programToJson, PROGRAM_FORMAT } from "./core/program-json.ts";
 export type { Runtime, Value } from "./core/runtime.ts";
 export { compare, compareFrameTimes, THRESHOLDS } from "./core/compare.ts";
 export { critique, measureTransitions } from "./core/critique.ts";

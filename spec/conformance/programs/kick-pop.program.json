@@ -1,0 +1,98 @@
+{
+ "nudgProgram": 1,
+ "version": "0.1",
+ "targets": [
+  "heart"
+ ],
+ "properties": [
+  {
+   "key": "heart.scale",
+   "kind": "number",
+   "base": [
+    1
+   ]
+  },
+  {
+   "key": "heart.y",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "heart.scale",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 438.6490844928604,
+    "damping": 35.604716740684324,
+    "mass": 1
+   }
+  },
+  {
+   "key": "heart.y",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 438.6490844928604,
+    "damping": 35.604716740684324,
+    "mass": 1
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "idle",
+  "states": [
+   {
+    "name": "idle",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [
+     {
+      "event": "heart.tap",
+      "animate": [],
+      "to": "liked"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "liked",
+    "set": [
+     {
+      "key": "heart.y",
+      "value": [
+       -4
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [
+     {
+      "key": "heart.scale",
+      "motion": {
+       "kind": "spring",
+       "stiffness": 246.74011002723395,
+       "damping": 15.707963267948966,
+       "mass": 1,
+       "kick": 6
+      }
+     }
+    ],
+    "when": [
+     {
+      "event": "heart.tap",
+      "animate": [],
+      "to": "idle"
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

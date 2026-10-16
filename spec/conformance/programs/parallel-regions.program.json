@@ -1,0 +1,149 @@
+{
+ "nudgProgram": 1,
+ "version": "0.1",
+ "targets": [
+  "knob",
+  "track"
+ ],
+ "properties": [
+  {
+   "key": "knob.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "knob.scale",
+   "kind": "number",
+   "base": [
+    1
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "knob.scale",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 986.9604401089358,
+    "damping": 62.83185307179586,
+    "mass": 1
+   }
+  }
+ ],
+ "machine": {
+  "kind": "regions",
+  "regions": [
+   {
+    "name": "checked",
+    "machine": {
+     "kind": "states",
+     "initial": "off",
+     "states": [
+      {
+       "name": "off",
+       "set": [],
+       "measure": [],
+       "follow": [],
+       "enter": [],
+       "when": [
+        {
+         "event": "track.tap",
+         "animate": [],
+         "to": "on"
+        }
+       ],
+       "timers": []
+      },
+      {
+       "name": "on",
+       "set": [
+        {
+         "key": "knob.x",
+         "value": [
+          20
+         ]
+        }
+       ],
+       "measure": [],
+       "follow": [],
+       "enter": [],
+       "when": [
+        {
+         "event": "track.tap",
+         "animate": [
+          {
+           "key": "knob.x",
+           "motion": {
+            "kind": "spring",
+            "stiffness": 438.6490844928604,
+            "damping": 41.88790204786391,
+            "mass": 1
+           }
+          }
+         ],
+         "to": "off"
+        }
+       ],
+       "timers": []
+      }
+     ],
+     "when": []
+    }
+   },
+   {
+    "name": "press",
+    "machine": {
+     "kind": "states",
+     "initial": "up",
+     "states": [
+      {
+       "name": "up",
+       "set": [],
+       "measure": [],
+       "follow": [],
+       "enter": [],
+       "when": [
+        {
+         "event": "track.down",
+         "animate": [],
+         "to": "down"
+        }
+       ],
+       "timers": []
+      },
+      {
+       "name": "down",
+       "set": [
+        {
+         "key": "knob.scale",
+         "value": [
+          0.9
+         ]
+        }
+       ],
+       "measure": [],
+       "follow": [],
+       "enter": [],
+       "when": [
+        {
+         "event": "track.up",
+         "animate": [],
+         "to": "up"
+        },
+        {
+         "event": "track.cancel",
+         "animate": [],
+         "to": "up"
+        }
+       ],
+       "timers": []
+      }
+     ],
+     "when": []
+    }
+   }
+  ]
+ }
+}

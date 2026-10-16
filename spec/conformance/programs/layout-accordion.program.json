@@ -1,0 +1,78 @@
+{
+ "nudgProgram": 1,
+ "version": "0.4",
+ "targets": [
+  "header",
+  "content"
+ ],
+ "properties": [
+  {
+   "key": "content.height",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "content.height",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 246.74011002723395,
+    "damping": 31.41592653589793,
+    "mass": 1
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "closed",
+  "states": [
+   {
+    "name": "closed",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [
+     {
+      "event": "header.tap",
+      "animate": [],
+      "to": "open"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "open",
+    "set": [
+     {
+      "key": "content.height",
+      "value": [
+       0
+      ]
+     }
+    ],
+    "measure": [
+     {
+      "key": "content.height",
+      "target": "content",
+      "of": "naturalHeight"
+     }
+    ],
+    "follow": [],
+    "enter": [],
+    "when": [
+     {
+      "event": "header.tap",
+      "animate": [],
+      "to": "closed"
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

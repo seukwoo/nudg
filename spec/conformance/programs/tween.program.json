@@ -1,0 +1,97 @@
+{
+ "nudgProgram": 1,
+ "version": "0.1",
+ "targets": [
+  "a",
+  "b"
+ ],
+ "properties": [
+  {
+   "key": "a.opacity",
+   "kind": "number",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "b.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "a.opacity",
+   "motion": {
+    "kind": "tween",
+    "duration": 0.2,
+    "ease": "linear"
+   }
+  },
+  {
+   "key": "b.x",
+   "motion": {
+    "kind": "tween",
+    "duration": 0.4,
+    "ease": [
+     0.2,
+     0.8,
+     0.4,
+     1.2
+    ]
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "hidden",
+  "states": [
+   {
+    "name": "hidden",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [
+     {
+      "event": "a.tap",
+      "animate": [],
+      "to": "shown"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "shown",
+    "set": [
+     {
+      "key": "a.opacity",
+      "value": [
+       1
+      ]
+     },
+     {
+      "key": "b.x",
+      "value": [
+       100
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [
+     {
+      "event": "a.tap",
+      "animate": [],
+      "to": "hidden"
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

@@ -45,6 +45,8 @@ test("schema accepts every example", () => {
 test("schema accepts every document in the conformance suite", () => {
   const dir = new URL("../spec/conformance/", import.meta.url);
   for (const url of filesIn(dir)) {
+    // programs/ holds compiled forms, not nudg documents.
+    if (url.pathname.includes("/programs/")) continue;
     const c = read(url);
     if (c.documents) continue;
     for (const doc of [c.doc, ...Object.values(c.files ?? {})]) {

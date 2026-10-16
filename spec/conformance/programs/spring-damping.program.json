@@ -1,0 +1,88 @@
+{
+ "nudgProgram": 1,
+ "version": "0.1",
+ "targets": [
+  "crit",
+  "over"
+ ],
+ "properties": [
+  {
+   "key": "crit.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "over.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "crit.x",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 438.6490844928604,
+    "damping": 41.88790204786391,
+    "mass": 1
+   }
+  },
+  {
+   "key": "over.x",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 438.6490844928604,
+    "damping": 62.83185307179586,
+    "mass": 1
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "rest",
+  "states": [
+   {
+    "name": "rest",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [
+     {
+      "event": "crit.tap",
+      "animate": [],
+      "to": "moved"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "moved",
+    "set": [
+     {
+      "key": "crit.x",
+      "value": [
+       50
+      ]
+     },
+     {
+      "key": "over.x",
+      "value": [
+       50
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

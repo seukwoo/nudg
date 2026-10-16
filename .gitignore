@@ -4,3 +4,6 @@ dist/
 *.log
 .env*
 test/fixtures/bridges/app.bundle.js
+
+swift/.build/
+swift/.swiftpm/

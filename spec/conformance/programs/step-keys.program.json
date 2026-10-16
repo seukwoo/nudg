@@ -1,0 +1,109 @@
+{
+ "nudgProgram": 1,
+ "version": "0.3",
+ "targets": [
+  "thumb"
+ ],
+ "properties": [
+  {
+   "key": "thumb.x",
+   "kind": "length",
+   "base": [
+    0
+   ],
+   "min": 0,
+   "max": 100
+  }
+ ],
+ "animate": [
+  {
+   "key": "thumb.x",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 438.6490844928604,
+    "damping": 41.88790204786391,
+    "mass": 1
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "idle",
+  "states": [
+   {
+    "name": "idle",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [
+     {
+      "event": "thumb.key.arrowright",
+      "animate": [],
+      "step": [
+       {
+        "key": "thumb.x",
+        "delta": 10
+       }
+      ]
+     },
+     {
+      "event": "thumb.key.arrowleft",
+      "animate": [],
+      "step": [
+       {
+        "key": "thumb.x",
+        "delta": -10
+       }
+      ]
+     },
+     {
+      "event": "thumb.key.end",
+      "animate": [],
+      "step": [
+       {
+        "key": "thumb.x",
+        "delta": 1000
+       }
+      ]
+     },
+     {
+      "event": "thumb.dragstart",
+      "animate": [],
+      "to": "dragging"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "dragging",
+    "set": [],
+    "measure": [],
+    "follow": [
+     {
+      "key": "thumb.x",
+      "input": "thumb.drag.x",
+      "overdrag": 0,
+      "range": [
+       0,
+       100
+      ]
+     }
+    ],
+    "enter": [],
+    "when": [
+     {
+      "event": "thumb.dragend",
+      "animate": [],
+      "to": "idle",
+      "commit": [
+       "thumb.x"
+      ]
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

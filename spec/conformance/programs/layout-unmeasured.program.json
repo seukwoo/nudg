@@ -1,0 +1,161 @@
+{
+ "nudgProgram": 1,
+ "version": "0.4",
+ "targets": [
+  "seg1",
+  "seg2",
+  "seg3",
+  "indicator"
+ ],
+ "properties": [
+  {
+   "key": "indicator.x",
+   "kind": "length",
+   "base": [
+    5
+   ]
+  },
+  {
+   "key": "indicator.width",
+   "kind": "length",
+   "base": [
+    0
+   ],
+   "measure": {
+    "target": "seg1",
+    "of": "width"
+   }
+  }
+ ],
+ "animate": [
+  {
+   "key": "indicator.x",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 438.6490844928604,
+    "damping": 37.69911184307752,
+    "mass": 1
+   }
+  },
+  {
+   "key": "indicator.width",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 438.6490844928604,
+    "damping": 37.69911184307752,
+    "mass": 1
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "first",
+  "states": [
+   {
+    "name": "first",
+    "set": [
+     {
+      "key": "indicator.x",
+      "value": [
+       0
+      ]
+     }
+    ],
+    "measure": [
+     {
+      "key": "indicator.x",
+      "target": "seg1",
+      "of": "x"
+     }
+    ],
+    "follow": [],
+    "enter": [],
+    "when": [],
+    "timers": []
+   },
+   {
+    "name": "second",
+    "set": [
+     {
+      "key": "indicator.x",
+      "value": [
+       0
+      ]
+     },
+     {
+      "key": "indicator.width",
+      "value": [
+       0
+      ]
+     }
+    ],
+    "measure": [
+     {
+      "key": "indicator.x",
+      "target": "seg2",
+      "of": "x"
+     },
+     {
+      "key": "indicator.width",
+      "target": "seg2",
+      "of": "width"
+     }
+    ],
+    "follow": [],
+    "enter": [],
+    "when": [],
+    "timers": []
+   },
+   {
+    "name": "third",
+    "set": [
+     {
+      "key": "indicator.x",
+      "value": [
+       0
+      ]
+     },
+     {
+      "key": "indicator.width",
+      "value": [
+       0
+      ]
+     }
+    ],
+    "measure": [
+     {
+      "key": "indicator.x",
+      "target": "seg3",
+      "of": "x"
+     },
+     {
+      "key": "indicator.width",
+      "target": "seg3",
+      "of": "width"
+     }
+    ],
+    "follow": [],
+    "enter": [],
+    "when": [],
+    "timers": []
+   }
+  ],
+  "when": [
+   {
+    "event": "seg1.tap",
+    "animate": [],
+    "to": "first"
+   },
+   {
+    "event": "seg2.tap",
+    "animate": [],
+    "to": "second"
+   },
+   {
+    "event": "seg3.tap",
+    "animate": [],
+    "to": "third"
+   }
+  ]
+ }
+}

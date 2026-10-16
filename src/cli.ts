@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { basename, extname, join } from "node:path";
 import { compare, compareFrameTimes } from "./core/compare.ts";
 import { critique } from "./core/critique.ts";
+import { programToJson } from "./core/program-json.ts";
 import { createRuntime } from "./core/runtime.ts";
 import { plot } from "./core/plot.ts";
 import { presets, type PresetName } from "./core/presets.ts";
@@ -75,6 +76,9 @@ simulate and plot options
                             HEAD~1, a branch): no copy of the "before" to keep around.
   render <file>             Draw real frames of the component with headless Chrome, as one
                             filmstrip PNG. Uses the page's markup and styles; its scripts don't run.
+  compile <file> [--out x]  The file compiled for a native runtime (Swift, Kotlin): validated,
+                            imports and named motions resolved, as plain JSON. Ship it with
+                            the app; the runtime there reads it without a validator.
   critique <file...>        Whether the motion is good, not only valid: each transition checked
                             against the platforms' motion guidelines and accessibility rules
                             (slow transitions, late press feedback, invisible changes, bouncy
@@ -547,6 +551,23 @@ if (command === "simulate") process.exit(runSimulate(args, json));
 if (command === "plot") process.exit(runPlot(args, json));
 if (command === "render") process.exit(await runRender(args, json));
 if (command === "observe") process.exit(await runObserve(args, json));
+if (command === "compile") {
+  const file = args.positional[0];
+  if (!file || args.positional.length > 1) fail("compile takes exactly one file.");
+  const { program, diagnostics } = load(file);
+  if (!program) {
+    process.stdout.write(`${file}: can't compile, the file has errors\n`);
+    for (const d of diagnostics) process.stdout.write(formatDiagnostic(d) + "\n");
+    process.exit(1);
+  }
+  const text = JSON.stringify(programToJson(program), null, 1) + "\n";
+  const out = args.flags.get("out")?.at(-1);
+  if (out) {
+    writeFileSync(out, text);
+    process.stdout.write(`wrote ${out}\n`);
+  } else process.stdout.write(text);
+  process.exit(0);
+}
 if (command === "critique") {
   if (args.positional.length === 0) fail("critique needs at least one file.");
   let warnings = 0;
@@ -623,4 +644,4 @@ if (command === "mcp") {
   await serveMcp();
   process.exit(0);
 }
-fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, critique, observe, preset, log, skill, mcp.`);
+fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, compile, critique, observe, preset, log, skill, mcp.`);

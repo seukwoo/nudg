@@ -1,0 +1,129 @@
+{
+ "nudgProgram": 1,
+ "version": "0.1",
+ "targets": [
+  "panel"
+ ],
+ "properties": [
+  {
+   "key": "panel.opacity",
+   "kind": "number",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "panel.y",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [],
+ "machine": {
+  "kind": "states",
+  "initial": "closed",
+  "states": [
+   {
+    "name": "closed",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [
+     {
+      "event": "panel.tap",
+      "animate": [],
+      "to": "open"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "open",
+    "set": [
+     {
+      "key": "panel.opacity",
+      "value": [
+       1
+      ]
+     },
+     {
+      "key": "panel.y",
+      "value": [
+       10
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [
+     {
+      "key": "panel.y",
+      "motion": {
+       "kind": "spring",
+       "stiffness": 438.6490844928604,
+       "damping": 29.321531433504735,
+       "mass": 1,
+       "kick": 50
+      }
+     }
+    ],
+    "when": [
+     {
+      "event": "panel.tap",
+      "animate": [],
+      "to": "closed"
+     }
+    ],
+    "timers": [],
+    "machine": {
+     "kind": "states",
+     "initial": "idle",
+     "states": [
+      {
+       "name": "idle",
+       "set": [],
+       "measure": [],
+       "follow": [],
+       "enter": [],
+       "when": [
+        {
+         "event": "panel.down",
+         "animate": [],
+         "to": "pressed"
+        }
+       ],
+       "timers": []
+      },
+      {
+       "name": "pressed",
+       "set": [
+        {
+         "key": "panel.y",
+         "value": [
+          12
+         ]
+        }
+       ],
+       "measure": [],
+       "follow": [],
+       "enter": [],
+       "when": [
+        {
+         "event": "panel.up",
+         "animate": [],
+         "to": "idle"
+        }
+       ],
+       "timers": []
+      }
+     ],
+     "when": []
+    }
+   }
+  ],
+  "when": []
+ }
+}

@@ -155,6 +155,8 @@ Status: first cut implemented as format 0.4 (`measure` in `values` and `set`, re
 
 **First cut, in order:** `measure` for `x`/`width` in `set` and `values` with retargeting; `segmented` and a new `tabs` example without hard-coded widths; `naturalHeight` and an `accordion` that opens to its content; then `nearest` over measured targets for a bottom sheet. Each with conformance cases in `derive.py` first.
 
+11. **Native runtimes read compiled programs.** Validation, error messages and hints live in one place, the reference implementation; runtimes on other platforms read the compiled form (`nudg compile`) and are checked by the same conformance suite. A file is validated where it is written (the editor, the AI's loop, CI), not on the device.
+
 ## Open questions
 
 These are unresolved design choices. Scheduling and completion status live in the [roadmap](roadmap.md); examples of possible syntax below are proposals.

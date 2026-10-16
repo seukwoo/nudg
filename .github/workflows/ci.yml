@@ -45,3 +45,17 @@ jobs:
           npx nudg simulate like.nudg.json --send heart.tap@0.1 --json > /dev/null
           npx nudg render like.nudg.json --html like.html --send heart.tap@0 --at 0.1 --out frames.png
           printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' | npx nudg mcp | grep -q '"serverInfo"'
+
+  swift:
+    # The Swift runtime must pass the same conformance suite, from the programs the
+    # reference compiler wrote; SwiftUI must draw what the runtime says.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: swift --version
+      - name: Conformance suite on the Swift runtime
+        working-directory: swift
+        run: swift run NudgConformance ../spec/conformance
+      - name: SwiftUI renders a nudg toggle
+        working-directory: swift
+        run: swift run NudgSwiftUICheck ../spec/conformance/programs/toggle-tap.program.json "$RUNNER_TEMP"

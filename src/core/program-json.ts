@@ -1,0 +1,129 @@
+// A compiled Program as plain JSON: what a runtime in another language reads, so only
+// the reference implementation needs the validator. Everything is resolved (named
+// motions, imports, spring forms, colors as OKLab channels), and every map is an array
+// of entries, because order matters (regions, states) and not every JSON reader keeps
+// object key order.
+
+import type { Follow, Machine, Measure, Motion, Program, Property, SpringMotion, State, Timer, Transition } from "./types.ts";
+
+export const PROGRAM_FORMAT = 1;
+
+type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
+
+export function programToJson(program: Program): Json {
+  return {
+    nudgProgram: PROGRAM_FORMAT,
+    version: program.version,
+    targets: program.targets,
+    properties: [...program.properties].map(([key, p]) => ({ key, ...property(p) })),
+    animate: [...program.animate].map(([key, m]) => ({ key, motion: motion(m) })),
+    machine: machine(program.machine),
+  };
+}
+
+export function programFromJson(json: unknown): Program {
+  const j = json as Record<string, any>;
+  if (j?.nudgProgram !== PROGRAM_FORMAT) throw new Error(`Not a compiled nudg program (format ${PROGRAM_FORMAT}).`);
+  return {
+    version: j.version,
+    targets: j.targets,
+    properties: new Map(j.properties.map((p: any) => [p.key, readProperty(p)])),
+    animate: new Map(j.animate.map((a: any) => [a.key, a.motion as Motion])),
+    machine: readMachine(j.machine),
+  };
+}
+
+function property(p: Property): Record<string, Json> {
+  const out: Record<string, Json> = { kind: p.kind, base: p.base };
+  if (p.map) out.map = { source: p.map.source, from: p.map.from, to: p.map.to };
+  if (p.measure) out.measure = measure(p.measure);
+  if (p.min !== undefined) out.min = p.min;
+  if (p.max !== undefined) out.max = p.max;
+  return out;
+}
+
+function readProperty(p: any): Property {
+  const out: Property = { kind: p.kind, base: p.base };
+  if (p.map) out.map = p.map;
+  if (p.measure) out.measure = p.measure;
+  if (p.min !== undefined) out.min = p.min;
+  if (p.max !== undefined) out.max = p.max;
+  return out;
+}
+
+const measure = (m: Measure): Json => ({ target: m.target, of: m.of });
+
+function motion(m: Motion): Json {
+  if (m.kind === "tween") return { kind: "tween", duration: m.duration, ease: m.ease === "linear" ? "linear" : [...m.ease] };
+  const out: Record<string, Json> = { kind: "spring", stiffness: m.stiffness, damping: m.damping, mass: m.mass };
+  if (m.kick !== undefined) out.kick = m.kick;
+  return out;
+}
+
+function machine(m: Machine): Json {
+  if (m.kind === "regions") return { kind: "regions", regions: [...m.regions].map(([name, r]) => ({ name, machine: machine(r) })) };
+  return { kind: "states", initial: m.initial, states: [...m.states.values()].map(state), when: [...m.when].map(([event, t]) => ({ event, ...transition(t) })) };
+}
+
+function readMachine(j: any): Machine {
+  if (j.kind === "regions") return { kind: "regions", regions: new Map(j.regions.map((r: any) => [r.name, readMachine(r.machine)])) };
+  return { kind: "states", initial: j.initial, states: new Map(j.states.map((s: any) => [s.name, readState(s)])), when: new Map(j.when.map((w: any) => [w.event, readTransition(w)])) };
+}
+
+function state(s: State): Json {
+  const out: Record<string, Json> = {
+    name: s.name,
+    set: [...s.set].map(([key, value]) => ({ key, value })),
+    measure: [...s.measure].map(([key, m]) => ({ key, ...(measure(m) as Record<string, Json>) })),
+    follow: [...s.follow].map(([key, f]) => ({ key, ...follow(f) })),
+    enter: [...s.enter].map(([key, m]) => ({ key, motion: motion(m) })),
+    when: [...s.when].map(([event, t]) => ({ event, ...transition(t) })),
+    timers: s.timers.map((t: Timer) => ({ key: t.key, delay: t.delay, transition: transition(t.transition) })),
+  };
+  if (s.machine) out.machine = machine(s.machine);
+  return out;
+}
+
+function readState(j: any): State {
+  const s: State = {
+    name: j.name,
+    set: new Map(j.set.map((e: any) => [e.key, e.value])),
+    measure: new Map(j.measure.map((e: any) => [e.key, { target: e.target, of: e.of }])),
+    follow: new Map(j.follow.map((e: any) => [e.key, readFollow(e)])),
+    enter: new Map(j.enter.map((e: any) => [e.key, e.motion as SpringMotion])),
+    when: new Map(j.when.map((w: any) => [w.event, readTransition(w)])),
+    timers: j.timers.map((t: any) => ({ key: t.key, delay: t.delay, transition: readTransition(t.transition) })),
+  };
+  if (j.machine) s.machine = readMachine(j.machine);
+  return s;
+}
+
+function follow(f: Follow): Record<string, Json> {
+  const out: Record<string, Json> = { input: f.input, overdrag: f.overdrag };
+  if (f.range) out.range = [...f.range];
+  return out;
+}
+
+function readFollow(j: any): Follow {
+  const f: Follow = { input: j.input, overdrag: j.overdrag };
+  if (j.range) f.range = [j.range[0], j.range[1]];
+  return f;
+}
+
+function transition(t: Transition): Record<string, Json> {
+  const out: Record<string, Json> = { animate: [...t.animate].map(([key, m]) => ({ key, motion: motion(m) })) };
+  if (t.to !== undefined) out.to = t.to;
+  if (t.nearest) out.nearest = { states: t.nearest.states, by: t.nearest.by, momentum: t.nearest.momentum };
+  if (t.step) out.step = [...t.step].map(([key, delta]) => ({ key, delta }));
+  if (t.commit) out.commit = t.commit;
+  return out;
+}
+
+function readTransition(j: any): Transition {
+  const t: Transition = { animate: new Map(j.animate.map((a: any) => [a.key, a.motion as Motion])) };
+  if (j.to !== undefined) t.to = j.to;
+  if (j.nearest) t.nearest = j.nearest;
+  if (j.step) t.step = new Map(j.step.map((s: any) => [s.key, s.delta]));
+  if (j.commit) t.commit = j.commit;
+  return t;
+}

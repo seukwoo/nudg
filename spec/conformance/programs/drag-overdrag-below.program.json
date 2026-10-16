@@ -1,0 +1,145 @@
+{
+ "nudgProgram": 1,
+ "version": "0.2",
+ "targets": [
+  "knob",
+  "track"
+ ],
+ "properties": [
+  {
+   "key": "knob.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "track.color",
+   "kind": "color",
+   "base": [
+    0.8716813285508724,
+    -0.0018876580530055032,
+    -0.009145881284123858,
+    1
+   ],
+   "map": {
+    "source": "knob.x",
+    "from": [
+     0,
+     20
+    ],
+    "to": [
+     [
+      0.8716813285508724,
+      -0.0018876580530055032,
+      -0.009145881284123858,
+      1
+     ],
+     [
+      0.8003487736930357,
+      -0.16031666057205773,
+      0.08628181815167235,
+      1
+     ]
+    ]
+   }
+  }
+ ],
+ "animate": [
+  {
+   "key": "knob.x",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 322.27279677026473,
+    "damping": 26.927937030769655,
+    "mass": 1
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "off",
+  "states": [
+   {
+    "name": "off",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [
+     {
+      "event": "track.tap",
+      "animate": [],
+      "to": "on"
+     },
+     {
+      "event": "track.dragstart",
+      "animate": [],
+      "to": "dragging"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "on",
+    "set": [
+     {
+      "key": "knob.x",
+      "value": [
+       20
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [
+     {
+      "event": "track.tap",
+      "animate": [],
+      "to": "off"
+     },
+     {
+      "event": "track.dragstart",
+      "animate": [],
+      "to": "dragging"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "dragging",
+    "set": [],
+    "measure": [],
+    "follow": [
+     {
+      "key": "knob.x",
+      "input": "track.drag.x",
+      "overdrag": 0.3,
+      "range": [
+       0,
+       20
+      ]
+     }
+    ],
+    "enter": [],
+    "when": [
+     {
+      "event": "track.dragend",
+      "animate": [],
+      "nearest": {
+       "states": [
+        "off",
+        "on"
+       ],
+       "by": "knob.x",
+       "momentum": 0.5
+      }
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

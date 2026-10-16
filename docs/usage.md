@@ -295,6 +295,35 @@ function Toggle() {
 
 For other hosts (a canvas, a game loop), `createPlayer(program, { host: { now, frame }, onFrame })` from `@nudg/core` is the same loop without any platform: you give it a clock and a frame scheduler, it gives you values.
 
+## Swift and SwiftUI
+
+The Swift runtime (`swift/`, Swift Package Manager) runs the same files on Apple platforms. It doesn't parse `.nudg.json` itself: the reference tools validate and compile it, and the app ships the result.
+
+```sh
+nudg compile toggle.nudg.json --out Toggle.program.json   # add it to the app's resources
+```
+
+```swift
+import Nudg
+import NudgSwiftUI
+
+struct Toggle: View {
+  @StateObject var model = NudgModel(try! Program.decode(Data(contentsOf: Bundle.main.url(forResource: "Toggle.program", withExtension: "json")!)))
+  var body: some View {
+    ZStack(alignment: .leading) {
+      Capsule().frame(width: 52, height: 32).nudg(model, "track")
+      Circle().fill(.white).frame(width: 24, height: 24).padding(4).nudg(model, "knob")
+    }
+    .onTapGesture { model.send("track.tap") }
+  }
+}
+```
+
+- `.nudg(model, "knob")` applies a target's values (offset, rotation, scale, opacity, size, background color) every frame through `TimelineView`. `.nudgPress(model, "button")` sends `down`, `up`, `tap`; `.nudgLayout(model, "tab2")` reports the view's frame for `measure`.
+- `model.send("host.show")`, `model.state`, and Reduce Motion from the system on iOS.
+- The runtime passes the whole conformance suite from `spec/conformance/programs/` (`swift run NudgConformance ../spec/conformance`), and CI also renders a toggle with SwiftUI's `ImageRenderer` and checks the knob is where the runtime says.
+- Not yet: drag gestures and keys in the SwiftUI adapter, an iOS simulator check (needs Xcode), Swift Package distribution outside this repository.
+
 ## DOM adapter
 
 ```js

@@ -1,0 +1,106 @@
+{
+ "nudgProgram": 1,
+ "version": "0.3",
+ "targets": [
+  "toast"
+ ],
+ "properties": [
+  {
+   "key": "toast.y",
+   "kind": "length",
+   "base": [
+    12
+   ]
+  },
+  {
+   "key": "toast.opacity",
+   "kind": "number",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "toast.y",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 246.74011002723395,
+    "damping": 25.132741228718345,
+    "mass": 1
+   }
+  },
+  {
+   "key": "toast.opacity",
+   "motion": {
+    "kind": "tween",
+    "duration": 0.2,
+    "ease": "linear"
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "hidden",
+  "states": [
+   {
+    "name": "hidden",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [],
+    "timers": []
+   },
+   {
+    "name": "shown",
+    "set": [
+     {
+      "key": "toast.y",
+      "value": [
+       0
+      ]
+     },
+     {
+      "key": "toast.opacity",
+      "value": [
+       1
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [
+     {
+      "event": "toast.tap",
+      "animate": [],
+      "to": "hidden"
+     }
+    ],
+    "timers": [
+     {
+      "key": "after:500ms",
+      "delay": 0.5,
+      "transition": {
+       "animate": [],
+       "to": "hidden"
+      }
+     }
+    ]
+   }
+  ],
+  "when": [
+   {
+    "event": "host.show",
+    "animate": [],
+    "to": "shown"
+   },
+   {
+    "event": "host.hide",
+    "animate": [],
+    "to": "hidden"
+   }
+  ]
+ }
+}

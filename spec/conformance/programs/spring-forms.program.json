@@ -1,0 +1,157 @@
+{
+ "nudgProgram": 1,
+ "version": "0.1",
+ "targets": [
+  "a",
+  "b",
+  "c",
+  "d",
+  "e"
+ ],
+ "properties": [
+  {
+   "key": "a.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "b.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "c.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "d.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "e.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "a.x",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 246.74011002723395,
+    "damping": 21.991148575128552,
+    "mass": 1
+   }
+  },
+  {
+   "key": "b.x",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 246.74011002723395,
+    "damping": 21.991148575128552,
+    "mass": 1
+   }
+  },
+  {
+   "key": "c.x",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 246.74011002723395,
+    "damping": 21.991148575128552,
+    "mass": 1
+   }
+  },
+  {
+   "key": "d.x",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 246.74011002723395,
+    "damping": 21.991148575128552,
+    "mass": 1
+   }
+  },
+  {
+   "key": "e.x",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 493.4802200544679,
+    "damping": 43.982297150257104,
+    "mass": 2
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "rest",
+  "states": [
+   {
+    "name": "rest",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [
+     {
+      "event": "a.tap",
+      "animate": [],
+      "to": "moved"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "moved",
+    "set": [
+     {
+      "key": "a.x",
+      "value": [
+       100
+      ]
+     },
+     {
+      "key": "b.x",
+      "value": [
+       100
+      ]
+     },
+     {
+      "key": "c.x",
+      "value": [
+       100
+      ]
+     },
+     {
+      "key": "d.x",
+      "value": [
+       100
+      ]
+     },
+     {
+      "key": "e.x",
+      "value": [
+       100
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

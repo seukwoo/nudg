@@ -3,7 +3,8 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, test } from "node:test";
-import { compile, createRuntime, type Value } from "../src/index.ts";
+import { compile, createRuntime, type Program, type Value } from "../src/index.ts";
+import { programFromJson, programToJson } from "../src/core/program-json.ts";
 
 const NUMBER_TOLERANCE = 1e-6;
 /** Colors may differ by one step per 8-bit channel after rounding. */
@@ -67,9 +68,7 @@ for (const file of readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
     continue;
   }
 
-  test(`${file}: ${c.name}`, () => {
-    const { program, diagnostics } = compileCase(c.doc, c.files);
-    assert.ok(program, `document should compile: ${JSON.stringify(diagnostics, null, 2)}`);
+  const run = (program: Program) => {
     const rt = createRuntime(program, { state: c.start, reducedMotion: c.reducedMotion });
     for (const step of c.steps ?? []) {
       if (step.input !== undefined) assert.ok(rt.input(step.input, step.value!, step.t), `input ${step.input} at ${step.t}s`);
@@ -84,5 +83,24 @@ for (const file of readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
         for (const [key, expected] of Object.entries(step.expect.values)) assertValue(key, values[key], expected, step.t);
       }
     }
+  };
+
+  test(`${file}: ${c.name}`, () => {
+    const { program, diagnostics } = compileCase(c.doc, c.files);
+    assert.ok(program, `document should compile: ${JSON.stringify(diagnostics, null, 2)}`);
+    run(program);
+  });
+
+  // The compiled form other runtimes read must carry everything: the same case, through JSON.
+  test(`${file} (compiled program JSON): ${c.name}`, () => {
+    const { program } = compileCase(c.doc, c.files);
+    run(programFromJson(JSON.parse(JSON.stringify(programToJson(program!)))));
   });
 }
+
+test("programs/ holds every case compiled by the current compiler (run spec/conformance/compile-programs.ts)", async () => {
+  const { compiledPrograms } = await import("../spec/conformance/compile-programs.ts");
+  for (const [name, text] of compiledPrograms()) {
+    assert.equal(readFileSync(new URL(`programs/${name}`, dir), "utf8"), text, `programs/${name} is out of date`);
+  }
+});

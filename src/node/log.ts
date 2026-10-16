@@ -167,16 +167,16 @@ export function shareableSummary(s: LogSummary, version: string): Record<string,
 }
 
 /** A prefilled GitHub issue for the shared summary; the person reads it and submits. */
-export function shareUrl(summary: Record<string, unknown>): string {
+export function shareUrl(summary: Record<string, unknown>, note?: string): string {
   const body = [
     "Usage summary from `nudg log --share`. Counts only: no file names, paths, URLs or code.",
     "",
+    ...(note ? ["In the person's words:", "", `> ${note.replace(/\n/g, "\n> ")}`, ""] : []),
     "```json",
     JSON.stringify(summary, null, 2),
     "```",
     "",
-    "Anything that took many rounds, or a verdict that was wrong? (optional)",
-    "",
+    ...(note ? [] : ["Anything that took many rounds, or a verdict that was wrong? (optional)", ""]),
   ].join("\n");
   const params = new URLSearchParams({ title: `Usage log: ${summary.changes} changes, median ${(summary.roundsPerChange as { median: number }).median} rounds`, labels: "usage-log", body });
   return `https://github.com/seukwoo/nudg/issues/new?${params.toString()}`;
@@ -199,6 +199,41 @@ export function shareTip(): string | undefined {
     if (s.rounds.changes < 3) return undefined;
     writeFileSync(marker, String(Date.now()));
     return `tip: you've judged ${s.rounds.changes} motion changes with nudg (median ${s.rounds.median} rounds each). \`nudg log --share\` sends the project those counts, nothing about your app.`;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Rounds at which a change counts as a struggle worth asking about. */
+export const STRUGGLE_ROUNDS = 3;
+
+/**
+ * The chain the latest compare of `file` (in `cwd`) belongs to: how many rounds so far
+ * and the verdict of each. Counts and verdicts only.
+ */
+export function latestChain(entries: LogEntry[], cwd: string, file: string): { rounds: number; verdicts: string[] } {
+  const mine = entries.filter((e) => e.tool === "compare" && !e.error && e.cwd === cwd && (e.files.at(-1) ?? "") === file);
+  const verdicts: string[] = [];
+  let last = Infinity;
+  for (let i = mine.length - 1; i >= 0; i--) {
+    const t = Date.parse(mine[i].t);
+    if (last - t > CHAIN_GAP_MS && verdicts.length) break;
+    verdicts.unshift(mine[i].verdict ?? "?");
+    last = t;
+  }
+  return { rounds: verdicts.length, verdicts };
+}
+
+/**
+ * Right after a compare: if this change has just reached STRUGGLE_ROUNDS, the moment to
+ * ask the person whether they'd share why. Asked once per change (exactly at that round).
+ */
+export function struggle(file: string): { rounds: number; verdicts: string[] } | undefined {
+  const path = logPath();
+  if (!path) return undefined;
+  try {
+    const chain = latestChain(readLog(path), process.cwd(), file);
+    return chain.rounds === STRUGGLE_ROUNDS ? chain : undefined;
   } catch {
     return undefined;
   }

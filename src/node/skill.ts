@@ -15,7 +15,7 @@ nudg files (\`*.nudg.json\`) describe an interaction: states, events, and spring
 
 1. Before the first edit, read the format with the \`nudg_guide\` tool (or \`npx @nudg/core\` docs in spec/guide.md).
 2. Edit the file. Map feel words to fields with the guide ("heavier" is a longer duration and less bounce; "snappier" the reverse).
-3. \`nudg_validate\` until it is clean. Every error has a hint that says how to fix it.
+3. \`nudg_validate\` until it is clean. Every error has a hint that says how to fix it. Then \`nudg_critique\` once and fix its warnings: it checks the motion against the platforms' guidelines.
 4. Show the person, unasked: \`nudg_compare\` with \`file\` and \`before: "HEAD"\`, and the running app's \`url\` if there is one. The before/after opens in their browser once; later calls rewrite the same page, so ask them to reload. Pass the headline on in one sentence and say which side is which.
 5. If the headline says nobody would notice, offer an exaggerated version first (about 3x the change), then dial it back.
 6. After wiring a file into the app, or when the person says it looks wrong there, \`nudg_observe\` the real page: it says whether the page played the file, or why not (unmounted mid-motion, a CSS transition fighting the spring, nothing bound).

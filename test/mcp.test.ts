@@ -49,7 +49,7 @@ test("lists the tools with input schemas", async () => {
   const { result } = await request("tools/list");
   assert.deepEqual(
     result.tools.map((t: { name: string }) => t.name),
-    ["nudg_guide", "nudg_validate", "nudg_simulate", "nudg_plot", "nudg_compare", "nudg_render", "nudg_share", "nudg_observe"],
+    ["nudg_guide", "nudg_validate", "nudg_simulate", "nudg_plot", "nudg_compare", "nudg_render", "nudg_critique", "nudg_share", "nudg_observe"],
   );
   for (const tool of result.tools) assert.equal(tool.inputSchema.type, "object");
 });
@@ -160,6 +160,14 @@ test("observe judges the real page against the file", { skip: chrome ? false : "
   const bad = await call("nudg_observe", { url: "test/fixtures/host/unmount.html", selector: "#btn", actions: [{ action: "poke", t: 0.1 }] });
   assert.equal(bad.isError, true);
   assert.match(bad.content[0].text, /Unknown action "poke"/);
+});
+
+test("critique names what to fix and where it comes from", async () => {
+  const result = await call("nudg_critique", { file: "examples/toast.nudg.json" });
+  assert.equal(result.isError, undefined, result.content[0].text);
+  assert.match(result.content[0].text, /suggestion short-timeout at \/states\/shown\/when\/after:3s/);
+  assert.match(result.content[0].text, /from: WCAG/);
+  assert.equal(result.structuredContent.findings[0].code, "short-timeout");
 });
 
 test("plot returns an image", { skip: chrome ? false : "no Chrome found" }, async () => {

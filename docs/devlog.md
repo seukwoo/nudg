@@ -249,6 +249,12 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Resolution:** Every protocol call now fails after 30 s with the method's name, so a hang becomes a failed test with a message. The run was cancelled and rerun.
 - **Lesson:** Anything that waits on another process needs a deadline, or a flake turns into a stuck pipeline.
 
+### Critique: from "is it visible" to "is it good"
+- **Problem:** The judge tools said whether a change was visible and whether the page played it, never whether the motion was good. Motion's MotionScore and Lottie's accessibility audit do say so; nudg's agent had no such reviewer.
+- **Design:** `critique` plays every transition of every leaf state from rest on fresh runtimes, measures 90% time and settle time per property, and checks seven rules sourced from Material 3 motion, Apple HIG, WCAG 2.2.1/2.2.2 and the WAI-ARIA dialog pattern. Findings are warnings or suggestions with a pointer, a fix and a source, never errors.
+- **Calibration:** the first run flagged almost every example as slow, because "settled" meant the runtime's rest threshold (1e-3 units): a 0.35 s spring took 0.74 s to get there. Settling was redefined as perceptual (staying within a pixel, or 0.5% of scale or opacity). Two rules were scoped after reading their sources: "exits faster than entrances" is about things leaving, not a press's springy release, and Escape is required of dialogs, sheets, menus and popovers, not of an accordion or a toast. After that the 20 curated examples produce one note, the 3 s toast, which the WCAG rule rightly questions.
+- **Lesson:** A critic is only useful if it is quiet on good work. Calibrate it on examples you trust before trusting what it says about new ones.
+
 ### Layout as input: format 0.4
 - **Problem:** Every example with an indicator or a panel hard-coded pixels (`segmented` assumed 72 px segments, `accordion` a 72 px panel), so a longer label or answer broke the motion. Motion's `layout` animations are the biggest capability gap between nudg and Motion.
 - **Design:** the core never measures (decisions 3, 6, 9 stay intact). The host reports `target.layout.{x,y,width,height,naturalWidth,naturalHeight}` as inputs, and one operator, `measure`, reads them: positions align (`tab2.layout.x - underline.layout.x`), sizes are the size. The user agreed on "align" over raw coordinates because raw coordinates would need arithmetic, which would pressure decision 9.

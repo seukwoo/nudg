@@ -5,6 +5,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { basename, extname, join } from "node:path";
 import { compare, compareFrameTimes } from "./core/compare.ts";
+import { critique } from "./core/critique.ts";
 import { createRuntime } from "./core/runtime.ts";
 import { plot } from "./core/plot.ts";
 import { presets, type PresetName } from "./core/presets.ts";
@@ -15,7 +16,7 @@ import { snapshotElement } from "./node/snapshot.ts";
 import { materializeRevision } from "./node/git.ts";
 import { clearLog, formatSummary as formatLogSummary, logPath, readLog, record, shareableSummary, shareTip, shareUrl, struggle, summarize } from "./node/log.ts";
 import { installSkill, SKILL } from "./node/skill.ts";
-import { formatComparison, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
+import { formatComparison, formatCritique, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
 import { comparePage, lastRuntimeInlined, readWithImports } from "./node/compare-page.ts";
 import { compilePath } from "./node/load.ts";
 import { serveMcp } from "./node/mcp.ts";
@@ -74,6 +75,11 @@ simulate and plot options
                             HEAD~1, a branch): no copy of the "before" to keep around.
   render <file>             Draw real frames of the component with headless Chrome, as one
                             filmstrip PNG. Uses the page's markup and styles; its scripts don't run.
+  critique <file...>        Whether the motion is good, not only valid: each transition checked
+                            against the platforms' motion guidelines and accessibility rules
+                            (slow transitions, late press feedback, invisible changes, bouncy
+                            fades, slow exits, short timeouts, dialogs without Escape).
+                            --strict exits 1 on warnings.
   observe <url|page.html>   Host truth: open the real page (scripts and all) in headless Chrome,
                             do what a finger would, measure the element every frame, and say
                             what the page actually showed. With --file, judge it against the file.
@@ -135,7 +141,7 @@ function parseArgs(argv: string[]): Args {
       continue;
     }
     const [name, inline] = arg.slice(2).split(/=(.*)/s, 2);
-    const boolean = ["json", "help", "reduced-motion", "open", "clear", "path", "print", "user", "share"].includes(name);
+    const boolean = ["json", "help", "reduced-motion", "open", "clear", "path", "print", "user", "share", "strict"].includes(name);
     const value = boolean ? "" : (inline ?? argv[++i]);
     if (value === undefined || (!boolean && (value === "" || value.startsWith("--")))) fail(`Option --${name} needs a value.`);
     flags.set(name, [...(flags.get(name) ?? []), value]);
@@ -541,6 +547,25 @@ if (command === "simulate") process.exit(runSimulate(args, json));
 if (command === "plot") process.exit(runPlot(args, json));
 if (command === "render") process.exit(await runRender(args, json));
 if (command === "observe") process.exit(await runObserve(args, json));
+if (command === "critique") {
+  if (args.positional.length === 0) fail("critique needs at least one file.");
+  let warnings = 0;
+  const all: unknown[] = [];
+  for (const file of args.positional) {
+    const { program, diagnostics } = load(file);
+    if (!program) {
+      process.stdout.write(`${file}: can't critique, the file has errors\n`);
+      for (const d of diagnostics) process.stdout.write(formatDiagnostic(d) + "\n");
+      process.exit(1);
+    }
+    const { findings, transitions } = critique(program);
+    warnings += findings.filter((f) => f.severity === "warning").length;
+    if (json) all.push({ file, findings, transitions: transitions.length });
+    else process.stdout.write(formatCritique(file, findings, transitions.length) + "\n");
+  }
+  if (json) process.stdout.write(JSON.stringify({ ok: true, results: all }, null, 2) + "\n");
+  process.exit(args.flags.has("strict") && warnings > 0 ? 1 : 0);
+}
 if (command === "compare") process.exit(await runCompare(args, json));
 if (command === "preset") {
   const name = args.positional[0] as PresetName | undefined;
@@ -598,4 +623,4 @@ if (command === "mcp") {
   await serveMcp();
   process.exit(0);
 }
-fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, observe, preset, log, skill, mcp.`);
+fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, critique, observe, preset, log, skill, mcp.`);

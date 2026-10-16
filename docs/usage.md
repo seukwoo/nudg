@@ -99,6 +99,34 @@ nudg compare toggle.nudg.json toggle-bouncier.nudg.json --send track.tap@0.05 --
 
 Each property gets a verdict: **imperceptible** (under a device pixel at 1×, or under about three frames), **subtle**, or **clear**. When nothing crosses the threshold it says so and proposes the next turn: look at an exaggerated version first, then dial it back. With `--html` the picture is real A/B filmstrips in two rows, same markup, same moments; without it, both curves on one graph (solid A, dashed B). `--labels now,bouncier` names the rows.
 
+### critique
+
+```sh
+nudg critique toast.nudg.json
+```
+
+Valid isn't the same as good. `critique` plays every transition from rest and checks it against the platforms' motion guidelines and accessibility rules:
+
+```
+toast.nudg.json: 0 warnings, 1 suggestions (5 transitions checked).
+
+suggestion short-timeout at /states/shown/when/after:3s: shown goes away after 3 s, and nothing pauses it.
+  fix: Give people time to read it: Material snackbars stay 4–10 s. Pause it while hovered or focused, or let it be dismissed instead.
+  from: WCAG 2.2.2 Pause, Stop, Hide / 2.2.1 Timing Adjustable
+```
+
+| Code | When |
+|---|---|
+| `slow-transition` | A transition takes 0.6 s or more to settle, as far as a person can see (a warning from 1 s). |
+| `late-feedback` | A press (`down`) gets less than 90% of its feedback within 0.15 s. |
+| `invisible-change` | Everything a transition moves stays under a pixel or 2%. |
+| `bouncy-fade` | Opacity or a color springs with overshoot, which is clipped and only delays settling. |
+| `slow-exit` | Going back to the initial state takes clearly longer than leaving it (not a press's release). |
+| `short-timeout` | Something shown goes away by itself in under 4 s. |
+| `no-escape` | A dialog, sheet, menu or popover can be closed, but not with Escape. |
+
+Findings are warnings or suggestions, never errors; `--strict` exits 1 on warnings, for CI. Over MCP it is `nudg_critique`, and the server tells the agent to run it after every change.
+
 ### observe
 
 The file says what should happen. `observe` says what the real page showed:
@@ -170,6 +198,7 @@ Installs a Claude Code skill that teaches the agent the loop: validate, compare 
 | `nudg_plot` | A motion graph image. |
 | `nudg_compare` | Two versions under the same events: a perceptibility verdict first (imperceptible / subtle / clear, per property), then real A/B filmstrips (with `html`; both versions as files) or one graph with both curves. With `html` it also writes the side-by-side page (its path is in the result; `page` chooses it) and tells the person to open it. Proposes an exaggerated version when nothing would be noticed. |
 | `nudg_render` | Real frames of the component as a filmstrip image, from the host page (needs Chrome). |
+| `nudg_critique` | Whether the motion is good: every transition checked against the platforms' motion guidelines and accessibility rules, each finding with a pointer, a fix and its source. |
 | `nudg_share` | Prepares a counts-only usage summary and a prefilled GitHub issue link, with the person's note, for them to submit. Sends nothing by itself. |
 | `nudg_observe` | Host truth: opens the running page, performs actions, measures the element every frame, and judges what the page showed against the file (played / differs / never shown / nothing moved). |
 

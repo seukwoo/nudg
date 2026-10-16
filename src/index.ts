@@ -3,6 +3,8 @@ export type { CompileResult, ReadFile, Source } from "./core/compile.ts";
 export { createRuntime } from "./core/runtime.ts";
 export type { Runtime, Value } from "./core/runtime.ts";
 export { compare, compareFrameTimes, THRESHOLDS } from "./core/compare.ts";
+export { critique, measureTransitions } from "./core/critique.ts";
+export type { CritiqueFinding, CritiqueSeverity, MeasuredTransition } from "./core/critique.ts";
 export type { Comparison, Perceptibility, PropertyDifference } from "./core/compare.ts";
 export { plot } from "./core/plot.ts";
 export { actionTarget, actionsToEvents, decomposeMatrix, handledEvents, judgeHost, measuredName, summarizeHost } from "./core/observe.ts";

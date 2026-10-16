@@ -92,3 +92,21 @@ test("nudg skill writes a Claude Code skill", () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("nudg log --share shows exactly what would be shared, counts only, and a prefilled issue", () => {
+  const dir = mkdtempSync(join(tmpdir(), "nudg-log-"));
+  const log = join(dir, "log.jsonl");
+  try {
+    cli(log, "compare", "examples/toggle.nudg.json", "examples/toggle-press.nudg.json", "--send", "track.down@0.05");
+    const out = cli(log, "log", "--share");
+    assert.match(out, /counts only/);
+    assert.match(out, /https:\/\/github\.com\/seukwoo\/nudg\/issues\/new\?title=Usage\+log/);
+    // Nothing about the person's app: no file names, paths, cwd or headlines.
+    assert.ok(!/toggle|examples|\/Users\/|track|knob/.test(out.replace(/https:\S+/, "")), out);
+    const url = decodeURIComponent(out.match(/https:\S+/)![0].replace(/\+/g, " "));
+    assert.ok(!/toggle|examples|track|knob/.test(url), url);
+    assert.match(url, /labels=usage-log/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

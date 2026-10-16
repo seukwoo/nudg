@@ -210,6 +210,16 @@ The [roadmap](docs/roadmap.md) tracks development priorities and stage status, f
 - [Guide for AI agents](spec/guide.md): the format on one page.
 - [Development log](docs/devlog.md): problems met while building nudg, and how they were resolved.
 
+## Help nudg get better
+
+nudg's goal is that a motion change takes one round: you say a word, see before and after, and judge. Whether it does is measured on your machine, in a local log that never leaves it by itself. If you use nudg, please share it now and then:
+
+```sh
+npx @nudg/core log --share
+```
+
+It shows exactly what it would send (counts only: rounds per change, verdicts, tool calls; no file names, paths or code) and opens a GitHub issue for you to read and submit.
+
 ## Contributing
 
 Issues and pull requests are welcome. nudg is designed before it is coded, so for anything beyond a bug fix, please open an issue first to talk through the interaction you want to build. See [CONTRIBUTING.md](CONTRIBUTING.md).

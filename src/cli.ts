@@ -13,7 +13,7 @@ import type { Diagnostic, Program } from "./core/types.ts";
 import { CHROME_HINT, findChrome, openInBrowser, svgToPng } from "./node/chrome.ts";
 import { snapshotElement } from "./node/snapshot.ts";
 import { materializeRevision } from "./node/git.ts";
-import { clearLog, formatSummary as formatLogSummary, logPath, readLog, record, shareableSummary, shareUrl, summarize } from "./node/log.ts";
+import { clearLog, formatSummary as formatLogSummary, logPath, readLog, record, shareableSummary, shareTip, shareUrl, summarize } from "./node/log.ts";
 import { installSkill, SKILL } from "./node/skill.ts";
 import { formatComparison, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
 import { comparePage, lastRuntimeInlined, readWithImports } from "./node/compare-page.ts";
@@ -297,7 +297,12 @@ function runPlot(args: Args, json: boolean): number {
 
 async function runCompare(args: Args, json: boolean): Promise<number> {
   try {
-    return await compareCommand(args, json);
+    const code = await compareCommand(args, json);
+    if (!json) {
+      const tip = shareTip();
+      if (tip) process.stdout.write(`\n${tip}\n`);
+    }
+    return code;
   } finally {
     // The materialized "before" is read during the run and never needed after it.
     if (beforeDirToClean) rmSync(beforeDirToClean, { recursive: true, force: true });

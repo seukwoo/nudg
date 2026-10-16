@@ -1,0 +1,11 @@
+# JitPack builds the Kotlin runtime and the Compose adapter from a git tag, so Android
+# and JVM apps can depend on them without Maven Central:
+#   repositories { maven("https://jitpack.io") }
+#   implementation("com.github.seukwoo.nudg:nudg:<tag>")      // runtime, plain JVM
+#   implementation("com.github.seukwoo.nudg:compose:<tag>")   // Jetpack Compose adapter
+jdk:
+  - openjdk17
+before_install:
+  - yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" > /dev/null || true
+install:
+  - cd kotlin && echo "sdk.dir=$ANDROID_HOME" > local.properties && ./gradlew :nudg:publishToMavenLocal :compose:publishToMavenLocal -Pversion=$VERSION --no-daemon

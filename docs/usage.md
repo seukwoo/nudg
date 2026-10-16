@@ -297,7 +297,14 @@ For other hosts (a canvas, a game loop), `createPlayer(program, { host: { now, f
 
 ## Swift and SwiftUI
 
-The Swift runtime (`swift/`, Swift Package Manager) runs the same files on Apple platforms. It doesn't parse `.nudg.json` itself: the reference tools validate and compile it, and the app ships the result.
+The Swift runtime runs the same files on Apple platforms. Add it with Swift Package Manager by this repository's URL (Xcode: File › Add Package Dependencies), from a release tag:
+
+```swift
+.package(url: "https://github.com/seukwoo/nudg", from: "0.8.0")
+// targets: .product(name: "Nudg", package: "nudg"), .product(name: "NudgSwiftUI", package: "nudg")
+```
+
+It doesn't parse `.nudg.json` itself: the reference tools validate and compile it, and the app ships the result.
 
 ```sh
 nudg compile toggle.nudg.json --out Toggle.program.json   # add it to the app's resources
@@ -326,7 +333,14 @@ struct Toggle: View {
 
 ## Kotlin and Jetpack Compose
 
-The Kotlin runtime (`kotlin/nudg`, plain JVM, no dependencies) reads compiled programs like the Swift one, and `kotlin/compose` is the Jetpack Compose adapter.
+The Kotlin runtime (plain JVM, no dependencies) reads compiled programs like the Swift one, and the Compose adapter sits on it. JitPack builds both from a release tag:
+
+```kotlin
+// settings.gradle.kts: dependencyResolutionManagement { repositories { google(); mavenCentral(); maven("https://jitpack.io") } }
+implementation("com.github.seukwoo.nudg:compose:0.8.0")   // brings com.github.seukwoo.nudg:nudg
+```
+
+Compile files with `npx @nudg/core compile toggle.nudg.json --out app/src/main/assets/toggle.program.json`.
 
 ```kotlin
 val toggle = rememberNudg(Program.decode(assets.open("toggle.program.json").bufferedReader().readText()))

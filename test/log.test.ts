@@ -58,7 +58,9 @@ test("the MCP server logs its compare calls with the verdict", async () => {
     const send = (id: number, method: string, params: object) => server.stdin!.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n");
     send(1, "initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "0" } });
     send(2, "tools/call", { name: "nudg_compare", arguments: { file: "examples/toggle.nudg.json", before: "HEAD", events: [{ event: "track.tap", t: 0.05 }] } });
-    for (let i = 0; i < 100 && !replies.some((r) => r.id === 2); i++) await new Promise((r) => setTimeout(r, 50));
+    // A cold Node on a busy runner can take several seconds to answer; wait for the reply and the line.
+    for (let i = 0; i < 600 && !(replies.some((r) => r.id === 2) && existsSync(log)); i++) await new Promise((r) => setTimeout(r, 50));
+    assert.ok(replies.some((r) => r.id === 2), "the server answered");
     const [entry] = readFileSync(log, "utf8").trim().split("\n").map((l) => JSON.parse(l));
     assert.equal(entry.via, "mcp");
     assert.equal(entry.tool, "compare");

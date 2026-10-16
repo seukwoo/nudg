@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Install outside npm.** A root `Package.swift` makes the Swift runtime and SwiftUI adapter installable by this repository's URL (Swift Package Manager); `jitpack.yml` and Maven publications make the Kotlin runtime and Compose adapter installable as `com.github.seukwoo.nudg:nudg` / `:compose` from a release tag. Both checked with separate consumer projects (by path and from the local Maven repository); the first tagged release proves the remote paths.
+
 ## 0.7.0
 
 Format 0.4 (layout as input), a motion critique, usage sharing, bridges to component libraries, and the first runtimes beyond the web: React Native, Swift with SwiftUI, Kotlin with Jetpack Compose. The same file plays on all of them.

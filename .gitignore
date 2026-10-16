@@ -7,3 +7,6 @@ test/fixtures/bridges/app.bundle.js
 
 swift/.build/
 swift/.swiftpm/
+
+.build/
+.swiftpm/

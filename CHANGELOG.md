@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **A local judge log.** Every `compare`, `observe` and `validate` (CLI and MCP) appends a line to `~/.nudg/log.jsonl`; `nudg log` summarizes it, above all rounds per change (the same file compared again within 15 minutes) and rounds that showed nothing anyone could see. It never leaves the machine; `NUDG_LOG=off` turns it off, `NUDG_LOG=<file>` moves it.
+- **`nudg skill`** installs a Claude Code skill (`/nudg`) that teaches the agent the say, see, judge loop, for the project or (`--user`) every project.
+
 ## 0.6.0
 
 The judge loop in one call from a real app: compare against the running page and against git. Format stays 0.3.

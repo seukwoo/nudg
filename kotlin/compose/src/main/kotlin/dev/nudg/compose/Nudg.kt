@@ -1,6 +1,14 @@
 package dev.nudg.compose
 
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.utf16CodePoint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -17,7 +25,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import dev.nudg.DRAG_SLOP
+import dev.nudg.PointerTracker
 import dev.nudg.Program
+import dev.nudg.draggableTargets
+import dev.nudg.handledEvents
+import dev.nudg.nudgKeyName
 import dev.nudg.Runtime
 import dev.nudg.Value
 import kotlin.math.roundToInt
@@ -116,15 +129,48 @@ fun Modifier.nudg(state: NudgState, name: String): Modifier = this
         (state.values["$name.color"] as? Value.Color)?.let { drawRect(parseHex(it.hex)) }
     }
 
-/** Sends down, up (or cancel) and tap for a target, like the DOM adapter. */
+/**
+ * Press and drag for a target, by the same rules as every other adapter: down, up (or
+ * cancel) and tap; for targets the file drags, dragstart, drag.x / drag.y in dp, dragend.
+ */
 fun Modifier.nudgPress(state: NudgState, name: String): Modifier = pointerInput(state, name) {
-    detectTapGestures(onPress = {
-        state.send("$name.down")
-        val released = tryAwaitRelease()
-        state.send(if (released) "$name.up" else "$name.cancel")
-        if (released) state.send("$name.tap")
-    })
+    val draggable = name in state.runtime.program.draggableTargets
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        val tracker = PointerTracker(name, draggable, { state.send(it) }, { n, v -> state.input(n, v) })
+        tracker.down(0.0, 0.0)
+        var released = false
+        while (!released) {
+            val event = awaitPointerEvent()
+            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+            val travel = (change.position - down.position) / density
+            tracker.move(travel.x.toDouble(), travel.y.toDouble())
+            if (draggable && travel.getDistance() > DRAG_SLOP) change.consume()
+            if (!change.pressed) {
+                released = true
+                val inside = change.position.x in 0f..size.width.toFloat() && change.position.y in 0f..size.height.toFloat()
+                tracker.up(inside)
+            }
+        }
+        if (!released) tracker.cancel()
+    }
 }
+
+/** Keys while focused: `target.key.<name>` for the keys the file listens for. */
+fun Modifier.nudgKeys(state: NudgState, name: String): Modifier = onKeyEvent { e ->
+    if (e.type != KeyEventType.KeyDown) return@onKeyEvent false
+    val key = when (e.key) {
+        Key.DirectionLeft -> "arrowleft"; Key.DirectionRight -> "arrowright"; Key.DirectionUp -> "arrowup"; Key.DirectionDown -> "arrowdown"
+        Key.Escape -> "escape"; Key.Enter -> "enter"; Key.Spacebar -> "space"; Key.Tab -> "tab"
+        Key.MoveHome -> "home"; Key.MoveEnd -> "end"; Key.PageUp -> "pageup"; Key.PageDown -> "pagedown"
+        Key.Backspace -> "backspace"; Key.Delete -> "delete"
+        else -> e.utf16CodePoint.takeIf { it > 0 }?.let { nudgKeyName(String(Character.toChars(it))) } ?: return@onKeyEvent false
+    }
+    val event = "$name.key.$key"
+    if (event !in state.runtime.program.handledEvents) return@onKeyEvent false
+    state.send(event)
+    true
+}.focusable()
 
 /** Reports the composable's untransformed box in dp for `measure` (format 0.4). Put it before `nudg` in the chain. */
 @Composable

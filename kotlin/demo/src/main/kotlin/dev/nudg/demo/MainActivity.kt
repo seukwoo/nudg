@@ -33,9 +33,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val toggleProgram = Program.decode(assets.open("toggle.program.json").bufferedReader().readText())
         val pressProgram = Program.decode(assets.open("press.program.json").bufferedReader().readText())
+        val dragProgram = Program.decode(assets.open("toggle-drag.program.json").bufferedReader().readText())
         setContent {
             val toggle = rememberNudg(toggleProgram)
             val press = rememberNudg(pressProgram)
+            val drag = rememberNudg(dragProgram)
             Column(
                 Modifier.fillMaxSize().background(Color(0xFFFAFAF9)).semantics { testTagsAsResourceId = true },
                 verticalArrangement = Arrangement.spacedBy(40.dp, Alignment.CenterVertically),
@@ -47,6 +49,13 @@ class MainActivity : ComponentActivity() {
                         .nudg(toggle, "track").nudgPress(toggle, "track").padding(4.dp),
                 ) {
                     Box(Modifier.size(24.dp).nudg(toggle, "knob").background(Color.White, CircleShape))
+                }
+                Text("drag: ${drag.state.joinToString(" ")}", fontSize = 18.sp)
+                Box(
+                    Modifier.testTag("dragtrack").size(width = 52.dp, height = 32.dp).clip(RoundedCornerShape(16.dp))
+                        .nudg(drag, "track").nudgPress(drag, "track").padding(4.dp),
+                ) {
+                    Box(Modifier.size(24.dp).nudg(drag, "knob").background(Color.White, CircleShape))
                 }
                 Box(
                     Modifier.testTag("button").nudgPress(press, "button").nudg(press, "button")

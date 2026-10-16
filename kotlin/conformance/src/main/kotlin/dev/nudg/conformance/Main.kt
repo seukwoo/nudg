@@ -3,6 +3,7 @@ package dev.nudg.conformance
 import dev.nudg.Program
 import dev.nudg.Runtime
 import dev.nudg.Value
+import dev.nudg.draggableTargets
 import java.io.File
 import kotlin.math.abs
 import kotlin.system.exitProcess
@@ -53,6 +54,21 @@ fun main(args: Array<String>) {
             failures.add(name); println("FAIL  $name\n      $e")
         }
     }
+    // The pointer rules, on the drag toggle: a drag of 30 units to the right turns it on.
+    run {
+        val program = Program.decode(File(dir, "programs/drag-flick.program.json").readText())
+        val rt = Runtime(program)
+        var t = 0.0
+        val log = ArrayList<String>()
+        val tracker = dev.nudg.PointerTracker("track", "track" in program.draggableTargets, { log.add(it); rt.send(it, t) }, { n, v -> rt.input(n, v, t) })
+        tracker.down(100.0, 50.0)
+        for (i in 1..6) { t += 1.0 / 60; tracker.move(100.0 + i * 5, 50.0) }
+        tracker.up()
+        rt.sample(t + 2)
+        if (rt.state() == listOf("on") && log == listOf("track.down", "track.dragstart", "track.up", "track.dragend")) { passed++; println("ok    pointer: a 30-unit drag turns the drag toggle on, with no tap") }
+        else { failures.add("pointer"); println("FAIL  pointer: state ${rt.state()}, events $log") }
+    }
+
     println("\n$passed passed, ${failures.size} failed")
     exitProcess(if (failures.isEmpty()) 0 else 1)
 }

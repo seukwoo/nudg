@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Drag and keys beyond the web.** One set of pointer rules (`PointerTracker`: press, 4-unit slop, `dragstart`, travel inputs, `dragend`, no tap after a drag) in TypeScript, Swift and Kotlin. React Native: `bind(name).gesture`. SwiftUI: `.nudgPress` drags too, and `.nudgKeys`. Compose: `nudgPress` drags too, and `nudgKeys`. The Swift and Kotlin conformance runners check a drag that turns the drag toggle on; React Native and Compose were checked on the Android emulator.
+
 ## 0.7.0
 
 Format 0.4 (layout as input), a motion critique, usage sharing, bridges to component libraries, and the first runtimes beyond the web: React Native, Swift with SwiftUI, Kotlin with Jetpack Compose. The same file plays on all of them.

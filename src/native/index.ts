@@ -5,7 +5,8 @@
 //   <Pressable {...bind("track").press}><Animated.View {...bind("knob")} /></Pressable>
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AccessibilityInfo, Animated, type LayoutChangeEvent } from "react-native";
+import { AccessibilityInfo, Animated, PanResponder, type LayoutChangeEvent } from "react-native";
+import { PointerTracker, draggableTargets } from "../core/pointer.ts";
 import { createPlayer, toProgram, type HeadlessPlayer } from "../core/player.ts";
 import { createRuntime, type Value } from "../core/runtime.ts";
 import type { Program } from "../core/types.ts";
@@ -27,6 +28,11 @@ export interface Bound {
   onLayout: (e: LayoutChangeEvent) => void;
   /** Spread on a Pressable: down, up, cancel and tap become this target's events. */
   press: { onPressIn: () => void; onPressOut: () => void; onPress: () => void };
+  /**
+   * Spread on any View for press and drag: down, up and tap like `press`, and for targets
+   * the file drags, dragstart, drag.x / drag.y and dragend, with the same 4-unit slop as the web.
+   */
+  gesture: Record<string, unknown>;
 }
 
 export interface NudgNative {
@@ -91,6 +97,22 @@ export function useNudg(source: Program | object, options: UseNudgNativeOptions 
     return out;
   }, [program, animated]);
 
+  const draggable = useMemo(() => draggableTargets(program), [program]);
+  const gestureFor = (name: string) => {
+    const tracker = new PointerTracker(name, draggable.has(name), {
+      send: (e) => void player.current?.send(e),
+      input: (n, v) => void player.current?.input(n, v),
+    });
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderTerminationRequest: () => !draggable.has(name),
+      onPanResponderGrant: () => tracker.down(0, 0),
+      onPanResponderMove: (_, g) => tracker.move(g.dx, g.dy),
+      onPanResponderRelease: () => tracker.up(),
+      onPanResponderTerminate: () => tracker.cancel(),
+    }).panHandlers;
+  };
   const bound = useRef(new Map<string, Bound>());
   const bind = useCallback(
     (name: string): Bound => {
@@ -104,6 +126,7 @@ export function useNudg(source: Program | object, options: UseNudgNativeOptions 
             for (const [m, v] of [["x", x], ["y", y], ["width", width], ["height", height]] as const) player.current?.input(`${name}.layout.${m}`, v);
           },
           press: { onPressIn: () => send("down"), onPressOut: () => send("up"), onPress: () => send("tap") },
+          gesture: gestureFor(name),
         };
         bound.current.set(name, b);
       }

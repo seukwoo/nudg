@@ -10,7 +10,7 @@ import { createPlayer, toProgram, type HeadlessPlayer } from "../core/player.ts"
 import { createRuntime, type Value } from "../core/runtime.ts";
 import type { Program } from "../core/types.ts";
 
-export { presets, press, hover, toggle, toast } from "../core/presets.ts";
+export { presets, press, hover, toggle, toast, appear } from "../core/presets.ts";
 
 export interface UseNudgNativeOptions {
   state?: string[];

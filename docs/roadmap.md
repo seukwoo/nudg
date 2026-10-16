@@ -31,7 +31,7 @@ The original stage numbers remain useful when reading the spec and changelog. Se
 
 ## Now: Meet People Where Their Components Are
 
-Status: the web bridges are in (unreleased): `watch` for libraries that show state as attributes (shadcn/ui and Radix, Headless UI, React Aria, Ark) and `nudgTransition` for transition slots (MUI, Ant Design, React Bootstrap). Next: a React Native adapter (the JavaScript core runs as is), then SwiftUI and Jetpack Compose runtimes checked against the conformance suite. Then a coverage map by trigger × response × structure instead of component counts, continuous app inputs (`host.<name>` values: a microphone level, a tilt), and examples for its empty cells.
+Status: the web bridges are in (unreleased): `watch` for libraries that show state as attributes (shadcn/ui and Radix, Headless UI, React Aria, Ark) and `nudgTransition` for transition slots (MUI, Ant Design, React Bootstrap). React Native is in too (unreleased; Android checked on an emulator, iOS waits for Xcode). Next: a Swift runtime that reads compiled programs, checked against the conformance suite, then SwiftUI and Jetpack Compose adapters. Then a coverage map by trigger × response × structure instead of component counts, continuous app inputs (`host.<name>` values: a microphone level, a tilt), and examples for its empty cells.
 
 ## Then: Prove the Workflow in Playsnack
 

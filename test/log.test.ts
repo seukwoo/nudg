@@ -110,3 +110,18 @@ test("nudg log --share shows exactly what would be shared, counts only, and a pr
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("the CLI suggests sharing at most once a week, and only after three judged changes", () => {
+  const dir = mkdtempSync(join(tmpdir(), "nudg-log-"));
+  const log = join(dir, "log.jsonl");
+  const compareOnce = (b: string) => cli(log, "compare", "examples/toggle.nudg.json", b, "--send", "track.tap@0.05");
+  try {
+    assert.doesNotMatch(compareOnce("examples/toggle-press.nudg.json"), /tip:/);
+    assert.doesNotMatch(compareOnce("examples/toggle-drag.nudg.json"), /tip:/);
+    assert.match(compareOnce("examples/ios-toggle.nudg.json"), /tip: you've judged 3 motion changes[\s\S]*nudg log --share/);
+    assert.doesNotMatch(compareOnce("examples/material-switch.nudg.json"), /tip:/, "not again within the week");
+    assert.match(cli(log, "log"), /Please share it: `nudg log --share`/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

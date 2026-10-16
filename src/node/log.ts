@@ -3,7 +3,7 @@
 // anywhere. On by default, in ~/.nudg/log.jsonl; NUDG_LOG=off turns it off, and
 // NUDG_LOG=<path> writes somewhere else.
 
-import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -143,7 +143,7 @@ export function formatSummary(s: LogSummary, path: string | undefined): string {
     `Observe: ${s.observe.calls} calls (${verdicts(s.observe.verdicts)}).`,
     `Validate: ${s.validate.calls} calls, ${s.validate.failed} with errors.`,
     "",
-    "The log stays on this machine. To share it, attach the file or `nudg log --json` to an issue.",
+    "The log stays on this machine. Please share it: `nudg log --share` shows the counts it would send (nothing about your app) and opens a GitHub issue for you to submit. It's how nudg learns whether a change takes one round or five.",
   ].join("\n");
 }
 
@@ -180,4 +180,26 @@ export function shareUrl(summary: Record<string, unknown>): string {
   ].join("\n");
   const params = new URLSearchParams({ title: `Usage log: ${summary.changes} changes, median ${(summary.roundsPerChange as { median: number }).median} rounds`, labels: "usage-log", body });
   return `https://github.com/seukwoo/nudg/issues/new?${params.toString()}`;
+}
+
+/** How often the CLI may suggest sharing, at most. */
+const TIP_EVERY_MS = 7 * 86_400_000;
+
+/**
+ * A one-line suggestion to share, at most once a week and only once there is something
+ * worth sharing (three judged changes). Never shown with logging off.
+ */
+export function shareTip(): string | undefined {
+  const path = logPath();
+  if (!path) return undefined;
+  const marker = join(dirname(path), "share-tip");
+  try {
+    if (existsSync(marker) && Date.now() - Number(readFileSync(marker, "utf8")) < TIP_EVERY_MS) return undefined;
+    const s = summarize(readLog(path));
+    if (s.rounds.changes < 3) return undefined;
+    writeFileSync(marker, String(Date.now()));
+    return `tip: you've judged ${s.rounds.changes} motion changes with nudg (median ${s.rounds.median} rounds each). \`nudg log --share\` sends the project those counts, nothing about your app.`;
+  } catch {
+    return undefined;
+  }
 }

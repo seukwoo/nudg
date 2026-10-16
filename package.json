@@ -64,7 +64,7 @@
     "spec/nudg-0.3.schema.json"
   ],
   "scripts": {
-    "test": "node --test --test-force-exit",
+    "test": "node --test --test-force-exit --test-concurrency=3",
     "typecheck": "tsc && tsc -p tsconfig.core.json",
     "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
     "prepack": "npm run build",

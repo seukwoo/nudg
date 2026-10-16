@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Format 0.4: layout as input.** `{ "measure": "tab2.x" }` / `{ "measure": "panel.naturalHeight" }` in `values` and `set`. The host reports each target's box and natural size as `target.layout.*` inputs; positions align (the translation onto the measured box), sizes are the size; the first report places, later reports move with the property's motion. The DOM adapter measures (offsets, scroll size) and re-measures on resize, font load and late binding. `--layout` / `layout` for `simulate`, `plot` and `compare`, with a note listing missing measurements. New `tabs` example; `accordion` opens to its content. Schema 0.4, conformance `layout-*` and `validation-0.4`.
 - **A local judge log.** Every `compare`, `observe` and `validate` (CLI and MCP) appends a line to `~/.nudg/log.jsonl`; `nudg log` summarizes it, above all rounds per change (the same file compared again within 15 minutes) and rounds that showed nothing anyone could see. It never leaves the machine; `NUDG_LOG=off` turns it off, `NUDG_LOG=<file>` moves it.
 - **`nudg skill`** installs a Claude Code skill (`/nudg`) that teaches the agent the say, see, judge loop, for the project or (`--user`) every project.
 

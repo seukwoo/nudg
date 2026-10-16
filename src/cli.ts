@@ -5,6 +5,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { basename, extname, join } from "node:path";
 import { compare, compareFrameTimes } from "./core/compare.ts";
+import { createRuntime } from "./core/runtime.ts";
 import { plot } from "./core/plot.ts";
 import { presets, type PresetName } from "./core/presets.ts";
 import { describeEvent, dragGesture, simulate, type SimulateOptions, type TimedEvent } from "./core/simulate.ts";
@@ -35,6 +36,8 @@ simulate and plot options
   --drag <t:dx[,dy]@a-b>    A drag on target t by (dx, dy) from time a to b, e.g. track:20@0.1-0.3.
                             Sends down, dragstart, 60 input samples per second, up, dragend.
   --input <name=v@time>     One input sample, e.g. track.drag.x=12@0.2. Repeatable.
+  --layout <t.m=v,...>      What the host would measure (0.4), e.g. tab2.x=96,tab2.width=88,
+                            underline.x=8. Measured values without it fall back to their base.
   --start <path,...>        Start in these states instead of initial, e.g. on.
   --reduced-motion          Play as a reduced-motion user would see it (0.3).
   --until <seconds>         Last sample time. Default: when everything settles.
@@ -190,6 +193,14 @@ function simulationOptions(args: Args, program: Program): SimulateOptions {
     if (!(to > from)) fail(`--drag must end after it starts, got "${raw}".`);
     events.push(...dragGesture(m[1], from, to, Number(m[2]), m[3] === undefined ? 0 : Number(m[3])));
   }
+  // Layout (0.4): what the host would report, at time 0, before any event.
+  const layout: TimedEvent[] = [];
+  for (const raw of (args.flags.get("layout") ?? []).flatMap((l) => l.split(","))) {
+    const m = /^\s*([^.=\s]+)\.([A-Za-z]+)\s*=\s*(-?[\d.]+)\s*$/.exec(raw);
+    if (!m) fail(`--layout expects target.measurement=value, e.g. seg2.x=72,seg2.width=88, got "${raw}".`);
+    layout.push({ input: `${m[1]}.layout.${m[2]}`, value: Number(m[3]), t: 0 });
+  }
+  events.unshift(...layout);
   for (const raw of args.flags.get("input") ?? []) {
     const m = /^([^=]+)=(-?[\d.]+)@(.+)$/.exec(raw);
     if (!m) fail(`--input expects name=value@time, e.g. track.drag.x=12@0.2, got "${raw}".`);
@@ -227,8 +238,16 @@ function runSimulate(args: Args, json: boolean): number {
 
   const keys = properties ?? [...program.properties.keys()];
   process.stdout.write(`${formatSamples(result, keys)}\n\nsummary\n${formatSummary(result, keys)}\n`);
+  const missing = unmeasuredIn(program, options.events);
+  if (missing.length) process.stdout.write(`note: not measured, so falling back to base values: ${missing.join(", ")}. Pass --layout ${missing.map((n) => n.replace(".layout.", ".") + "=…").join(",")}.\n`);
   for (const d of diagnostics) process.stdout.write(formatDiagnostic(d) + "\n");
   return 0;
+}
+
+/** Layout inputs the program reads that the events never report. */
+function unmeasuredIn(program: Program, events: TimedEvent[]): string[] {
+  const reported = new Set(events.flatMap((e) => ("input" in e ? [e.input] : [])));
+  return createRuntime(program).measurements().filter((n) => !reported.has(n));
 }
 
 function runPlot(args: Args, json: boolean): number {

@@ -953,6 +953,154 @@ def validation_v03_cases():
     })
 
 
+# --- v0.4: layout as input -----------------------------------------------------
+
+
+MEASURED_TABS = {
+    "nudg": "0.4",
+    "targets": ["seg1", "seg2", "seg3", "indicator"],
+    "values": {"indicator.x": 0, "indicator.width": {"measure": "seg1.width"}},
+    "animate": {
+        "indicator.x": spring_json(0.3, 0.1),
+        "indicator.width": spring_json(0.3, 0.1),
+    },
+    "initial": "first",
+    "when": {"seg1.tap": "first", "seg2.tap": "second", "seg3.tap": "third"},
+    "states": {
+        "first": {"set": {"indicator.x": {"measure": "seg1.x"}}},
+        "second": {"set": {"indicator.x": {"measure": "seg2.x"}, "indicator.width": {"measure": "seg2.width"}}},
+        "third": {"set": {"indicator.x": {"measure": "seg3.x"}, "indicator.width": {"measure": "seg3.width"}}},
+    },
+}
+
+
+def layout_cases():
+    s = spring(0.3, 0.1)
+    # The host's report: the indicator's own box starts at 10; segments of different widths.
+    layout = [("indicator.layout.x", 10), ("seg1.layout.x", 10), ("seg1.layout.width", 60), ("seg2.layout.x", 70), ("seg2.layout.width", 90), ("seg3.layout.x", 160), ("seg3.layout.width", 50)]
+    x, w = Prop(0), Prop(0)
+    steps = [{"t": 0, "expect": {"state": ["first"], "values": {"indicator.x": 0, "indicator.width": 0}}}]
+    # Before any report a measured value is its base; the first report places values without motion.
+    for name, v in layout:
+        steps.append({"t": 0, "input": name, "value": v})
+    x.retarget(0, None, 0)  # seg1.x - indicator.x = 0
+    w.retarget(60, None, 0)
+    steps.append({"t": 0, "expect": {"values": {"indicator.x": x.value(0), "indicator.width": w.value(0)}}})
+    # A tap: position aligns (seg2.x - indicator.x), size is the size.
+    steps.append({"t": 0.1, "send": "seg2.tap"})
+    x.retarget(60, s, 0.1)
+    w.retarget(90, s, 0.1)
+    for t in (0.15, 0.2, 0.3):
+        steps.append({"t": t, "expect": {"state": ["second"], "values": {"indicator.x": x.value(t), "indicator.width": w.value(t)}}})
+    # A relayout while moving (a font loaded): seg2 grows and shifts; the values retarget, keeping velocity.
+    steps.append({"t": 0.3, "input": "seg2.layout.x", "value": 74})
+    x.retarget(64, s, 0.3)
+    steps.append({"t": 0.3, "input": "seg2.layout.width", "value": 96})
+    w.retarget(96, s, 0.3)
+    for t in (0.35, 0.45, 0.7):
+        steps.append({"t": t, "expect": {"state": ["second"], "values": {"indicator.x": x.value(t), "indicator.width": w.value(t)}}})
+    # A relayout of a segment the active state doesn't measure moves nothing.
+    steps.append({"t": 0.7, "input": "seg3.layout.x", "value": 170})
+    steps.append({"t": 0.8, "expect": {"values": {"indicator.x": x.value(0.8), "indicator.width": w.value(0.8)}}})
+    write("layout-tabs", {
+        "conformance": "0.4",
+        "name": "Layout: measured positions align, measured sizes size, the first report places, a relayout retargets with velocity",
+        "doc": MEASURED_TABS,
+        "steps": steps,
+    })
+
+    # Not yet measured: a measured set falls back to the property's base value (5 here, not 0).
+    unmeasured_doc = json.loads(json.dumps(MEASURED_TABS))
+    unmeasured_doc["values"]["indicator.x"] = 5
+    steps = [{"t": 0.1, "send": "seg3.tap"}]
+    steps.append({"t": 0.2, "expect": {"state": ["third"], "values": {"indicator.x": 5, "indicator.width": 0}}})
+    # The first report of seg3 now places the indicator, no motion.
+    for name, v in (("indicator.layout.x", 10), ("seg3.layout.x", 160)):
+        steps.append({"t": 0.3, "input": name, "value": v})
+    steps.append({"t": 0.3, "expect": {"values": {"indicator.x": 150}}})
+    write("layout-unmeasured", {
+        "conformance": "0.4",
+        "name": "Layout: before the host reports, a measured value is its base; the first report places it",
+        "doc": unmeasured_doc,
+        "steps": steps,
+    })
+
+    # An accordion that opens to its natural height, and follows the content when it grows.
+    doc = {
+        "nudg": "0.4",
+        "targets": ["header", "content"],
+        "values": {"content.height": 0},
+        "animate": {"content.height": spring_json(0.4, 0)},
+        "initial": "closed",
+        "states": {
+            "closed": {"when": {"header.tap": "open"}},
+            "open": {"set": {"content.height": {"measure": "content.naturalHeight"}}, "when": {"header.tap": "closed"}},
+        },
+    }
+    s = spring(0.4, 0)
+    h = Prop(0)
+    steps = [{"t": 0, "input": "content.layout.naturalHeight", "value": 120}]
+    steps.append({"t": 0, "expect": {"state": ["closed"], "values": {"content.height": 0}}})
+    steps.append({"t": 0.1, "send": "header.tap"})
+    h.retarget(120, s, 0.1)
+    for t in (0.2, 0.35):
+        steps.append({"t": t, "expect": {"state": ["open"], "values": {"content.height": h.value(t)}}})
+    steps.append({"t": 0.35, "input": "content.layout.naturalHeight", "value": 150})
+    h.retarget(150, s, 0.35)
+    for t in (0.45, 0.8):
+        steps.append({"t": t, "expect": {"state": ["open"], "values": {"content.height": h.value(t)}}})
+    steps.append({"t": 0.8, "send": "header.tap"})
+    h.retarget(0, s, 0.8)
+    steps.append({"t": 1.0, "expect": {"state": ["closed"], "values": {"content.height": h.value(1.0)}}})
+    write("layout-accordion", {
+        "conformance": "0.4",
+        "name": "Layout: a natural height to open to, followed when the content grows",
+        "doc": doc,
+        "steps": steps,
+    })
+
+
+def validation_v04_cases():
+    def doc():
+        return json.loads(json.dumps(MEASURED_TABS))
+
+    out = []
+    d = doc()
+    d["nudg"] = "0.3"
+    out.append(("needs-version", d, [
+        ("needs-version", "/values/indicator.width"),
+        ("needs-version", "/states/first/set/indicator.x"),
+        ("needs-version", "/states/second/set/indicator.x"),
+        ("needs-version", "/states/second/set/indicator.width"),
+        ("needs-version", "/states/third/set/indicator.x"),
+        ("needs-version", "/states/third/set/indicator.width"),
+    ]))
+    d = doc()
+    d["states"]["second"]["set"]["indicator.x"] = {"measure": "seg2.left"}
+    out.append(("unknown-measurement", d, [("invalid-measure", "/states/second/set/indicator.x/measure")]))
+    d = doc()
+    d["states"]["second"]["set"]["indicator.x"] = {"measure": "tab9.x"}
+    out.append(("unknown-target", d, [("unknown-target", "/states/second/set/indicator.x/measure")]))
+    d = doc()
+    d["states"]["second"]["set"]["indicator.width"] = {"measure": "seg2.x"}
+    out.append(("position-into-size", d, [("invalid-measure", "/states/second/set/indicator.width/measure")]))
+    d = doc()
+    d["states"]["second"]["set"]["indicator.x"] = {"measure": "seg2.y"}
+    out.append(("axis-mismatch", d, [("invalid-measure", "/states/second/set/indicator.x/measure")]))
+    d = doc()
+    d["targets"].append("track")
+    d["values"]["track.color"] = {"measure": "seg1.width"}
+    out.append(("measure-color", d, [("invalid-measure", "/values/track.color")]))
+    d = doc()
+    d["states"]["second"]["set"]["indicator.x"] = {"measure": "seg2.x", "plus": 4}
+    out.append(("unknown-key", d, [("unknown-key", "/states/second/set/indicator.x/plus")]))
+    write("validation-0.4", {
+        "conformance": "0.4",
+        "name": "Validator (0.4): each document produces exactly these errors (code and JSON pointer)",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 if __name__ == "__main__":
     toggle_cases()
     spring_form_cases()
@@ -968,4 +1116,6 @@ if __name__ == "__main__":
     commit_moving_case()
     reduced_motion_cases()
     validation_v03_cases()
+    layout_cases()
+    validation_v04_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

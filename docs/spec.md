@@ -283,3 +283,42 @@ Some people ask the system to reduce motion (`prefers-reduced-motion`; WCAG 2.3.
 
 - Every spring and tween becomes a short linear tween (0.15 s), and kicks are ignored. States, transitions, timers and followed values are unchanged, so nothing functional depends on the setting.
 - The DOM adapter follows the system setting unless the option is passed explicitly; `simulate`, `plot` and `render` take `--reduced-motion`.
+
+## Additions in 0.4 (draft)
+
+Layout as input. Motion that depends on where things are or how big they are: a tab underline under a label whose width depends on its text, an accordion that opens to its content, a sheet whose stops depend on the screen. The core never measures; the host reports layout, the same way it reports the pointer. A file that uses this declares `"nudg": "0.4"`; a 0.4 runtime also reads 0.1 to 0.3 files. The reasoning is in [Design](design.md#proposal-layout-as-input-format-04).
+
+```json
+{
+  "nudg": "0.4",
+  "targets": ["tab1", "tab2", "underline"],
+  "values": { "underline.x": 0, "underline.width": { "measure": "tab1.width" } },
+  "animate": { "underline.x": "snappy", "underline.width": "snappy" },
+  "initial": "first",
+  "when": { "tab1.tap": "first", "tab2.tap": "second" },
+  "states": {
+    "first": { "set": { "underline.x": { "measure": "tab1.x" } } },
+    "second": { "set": { "underline.x": { "measure": "tab2.x" }, "underline.width": { "measure": "tab2.width" } } }
+  }
+}
+```
+
+### Layout inputs
+
+For each bound target the host reports `target.layout.x`, `.y`, `.width`, `.height` (the box as laid out, without any motion nudg applies, in logical units and one coordinate space per player) and `.naturalWidth`, `.naturalHeight` (the size the content needs unconstrained: CSS's `auto`). It reports them when the player starts, and again whenever they change. `runtime.measurements()` lists what a file reads; `runtime.unmeasured()` what hasn't been reported yet.
+
+### `measure`
+
+`{ "measure": "target.measurement" }` may stand for a number in `values` and in a state's `set`.
+
+- **Positions align.** `{ "measure": "tab2.x" }` on `underline.x` is `tab2.layout.x - underline.layout.x`: the translation that puts the underline's box where tab2's box is. A position measures only into the same axis (`x` into `.x`, `y` into `.y`).
+- **Sizes are the size.** `{ "measure": "panel.naturalHeight" }` on `panel.height` is the panel's natural height. A size may go into any numeric property.
+- **Not reported yet:** a measured value is its property's base value (a measured base is 0), until everything it reads has been reported.
+- **First report places, later reports move.** When a layout input is reported for the first time, the values it changes take their new targets at once, without motion: that is where things are. When it changes later (a resize, a font loading, a longer label), each value whose target changed moves there with its property's motion, keeping its velocity, as if a state had set it.
+- `nearest` compares measured targets like any others. `step` from a measured base starts from its measured value; `step` and `commit` replace the measurement with a number from then on.
+- No arithmetic in 0.4: an offset or a fraction of a size is an open question.
+
+### Errors
+
+`invalid-measure` (not `target.measurement`, an unknown measurement, a position into another axis or a size property, or a color property), `unknown-target`, and `needs-version` below 0.4. The conformance cases `layout-*.json` and `validation-0.4.json` define the behavior.
+

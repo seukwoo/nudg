@@ -4,7 +4,7 @@
 import { hexToOklab, isHexColor } from "./color.ts";
 import { interpolate } from "./map.ts";
 import { fromDurationBounce, fromStiffnessRatio } from "./spring.ts";
-import type {
+import type { Measure,
   Channels,
   Diagnostic,
   Ease,
@@ -19,7 +19,7 @@ import type {
   State,
   Transition,
 } from "./types.ts";
-import {
+import { MEASUREMENTS,
   EVENT_ALIASES,
   EVENTS,
   EVENTS_0_2,
@@ -120,7 +120,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core@0.3/spec/nudg-0.3.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core@0.7/spec/nudg-0.4.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -249,6 +249,43 @@ class ComponentCompiler {
     return this.needsVersion("0.3", p, what);
   }
 
+  /** `{ "measure": "seg2.x" }` (v0.4): a value the host's layout report supplies. */
+  private parseMeasure(kind: PropertyKind, key: string, raw: JsonObject, p: string): Measure | undefined {
+    const r = this.r;
+    if (!this.needsVersion("0.4", p, "A measured value")) return undefined;
+    r.keys(raw, p, ["measure"]);
+    if (kind === "color") {
+      r.error("invalid-measure", p, `"${key}" is a color; layout measures positions and sizes.`, "Measure into a numeric property such as x, y, width or height.");
+      return undefined;
+    }
+    const mp = ptr(p, "measure");
+    const spec = raw.measure;
+    const dot = typeof spec === "string" ? spec.lastIndexOf(".") : -1;
+    if (typeof spec !== "string" || dot <= 0) {
+      r.error("invalid-measure", mp, `${JSON.stringify(spec)} is not a measurement.`, `Write target.measurement, for example "seg2.x" or "content.naturalHeight".`);
+      return undefined;
+    }
+    const target = spec.slice(0, dot);
+    const of = spec.slice(dot + 1);
+    if (!(MEASUREMENTS as readonly string[]).includes(of)) {
+      const guess = didYouMean(of, [...MEASUREMENTS]);
+      r.error("invalid-measure", mp, `"${of}" is not a measurement.`, guess ? `Did you mean "${target}.${guess}"? Measurements are ${MEASUREMENTS.join(", ")}.` : `Measurements are ${MEASUREMENTS.join(", ")}.`);
+      return undefined;
+    }
+    if (!this.checkTarget(target, mp)) return undefined;
+    const prop = key.split(".")[1];
+    if ((of === "x" || of === "y") && prop !== of) {
+      r.error(
+        "invalid-measure",
+        mp,
+        `"${spec}" is a position, which aligns "${key.split(".")[0]}.${of}" with ${target}; it can't go into "${key}".`,
+        prop === "x" || prop === "y" ? `Measure "${target}.${prop}" for "${key}".` : `Measure a size into "${key}", such as "${target}.${prop === "height" ? "height" : "width"}".`,
+      );
+      return undefined;
+    }
+    return { target, of: of as Measure["of"] };
+  }
+
   compile(doc: JsonObject): Program | undefined {
     const r = this.r;
     this.parseTargets(doc.targets);
@@ -306,6 +343,10 @@ class ComponentCompiler {
       const kind = this.parsePropertyPath(key, p);
       if (!kind) continue;
       const placeholder = kind === "color" ? [0, 0, 0, 1] : [0];
+      if (isObject(value) && "measure" in value) {
+        this.properties.set(key, { kind, base: placeholder, measure: this.parseMeasure(kind, key, value, p) });
+        continue;
+      }
       if (isObject(value) && "map" in value) {
         // Mapped properties resolve after every plain base value is known.
         this.properties.set(key, { kind, base: placeholder, map: { source: "", from: [], to: [] } });
@@ -661,7 +702,7 @@ class ComponentCompiler {
       return undefined;
     }
     r.keys(raw, p, STATE_KEYS);
-    const state: State = { name, set: new Map(), follow: new Map(), enter: new Map(), when: new Map(), timers: [] };
+    const state: State = { name, set: new Map(), measure: new Map(), follow: new Map(), enter: new Map(), when: new Map(), timers: [] };
 
     if ("set" in raw) {
       const set = raw.set;
@@ -673,6 +714,13 @@ class ComponentCompiler {
           const kp = ptr(ptr(p, "set"), key);
           const prop = this.property(key, kp);
           if (!prop) continue;
+          if (isObject(value) && "measure" in value) {
+            const measure = this.parseMeasure(prop.kind, key, value, kp);
+            if (!measure) continue;
+            state.set.set(key, [0]);
+            state.measure.set(key, measure);
+            continue;
+          }
           const channels = this.parseValue(prop.kind, key, value, kp);
           if (!channels) continue;
           if ((prop.min !== undefined && channels[0] < prop.min) || (prop.max !== undefined && channels[0] > prop.max)) {

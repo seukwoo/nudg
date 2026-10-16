@@ -29,7 +29,7 @@
     <button type="button" class="header" data-nudg="header">What is nudg?<svg class="chevron" data-nudg="chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6l5 5 5-5"/></svg></button>
     <div class="panel" data-nudg="panel"><p>A plain-text format for UI interactions: states, events, and the motion between them. Your AI writes it; a runtime plays it.</p></div>
   </div>
-  <!-- Host markup for accordion.nudg.json. Serve the repo and build first to try it live. -->
+  <!-- Host markup for accordion.nudg.json. The adapter reports the panel's natural height; the file opens to it. -->
   <script type="module">
     import { compileUrl, play } from "../dist/dom/index.js";
     const { program } = await compileUrl("./accordion.nudg.json");

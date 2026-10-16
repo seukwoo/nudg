@@ -41,7 +41,7 @@
       "types": "./dist/node/index.d.ts",
       "default": "./dist/node/index.js"
     },
-    "./schema.json": "./spec/nudg-0.3.schema.json",
+    "./schema.json": "./spec/nudg-0.4.schema.json",
     "./guide.md": "./spec/guide.md",
     "./motion/*": "./examples/motion/*",
     "./package.json": "./package.json"
@@ -61,7 +61,8 @@
     "examples/motion/material-standard.nudg.json",
     "spec/nudg-0.1.schema.json",
     "spec/nudg-0.2.schema.json",
-    "spec/nudg-0.3.schema.json"
+    "spec/nudg-0.3.schema.json",
+    "spec/nudg-0.4.schema.json"
   ],
   "scripts": {
     "test": "NUDG_LOG=off NUDG_OPEN=false node --test --test-force-exit --test-concurrency=3",

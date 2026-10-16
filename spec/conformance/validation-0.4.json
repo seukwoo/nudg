@@ -1,0 +1,542 @@
+{
+  "conformance": "0.4",
+  "name": "Validator (0.4): each document produces exactly these errors (code and JSON pointer)",
+  "documents": [
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "0.3",
+        "targets": [
+          "seg1",
+          "seg2",
+          "seg3",
+          "indicator"
+        ],
+        "values": {
+          "indicator.x": 0,
+          "indicator.width": {
+            "measure": "seg1.width"
+          }
+        },
+        "animate": {
+          "indicator.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          },
+          "indicator.width": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          }
+        },
+        "initial": "first",
+        "when": {
+          "seg1.tap": "first",
+          "seg2.tap": "second",
+          "seg3.tap": "third"
+        },
+        "states": {
+          "first": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg1.x"
+              }
+            }
+          },
+          "second": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg2.x"
+              },
+              "indicator.width": {
+                "measure": "seg2.width"
+              }
+            }
+          },
+          "third": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg3.x"
+              },
+              "indicator.width": {
+                "measure": "seg3.width"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/values/indicator.width"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/first/set/indicator.x"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/second/set/indicator.x"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/second/set/indicator.width"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/third/set/indicator.x"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/third/set/indicator.width"
+        }
+      ]
+    },
+    {
+      "name": "unknown-measurement",
+      "doc": {
+        "nudg": "0.4",
+        "targets": [
+          "seg1",
+          "seg2",
+          "seg3",
+          "indicator"
+        ],
+        "values": {
+          "indicator.x": 0,
+          "indicator.width": {
+            "measure": "seg1.width"
+          }
+        },
+        "animate": {
+          "indicator.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          },
+          "indicator.width": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          }
+        },
+        "initial": "first",
+        "when": {
+          "seg1.tap": "first",
+          "seg2.tap": "second",
+          "seg3.tap": "third"
+        },
+        "states": {
+          "first": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg1.x"
+              }
+            }
+          },
+          "second": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg2.left"
+              },
+              "indicator.width": {
+                "measure": "seg2.width"
+              }
+            }
+          },
+          "third": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg3.x"
+              },
+              "indicator.width": {
+                "measure": "seg3.width"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-measure",
+          "path": "/states/second/set/indicator.x/measure"
+        }
+      ]
+    },
+    {
+      "name": "unknown-target",
+      "doc": {
+        "nudg": "0.4",
+        "targets": [
+          "seg1",
+          "seg2",
+          "seg3",
+          "indicator"
+        ],
+        "values": {
+          "indicator.x": 0,
+          "indicator.width": {
+            "measure": "seg1.width"
+          }
+        },
+        "animate": {
+          "indicator.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          },
+          "indicator.width": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          }
+        },
+        "initial": "first",
+        "when": {
+          "seg1.tap": "first",
+          "seg2.tap": "second",
+          "seg3.tap": "third"
+        },
+        "states": {
+          "first": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg1.x"
+              }
+            }
+          },
+          "second": {
+            "set": {
+              "indicator.x": {
+                "measure": "tab9.x"
+              },
+              "indicator.width": {
+                "measure": "seg2.width"
+              }
+            }
+          },
+          "third": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg3.x"
+              },
+              "indicator.width": {
+                "measure": "seg3.width"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-target",
+          "path": "/states/second/set/indicator.x/measure"
+        }
+      ]
+    },
+    {
+      "name": "position-into-size",
+      "doc": {
+        "nudg": "0.4",
+        "targets": [
+          "seg1",
+          "seg2",
+          "seg3",
+          "indicator"
+        ],
+        "values": {
+          "indicator.x": 0,
+          "indicator.width": {
+            "measure": "seg1.width"
+          }
+        },
+        "animate": {
+          "indicator.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          },
+          "indicator.width": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          }
+        },
+        "initial": "first",
+        "when": {
+          "seg1.tap": "first",
+          "seg2.tap": "second",
+          "seg3.tap": "third"
+        },
+        "states": {
+          "first": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg1.x"
+              }
+            }
+          },
+          "second": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg2.x"
+              },
+              "indicator.width": {
+                "measure": "seg2.x"
+              }
+            }
+          },
+          "third": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg3.x"
+              },
+              "indicator.width": {
+                "measure": "seg3.width"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-measure",
+          "path": "/states/second/set/indicator.width/measure"
+        }
+      ]
+    },
+    {
+      "name": "axis-mismatch",
+      "doc": {
+        "nudg": "0.4",
+        "targets": [
+          "seg1",
+          "seg2",
+          "seg3",
+          "indicator"
+        ],
+        "values": {
+          "indicator.x": 0,
+          "indicator.width": {
+            "measure": "seg1.width"
+          }
+        },
+        "animate": {
+          "indicator.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          },
+          "indicator.width": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          }
+        },
+        "initial": "first",
+        "when": {
+          "seg1.tap": "first",
+          "seg2.tap": "second",
+          "seg3.tap": "third"
+        },
+        "states": {
+          "first": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg1.x"
+              }
+            }
+          },
+          "second": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg2.y"
+              },
+              "indicator.width": {
+                "measure": "seg2.width"
+              }
+            }
+          },
+          "third": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg3.x"
+              },
+              "indicator.width": {
+                "measure": "seg3.width"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-measure",
+          "path": "/states/second/set/indicator.x/measure"
+        }
+      ]
+    },
+    {
+      "name": "measure-color",
+      "doc": {
+        "nudg": "0.4",
+        "targets": [
+          "seg1",
+          "seg2",
+          "seg3",
+          "indicator",
+          "track"
+        ],
+        "values": {
+          "indicator.x": 0,
+          "indicator.width": {
+            "measure": "seg1.width"
+          },
+          "track.color": {
+            "measure": "seg1.width"
+          }
+        },
+        "animate": {
+          "indicator.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          },
+          "indicator.width": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          }
+        },
+        "initial": "first",
+        "when": {
+          "seg1.tap": "first",
+          "seg2.tap": "second",
+          "seg3.tap": "third"
+        },
+        "states": {
+          "first": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg1.x"
+              }
+            }
+          },
+          "second": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg2.x"
+              },
+              "indicator.width": {
+                "measure": "seg2.width"
+              }
+            }
+          },
+          "third": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg3.x"
+              },
+              "indicator.width": {
+                "measure": "seg3.width"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-measure",
+          "path": "/values/track.color"
+        }
+      ]
+    },
+    {
+      "name": "unknown-key",
+      "doc": {
+        "nudg": "0.4",
+        "targets": [
+          "seg1",
+          "seg2",
+          "seg3",
+          "indicator"
+        ],
+        "values": {
+          "indicator.x": 0,
+          "indicator.width": {
+            "measure": "seg1.width"
+          }
+        },
+        "animate": {
+          "indicator.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          },
+          "indicator.width": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          }
+        },
+        "initial": "first",
+        "when": {
+          "seg1.tap": "first",
+          "seg2.tap": "second",
+          "seg3.tap": "third"
+        },
+        "states": {
+          "first": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg1.x"
+              }
+            }
+          },
+          "second": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg2.x",
+                "plus": 4
+              },
+              "indicator.width": {
+                "measure": "seg2.width"
+              }
+            }
+          },
+          "third": {
+            "set": {
+              "indicator.x": {
+                "measure": "seg3.x"
+              },
+              "indicator.width": {
+                "measure": "seg3.width"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-key",
+          "path": "/states/second/set/indicator.x/plus"
+        }
+      ]
+    }
+  ]
+}

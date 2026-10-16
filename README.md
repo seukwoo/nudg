@@ -211,6 +211,10 @@ The [roadmap](docs/roadmap.md) tracks development priorities and stage status, f
 - [Guide for AI agents](spec/guide.md): the format on one page.
 - [Development log](docs/devlog.md): problems met while building nudg, and how they were resolved.
 
+## With the components you already use
+
+nudg gives motion to the components you already have; it doesn't replace them. With shadcn/ui, Radix, Headless UI or React Aria, `useNudg(file, { watch: true })` follows the state they show (`data-state`, `aria-*`). With MUI, Ant Design or React Bootstrap, `nudgTransition(file)` plugs into their transition slot. The library keeps behavior and accessibility; the file holds the feel, where an AI can tune it and you can judge it. See [Using nudg](docs/usage.md#with-component-libraries).
+
 ## Help nudg get better
 
 nudg's goal is that a motion change takes one round: you say a word, see before and after, and judge. Whether it does is measured on your machine, in a local log that never leaves it by itself. If you use nudg, please share it now and then:

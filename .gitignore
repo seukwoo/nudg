@@ -3,3 +3,4 @@ dist/
 .DS_Store
 *.log
 .env*
+test/fixtures/bridges/app.bundle.js

@@ -7,7 +7,9 @@ import { createRuntime } from "../core/runtime.ts";
 import type { Program } from "../core/types.ts";
 import { play, type Player } from "../dom/play.ts";
 
-export { presets, press, hover, toggle, toast } from "../core/presets.ts";
+export { presets, press, hover, toggle, toast, appear } from "../core/presets.ts";
+export { nudgTransition } from "./transition.ts";
+export type { NudgTransitionOptions, TransitionProps } from "./transition.ts";
 
 export interface UseNudgOptions {
   /** Leaf state paths to start in instead of `initial`, e.g. ["on"] for a toggle that mounts checked. */
@@ -26,6 +28,8 @@ export interface UseNudgOptions {
    */
   exit?: string | string[];
   onExit?: () => void;
+  /** Follow the state a component library shows on the bound elements (data-state, aria-*); see PlayOptions.watch. */
+  watch?: boolean;
 }
 
 export interface Nudg {
@@ -68,6 +72,7 @@ export function useNudg(source: Program | object, options: UseNudgOptions = {}):
         if (p.present()) setPresent(true);
       },
       exit: options.exit,
+      watch: options.watch,
       onExit: () => {
         setPresent(false);
         onExit.current?.();

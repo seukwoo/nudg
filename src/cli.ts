@@ -12,6 +12,8 @@ import type { Diagnostic, Program } from "./core/types.ts";
 import { CHROME_HINT, findChrome, openInBrowser, svgToPng } from "./node/chrome.ts";
 import { snapshotElement } from "./node/snapshot.ts";
 import { materializeRevision } from "./node/git.ts";
+import { clearLog, formatSummary as formatLogSummary, logPath, readLog, record, summarize } from "./node/log.ts";
+import { installSkill, SKILL } from "./node/skill.ts";
 import { formatComparison, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
 import { comparePage, lastRuntimeInlined, readWithImports } from "./node/compare-page.ts";
 import { compilePath } from "./node/load.ts";
@@ -39,6 +41,12 @@ simulate and plot options
   --every <seconds>         Sample interval (simulate only). Default: 0.05.
   --props <a,b,...>         Properties to report. Default: all.
 
+  log [--json|--path|--clear]
+                            What the judge loop looked like on this machine: compares,
+                            verdicts, rounds per change. Local only (~/.nudg/log.jsonl);
+                            NUDG_LOG=off turns logging off, NUDG_LOG=<file> moves it.
+  skill [--user|--print]    Install a Claude Code skill that teaches the agent the loop,
+                            for this project (default) or for every project (--user).
   mcp                       Run the MCP server on stdio (tools: nudg_guide, nudg_validate,
                             nudg_simulate, nudg_plot, nudg_compare, nudg_render, nudg_observe).
   preset <name> [--options '{"scale":0.9}']
@@ -113,7 +121,7 @@ function parseArgs(argv: string[]): Args {
       continue;
     }
     const [name, inline] = arg.slice(2).split(/=(.*)/s, 2);
-    const boolean = name === "json" || name === "help" || name === "reduced-motion" || name === "open";
+    const boolean = ["json", "help", "reduced-motion", "open", "clear", "path", "print", "user"].includes(name);
     const value = boolean ? "" : (inline ?? argv[++i]);
     if (value === undefined || (!boolean && (value === "" || value.startsWith("--")))) fail(`Option --${name} needs a value.`);
     flags.set(name, [...(flags.get(name) ?? []), value]);
@@ -149,6 +157,7 @@ function validate(args: Args, json: boolean): number {
       for (const d of diagnostics) process.stdout.write(formatDiagnostic(d) + "\n");
     }
   }
+  record({ via: "cli", tool: "validate", files: args.positional, verdict: failed ? "errors" : "ok" });
   return failed ? 1 : 0;
 }
 
@@ -301,6 +310,7 @@ async function compareCommand(args: Args, json: boolean): Promise<number> {
   const options = simulationOptions(args, a.program!);
   const labels = (args.flags.get("labels")?.at(-1)?.split(",").map((s) => s.trim()) ?? (before ? [before, "now"] : ["A", "B"])) as [string, string];
   const comparison = compare(a.program!, b.program!, options);
+  const logged = (opened = false) => record({ via: "cli", tool: "compare", files: [...new Set(args.positional)], before, url, verdict: comparison.identical ? "identical" : comparison.verdict, headline: comparison.headline, opened });
   let html = args.flags.get("html")?.at(-1);
   let out = args.flags.get("out")?.at(-1);
   const url = args.flags.get("url")?.at(-1);
@@ -330,6 +340,7 @@ async function compareCommand(args: Args, json: boolean): Promise<number> {
     // Nothing to show a person; say so instead of opening a page with two identical stages.
     process.stdout.write(formatComparison(comparison, labels) + "\n");
     for (const n of notes) process.stdout.write(`note: ${n}\n`);
+    logged();
     return 0;
   }
   if (html && out && extname(out).toLowerCase() === ".html") {
@@ -363,11 +374,13 @@ async function compareCommand(args: Args, json: boolean): Promise<number> {
       picture = out;
     } else if (!json) {
       process.stdout.write(formatComparison(comparison, labels) + "\n\n" + graph.svg + "\n");
+      logged();
       return 0;
     }
   }
 
   const opened = picture?.endsWith(".html") && args.flags.has("open") ? openInBrowser(picture) : false;
+  logged(opened);
   if (json) {
     const { a: _a, b: _b, ...rest } = comparison;
     process.stdout.write(JSON.stringify({ ok: true, ...rest, summaryA: comparison.a.summary, summaryB: comparison.b.summary, picture, opened, notes }, null, 2) + "\n");
@@ -439,6 +452,7 @@ async function runObserve(args: Args, json: boolean): Promise<number> {
   } else {
     process.stdout.write(formatObservation({ url, selector, summary: observation.summary, marks: observation.series.marks, errors: observation.errors }, judgement) + "\n");
   }
+  record({ via: "cli", tool: "observe", files: file ? [file] : [], url, verdict: judgement?.verdict ?? "measured", headline: judgement?.headline });
   if (judgement?.verdict === "unmeasured") return 2;
   return judgement && judgement.verdict !== "played" ? 1 : 0;
 }
@@ -504,8 +518,32 @@ if (command === "preset") {
   process.stdout.write(JSON.stringify(presets[name!](options), null, 2) + "\n");
   process.exit(0);
 }
+if (command === "log") {
+  const path = logPath();
+  if (args.flags.has("clear")) {
+    clearLog(path);
+    process.stdout.write(path ? `cleared ${path}\n` : "The log is off (NUDG_LOG=off).\n");
+    process.exit(0);
+  }
+  if (args.flags.has("path")) {
+    process.stdout.write((path ?? "off") + "\n");
+    process.exit(0);
+  }
+  const summary = summarize(readLog(path));
+  process.stdout.write(json ? JSON.stringify({ path: path ?? null, ...summary }, null, 2) + "\n" : formatLogSummary(summary, path) + "\n");
+  process.exit(0);
+}
+if (command === "skill") {
+  if (args.flags.has("print")) {
+    process.stdout.write(SKILL);
+    process.exit(0);
+  }
+  const path = installSkill(args.flags.has("user") ? "user" : "project");
+  process.stdout.write(`wrote ${path}\nClaude Code picks it up as /nudg; it tells the agent the say, see, judge loop.\n`);
+  process.exit(0);
+}
 if (command === "mcp") {
   await serveMcp();
   process.exit(0);
 }
-fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, observe, preset, mcp.`);
+fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, observe, preset, log, skill, mcp.`);

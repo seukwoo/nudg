@@ -129,6 +129,24 @@ nudg preset toast --options '{"duration": 5}'
 
 Prints a preset (`press`, `hover`, `toggle`, `toast`) as a nudg file. The same presets are `presets.*` in `@nudg/core` and `@nudg/core/react`, for use without a file: `useNudg(presets.press())`, `playDoc(presets.hover(), element)`.
 
+### log
+
+```sh
+nudg log            # what the judge loop looked like on this machine
+nudg log --json     # the same, for an issue or a script
+```
+
+Every `compare`, `observe` and `validate`, from the CLI or the MCP server, appends one line to `~/.nudg/log.jsonl`: the tool, the files, the verdict, whether a page opened. `nudg log` summarizes it, above all **rounds per change**: how many times the same file was compared again within 15 minutes before the work moved on. One round means the person judged the change at the first look. It also counts rounds that showed nothing anyone could see. The log never leaves the machine; `NUDG_LOG=off` turns it off, `NUDG_LOG=<file>` moves it, `nudg log --clear` empties it. To help the project, attach `nudg log --json` to an issue.
+
+### skill
+
+```sh
+nudg skill          # ./.claude/skills/nudg/SKILL.md, for this project
+nudg skill --user   # ~/.claude/skills/nudg/SKILL.md, for every project
+```
+
+Installs a Claude Code skill that teaches the agent the loop: validate, compare against `HEAD` on the running app, pass the headline on, exaggerate first when nothing would be noticed, observe the real page. `--print` shows it without writing.
+
 ## MCP server
 
 `nudg mcp` serves the same capabilities as tools over stdio, with no dependencies:

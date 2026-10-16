@@ -16,6 +16,7 @@ import { VERSION } from "../core/vocabulary.ts";
 import { CHROME_HINT, findChrome, openInBrowser, svgToPng } from "./chrome.ts";
 import { snapshotElement } from "./snapshot.ts";
 import { materializeRevision } from "./git.ts";
+import { record } from "./log.ts";
 import { formatComparison, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./format.ts";
 import { comparePage, lastRuntimeInlined, readWithImports } from "./compare-page.ts";
 import { compilePath } from "./load.ts";
@@ -243,6 +244,33 @@ async function handle(message: Json): Promise<Json | undefined> {
 }
 
 async function callTool(name: string, args: Json): Promise<ToolResult> {
+  const result = await runTool(name, args);
+  logCall(name, args, result);
+  return result;
+}
+
+/** One line in the local judge log for the tools that make up the loop. */
+function logCall(name: string, args: Json, result: ToolResult): void {
+  const tool = name === "nudg_compare" ? "compare" : name === "nudg_observe" ? "observe" : name === "nudg_validate" ? "validate" : undefined;
+  if (!tool) return;
+  const s = (result.structuredContent ?? {}) as Json;
+  const side = (v: unknown) => (v && typeof v === "object" ? ((v as Json).file as string | undefined) ?? ((v as Json).path as string | undefined) ?? "(source)" : undefined);
+  const files = tool === "compare" ? (typeof args.file === "string" ? [args.file] : [side(args.a), side(args.b)].filter((f): f is string => !!f)) : [typeof args.file === "string" ? args.file : typeof args.path === "string" ? args.path : "(source)"];
+  const judgement = s.judgement as Json | undefined;
+  record({
+    via: "mcp",
+    tool,
+    files,
+    before: typeof args.before === "string" ? args.before : undefined,
+    url: typeof args.url === "string" ? args.url : undefined,
+    verdict: result.isError ? undefined : tool === "compare" ? (s.identical ? "identical" : (s.verdict as string | undefined)) : tool === "observe" ? (judgement?.verdict as string | undefined) ?? "measured" : s.ok ? "ok" : "errors",
+    headline: tool === "compare" ? (s.headline as string | undefined) : tool === "observe" ? (judgement?.headline as string | undefined) : undefined,
+    opened: tool === "compare" ? Boolean(s.opened) : undefined,
+    error: result.isError ? result.content[0]?.type === "text" ? result.content[0].text.slice(0, 300) : "error" : undefined,
+  });
+}
+
+async function runTool(name: string, args: Json): Promise<ToolResult> {
   try {
     switch (name) {
       case "nudg_guide":

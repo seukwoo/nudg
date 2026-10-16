@@ -157,6 +157,24 @@ Status: first cut implemented as format 0.4 (`measure` in `values` and `set`, re
 
 11. **Native runtimes read compiled programs.** Validation, error messages and hints live in one place, the reference implementation; runtimes on other platforms read the compiled form (`nudg compile`) and are checked by the same conformance suite. A file is validated where it is written (the editor, the AI's loop, CI), not on the device.
 
+## Proposal: continuous app inputs
+
+Status: proposed, not implemented. The cases: a circle that grows with the microphone level, a card that tilts with the phone, a progress ring that follows a download, an app bar that hides as the page scrolls. Events (`host.show`) can't say these; they are values that change every frame.
+
+**The app supplies values as inputs, the same way the adapters supply the pointer and the layout.** `player.input("host.volume", 0.7)`, at any rate. The name is the app's own, as with `host.*` events, so the validator accepts any `host.<name>` and the guide asks for names that say what the value is.
+
+**Files read them with the existing operators, not new ones:**
+
+- `map` from an input: `"ring.scale": { "map": "host.volume", "from": [0, 1], "to": [1, 1.6] }`. Today `map` reads a property; reading an input is the same piecewise-linear rule, applied to the input's latest value.
+- `follow` an input in a state, as with a drag: `"follow": { "card.rotation": { "input": "host.tilt", "range": [-8, 8] } }`. It moves with the input from where the value was when the state was entered.
+- `nearest` and velocity work as for drags, since inputs keep their history.
+
+**Scroll** is the same idea, supplied by the adapter: `target.scroll.y` is the scroll offset of a scrolling target, usable by `map` (a header that shrinks as the page scrolls) and `follow`. Hiding on scroll direction needs events too (`target.scrollup` / `target.scrolldown`, sent past a threshold), which would be the first events derived from an input.
+
+**What it does not do:** read devices. Microphones, cameras, motion sensors and file downloads are the app's business; nudg receives numbers. An adapter may offer a thin helper for the most common ones (scroll), never a sensor.
+
+**First cut, if agreed:** `map` from `host.*` inputs and `target.scroll.*`, a microphone example (the site feeds a level from the Web Audio API) and a shrinking header, conformance cases in `derive.py` first.
+
 ## Open questions
 
 These are unresolved design choices. Scheduling and completion status live in the [roadmap](roadmap.md); examples of possible syntax below are proposals.
@@ -173,6 +191,7 @@ These are unresolved design choices. Scheduling and completion status live in th
 - Continuous motion while a state is active (a spinner turning, a marquee): a rate-driven value, and how it hands off when the state is left (a rotation at 720° shouldn't unwind to 0). Today this is left to CSS through `data-nudg-state`.
 - `nearest` limited to neighbors of the current state (a carousel that moves one slide per swipe however hard the flick), instead of tuning `momentum` down.
 - Pinch, rotate and other multi-pointer gestures.
+- Continuous app inputs and scroll: see [the proposal above](#proposal-continuous-app-inputs).
 - More primitives and combinators: `keyframes`, `sequence`, `delay`, `stagger`.
 - Tweaking a named motion at the point of use, for example `{ "use": "snappy", "duration": 0.5 }`.
 - Schemes: which names a scheme may supply or override, how the host passes one in, and how the validator still catches misspelled names. The built-in Apple-like and Material-like libraries.

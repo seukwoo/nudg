@@ -1,0 +1,126 @@
+{
+  "conformance": "0.4",
+  "name": "Layout: a natural height to open to, followed when the content grows",
+  "doc": {
+    "nudg": "0.4",
+    "targets": [
+      "header",
+      "content"
+    ],
+    "values": {
+      "content.height": 0
+    },
+    "animate": {
+      "content.height": {
+        "spring": {
+          "duration": 0.4,
+          "bounce": 0
+        }
+      }
+    },
+    "initial": "closed",
+    "states": {
+      "closed": {
+        "when": {
+          "header.tap": "open"
+        }
+      },
+      "open": {
+        "set": {
+          "content.height": {
+            "measure": "content.naturalHeight"
+          }
+        },
+        "when": {
+          "header.tap": "closed"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "input": "content.layout.naturalHeight",
+      "value": 120
+    },
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "closed"
+        ],
+        "values": {
+          "content.height": 0
+        }
+      }
+    },
+    {
+      "t": 0.1,
+      "send": "header.tap"
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "state": [
+          "open"
+        ],
+        "values": {
+          "content.height": 55.870073844
+        }
+      }
+    },
+    {
+      "t": 0.35,
+      "expect": {
+        "state": [
+          "open"
+        ],
+        "values": {
+          "content.height": 108.350895087
+        }
+      }
+    },
+    {
+      "t": 0.35,
+      "input": "content.layout.naturalHeight",
+      "value": 150
+    },
+    {
+      "t": 0.45,
+      "expect": {
+        "state": [
+          "open"
+        ],
+        "values": {
+          "content.height": 130.773862664
+        }
+      }
+    },
+    {
+      "t": 0.8,
+      "expect": {
+        "state": [
+          "open"
+        ],
+        "values": {
+          "content.height": 149.769754744
+        }
+      }
+    },
+    {
+      "t": 0.8,
+      "send": "header.tap"
+    },
+    {
+      "t": 1.0,
+      "expect": {
+        "state": [
+          "closed"
+        ],
+        "values": {
+          "content.height": 26.832476112
+        }
+      }
+    }
+  ]
+}

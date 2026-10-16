@@ -48,8 +48,17 @@ export interface PropertyMap {
   to: Channels[];
 }
 
+/** A value read from the host's layout report (v0.4): `{ "measure": "seg2.x" }`. */
+export interface Measure {
+  target: string;
+  /** x and y align (the measured box's position minus this property's own target's); sizes are the size. */
+  of: "x" | "y" | "width" | "height" | "naturalWidth" | "naturalHeight";
+}
+
 export interface Property {
   kind: PropertyKind;
+  /** A base value measured from layout instead of a number (v0.4). `base` holds 0 until then. */
+  measure?: Measure;
   /** For a mapped property, its value at the source's base. */
   base: Channels;
   map?: PropertyMap;
@@ -86,6 +95,8 @@ export interface Timer {
 export interface State {
   name: string;
   set: Map<string, Channels>;
+  /** Entries of `set` that are measured (v0.4); their `set` value is a placeholder. */
+  measure: Map<string, Measure>;
   follow: Map<string, Follow>;
   enter: Map<string, SpringMotion>;
   when: Map<string, Transition>;

@@ -1,0 +1,65 @@
+{
+  "nudg": "0.4",
+  "note": "Tabs whose labels have different widths. The underline moves under the selected tab and takes its width, both measured from the page, so renaming a tab or changing the font needs no new numbers.",
+  "targets": [
+    "tab1",
+    "tab2",
+    "tab3",
+    "underline"
+  ],
+  "values": {
+    "underline.x": 0,
+    "underline.width": {
+      "measure": "tab1.width"
+    }
+  },
+  "animate": {
+    "underline.x": {
+      "spring": {
+        "duration": 0.35,
+        "bounce": 0.15
+      }
+    },
+    "underline.width": {
+      "spring": {
+        "duration": 0.35,
+        "bounce": 0.15
+      }
+    }
+  },
+  "initial": "first",
+  "when": {
+    "tab1.tap": "first",
+    "tab2.tap": "second",
+    "tab3.tap": "third"
+  },
+  "states": {
+    "first": {
+      "set": {
+        "underline.x": {
+          "measure": "tab1.x"
+        }
+      }
+    },
+    "second": {
+      "set": {
+        "underline.x": {
+          "measure": "tab2.x"
+        },
+        "underline.width": {
+          "measure": "tab2.width"
+        }
+      }
+    },
+    "third": {
+      "set": {
+        "underline.x": {
+          "measure": "tab3.x"
+        },
+        "underline.width": {
+          "measure": "tab3.width"
+        }
+      }
+    }
+  }
+}

@@ -1,19 +1,54 @@
 {
-  "nudg": "0.1",
-  "note": "An accordion section with a fixed open height. The panel's height springs without overshoot, its content fades, and the chevron turns.",
-  "targets": ["header", "panel", "chevron"],
-  "values": { "panel.height": 0, "panel.opacity": 0, "chevron.rotation": 0 },
+  "nudg": "0.4",
+  "note": "An accordion section that opens to exactly its content's height, measured by the host, so a longer answer needs no edit. The panel's height springs without overshoot, its content fades, and the chevron turns.",
+  "targets": [
+    "header",
+    "panel",
+    "chevron"
+  ],
+  "values": {
+    "panel.height": 0,
+    "panel.opacity": 0,
+    "chevron.rotation": 0
+  },
   "animate": {
-    "panel.height": { "spring": { "duration": 0.35, "bounce": 0 } },
-    "panel.opacity": { "tween": { "duration": 0.2, "ease": "out" } },
-    "chevron.rotation": { "spring": { "duration": 0.3, "bounce": 0.2 } }
+    "panel.height": {
+      "spring": {
+        "duration": 0.35,
+        "bounce": 0
+      }
+    },
+    "panel.opacity": {
+      "tween": {
+        "duration": 0.2,
+        "ease": "out"
+      }
+    },
+    "chevron.rotation": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0.2
+      }
+    }
   },
   "initial": "closed",
   "states": {
-    "closed": { "when": { "header.tap": "open" } },
+    "closed": {
+      "when": {
+        "header.tap": "open"
+      }
+    },
     "open": {
-      "set": { "panel.height": 72, "panel.opacity": 1, "chevron.rotation": 180 },
-      "when": { "header.tap": "closed" }
+      "set": {
+        "panel.height": {
+          "measure": "panel.naturalHeight"
+        },
+        "panel.opacity": 1,
+        "chevron.rotation": 180
+      },
+      "when": {
+        "header.tap": "closed"
+      }
     }
   }
 }

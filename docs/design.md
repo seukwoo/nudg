@@ -126,7 +126,7 @@ These are expensive to change later, so they are fixed early:
 
 ## Proposal: layout as input (format 0.4)
 
-Status: proposed, not implemented. Settles the open question "Layout: measured positions and sizes". The cases that force it: a tab or segmented indicator that must sit under a label whose width depends on its text and the font, an accordion that collapses from its natural height, a bottom sheet whose snap points depend on the screen, a swipe row whose actions are as wide as their labels. Today every example hard-codes these numbers (`segmented` assumes 72 px segments).
+Status: first cut implemented as format 0.4 (`measure` in `values` and `set`, retargeting, the DOM adapter's measuring); arithmetic and sheets are still ahead. Settles the open question "Layout: measured positions and sizes". The cases that force it: a tab or segmented indicator that must sit under a label whose width depends on its text and the font, an accordion that collapses from its natural height, a bottom sheet whose snap points depend on the screen, a swipe row whose actions are as wide as their labels. Today every example hard-codes these numbers (`segmented` assumes 72 px segments).
 
 **The core never measures.** Measuring is the host's job, like the pointer: the adapter reports each bound target's layout as inputs, the same kind of value as `drag.x`, and the core reads them. This keeps decisions 3 (deterministic clock), 6 (core and renderers separate) and 9 (no expressions) intact, and the conformance suite can state layouts as given numbers.
 

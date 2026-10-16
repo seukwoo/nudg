@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Tabs</title>
+  <style>
+    .tabs { position: relative; display: flex; gap: 4px; border-bottom: 1px solid #e4e4df; font: 600 14px ui-sans-serif, system-ui, sans-serif; }
+    .tabs button {
+      padding: 10px 12px;
+      border: 0;
+      background: none;
+      font: inherit;
+      color: #1c1c1a;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* Starts at the left edge with no width; nudg moves and sizes it from what the page measures. */
+    .tabs .underline { position: absolute; left: 0; bottom: -1px; height: 2px; width: 0; border-radius: 1px; background: #2563eb; }
+  </style>
+</head>
+<body>
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" data-nudg="tab1">For you</button>
+    <button type="button" role="tab" data-nudg="tab2">Following</button>
+    <button type="button" role="tab" data-nudg="tab3">News</button>
+    <div class="underline" data-nudg="underline"></div>
+  </div>
+  <!-- Host markup for tabs.nudg.json. The adapter reports each tab's box; the file aligns the underline with it. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./tabs.nudg.json");
+    play(program, document.body);
+  </script>
+</body>
+</html>

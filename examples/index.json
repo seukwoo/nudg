@@ -182,11 +182,12 @@
       "category": "lists",
       "tags": [
         "height",
-        "tween",
-        "rotation"
+        "measure",
+        "rotation",
+        "tween"
       ],
       "html": "accordion.html",
-      "summary": "The panel's height springs open without overshoot, its content fades in, and the chevron turns.",
+      "summary": "The panel opens to exactly its content's height, measured from the page; it springs without overshoot, its content fades, and the chevron turns.",
       "prompts": [
         "Let the panel overshoot a little when it opens.",
         "Make the chevron turn a bit before the panel opens."
@@ -241,6 +242,22 @@
       "prompts": [
         "Make the indicator move with a bit of overshoot.",
         "Add a fourth segment."
+      ]
+    },
+    {
+      "id": "tabs",
+      "title": "Tabs",
+      "category": "navigation",
+      "tags": [
+        "measure",
+        "width",
+        "any-state-when"
+      ],
+      "html": "tabs.html",
+      "summary": "The underline slides under the selected tab and takes its width, measured from the labels, so renaming a tab needs no new numbers.",
+      "prompts": [
+        "Make the underline lag a little behind, like it's being pulled.",
+        "Let the underline stretch toward the new tab before it moves."
       ]
     },
     {

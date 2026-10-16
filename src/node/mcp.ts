@@ -8,6 +8,7 @@ import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { compile, type CompileResult } from "../core/compile.ts";
 import { compare, compareFrameTimes } from "../core/compare.ts";
+import { createRuntime } from "../core/runtime.ts";
 import { actionTarget, actionsToEvents, judgeHost } from "../core/observe.ts";
 import { plot } from "../core/plot.ts";
 import { dragGesture, simulate, type SimulateOptions, type TimedEvent } from "../core/simulate.ts";
@@ -68,6 +69,7 @@ const timing = {
     },
   },
   start: { type: "array", items: { type: "string" }, description: "Start in these states instead of initial, e.g. [\"on\"]." },
+  layout: { type: "object", additionalProperties: { type: "number" }, description: "What the host would measure (0.4), reported at time 0: { \"tab2.x\": 96, \"tab2.width\": 88, \"underline.x\": 8 }. Measured values without it fall back to their base." },
   reducedMotion: { type: "boolean", description: "Play as a reduced-motion user would see it: short linear tweens, no kicks (0.3)." },
   until: { type: ["number", "string"], description: "Last time to look at. Default: when everything has come to rest." },
   properties: { type: "array", items: { type: "string" }, description: "Properties to report, e.g. [\"knob.x\"]. Default: all." },
@@ -306,8 +308,11 @@ function simulateTool(args: Json): ToolResult {
   const options = { ...timingOptions(args, program), every: optionalTime(args.every, "every") };
   const sim = simulate(program, options);
   const keys = options.properties ?? [...program.properties.keys()];
-  const body = `${label}\n\nsummary\n${formatSummary(sim, keys)}\n\n${formatSamples(sim, keys)}`;
-  return { content: [text(body)], structuredContent: { summary: sim.summary, unhandled: sim.unhandled, samples: sim.samples } };
+  const reported = new Set(options.events.flatMap((e) => ("input" in e ? [e.input] : [])));
+  const unmeasured = createRuntime(program).measurements().filter((n) => !reported.has(n));
+  const note = unmeasured.length ? `\n\nNot measured, so falling back to base values: ${unmeasured.join(", ")}. Pass layout, e.g. { ${unmeasured.map((n) => `"${n.replace(".layout.", ".")}": …`).join(", ")} }.` : "";
+  const body = `${label}\n\nsummary\n${formatSummary(sim, keys)}${note}\n\n${formatSamples(sim, keys)}`;
+  return { content: [text(body)], structuredContent: { summary: sim.summary, unhandled: sim.unhandled, samples: sim.samples, unmeasured } };
 }
 
 async function plotTool(args: Json): Promise<ToolResult> {
@@ -570,6 +575,16 @@ function timingOptions(args: Json, program: Program): SimulateOptions {
     if (unknown.length) throw new ToolError(`Unknown properties: ${unknown.join(", ")}. This file has ${[...program.properties.keys()].join(", ")}.`);
   }
   const reducedMotion = args.reducedMotion === undefined ? undefined : Boolean(args.reducedMotion);
+  if (args.layout !== undefined) {
+    if (typeof args.layout !== "object" || args.layout === null || Array.isArray(args.layout)) throw new ToolError("`layout` must map target.measurement to a number, e.g. { \"tab2.x\": 96 }.");
+    const layout: TimedEvent[] = [];
+    for (const [key, value] of Object.entries(args.layout as Json)) {
+      const m = /^([^.]+)\.([A-Za-z]+)$/.exec(key);
+      if (!m || typeof value !== "number") throw new ToolError(`layout: "${key}" must be target.measurement with a number, e.g. "tab2.x": 96.`);
+      layout.push({ input: `${m[1]}.layout.${m[2]}`, value, t: 0 });
+    }
+    events.unshift(...layout);
+  }
   return { events, start, reducedMotion, until: optionalTime(args.until, "until"), properties };
 }
 

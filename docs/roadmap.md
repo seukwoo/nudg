@@ -45,6 +45,8 @@ Done when: a real playsnack interaction is easier to tune with nudg than by edit
 
 ## Next: Layout-Aware Interactions
 
+Status: format 0.4 (unreleased) measures positions and sizes: `tabs` and `accordion` no longer guess. Still ahead: arithmetic on measurements (offsets, fractions, `%`), bottom sheet snap points, a responsive swipe row.
+
 Goal: support the component patterns whose motion depends on measured size or position.
 
 - Add measured values such as tab indicator `x` / `width`, content height, sheet bounds, and action width.

@@ -224,6 +224,9 @@ export function play(program: Program, root: ParentNode | null = document, optio
   const pressed = new Map<string, Press>();
   const suppressTap = new Set<string>();
 
+  /** Set once layout reporting starts: elements bound later (React refs) are measured too. */
+  let onLayoutBind: ((name: string, el: Element) => void) | undefined;
+
   function bind(name: string, el: Element): () => void {
     if (!program.targets.includes(name)) return () => {};
     const set = elements.get(name) ?? new Set<Element>();
@@ -270,6 +273,7 @@ export function play(program: Program, root: ParentNode | null = document, optio
     if (draggable.has(name) && style) style.touchAction = "none";
     applyTo(name, runtime.sample(now()), [el]);
     reflectState([el]);
+    onLayoutBind?.(name, el);
 
     const unbind = () => {
       el.removeAttribute("data-nudg-state");
@@ -344,6 +348,43 @@ export function play(program: Program, root: ParentNode | null = document, optio
     if (unknown.length) console.warn(`nudg: data-nudg="${unknown.join('", "')}" is not a target in this file.`);
   }
 
+  // Layout (v0.4): report what the file measures, now and whenever it changes. Positions
+  // are untransformed (offsets), so nudg's own motion is never part of what it measures.
+  const needed = runtime.measurements();
+  let observer: ResizeObserver | undefined;
+  let measureFrame = 0;
+  const measureNow = () => {
+    measureFrame = 0;
+    if (destroyed) return;
+    let changedAny = false;
+    for (const name of needed) {
+      const [target, , what] = name.split(".");
+      const el = elements.get(target)?.values().next().value;
+      if (!el) continue;
+      const v = measureElement(el, what);
+      if (v !== undefined && runtime.input(name, v, now())) changedAny = true;
+    }
+    if (changedAny) changed();
+  };
+  const remeasure = () => {
+    if (!measureFrame) measureFrame = requestAnimationFrame(measureNow);
+  };
+  if (needed.length) {
+    measureNow();
+    if (typeof ResizeObserver === "function") {
+      observer = new ResizeObserver(remeasure);
+      for (const name of needed) for (const el of elements.get(name.split(".")[0]) ?? []) observer.observe(el);
+    }
+    window.addEventListener("resize", remeasure);
+    (document as Document & { fonts?: FontFaceSet }).fonts?.ready.then(remeasure).catch(() => {});
+    const measuredTargets = new Set(needed.map((n) => n.split(".")[0]));
+    onLayoutBind = (name, el) => {
+      if (!measuredTargets.has(name)) return;
+      observer?.observe(el);
+      remeasure();
+    };
+  }
+
   // Real time has already started; sampling at 0 now would run the clock backwards.
   apply(runtime.sample(now()));
 
@@ -371,6 +412,9 @@ export function play(program: Program, root: ParentNode | null = document, optio
     destroy() {
       destroyed = true;
       cancelAnimationFrame(frame);
+      cancelAnimationFrame(measureFrame);
+      observer?.disconnect();
+      window.removeEventListener("resize", remeasure);
       for (const unbind of [...cleanups.values()]) unbind();
       window.removeEventListener("pointermove", onMove, true);
       window.removeEventListener("pointerup", onUp, true);
@@ -428,4 +472,32 @@ function dragTargets(program: Program): Set<string> {
   };
   walk(program.machine);
   return out;
+}
+
+/**
+ * One layout measurement of an element, in CSS pixels (logical units): the untransformed
+ * box from offsets, summed up to the page, or the natural size from the scroll size.
+ */
+function measureElement(el: Element, what: string): number | undefined {
+  if (!(el instanceof HTMLElement)) {
+    const r = el.getBoundingClientRect();
+    return what === "x" ? r.left + scrollX : what === "y" ? r.top + scrollY : what === "width" || what === "naturalWidth" ? r.width : r.height;
+  }
+  switch (what) {
+    case "x":
+    case "y": {
+      let sum = 0;
+      for (let node: HTMLElement | null = el; node; node = node.offsetParent as HTMLElement | null) sum += what === "x" ? node.offsetLeft : node.offsetTop;
+      return sum;
+    }
+    case "width":
+      return el.offsetWidth;
+    case "height":
+      return el.offsetHeight;
+    case "naturalWidth":
+      return el.scrollWidth;
+    case "naturalHeight":
+      return el.scrollHeight;
+  }
+  return undefined;
 }

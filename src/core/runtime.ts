@@ -5,7 +5,7 @@ import { oklabToHex } from "./color.ts";
 import { easeAt, easeSlope } from "./ease.ts";
 import { interpolate } from "./map.ts";
 import { springAt } from "./spring.ts";
-import type { Channels, Follow, Machine, Motion, Program, State, Transition } from "./types.ts";
+import type { Channels, Follow, Machine, Measure, Motion, Program, State, Transition } from "./types.ts";
 
 export type Value = number | string;
 
@@ -26,8 +26,15 @@ export interface Runtime {
   readonly program: Program;
   /** Sends an event at time `t` (seconds). Returns false if nothing handled it. */
   send(event: string, t: number): boolean;
-  /** Records an input sample at time `t`, e.g. ("track.drag.x", 12, 0.2). Returns false for an unknown input. */
+  /**
+   * Records an input sample at time `t`, e.g. ("track.drag.x", 12, 0.2), or a layout
+   * report (v0.4), e.g. ("seg2.layout.x", 72, 0). Returns false for an unknown input.
+   */
   input(name: string, value: number, t: number): boolean;
+  /** The layout inputs this program reads (target.layout.<name>), for a host to report. */
+  measurements(): string[];
+  /** Of those, the ones not reported yet: measured values fall back to their base until then. */
+  unmeasured(): string[];
   /** Property values at time `t`: numbers in logical units, colors as hex. */
   sample(t: number): Record<string, Value>;
   /**
@@ -62,6 +69,7 @@ const REST = { number: 1e-3, color: 1e-4 };
 /** Seconds of input history used for velocity. */
 const VELOCITY_WINDOW = 0.1;
 const INPUT = /^(.+)\.drag\.(x|y)$/;
+const LAYOUT = /^(.+)\.layout\.(x|y|width|height|naturalWidth|naturalHeight)$/;
 /** What every motion becomes under reduced motion. */
 const REDUCED: Motion = { kind: "tween", duration: 0.15, ease: "linear" };
 
@@ -72,6 +80,11 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
   /** Base values, which `step` and `commit` change for good. */
   const bases = new Map<string, Channels>();
   const pending: Pending[] = [];
+  /** The host's latest layout report, by input name (v0.4). */
+  const layout = new Map<string, number>();
+  /** Base values measured from layout, until a step or commit replaces them. */
+  const measuredBases = new Map<string, Measure>();
+  for (const [key, prop] of program.properties) if (prop.measure) measuredBases.set(key, prop.measure);
   let order = 0;
   let now = 0;
   const reduced = options.reducedMotion === true;
@@ -153,11 +166,38 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     walk(program.machine);
   }
 
-  /** Base values, overridden by every active state's `set`, deeper states last. */
+  /** The layout inputs a measurement reads: positions align, so they also need the property's own target. */
+  function inputsOf(key: string, m: Measure): string[] {
+    const own = key.split(".")[0];
+    return m.of === "x" || m.of === "y" ? [`${m.target}.layout.${m.of}`, `${own}.layout.${m.of}`] : [`${m.target}.layout.${m.of}`];
+  }
+
+  /** A measured value from the latest report, or undefined until everything it reads is reported. */
+  function measured(key: string, m: Measure): number | undefined {
+    const values = inputsOf(key, m).map((name) => layout.get(name));
+    if (values.some((v) => v === undefined)) return undefined;
+    return m.of === "x" || m.of === "y" ? values[0]! - values[1]! : values[0]!;
+  }
+
+  /** Base values (measured ones from the layout report), overridden by every active state's `set`, deeper states last. */
   function resolveTargets(act: Map<Machine, string>): Map<string, Channels> {
     const out = new Map<string, Channels>(bases);
+    for (const [key, m] of measuredBases) {
+      const v = measured(key, m);
+      if (v !== undefined) out.set(key, [clamp(key, v)]);
+    }
+    const resolvedBases = new Map(out);
     walkActive(act, (state) => {
-      for (const [key, value] of state.set) out.set(key, value);
+      for (const [key, value] of state.set) {
+        const m = state.measure.get(key);
+        if (!m) {
+          out.set(key, value);
+          continue;
+        }
+        // Not measured yet: the property's base value.
+        const v = measured(key, m);
+        out.set(key, v === undefined ? resolvedBases.get(key)! : [clamp(key, v)]);
+      }
     });
     return out;
   }
@@ -265,15 +305,26 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     return true;
   }
 
-  /** After the machine changed at time `t`: commit and step bases, then retarget every property. */
-  function settle(t: number, fired: Transition[], entered: State[]) {
+  /**
+   * After the machine or the layout changed at time `t`: commit and step bases, then
+   * retarget every property. `snap` places changed targets without motion: a layout
+   * reported for the first time is where things are, not somewhere they move to.
+   */
+  function settle(t: number, fired: Transition[], entered: State[], snap = false) {
     const committed = new Set<string>();
     for (const transition of fired) {
       for (const key of transition.commit ?? []) {
         bases.set(key, [clamp(key, evaluate(segments.get(key)!, t)[0][0])]);
+        measuredBases.delete(key);
         committed.add(key);
       }
-      for (const [key, delta] of transition.step ?? []) bases.set(key, [clamp(key, bases.get(key)![0] + delta)]);
+      for (const [key, delta] of transition.step ?? []) {
+        // A step moves from the base as it resolves now, measured or not; from then on it's a number.
+        const m = measuredBases.get(key);
+        const from = (m && measured(key, m)) ?? bases.get(key)![0];
+        bases.set(key, [clamp(key, from + delta)]);
+        measuredBases.delete(key);
+      }
     }
     const overrides = new Map<string, Motion>();
     for (const transition of fired) for (const [key, motion] of transition.animate) overrides.set(key, motion);
@@ -294,6 +345,10 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       const to = targets.get(key)!;
       // Leaving a follow always hands off, carrying the input's velocity into the motion.
       if (segment.kind === "motion" && sameChannels(segment.to, to)) continue;
+      if (snap) {
+        segments.set(key, { kind: "motion", t0: t, from: to, v0: to.map(() => 0), to });
+        continue;
+      }
       const [pos, vel] = evaluate(segment, t);
       // A committed value is placed, not thrown: it keeps no velocity from the finger.
       if (committed.has(key)) vel.fill(0);
@@ -361,12 +416,43 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
 
     input(name, value, t) {
       advanceTo(t);
+      const l = LAYOUT.exec(name);
+      if (l) {
+        if (!program.targets.includes(l[1]) || !Number.isFinite(value)) return false;
+        const first = !layout.has(name);
+        if (layout.get(name) === value) return true;
+        layout.set(name, value);
+        // A relayout moves measured values to their new targets, with each property's motion.
+        settle(t, [], [], first);
+        return true;
+      }
       const m = INPUT.exec(name);
       if (!m || !program.targets.includes(m[1]) || !Number.isFinite(value)) return false;
       const history = inputs.get(name) ?? [];
       history.push([t, value]);
       inputs.set(name, history);
       return true;
+    },
+
+    measurements() {
+      const out = new Set<string>();
+      for (const [key, m] of measuredBases) for (const name of inputsOf(key, m)) out.add(name);
+      const walk = (machine: Machine) => {
+        if (machine.kind === "regions") {
+          for (const region of machine.regions.values()) walk(region);
+          return;
+        }
+        for (const state of machine.states.values()) {
+          for (const [key, m] of state.measure) for (const name of inputsOf(key, m)) out.add(name);
+          if (state.machine) walk(state.machine);
+        }
+      };
+      walk(program.machine);
+      return [...out];
+    },
+
+    unmeasured() {
+      return this.measurements().filter((name) => !layout.has(name));
     },
 
     sample(t) {

@@ -1,0 +1,92 @@
+{
+ "nudgProgram": 1,
+ "version": "0.5",
+ "targets": [
+  "ring",
+  "card",
+  "scroller",
+  "header"
+ ],
+ "properties": [
+  {
+   "key": "ring.scale",
+   "kind": "number",
+   "base": [
+    1
+   ],
+   "map": {
+    "source": "host.volume",
+    "sourceKind": "input",
+    "from": [
+     0,
+     1
+    ],
+    "to": [
+     [
+      1
+     ],
+     [
+      1.6
+     ]
+    ]
+   }
+  },
+  {
+   "key": "card.rotation",
+   "kind": "number",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "header.height",
+   "kind": "length",
+   "base": [
+    64
+   ],
+   "map": {
+    "source": "scroller.scroll.y",
+    "sourceKind": "input",
+    "from": [
+     0,
+     100
+    ],
+    "to": [
+     [
+      64
+     ],
+     [
+      40
+     ]
+    ]
+   }
+  }
+ ],
+ "animate": [],
+ "machine": {
+  "kind": "states",
+  "initial": "active",
+  "states": [
+   {
+    "name": "active",
+    "set": [],
+    "measure": [],
+    "follow": [
+     {
+      "key": "card.rotation",
+      "input": "host.tilt",
+      "overdrag": 0,
+      "range": [
+       -8,
+       8
+      ]
+     }
+    ],
+    "enter": [],
+    "when": [],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

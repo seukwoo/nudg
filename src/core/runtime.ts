@@ -26,11 +26,10 @@ export interface Runtime {
   readonly program: Program;
   /** Sends an event at time `t` (seconds). Returns false if nothing handled it. */
   send(event: string, t: number): boolean;
-  /**
-   * Records an input sample at time `t`, e.g. ("track.drag.x", 12, 0.2), or a layout
-   * report (v0.4), e.g. ("seg2.layout.x", 72, 0). Returns false for an unknown input.
-   */
+  /** Records a referenced drag, app, scroll, or layout input sample at time `t`. */
   input(name: string, value: number, t: number): boolean;
+  /** Continuous inputs referenced by `map` or `follow` (layout measurements excluded). */
+  requiredInputs(): string[];
   /** The layout inputs this program reads (target.layout.<name>), for a host to report. */
   measurements(): string[];
   /** Of those, the ones not reported yet: measured values fall back to their base until then. */
@@ -68,7 +67,6 @@ interface Pending {
 const REST = { number: 1e-3, color: 1e-4 };
 /** Seconds of input history used for velocity. */
 const VELOCITY_WINDOW = 0.1;
-const INPUT = /^(.+)\.drag\.(x|y)$/;
 const LAYOUT = /^(.+)\.layout\.(x|y|width|height|naturalWidth|naturalHeight)$/;
 /** What every motion becomes under reduced motion. */
 const REDUCED: Motion = { kind: "tween", duration: 0.15, ease: "linear" };
@@ -85,6 +83,9 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
   /** Base values measured from layout, until a step or commit replaces them. */
   const measuredBases = new Map<string, Measure>();
   for (const [key, prop] of program.properties) if (prop.measure) measuredBases.set(key, prop.measure);
+  const requiredInputs = new Set<string>();
+  for (const prop of program.properties.values()) if (prop.map?.sourceKind === "input") requiredInputs.add(prop.map.source);
+  collectFollowInputs(program.machine, requiredInputs);
   let order = 0;
   let now = 0;
   const reduced = options.reducedMotion === true;
@@ -393,7 +394,10 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
 
   const valueOf = (key: string, t: number): Channels => {
     const prop = program.properties.get(key)!;
-    if (prop.map) return interpolate(prop.map, evaluate(segments.get(prop.map.source)!, t)[0][0]);
+    if (prop.map) {
+      const source = prop.map.sourceKind === "input" ? inputAt(prop.map.source, t) : evaluate(segments.get(prop.map.source)!, t)[0][0];
+      return interpolate(prop.map, source);
+    }
     return evaluate(segments.get(key)!, t)[0];
   };
 
@@ -426,12 +430,15 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
         settle(t, [], [], first);
         return true;
       }
-      const m = INPUT.exec(name);
-      if (!m || !program.targets.includes(m[1]) || !Number.isFinite(value)) return false;
+      if (!requiredInputs.has(name) || !Number.isFinite(value)) return false;
       const history = inputs.get(name) ?? [];
       history.push([t, value]);
       inputs.set(name, history);
       return true;
+    },
+
+    requiredInputs() {
+      return [...requiredInputs];
     },
 
     measurements() {
@@ -503,6 +510,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       return keys.every((key) => {
         const prop = program.properties.get(key);
         if (!prop) throw new Error(`Unknown property "${key}".`);
+        if (prop.map?.sourceKind === "input") return true;
         const source = prop.map ? prop.map.source : key;
         const segment = segments.get(source)!;
         // A followed value moves only when its input does; nothing is animating it.
@@ -540,6 +548,17 @@ function evaluateMotion(segment: Segment & { kind: "motion" }, t: number): [Chan
     vel.push(v);
   });
   return [pos, vel];
+}
+
+function collectFollowInputs(machine: Machine, out: Set<string>) {
+  if (machine.kind === "regions") {
+    for (const region of machine.regions.values()) collectFollowInputs(region, out);
+    return;
+  }
+  for (const state of machine.states.values()) {
+    for (const follow of state.follow.values()) out.add(follow.input);
+    if (state.machine) collectFollowInputs(state.machine, out);
+  }
 }
 
 function sameChannels(a: Channels, b: Channels): boolean {

@@ -38,6 +38,7 @@ public final class Runtime {
   private var pending: [Pending] = []
   private var layout: [String: Double] = [:]
   private var measuredBases: [String: Measure] = [:]
+  private var requiredInputs: Set<String> = []
   private var order = 0
   private var now = 0.0
   private let reduced: Bool
@@ -48,7 +49,9 @@ public final class Runtime {
     for (key, prop) in program.properties {
       if let m = prop.measure { measuredBases[key] = m }
       if prop.map == nil { bases[key] = prop.base }
+      if let map = prop.map, map.sourceKind == "input" { requiredInputs.insert(map.source) }
     }
+    collectFollowInputs(program.machine)
     var entered: [State] = []
     enterMachine(program.machine, &active, &entered, 0)
     for path in state { try enterPath(path) }
@@ -122,6 +125,17 @@ public final class Runtime {
       }
     }
     walk(program.machine)
+  }
+
+  private func collectFollowInputs(_ machine: Machine) {
+    switch machine.kind {
+    case let .regions(regions): for (_, region) in regions { collectFollowInputs(region) }
+    case let .states(_, states, _):
+      for state in states {
+        for (_, follow) in state.follow { requiredInputs.insert(follow.input) }
+        if let inner = state.machine { collectFollowInputs(inner) }
+      }
+    }
   }
 
   // MARK: targets
@@ -334,7 +348,10 @@ public final class Runtime {
 
   private func valueOf(_ key: String, _ t: Double) -> [Double] {
     let prop = program.property(key)!
-    if let map = prop.map { return interpolate(map, evaluate(segments[map.source]!, t).0[0]) }
+    if let map = prop.map {
+      let source = map.sourceKind == "input" ? inputAt(map.source, t) : evaluate(segments[map.source]!, t).0[0]
+      return interpolate(map, source)
+    }
     return evaluate(segments[key]!, t).0
   }
 
@@ -354,13 +371,13 @@ public final class Runtime {
     return true
   }
 
-  /** Records an input sample (target.drag.x) or a layout report (target.layout.width). */
+  /** Records a referenced continuous input or a layout report. */
   @discardableResult
   public func input(_ name: String, _ value: Double, at t: Double) throws -> Bool {
     try advanceTo(t)
     let parts = name.split(separator: ".").map(String.init)
-    guard parts.count == 3, program.targets.contains(parts[0]), value.isFinite else { return false }
-    if parts[1] == "layout" {
+    guard value.isFinite else { return false }
+    if parts.count == 3 && program.targets.contains(parts[0]) && parts[1] == "layout" {
       guard LAYOUT_NAMES.contains(parts[2]) else { return false }
       let first = layout[name] == nil
       if layout[name] == value { return true }
@@ -368,7 +385,7 @@ public final class Runtime {
       settle(t, [], [], snap: first)
       return true
     }
-    guard parts[1] == "drag", parts[2] == "x" || parts[2] == "y" else { return false }
+    guard requiredInputs.contains(name) else { return false }
     inputs[name, default: []].append((t, value))
     return true
   }
@@ -408,6 +425,7 @@ public final class Runtime {
     let keys = property.map { [$0] } ?? program.properties.map { $0.0 }
     return keys.allSatisfy { key in
       let prop = program.property(key)!
+      if prop.map?.sourceKind == "input" { return true }
       let source = prop.map?.source ?? key
       guard case let .motion(t0, from, v0, to, motion) = segments[source]!, let motion else { return true }
       switch motion {

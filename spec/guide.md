@@ -106,6 +106,15 @@ When a value depends on the page (an underline under a tab whose width depends o
 - To simulate or compare without a page, pass what the page would measure: `layout: { "tab2.x": 96, "tab2.width": 88, "underline.x": 8 }` (CLI `--layout tab2.x=96,...`). Tools say which measurements are missing.
 - Prefer measuring to hard-coding whenever a number would come from the layout: tab bars, accordions, swipe actions as wide as their labels, sheets sized by their content.
 
+## Continuous app and scroll inputs (format 0.5)
+
+Use a number supplied by the app without inventing frame-by-frame events. The app calls `player.input("host.volume", 0.7)`; files read the latest value with the existing operators.
+
+- Map it directly: `"ring.scale": { "map": "host.volume", "from": [0, 1], "to": [1, 1.6] }`.
+- Follow it while a state is active: `"follow": { "card.rotation": { "input": "host.tilt", "range": [-8, 8] } }`.
+- On the DOM, a referenced `target.scroll.x` or `target.scroll.y` is reported automatically from the bound scrolling element.
+- Before the first sample an input is 0. Only referenced inputs are accepted. Use one descriptive `host.<name>` segment; the app owns microphones, sensors and downloads, while nudg only receives finite numbers.
+
 ## Platform motion
 
 Libraries in `examples/motion/` carry the platforms' published spring values: `apple.nudg.json` (SwiftUI `smooth`, `snappy`, `bouncy`), `material-expressive.nudg.json` and `material-standard.nudg.json` (Material 3 `spatial-*` and `effects-*` tokens). Every platform library also defines the common names `standard`, `quick`, `gentle`, `playful` and `fade` (for color and opacity).

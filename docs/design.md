@@ -159,7 +159,7 @@ Status: first cut implemented as format 0.4 (`measure` in `values` and `set`, re
 
 ## Proposal: continuous app inputs
 
-Status: proposed, not implemented. The cases: a circle that grows with the microphone level, a card that tilts with the phone, a progress ring that follows a download, an app bar that hides as the page scrolls. Events (`host.show`) can't say these; they are values that change every frame.
+Status: first cut implemented as format 0.5: `map` and `follow` read app and scroll inputs, the DOM adapter reports referenced scroll offsets, and microphone and shrinking-header examples exercise both host and adapter input. Scroll-direction events remain future work. The cases: a circle that grows with the microphone level, a card that tilts with the phone, a progress ring that follows a download, an app bar that hides as the page scrolls. Events (`host.show`) can't say these; they are values that change every frame.
 
 **The app supplies values as inputs, the same way the adapters supply the pointer and the layout.** `player.input("host.volume", 0.7)`, at any rate. The name is the app's own, as with `host.*` events, so the validator accepts any `host.<name>` and the guide asks for names that say what the value is.
 
@@ -173,7 +173,7 @@ Status: proposed, not implemented. The cases: a circle that grows with the micro
 
 **What it does not do:** read devices. Microphones, cameras, motion sensors and file downloads are the app's business; nudg receives numbers. An adapter may offer a thin helper for the most common ones (scroll), never a sensor.
 
-**First cut, if agreed:** `map` from `host.*` inputs and `target.scroll.*`, a microphone example (the site feeds a level from the Web Audio API) and a shrinking header, conformance cases in `derive.py` first.
+**First cut:** `map` and `follow` from `host.*` inputs and `target.scroll.*`, a microphone example (the site feeds a level from the Web Audio API) and a shrinking header, with language-neutral conformance cases.
 
 ## Open questions
 

@@ -43,6 +43,8 @@ export type Motion = SpringMotion | TweenMotion;
 /** A property computed from another at every moment (v0.2). */
 export interface PropertyMap {
   source: string;
+  /** A property in older formats; a host-supplied continuous input in v0.5. */
+  sourceKind: "property" | "input";
   /** Strictly monotonic points on the source. */
   from: number[];
   to: Channels[];

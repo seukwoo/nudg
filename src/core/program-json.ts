@@ -35,7 +35,7 @@ export function programFromJson(json: unknown): Program {
 
 function property(p: Property): Record<string, Json> {
   const out: Record<string, Json> = { kind: p.kind, base: p.base };
-  if (p.map) out.map = { source: p.map.source, from: p.map.from, to: p.map.to };
+  if (p.map) out.map = { source: p.map.source, sourceKind: p.map.sourceKind, from: p.map.from, to: p.map.to };
   if (p.measure) out.measure = measure(p.measure);
   if (p.min !== undefined) out.min = p.min;
   if (p.max !== undefined) out.max = p.max;
@@ -44,7 +44,7 @@ function property(p: Property): Record<string, Json> {
 
 function readProperty(p: any): Property {
   const out: Property = { kind: p.kind, base: p.base };
-  if (p.map) out.map = p.map;
+  if (p.map) out.map = { ...p.map, sourceKind: p.map.sourceKind ?? "property" };
   if (p.measure) out.measure = p.measure;
   if (p.min !== undefined) out.min = p.min;
   if (p.max !== undefined) out.max = p.max;

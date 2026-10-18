@@ -1,0 +1,30 @@
+{
+  "nudg": "0.5",
+  "note": "The DOM adapter reports the scroller's vertical offset. The app bar and accent map that standard scroll input without scroll code in the component.",
+  "targets": [
+    "scroller",
+    "header",
+    "accent"
+  ],
+  "values": {
+    "header.height": {
+      "map": "scroller.scroll.y",
+      "from": [0, 80],
+      "to": [64, 40]
+    },
+    "accent.opacity": {
+      "map": "scroller.scroll.y",
+      "from": [0, 50, 80],
+      "to": [1, 0.4, 0]
+    },
+    "accent.scaleX": {
+      "map": "scroller.scroll.y",
+      "from": [0, 80],
+      "to": [1, 0.55]
+    }
+  },
+  "initial": "ready",
+  "states": {
+    "ready": {}
+  }
+}

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Microphone level</title>
+  <style>
+    body { margin: 0; min-height: 200px; display: grid; place-items: center; background: #f7f7f5; font: 13px ui-sans-serif, system-ui, sans-serif; color: #252522; }
+    .meter { display: grid; justify-items: center; gap: 12px; }
+    .visual { position: relative; width: 104px; height: 96px; display: grid; place-items: center; }
+    .glow, .ring { position: absolute; border-radius: 50%; transform-origin: center; }
+    .glow { width: 84px; height: 84px; background: #76c7b7; }
+    .ring { width: 72px; height: 72px; border: 3px solid #176f62; background: #ecfffa; box-sizing: border-box; }
+    .core { position: relative; width: 20px; height: 30px; border: 3px solid #174f49; border-radius: 12px; box-sizing: border-box; }
+    .core::after { content: ""; position: absolute; left: 50%; top: 30px; width: 3px; height: 10px; background: #174f49; transform: translateX(-50%); }
+    button { border: 0; border-radius: 6px; padding: 8px 12px; color: #fff; background: #1f6f63; font: inherit; font-weight: 650; cursor: pointer; }
+    button:disabled { opacity: 0.65; cursor: default; }
+    output { min-height: 16px; color: #62625c; }
+  </style>
+</head>
+<body>
+  <div class="meter">
+    <div class="visual" aria-hidden="true">
+      <div class="glow" data-nudg="glow"></div>
+      <div class="ring" data-nudg="ring"></div>
+      <div class="core"></div>
+    </div>
+    <button type="button">Use microphone</button>
+    <output aria-live="polite"></output>
+  </div>
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./microphone.nudg.json");
+    const player = play(program, document.body);
+    const button = document.querySelector("button");
+    const status = document.querySelector("output");
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const context = new AudioContext();
+        const analyser = context.createAnalyser();
+        analyser.fftSize = 512;
+        context.createMediaStreamSource(stream).connect(analyser);
+        const samples = new Float32Array(analyser.fftSize);
+        status.value = "Listening";
+        const update = () => {
+          analyser.getFloatTimeDomainData(samples);
+          const rms = Math.sqrt(samples.reduce((sum, value) => sum + value * value, 0) / samples.length);
+          player.input("host.volume", Math.min(1, rms * 8));
+          requestAnimationFrame(update);
+        };
+        update();
+      } catch {
+        button.disabled = false;
+        status.value = "Microphone unavailable";
+      }
+    });
+  </script>
+</body>
+</html>

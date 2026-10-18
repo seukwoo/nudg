@@ -57,3 +57,21 @@ test("layout inputs reach the runtime through input()", () => {
   h.advance(1 / 60);
   assert.equal(p.values()["line.width"], 88);
 });
+
+test("continuous app inputs update mapped values and reject names the file does not read", () => {
+  const h = fakeHost();
+  const doc = {
+    nudg: "0.5",
+    targets: ["ring"],
+    values: { "ring.scale": { map: "host.volume", from: [0, 1], to: [1, 1.6] } },
+    initial: "active",
+    states: { active: {} },
+  };
+  const p = createPlayer(toProgram(doc), { host: h.host });
+  assert.deepEqual(p.runtime.requiredInputs(), ["host.volume"]);
+  assert.equal(p.values()["ring.scale"], 1);
+  assert.equal(p.input("host.unknown", 0.5), false);
+  assert.equal(p.input("host.volume", 0.5), true);
+  h.advance(1 / 60);
+  assert.equal(p.values()["ring.scale"], 1.3);
+});

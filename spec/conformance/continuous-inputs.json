@@ -1,0 +1,119 @@
+{
+  "conformance": "0.5",
+  "name": "Continuous inputs: map app and scroll values; follow an app value with bounds",
+  "doc": {
+    "nudg": "0.5",
+    "targets": [
+      "ring",
+      "card",
+      "scroller",
+      "header"
+    ],
+    "values": {
+      "ring.scale": {
+        "map": "host.volume",
+        "from": [
+          0,
+          1
+        ],
+        "to": [
+          1,
+          1.6
+        ]
+      },
+      "card.rotation": 0,
+      "header.height": {
+        "map": "scroller.scroll.y",
+        "from": [
+          0,
+          100
+        ],
+        "to": [
+          64,
+          40
+        ]
+      }
+    },
+    "initial": "active",
+    "states": {
+      "active": {
+        "follow": {
+          "card.rotation": {
+            "input": "host.tilt",
+            "range": [
+              -8,
+              8
+            ]
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "active"
+        ],
+        "values": {
+          "ring.scale": 1,
+          "card.rotation": 0,
+          "header.height": 64
+        }
+      }
+    },
+    {
+      "t": 0.1,
+      "input": "host.volume",
+      "value": 0.5
+    },
+    {
+      "t": 0.1,
+      "expect": {
+        "values": {
+          "ring.scale": 1.3
+        }
+      }
+    },
+    {
+      "t": 0.2,
+      "input": "scroller.scroll.y",
+      "value": 25
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "values": {
+          "header.height": 58
+        }
+      }
+    },
+    {
+      "t": 0.3,
+      "input": "host.tilt",
+      "value": 5
+    },
+    {
+      "t": 0.3,
+      "expect": {
+        "values": {
+          "card.rotation": 5
+        }
+      }
+    },
+    {
+      "t": 0.4,
+      "input": "host.tilt",
+      "value": 10
+    },
+    {
+      "t": 0.4,
+      "expect": {
+        "values": {
+          "card.rotation": 8
+        }
+      }
+    }
+  ]
+}

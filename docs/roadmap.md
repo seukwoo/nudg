@@ -4,7 +4,7 @@ nudg is early. The format can still change before 1.0, but the development direc
 
 This is the single development plan for priorities, stage status and completion criteria. It consolidates the stages previously listed in the README and design doc, and the next steps previously kept in `CLAUDE.md`. Design rationale and unresolved technical choices stay in [Design](design.md#open-questions); implemented behavior is defined by [the spec](spec.md), and release history stays in the [changelog](../CHANGELOG.md). The [devlog](devlog.md) records findings at the time, not the current queue.
 
-The order below follows real app needs. Release numbers and dates are assigned when scope is established; the earlier 0.6-0.9 headings were provisional. Package and format versions are separate: the package is currently 0.5.0, while documents use format 0.3. Earlier notes call the next grammar v0.4; its scope is still open.
+The order below follows real app needs. Release numbers and dates are assigned when scope is established; the earlier 0.6-0.9 headings were provisional. Package and format versions are separate: package 0.7.0 and format 0.4 are released; format 0.5 is in development.
 
 ## Current Baseline
 
@@ -31,7 +31,7 @@ The original stage numbers remain useful when reading the spec and changelog. Se
 
 ## Now: Meet People Where Their Components Are
 
-Status: the web bridges are in (unreleased): `watch` for libraries that show state as attributes (shadcn/ui and Radix, Headless UI, React Aria, Ark) and `nudgTransition` for transition slots (MUI, Ant Design, React Bootstrap). Beyond the web (unreleased): React Native (the JavaScript core as is), and Swift and Kotlin runtimes that read compiled programs (`nudg compile`) and pass the whole conformance suite, with SwiftUI and Jetpack Compose adapters. The same file plays on all of them; Android was checked on an emulator, SwiftUI by rendering, and an iOS simulator run waits for Xcode. Drag and keys now work on the native adapters too, and Swift Package and JitPack (Maven) distribution are set up (unreleased; the first tag proves the remote install paths). Next: use [coverage](coverage.md) by trigger × response × structure to choose examples from its empty cells, and implement continuous app inputs ([proposal](design.md#proposal-continuous-app-inputs)).
+Status: web component bridges, React Native, SwiftUI and Compose adapters are released in 0.7. Native drag and keys plus Swift Package and JitPack distribution are merged for the next release; the first tag will prove the remote install paths. Format 0.5 continuous app and scroll inputs are in development, with microphone and shrinking-header examples. Next: use [coverage](coverage.md) by trigger × response × structure to choose examples from its remaining empty cells.
 
 ## Then: Prove the Workflow in Playsnack
 
@@ -50,7 +50,7 @@ Done when: a real playsnack interaction is easier to tune with nudg than by edit
 
 ## Next: Layout-Aware Interactions
 
-Status: format 0.4 (unreleased) measures positions and sizes: `tabs` and `accordion` no longer guess. Still ahead: arithmetic on measurements (offsets, fractions, `%`), bottom sheet snap points, a responsive swipe row.
+Status: format 0.4 measures positions and sizes: `tabs` and `accordion` no longer guess. Still ahead: arithmetic on measurements (offsets, fractions, `%`), bottom sheet snap points, a responsive swipe row.
 
 Goal: support the component patterns whose motion depends on measured size or position.
 

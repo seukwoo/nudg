@@ -1101,6 +1101,73 @@ def validation_v04_cases():
     })
 
 
+# --- v0.5: continuous app and scroll inputs ----------------------------------
+
+CONTINUOUS_INPUTS = {
+    "nudg": "0.5",
+    "targets": ["ring", "card", "scroller", "header"],
+    "values": {
+        "ring.scale": {"map": "host.volume", "from": [0, 1], "to": [1, 1.6]},
+        "card.rotation": 0,
+        "header.height": {"map": "scroller.scroll.y", "from": [0, 100], "to": [64, 40]},
+    },
+    "initial": "active",
+    "states": {
+        "active": {
+            "follow": {"card.rotation": {"input": "host.tilt", "range": [-8, 8]}},
+        },
+    },
+}
+
+
+def continuous_input_cases():
+    steps = [
+        {"t": 0, "expect": {"state": ["active"], "values": {"ring.scale": 1, "card.rotation": 0, "header.height": 64}}},
+        {"t": 0.1, "input": "host.volume", "value": 0.5},
+        {"t": 0.1, "expect": {"values": {"ring.scale": 1.3}}},
+        {"t": 0.2, "input": "scroller.scroll.y", "value": 25},
+        {"t": 0.2, "expect": {"values": {"header.height": 58}}},
+        {"t": 0.3, "input": "host.tilt", "value": 5},
+        {"t": 0.3, "expect": {"values": {"card.rotation": 5}}},
+        {"t": 0.4, "input": "host.tilt", "value": 10},
+        {"t": 0.4, "expect": {"values": {"card.rotation": 8}}},
+    ]
+    write("continuous-inputs", {
+        "conformance": "0.5",
+        "name": "Continuous inputs: map app and scroll values; follow an app value with bounds",
+        "doc": CONTINUOUS_INPUTS,
+        "steps": steps,
+    })
+
+
+def validation_v05_cases():
+    def doc():
+        return json.loads(json.dumps(CONTINUOUS_INPUTS))
+
+    out = []
+    d = doc()
+    d["nudg"] = "0.4"
+    out.append(("needs-version", d, [
+        ("needs-version", "/values/ring.scale/map"),
+        ("needs-version", "/values/header.height/map"),
+        ("needs-version", "/states/active/follow/card.rotation/input"),
+    ]))
+    d = doc()
+    d["values"]["ring.scale"]["map"] = "host.audio.level"
+    out.append(("invalid-host-input", d, [("unknown-input", "/values/ring.scale/map")]))
+    d = doc()
+    d["values"]["header.height"]["map"] = "scroller.scroll.z"
+    out.append(("invalid-scroll-axis", d, [("unknown-input", "/values/header.height/map")]))
+    d = doc()
+    d["values"]["header.height"]["map"] = "missing.scroll.y"
+    out.append(("unknown-scroll-target", d, [("unknown-target", "/values/header.height/map")]))
+    write("validation-0.5", {
+        "conformance": "0.5",
+        "name": "Validator (0.5): continuous app and scroll inputs",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 if __name__ == "__main__":
     toggle_cases()
     spring_form_cases()
@@ -1118,4 +1185,6 @@ if __name__ == "__main__":
     validation_v03_cases()
     layout_cases()
     validation_v04_cases()
+    continuous_input_cases()
+    validation_v05_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

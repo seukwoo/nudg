@@ -62,7 +62,7 @@ export interface Player {
   send(event: string): boolean;
   /** The values last applied to the elements. */
   values(): Record<string, Value>;
-  /** Records an input sample now (e.g. "track.drag.x", 12). */
+  /** Records an input sample now (e.g. "host.volume", 0.7). */
   input(name: string, value: number): boolean;
   /** Binds one more element to a target. Returns a function that unbinds it. */
   bind(name: string, element: Element): () => void;
@@ -104,6 +104,14 @@ export function play(program: Program, root: ParentNode | null = document, optio
   const found = new Set<string>();
   const reducedMotion = options.reducedMotion ?? (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
   const runtime = createRuntime(program, { state: options.state, reducedMotion });
+  const scrollInputs = new Map<string, Set<"x" | "y">>();
+  for (const input of runtime.requiredInputs()) {
+    const match = /^(.+)\.scroll\.(x|y)$/.exec(input);
+    if (!match) continue;
+    const axes = scrollInputs.get(match[1]) ?? new Set<"x" | "y">();
+    axes.add(match[2] as "x" | "y");
+    scrollInputs.set(match[1], axes);
+  }
   const keyEvents = keyEventsOf(program);
   const manual = options.clock === "manual";
   const start = performance.now();
@@ -272,6 +280,19 @@ export function play(program: Program, root: ParentNode | null = document, optio
         },
       ],
     ];
+    const scrollAxes = scrollInputs.get(name);
+    const reportScroll = () => {
+      if (!scrollAxes) return;
+      const t = now();
+      for (const axis of scrollAxes) {
+        const inputName = `${name}.scroll.${axis}`;
+        const value = axis === "x" ? el.scrollLeft : el.scrollTop;
+        runtime.input(inputName, value, t);
+        options.onEvent?.({ input: inputName, value }, t);
+      }
+      changed();
+    };
+    if (scrollAxes) listeners.push(["scroll", reportScroll]);
     for (const [type, fn] of listeners) el.addEventListener(type, fn);
     // Mark the element with its name, so a snapshot of the page (and observe's default
     // selector) can find targets bound by ref as well as by attribute.
@@ -281,6 +302,7 @@ export function play(program: Program, root: ParentNode | null = document, optio
     const touchAction = style?.touchAction;
     // Let a drag reach us instead of scrolling the page.
     if (draggable.has(name) && style) style.touchAction = "none";
+    if (scrollAxes) reportScroll();
     applyTo(name, runtime.sample(now()), [el]);
     reflectState([el]);
     onLayoutBind?.(name, el);

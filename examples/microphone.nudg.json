@@ -1,0 +1,29 @@
+{
+  "nudg": "0.5",
+  "note": "The app reports microphone loudness as host.volume. The rings map that number directly to scale and opacity; nudg never opens the microphone itself.",
+  "targets": [
+    "ring",
+    "glow"
+  ],
+  "values": {
+    "ring.scale": {
+      "map": "host.volume",
+      "from": [0, 0.35, 1],
+      "to": [1, 1.18, 1.65]
+    },
+    "glow.scale": {
+      "map": "host.volume",
+      "from": [0, 1],
+      "to": [0.7, 1.5]
+    },
+    "glow.opacity": {
+      "map": "host.volume",
+      "from": [0, 0.15, 1],
+      "to": [0.12, 0.35, 0.85]
+    }
+  },
+  "initial": "listening",
+  "states": {
+    "listening": {}
+  }
+}

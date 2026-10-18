@@ -14,6 +14,7 @@ import type { Measure,
   Motion,
   Program,
   Property,
+  PropertyMap,
   PropertyKind,
   SpringMotion,
   State,
@@ -120,7 +121,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core@0.7/spec/nudg-0.4.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.5.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -349,7 +350,7 @@ class ComponentCompiler {
       }
       if (isObject(value) && "map" in value) {
         // Mapped properties resolve after every plain base value is known.
-        this.properties.set(key, { kind, base: placeholder, map: { source: "", from: [], to: [] } });
+        this.properties.set(key, { kind, base: placeholder, map: { source: "", sourceKind: "property", from: [], to: [] } });
         maps.push([key, value, p, kind]);
         continue;
       }
@@ -409,12 +410,22 @@ class ComponentCompiler {
     const prop = this.properties.get(key)!;
     const source = raw.map;
     const sourceProp = typeof source === "string" ? this.properties.get(source) : undefined;
-    if (typeof source !== "string" || !sourceProp || sourceProp.map || sourceProp.kind === "color") {
-      const reason = typeof source !== "string" ? "must name a property" : !sourceProp ? "has no base value" : sourceProp.map ? "is itself mapped" : "is a color";
-      r.error("invalid-map-source", ptr(p, "map"), `The map's source ${JSON.stringify(source)} ${reason}.`, "Map from a numeric property with its own base value in \"values\", such as \"knob.x\".");
+    let sourceKind: PropertyMap["sourceKind"] = "property";
+    if (sourceProp) {
+      if (sourceProp.map || sourceProp.kind === "color") {
+        const reason = sourceProp.map ? "is itself mapped" : "is a color";
+        r.error("invalid-map-source", ptr(p, "map"), `The map's source ${JSON.stringify(source)} ${reason}.`, "Map from a numeric property with its own base value, or from a continuous input in format 0.5.");
+        return;
+      }
+      this.usedTargets.add((source as string).split(".")[0]);
+    } else if (typeof source === "string" && this.looksLikeInput(source)) {
+      if (!this.checkInput(source, ptr(p, "map"), ptr(p, "map"))) return;
+      sourceKind = "input";
+    } else {
+      const reason = typeof source !== "string" ? "must name a property or input" : "has no base value";
+      r.error("invalid-map-source", ptr(p, "map"), `The map's source ${JSON.stringify(source)} ${reason}.`, "Map from a numeric property in \"values\", or from an input such as \"host.volume\" in format 0.5.");
       return;
     }
-    this.usedTargets.add(source.split(".")[0]);
     const from = raw.from;
     const to = raw.to;
     if (!Array.isArray(from) || from.length < 2 || from.some((n) => typeof n !== "number" || !Number.isFinite(n))) {
@@ -438,8 +449,9 @@ class ComponentCompiler {
       if (c) channels.push(c);
     });
     if (channels.length !== to.length) return;
-    prop.map = { source, from: nums, to: channels };
-    prop.base = interpolate(prop.map, sourceProp.base[0]);
+    const map: PropertyMap = { source: source as string, sourceKind, from: nums, to: channels };
+    prop.map = map;
+    prop.base = interpolate(map, sourceProp?.base[0] ?? 0);
   }
 
   /** Resolves a path used outside "values"; it must have a base value, and not be mapped. */
@@ -841,12 +853,26 @@ class ComponentCompiler {
     const parts = typeof raw === "string" ? raw.split(".") : [];
     const target = parts[0];
     const input = parts.slice(1).join(".");
-    if (typeof raw !== "string" || parts.length < 2 || !INPUTS.includes(input)) {
-      const options = target && this.targets.has(target) ? INPUTS.map((i) => `${target}.${i}`) : INPUTS.map((i) => `<target>.${i}`);
-      this.r.error("unknown-input", unknownAt, `${JSON.stringify(raw)} is not an input.`, `Inputs are ${options.join(" and ")}.`);
-      return false;
+    if (target === HOST && parts.length === 2 && IDENTIFIER.test(parts[1])) {
+      return this.needsVersion("0.5", p, "An app input (host.<name>)");
     }
-    return this.checkTarget(target, p);
+    if (input === "scroll.x" || input === "scroll.y") {
+      if (!this.needsVersion("0.5", p, "A scroll input")) return false;
+      return this.checkTarget(target, p);
+    }
+    if (INPUTS.includes(input)) return this.checkTarget(target, p);
+    const options = target && this.targets.has(target)
+      ? [...INPUTS.map((i) => `${target}.${i}`), `${target}.scroll.x`, `${target}.scroll.y`, "host.<name>"]
+      : [...INPUTS.map((i) => `<target>.${i}`), "<target>.scroll.x", "<target>.scroll.y", "host.<name>"];
+    this.r.error("unknown-input", unknownAt, `${JSON.stringify(raw)} is not an input.`, `Inputs are ${options.join(", ")}.`);
+    return false;
+  }
+
+  private looksLikeInput(source: string): boolean {
+    if (source.startsWith(`${HOST}.`)) return true;
+    const parts = source.split(".");
+    const input = parts.slice(1).join(".");
+    return INPUTS.includes(input) || input.startsWith("scroll.");
   }
 
   private parseTransition(raw: Json, p: string): Transition | undefined {

@@ -322,6 +322,18 @@ For each bound target the host reports `target.layout.x`, `.y`, `.width`, `.heig
 
 `invalid-measure` (not `target.measurement`, an unknown measurement, a position into another axis or a size property, or a color property), `unknown-target`, and `needs-version` below 0.4. The conformance cases `layout-*.json` and `validation-0.4.json` define the behavior.
 
+## Additions in 0.5 (draft)
+
+Continuous app and scroll inputs. A file that uses these declares `"nudg": "0.5"`; a 0.5 runtime also reads older files.
+
+- `host.<name>` is a finite number supplied with `player.input(name, value)`. The name has one identifier segment, such as `host.volume`, `host.tilt` or `host.progress`.
+- `target.scroll.x` and `target.scroll.y` are the bound scrolling view's offsets. The DOM adapter reports a referenced scroll input automatically; other hosts call `input` from their scroll system.
+- `map` may name an input instead of a property. It applies the same piecewise-linear rule to the latest sample, using 0 before the first sample.
+- `follow` may use app and scroll inputs with the same anchoring, range, overdrag and velocity rules as drag inputs.
+- Runtimes accept only inputs referenced by the program and return false for unknown names or non-finite values. Device APIs remain the host's responsibility.
+
+The conformance cases `continuous-inputs.json` and `validation-0.5.json` define the behavior.
+
 ## Compiled programs (for native runtimes)
 
 `nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 1`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms.

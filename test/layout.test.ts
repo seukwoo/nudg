@@ -88,3 +88,14 @@ test("elements bound after the player starts (React refs) are measured too", { s
     assert.equal(result.width, result.aWidth);
   });
 });
+
+test("a referenced scroll input is reported by the DOM adapter", { skip: chrome ? false : "no Chrome found" }, async () => {
+  await onPage("examples/scroll-header.html", async (evaluate) => {
+    const before = await evaluate(`document.querySelector("[data-nudg=header]").offsetHeight`);
+    assert.equal(before, 64);
+    await evaluate(`document.querySelector("[data-nudg=scroller]").scrollTop = 80`);
+    await new Promise((r) => setTimeout(r, 100));
+    const after = await evaluate(`document.querySelector("[data-nudg=header]").offsetHeight`);
+    assert.equal(after, 40);
+  });
+});

@@ -35,6 +35,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
     private val pending = ArrayList<Pending>()
     private val layout = HashMap<String, Double>()
     private val measuredBases = HashMap<String, Measure>()
+    private val requiredInputs = HashSet<String>()
     private var order = 0
     private var now = 0.0
 
@@ -42,7 +43,9 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         for ((key, prop) in program.properties) {
             prop.measure?.let { measuredBases[key] = it }
             if (prop.map == null) bases[key] = prop.base
+            if (prop.map?.sourceKind == "input") requiredInputs.add(prop.map.source)
         }
+        collectFollowInputs(program.machine)
         enterMachine(program.machine, active, ArrayList(), 0.0)
         for (path in state) enterPath(path)
         val targets = resolveTargets(active)
@@ -115,6 +118,16 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
             }
         }
         walk(program.machine)
+    }
+
+    private fun collectFollowInputs(machine: Machine) {
+        when (machine) {
+            is Machine.Regions -> for ((_, region) in machine.regions) collectFollowInputs(region)
+            is Machine.States -> for (state in machine.states) {
+                for ((_, follow) in state.follow) requiredInputs.add(follow.input)
+                state.machine?.let(::collectFollowInputs)
+            }
+        }
     }
 
     // targets
@@ -325,7 +338,10 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
 
     private fun valueOf(key: String, t: Double): List<Double> {
         val p = program.property(key)
-        p.map?.let { return interpolate(it, evaluate(segments.getValue(it.source), t).first[0]) }
+        p.map?.let {
+            val source = if (it.sourceKind == "input") inputAt(it.source, t) else evaluate(segments.getValue(it.source), t).first[0]
+            return interpolate(it, source)
+        }
         return evaluate(segments.getValue(key), t).first
     }
 
@@ -345,12 +361,12 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         return true
     }
 
-    /** Records an input sample (target.drag.x) or a layout report (target.layout.width). */
+    /** Records a referenced continuous input or a layout report. */
     fun input(name: String, value: Double, t: Double): Boolean {
         advanceTo(t)
         val parts = name.split(".")
-        if (parts.size != 3 || parts[0] !in program.targets || !value.isFinite()) return false
-        if (parts[1] == "layout") {
+        if (!value.isFinite()) return false
+        if (parts.size == 3 && parts[0] in program.targets && parts[1] == "layout") {
             if (parts[2] !in LAYOUT_NAMES) return false
             val first = name !in layout
             if (layout[name] == value) return true
@@ -358,7 +374,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
             settle(t, emptyList(), emptyList(), snap = first)
             return true
         }
-        if (parts[1] != "drag" || (parts[2] != "x" && parts[2] != "y")) return false
+        if (name !in requiredInputs) return false
         inputs.getOrPut(name) { ArrayList() }.add(t to value)
         return true
     }
@@ -396,6 +412,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         if (property == null && pending.isNotEmpty()) return false
         val keys = property?.let { listOf(it) } ?: program.properties.map { it.first }
         return keys.all { key ->
+            if (program.property(key).map?.sourceKind == "input") return@all true
             val source = program.property(key).map?.source ?: key
             val seg = segments.getValue(source)
             if (seg !is Segment.MotionSeg || seg.motion == null) return@all true

@@ -365,6 +365,38 @@
         "Open the dialog with more bounce.",
         "Slide the dialog up from the bottom instead of scaling."
       ]
+    },
+    {
+      "id": "microphone",
+      "title": "Microphone level",
+      "category": "feedback",
+      "tags": [
+        "continuous-input",
+        "host-input",
+        "map"
+      ],
+      "html": "microphone.html",
+      "summary": "The app reads microphone loudness and supplies one number; mapped rings respond every frame. The device API stays in the host, outside nudg.",
+      "prompts": [
+        "Make quiet sounds affect the ring more strongly.",
+        "Make the glow grow less than the outline."
+      ]
+    },
+    {
+      "id": "scroll-header",
+      "title": "Shrinking app bar",
+      "category": "navigation",
+      "tags": [
+        "continuous-input",
+        "scroll",
+        "map"
+      ],
+      "html": "scroll-header.html",
+      "summary": "The DOM adapter reports scroll position; the sticky app bar shrinks and its accent fades through ordinary maps.",
+      "prompts": [
+        "Keep the app bar large for the first 20 pixels of scrolling.",
+        "Make the accent fade later than the header shrinks."
+      ]
     }
   ]
 }

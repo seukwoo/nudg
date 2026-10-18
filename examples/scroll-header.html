@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Shrinking app bar</title>
+  <style>
+    body { margin: 0; min-height: 220px; display: grid; place-items: center; background: #f3f4f1; font: 13px ui-sans-serif, system-ui, sans-serif; color: #20231f; }
+    .phone { width: 260px; height: 150px; overflow-y: auto; overflow-anchor: none; border: 1px solid #d7d9d3; border-radius: 8px; background: #fff; box-shadow: 0 8px 24px rgba(22, 35, 29, 0.1); }
+    .appbar { position: sticky; top: 0; z-index: 1; height: 64px; display: flex; align-items: center; padding: 0 14px; box-sizing: border-box; background: rgba(255, 255, 255, 0.96); border-bottom: 1px solid #e5e7e2; font-size: 15px; font-weight: 700; }
+    .accent { width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: #32a48e; transform-origin: left center; }
+    .content { padding: 8px 14px 20px; }
+    .row { padding: 12px 0; border-bottom: 1px solid #eceee9; }
+    .row strong { display: block; margin-bottom: 3px; }
+    .row span { color: #777b74; }
+  </style>
+</head>
+<body>
+  <div class="phone" data-nudg="scroller">
+    <header class="appbar" data-nudg="header"><span class="accent" data-nudg="accent"></span>Today</header>
+    <main class="content">
+      <div class="row"><strong>Morning brief</strong><span>Six updates waiting</span></div>
+      <div class="row"><strong>Design review</strong><span>Motion and interaction</span></div>
+      <div class="row"><strong>Build status</strong><span>All checks passed</span></div>
+      <div class="row"><strong>Release notes</strong><span>Native adapters ready</span></div>
+      <div class="row"><strong>Later today</strong><span>Three reminders</span></div>
+      <div class="row"><strong>Saved items</strong><span>Five articles</span></div>
+      <div class="row"><strong>Team activity</strong><span>Two new comments</span></div>
+      <div class="row"><strong>Tomorrow</strong><span>Planning at nine</span></div>
+    </main>
+  </div>
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./scroll-header.nudg.json");
+    play(program, document.body);
+  </script>
+</body>
+</html>

@@ -23,6 +23,7 @@
    ],
    "map": {
     "source": "indicator.x",
+    "sourceKind": "property",
     "from": [
      0,
      50,

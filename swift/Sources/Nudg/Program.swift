@@ -22,6 +22,7 @@ public struct Measure {
 
 public struct PropertyMap {
   public let source: String
+  public let sourceKind: String
   public let from: [Double]
   public let to: [[Double]]
 }
@@ -111,7 +112,7 @@ public struct Program {
       (p["key"] as! String, Property(
         kind: PropertyKind(rawValue: p["kind"] as! String)!,
         base: doubles(p["base"]),
-        map: (p["map"] as? [String: Any]).map { m in PropertyMap(source: m["source"] as! String, from: doubles(m["from"]), to: (m["to"] as! [Any]).map(doubles)) },
+        map: (p["map"] as? [String: Any]).map { m in PropertyMap(source: m["source"] as! String, sourceKind: m["sourceKind"] as? String ?? "property", from: doubles(m["from"]), to: (m["to"] as! [Any]).map(doubles)) },
         measure: (p["measure"] as? [String: Any]).map(readMeasure),
         min: number(p["min"]),
         max: number(p["max"])))

@@ -1,0 +1,242 @@
+{
+  "conformance": "0.5",
+  "name": "Validator (0.5): continuous app and scroll inputs",
+  "documents": [
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "0.4",
+        "targets": [
+          "ring",
+          "card",
+          "scroller",
+          "header"
+        ],
+        "values": {
+          "ring.scale": {
+            "map": "host.volume",
+            "from": [
+              0,
+              1
+            ],
+            "to": [
+              1,
+              1.6
+            ]
+          },
+          "card.rotation": 0,
+          "header.height": {
+            "map": "scroller.scroll.y",
+            "from": [
+              0,
+              100
+            ],
+            "to": [
+              64,
+              40
+            ]
+          }
+        },
+        "initial": "active",
+        "states": {
+          "active": {
+            "follow": {
+              "card.rotation": {
+                "input": "host.tilt",
+                "range": [
+                  -8,
+                  8
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/values/ring.scale/map"
+        },
+        {
+          "code": "needs-version",
+          "path": "/values/header.height/map"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/active/follow/card.rotation/input"
+        }
+      ]
+    },
+    {
+      "name": "invalid-host-input",
+      "doc": {
+        "nudg": "0.5",
+        "targets": [
+          "ring",
+          "card",
+          "scroller",
+          "header"
+        ],
+        "values": {
+          "ring.scale": {
+            "map": "host.audio.level",
+            "from": [
+              0,
+              1
+            ],
+            "to": [
+              1,
+              1.6
+            ]
+          },
+          "card.rotation": 0,
+          "header.height": {
+            "map": "scroller.scroll.y",
+            "from": [
+              0,
+              100
+            ],
+            "to": [
+              64,
+              40
+            ]
+          }
+        },
+        "initial": "active",
+        "states": {
+          "active": {
+            "follow": {
+              "card.rotation": {
+                "input": "host.tilt",
+                "range": [
+                  -8,
+                  8
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-input",
+          "path": "/values/ring.scale/map"
+        }
+      ]
+    },
+    {
+      "name": "invalid-scroll-axis",
+      "doc": {
+        "nudg": "0.5",
+        "targets": [
+          "ring",
+          "card",
+          "scroller",
+          "header"
+        ],
+        "values": {
+          "ring.scale": {
+            "map": "host.volume",
+            "from": [
+              0,
+              1
+            ],
+            "to": [
+              1,
+              1.6
+            ]
+          },
+          "card.rotation": 0,
+          "header.height": {
+            "map": "scroller.scroll.z",
+            "from": [
+              0,
+              100
+            ],
+            "to": [
+              64,
+              40
+            ]
+          }
+        },
+        "initial": "active",
+        "states": {
+          "active": {
+            "follow": {
+              "card.rotation": {
+                "input": "host.tilt",
+                "range": [
+                  -8,
+                  8
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-input",
+          "path": "/values/header.height/map"
+        }
+      ]
+    },
+    {
+      "name": "unknown-scroll-target",
+      "doc": {
+        "nudg": "0.5",
+        "targets": [
+          "ring",
+          "card",
+          "scroller",
+          "header"
+        ],
+        "values": {
+          "ring.scale": {
+            "map": "host.volume",
+            "from": [
+              0,
+              1
+            ],
+            "to": [
+              1,
+              1.6
+            ]
+          },
+          "card.rotation": 0,
+          "header.height": {
+            "map": "missing.scroll.y",
+            "from": [
+              0,
+              100
+            ],
+            "to": [
+              64,
+              40
+            ]
+          }
+        },
+        "initial": "active",
+        "states": {
+          "active": {
+            "follow": {
+              "card.rotation": {
+                "input": "host.tilt",
+                "range": [
+                  -8,
+                  8
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-target",
+          "path": "/values/header.height/map"
+        }
+      ]
+    }
+  ]
+}

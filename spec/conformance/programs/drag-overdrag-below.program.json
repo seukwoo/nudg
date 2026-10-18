@@ -24,6 +24,7 @@
    ],
    "map": {
     "source": "knob.x",
+    "sourceKind": "property",
     "from": [
      0,
      20

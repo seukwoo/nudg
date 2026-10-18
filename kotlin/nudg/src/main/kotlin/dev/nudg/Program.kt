@@ -15,7 +15,7 @@ sealed interface Motion {
 }
 
 data class Measure(val target: String, val of: String)
-data class PropertyMap(val source: String, val from: List<Double>, val to: List<List<Double>>)
+data class PropertyMap(val source: String, val sourceKind: String, val from: List<Double>, val to: List<List<Double>>)
 data class Property(val kind: PropertyKind, val base: List<Double>, val map: PropertyMap?, val measure: Measure?, val min: Double?, val max: Double?)
 data class Follow(val input: String, val range: Pair<Double, Double>?, val overdrag: Double)
 data class Nearest(val states: List<String>, val by: String, val momentum: Double)
@@ -58,7 +58,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
                     (m["key"] as String) to Property(
                         PropertyKind.valueOf((m["kind"] as String).uppercase()),
                         doubles(m["base"]),
-                        (m["map"] as? Map<*, *>)?.let { mp -> PropertyMap(mp["source"] as String, doubles(mp["from"]), list(mp["to"]).map(::doubles)) },
+                        (m["map"] as? Map<*, *>)?.let { mp -> PropertyMap(mp["source"] as String, mp["sourceKind"] as? String ?: "property", doubles(mp["from"]), list(mp["to"]).map(::doubles)) },
                         (m["measure"] as? Map<*, *>)?.let(::measure),
                         m["min"] as? Double,
                         m["max"] as? Double,

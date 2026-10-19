@@ -177,32 +177,38 @@ export function critique(program: Program): { findings: CritiqueFinding[]; trans
 /** Plays every event a leaf state handles, from rest, and measures what it moves. */
 export function measureTransitions(program: Program): MeasuredTransition[] {
   const out: MeasuredTransition[] = [];
-  for (const { path, pointer, state, machine } of leafStates(program.machine, "", "")) {
-    const events = new Map<string, string>();
-    for (const e of state.when.keys()) events.set(e, `${pointer}/when/${escape(e)}`);
-    for (const e of machine.when.keys()) if (!events.has(e)) events.set(e, `${pointer.replace(/\/states\/[^/]+$/, "")}/when/${escape(e)}`);
-    for (const [event, ptr] of events) {
-      // Gestures need a drag to mean anything; timers are measured where they fire.
-      if (/\.(dragstart|dragend)$/.test(event) || event.startsWith("after:")) continue;
-      const rt = createRuntime(program, { state: [path] });
-      const before = rt.sample(0);
-      const t0 = 0.05;
-      if (!rt.send(event, t0)) continue;
-      const to = rt.state().join(" ");
-      const targets = rt.targets();
-      const properties: MeasuredTransition["properties"] = [];
-      for (const [key, prop] of program.properties) {
-        const target = targets[key];
-        if (target === undefined || prop.measure) continue;
-        if (prop.kind === "color") {
-          if (target !== before[key]) properties.push({ key, delta: -1, ...timing(program, path, event, key, undefined, undefined, t0) });
-          continue;
+  const measured = new Set<string>();
+  for (const configuration of stateConfigurations(program.machine, "", "")) {
+    for (const { path, pointer, state, machine } of configuration.leaves) {
+      const events = new Map<string, string>();
+      for (const e of state.when.keys()) events.set(e, `${pointer}/when/${escape(e)}`);
+      for (const e of machine.when.keys()) if (!events.has(e)) events.set(e, `${pointer.replace(/\/states\/[^/]+$/, "")}/when/${escape(e)}`);
+      for (const [event, ptr] of events) {
+        // Gestures need a drag to mean anything; timers are measured where they fire.
+        if (/\.(dragstart|dragend)$/.test(event) || event.startsWith("after:")) continue;
+        const id = `${path}\0${ptr}`;
+        if (measured.has(id)) continue;
+        measured.add(id);
+        const rt = createRuntime(program, { state: configuration.paths });
+        const before = rt.sample(0);
+        const t0 = 0.05;
+        if (!rt.send(event, t0)) continue;
+        const to = rt.state().join(" ");
+        const targets = rt.targets();
+        const properties: MeasuredTransition["properties"] = [];
+        for (const [key, prop] of program.properties) {
+          const target = targets[key];
+          if (target === undefined || prop.measure) continue;
+          if (prop.kind === "color") {
+            if (target !== before[key]) properties.push({ key, delta: -1, ...timing(program, configuration.paths, event, key, undefined, undefined, t0) });
+            continue;
+          }
+          const delta = Math.abs((target as number) - (before[key] as number));
+          if (delta === 0) continue;
+          properties.push({ key, delta, ...timing(program, configuration.paths, event, key, before[key] as number, target as number, t0) });
         }
-        const delta = Math.abs((target as number) - (before[key] as number));
-        if (delta === 0) continue;
-        properties.push({ key, delta, ...timing(program, path, event, key, before[key] as number, target as number, t0) });
+        out.push({ from: path, event, to, path: ptr, properties });
       }
-      out.push({ from: path, event, to, path: ptr, properties });
     }
   }
   return out;
@@ -213,8 +219,8 @@ export function measureTransitions(program: Program): MeasuredTransition[] {
  * it is done as far as a person can see (it stays within a pixel, or 0.5% of scale or
  * opacity, of where it ends up). The runtime's own rest threshold is far finer than that.
  */
-function timing(program: Program, path: string, event: string, key: string, from: number | undefined, to: number | undefined, t0: number): { t90: number; settle: number } {
-  const rt = createRuntime(program, { state: [path] });
+function timing(program: Program, paths: string[], event: string, key: string, from: number | undefined, to: number | undefined, t0: number): { t90: number; settle: number } {
+  const rt = createRuntime(program, { state: paths });
   rt.send(event, t0);
   const prop = key.split(".")[1];
   const color = program.properties.get(key)?.kind === "color";
@@ -240,15 +246,25 @@ function initialPath(program: Program): string | undefined {
 }
 
 type StatesMachine = Machine & { kind: "states" };
+type LeafState = { path: string; pointer: string; state: State; machine: StatesMachine };
+type StateConfiguration = { paths: string[]; leaves: LeafState[] };
 
-function leafStates(machine: Machine, prefix: string, pointer: string): { path: string; pointer: string; state: State; machine: StatesMachine }[] {
-  if (machine.kind === "regions") return []; // parallel regions: their combinations are out of scope here
-  const out: { path: string; pointer: string; state: State; machine: StatesMachine }[] = [];
+function stateConfigurations(machine: Machine, prefix: string, pointer: string): StateConfiguration[] {
+  if (machine.kind === "regions") {
+    let combinations: StateConfiguration[] = [{ paths: [], leaves: [] }];
+    for (const [name, region] of machine.regions) {
+      const regionPrefix = prefix ? `${prefix}/${name}` : name;
+      const configurations = stateConfigurations(region, regionPrefix, `${pointer}/regions/${escape(name)}`);
+      combinations = combinations.flatMap((left) => configurations.map((right) => ({ paths: [...left.paths, ...right.paths], leaves: [...left.leaves, ...right.leaves] })));
+    }
+    return combinations;
+  }
+  const out: StateConfiguration[] = [];
   for (const [name, state] of machine.states) {
     const path = prefix ? `${prefix}/${name}` : name;
     const ptr = `${pointer}/states/${escape(name)}`;
-    if (state.machine) out.push(...leafStates(state.machine, path, ptr));
-    else out.push({ path, pointer: ptr, state, machine });
+    if (state.machine) out.push(...stateConfigurations(state.machine, path, ptr));
+    else out.push({ paths: [path], leaves: [{ path, pointer: ptr, state, machine }] });
   }
   return out;
 }

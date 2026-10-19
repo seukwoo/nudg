@@ -54,7 +54,7 @@ npx nudg render examples/like.nudg.json --html examples/like.html --send heart.t
 ```
 
 See [Seeing motion](#seeing-motion) below.
-All three also take `--reduced-motion` (0.3): springs and tweens become 0.15 s linear tweens and kicks do nothing, so you can check what a reduced-motion user sees.
+All three also take `--reduced-motion`: springs and tweens become 0.15 s linear tweens, while kicks and entry keyframes are skipped, so you can check what a reduced-motion user sees.
 
 ### compare
 

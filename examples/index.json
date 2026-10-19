@@ -325,12 +325,12 @@
       "title": "Shake on error",
       "category": "feedback",
       "tags": [
-        "kick",
+        "keyframes",
         "host-event",
         "tween"
       ],
       "html": "shake.html",
-      "summary": "The field shakes and turns red when the app rejects it. The shake is a kick with a bouncy spring, so it's real motion, not keyframes.",
+      "summary": "The field turns red and plays a precisely authored multi-beat shake. Rejection during the motion restarts continuously; reduced motion skips the shake.",
       "prompts": [
         "Make the shake shorter and sharper.",
         "Shake vertically instead of horizontally."

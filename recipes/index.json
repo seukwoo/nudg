@@ -55,8 +55,8 @@
       "events": ["heart.tap"],
       "inputs": [],
       "hostResponsibilities": ["Persist the selected value and reconcile optimistic updates."],
-      "motion": ["Kick scale on selection and settle with a spring."],
-      "gaps": [{ "capability": "keyframes", "status": "missing", "need": "Multi-stage burst and particle accents need more than a single kick." }]
+      "motion": ["Kick scale for a physical pop, or use entry keyframes when the confirmation needs an authored multi-stage burst."],
+      "gaps": []
     },
     {
       "id": "swipe-row",
@@ -181,8 +181,8 @@
       "events": ["host.invalid", "host.valid"],
       "inputs": [],
       "hostResponsibilities": ["Expose the validation message and invalid semantics; never rely on motion alone."],
-      "motion": ["Kick horizontal velocity and settle quickly, with reduced-motion fallback."],
-      "gaps": [{ "capability": "keyframes", "status": "missing", "need": "Precisely authored multi-beat shakes need a keyframe sequence." }]
+      "motion": ["Play an authored multi-beat horizontal sequence and return to the state target; skip the transient sequence under reduced motion."],
+      "gaps": []
     },
     {
       "id": "slider",

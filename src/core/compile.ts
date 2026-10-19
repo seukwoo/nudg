@@ -8,7 +8,9 @@ import type { Measure,
   Channels,
   Diagnostic,
   Ease,
+  EntryEffect,
   Follow,
+  KeyframesEffect,
   Machine,
   Timer,
   Motion,
@@ -73,6 +75,7 @@ const VALUE_KEYS = ["base", "min", "max"];
 const FOLLOW_KEYS = ["input", "range", "overdrag"];
 const MAP_KEYS = ["map", "from", "to"];
 const MOTION_KEYS = ["spring", "tween", "kick"];
+const KEYFRAMES_KEYS = ["keyframes", "duration", "ease"];
 const TWEEN_KEYS = ["duration", "ease"];
 const SPRING_FORMS = [
   { keys: ["duration", "bounce"], required: ["duration"] },
@@ -121,7 +124,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.7.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.8.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -563,6 +566,10 @@ class ComponentCompiler {
       if (key === "note" || key.startsWith("x-")) continue;
       const kp = ptr(p, key);
       const prop = this.property(key, kp);
+      if (isObject(value) && "keyframes" in value) {
+        this.r.error("keyframes-outside-enter", kp, "Keyframes are a transient state-entry effect, not an ordinary motion.", `Move them to a state's "enter": { "${key}": { "keyframes": [...], "duration": 0.4 } }.`);
+        continue;
+      }
       const motion = this.motion(value, kp);
       if (!prop || !motion) continue;
       if (motion.kind === "spring" && motion.kick !== undefined) {
@@ -574,8 +581,8 @@ class ComponentCompiler {
     return out;
   }
 
-  private parseEnter(raw: Json, p: string): Map<string, SpringMotion> {
-    const out = new Map<string, SpringMotion>();
+  private parseEnter(raw: Json, p: string): Map<string, EntryEffect> {
+    const out = new Map<string, EntryEffect>();
     if (!isObject(raw)) {
       this.r.error("invalid-type", p, "\"enter\" must map properties to kicks.", `For example: "enter": { "heart.scale": { "kick": 6, "spring": { "duration": 0.4, "bounce": 0.5 } } }`);
       return out;
@@ -584,6 +591,11 @@ class ComponentCompiler {
       if (key === "note" || key.startsWith("x-")) continue;
       const kp = ptr(p, key);
       const prop = this.property(key, kp);
+      if (prop && isObject(value) && "keyframes" in value) {
+        const effect = this.parseKeyframes(prop.kind, key, value, kp);
+        if (effect) out.set(key, effect);
+        continue;
+      }
       const motion = this.motion(value, kp);
       if (!prop || !motion) continue;
       if (motion.kind !== "spring" || motion.kick === undefined) {
@@ -597,6 +609,61 @@ class ComponentCompiler {
       out.set(key, motion);
     }
     return out;
+  }
+
+  private parseKeyframes(kind: PropertyKind, key: string, raw: JsonObject, p: string): KeyframesEffect | undefined {
+    const r = this.r;
+    if (["kick", "spring", "tween"].some((name) => name in raw)) {
+      r.error("enter-effect-conflict", p, "An entry effect is either keyframes or a spring kick, not both.", "Remove the kick and spring, or remove keyframes.");
+      return undefined;
+    }
+    r.keys(raw, p, KEYFRAMES_KEYS);
+    if (!this.needsVersion("0.8", ptr(p, "keyframes"), "Entry keyframes")) return undefined;
+    if (!Array.isArray(raw.keyframes) || raw.keyframes.length === 0) {
+      r.error("invalid-keyframes", ptr(p, "keyframes"), '"keyframes" must be a non-empty list of intermediate points.', 'For example: [{ "at": 0.25, "value": -8 }, { "at": 0.6, "value": 5 }].');
+      return undefined;
+    }
+    const frames: KeyframesEffect["frames"] = [];
+    let previous = 0;
+    raw.keyframes.forEach((frame, i) => {
+      const fp = ptr(ptr(p, "keyframes"), i);
+      if (!isObject(frame)) {
+        r.error("invalid-keyframes", fp, "A keyframe must have normalized time and a value.", 'Write { "at": 0.5, "value": 8 }.');
+        return;
+      }
+      r.keys(frame, fp, ["at", "value"]);
+      const at = frame.at;
+      let ok = true;
+      if (typeof at !== "number" || !Number.isFinite(at) || at <= 0 || at >= 1 || at <= previous) {
+        r.error("invalid-keyframe-time", ptr(fp, "at"), '"at" must increase strictly between 0 and 1.', "Keep the current value at 0 and the state target at 1 implicit; put intermediate frames in ascending order.");
+        ok = false;
+      }
+      if (!("value" in frame)) {
+        r.error("invalid-keyframes", ptr(fp, "value"), "The keyframe has no value.", `Add a value valid for "${key}".`);
+        ok = false;
+      }
+      const value = "value" in frame ? this.parseValue(kind, key, frame.value, ptr(fp, "value")) : undefined;
+      if (ok && value) {
+        frames.push({ at: at as number, value });
+        previous = at as number;
+      }
+    });
+    if (!("duration" in raw)) {
+      r.error("missing-duration", p, "The keyframes have no duration.", 'Add "duration" in seconds, for example 0.4.');
+      return undefined;
+    }
+    const duration = parseTime(raw.duration);
+    if (duration === undefined || duration <= 0) {
+      r.error("invalid-value", ptr(p, "duration"), '"duration" must be a time greater than 0.', 'Use seconds (0.4) or a string like "400ms".');
+      return undefined;
+    }
+    let ease: Ease = "linear";
+    if ("ease" in raw) {
+      const parsed = parseEase(raw.ease, ptr(p, "ease"), r);
+      if (!parsed) return undefined;
+      ease = parsed;
+    }
+    return frames.length === raw.keyframes.length ? { kind: "keyframes", frames, duration, ease } : undefined;
   }
 
   private motion(raw: Json, p: string): Motion | undefined {
@@ -760,7 +827,7 @@ class ComponentCompiler {
     if ("follow" in raw) state.follow = this.parseFollow(raw.follow, ptr(p, "follow"), state);
     if ("enter" in raw) state.enter = this.parseEnter(raw.enter, ptr(p, "enter"));
     for (const key of state.enter.keys()) {
-      if (state.follow.has(key)) r.error("follow-conflict", ptr(ptr(p, "enter"), key), `"${key}" is followed in this state, so it can't also be kicked here.`, "Remove the kick, or follow a different property.");
+      if (state.follow.has(key)) r.error("follow-conflict", ptr(ptr(p, "enter"), key), `"${key}" is followed in this state, so it can't also have an entry effect here.`, "Remove the entry effect, or follow a different property.");
     }
     if ("when" in raw) state.when = this.parseWhen(raw.when, ptr(p, "when"), false, state.timers);
     if ("states" in raw || "regions" in raw || "initial" in raw) {

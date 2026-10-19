@@ -38,7 +38,7 @@ JSON has no comments. Instead, any object may carry a `note` string. Runtimes ig
 
 - **States say where.** A state only declares target values.
 - **`animate` says how.** It maps each property to the motion that carries it to its target. When the target changes mid-flight (a second tap while the knob is still moving), the value retargets from where it is. A spring also keeps its velocity, so interruption is correct by default instead of a special case.
-- **`enter` adds a moment.** Some feedback is transient: a heart that pops and settles back, a field that shakes. The target doesn't change, so `enter` plays a *kick* when a state is entered through a transition (see below). Loading a file enters its initial states without kicks.
+- **`enter` adds a moment.** Some feedback is transient: a heart that pops and settles back, a field that shakes. The target doesn't change, so `enter` plays a spring *kick* or authored *keyframes* when a state is entered through a transition. Loading a file does not play its initial state's entry effects.
 
 A transition can override `animate` for itself:
 
@@ -50,7 +50,7 @@ A transition can override `animate` for itself:
 
 Platform motion is not special in nudg. Motion is defined in three layers, and the same format is used at every layer:
 
-1. **Primitives** (in the core, defined by the spec and checked by the conformance suite): `spring`, `tween`, and `kick`. The core stays small.
+1. **Primitives** (in the core, defined by the spec and checked by the conformance suite): `spring`, `tween`, `kick`, and state-entry `keyframes`. The core stays small.
 2. **Named motions:** a file's `motions` defines motions by name, and anywhere a motion is expected, a name can be used instead. `import` brings in the named motions of other files, so a design system keeps its signature motion in one library and every component follows it. "Make the whole app snappier" is a one-line diff in that library.
 3. **Schemes:** a motion library the host chooses. Apple-like and Material-like feels ship as nudg libraries written in this same format, not as runtime code, so a team's own signature motion is a peer of the platform ones.
 
@@ -92,7 +92,7 @@ A component imports it:
 
 - **Top level:** `nudg` (format version), `import`, `targets`, `values`, `motions`, `animate`, and a machine. A file without a machine is a library.
 - **Machine:** either `initial` + `states` (one active state at a time) or `regions` (named machines that all run in parallel).
-- **State:** `set` (values while active), `enter` (kicks played on entry), `when` (transitions), and optionally a nested machine. Machines and states share this shape at every depth, which covers composition ([decision 2](design.md#design-decisions)).
+- **State:** `set` (values while active), `enter` (transient effects played on entry), `when` (transitions), and optionally a nested machine. Machines and states share this shape at every depth, which covers composition ([decision 2](design.md#design-decisions)).
 - **Transition:** `"event": "target-state"` or `"event": { "to": ..., "animate": ..., "note": ... }`. In v0.1 a transition targets a sibling state.
 
 ### Paths and events
@@ -281,7 +281,7 @@ A value in `values` may be an object: `{ "base": 0, "min": 0, "max": 200 }`. `mi
 
 Some people ask the system to reduce motion (`prefers-reduced-motion`; WCAG 2.3.3). The format says nothing about it; the runtime does, as an option: `createRuntime(program, { reducedMotion: true })`.
 
-- Every spring and tween becomes a short linear tween (0.15 s), and kicks are ignored. States, transitions, timers and followed values are unchanged, so nothing functional depends on the setting.
+- Every spring and tween becomes a short linear tween (0.15 s); kicks and entry keyframes are skipped. States, transitions, timers and followed values are unchanged, so nothing functional depends on the setting.
 - The DOM adapter follows the system setting unless the option is passed explicitly; `simulate`, `plot` and `render` take `--reduced-motion`.
 
 ## Additions in 0.4 (draft)
@@ -367,6 +367,33 @@ Pausable state timers. A file that uses them declares `"nudg": "0.7"`; a 0.7 run
 - Hosts produce semantic lifecycle events such as `host.suspend`; nudg does not read platform lifecycle APIs itself.
 
 The conformance cases `timer-pause.json` and `validation-0.7.json` define the behavior across TypeScript, Swift and Kotlin.
+
+## Additions in 0.8 (draft)
+
+Transient keyframes on state entry. A file that uses them declares `"nudg": "0.8"`; a 0.8 runtime also reads older files.
+
+```json
+"enter": {
+  "field.x": {
+    "keyframes": [
+      { "at": 0.16, "value": -10 },
+      { "at": 0.36, "value": 9 },
+      { "at": 0.58, "value": -6 }
+    ],
+    "duration": 0.42,
+    "ease": "out-quad"
+  }
+}
+```
+
+- The property's exact current value is the implicit frame at `at: 0`; the active state's resolved target is the implicit frame at `at: 1`. Files list only strictly increasing intermediate points between them.
+- `duration` is greater than zero. `ease` uses the existing names or cubic Bézier form, defaults to `linear`, and applies independently to each leg.
+- Re-entering the state samples the current value and restarts the sequence without a position jump. Leaving while it plays samples both position and velocity; the destination state's ordinary spring can carry that velocity forward.
+- A transition in an unrelated parallel region does not interrupt the sequence. Relayout updates its implicit final target without restarting it.
+- Reduced motion skips the transient sequence. Any actual target change still uses the runtime's short linear reduced-motion tween.
+- Keyframes are inline entry effects, not named motions and not transition `animate`. Sequence, delay and stagger remain separate future primitives.
+
+The conformance cases `keyframes-enter.json`, `keyframes-reduced.json` and `validation-0.8.json` define the behavior across TypeScript, Swift and Kotlin.
 
 ## Compiled programs (for native runtimes)
 

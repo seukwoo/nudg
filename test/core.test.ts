@@ -113,8 +113,8 @@ test("time never goes backwards", () => {
   assert.throws(() => rt.send("track.tap", 0.1), RangeError);
 });
 
-test("the initial state plays no kick", () => {
-  const { program } = compile({
+test("the initial state plays no entry effect", () => {
+  const kick = compile({
     path: "main.nudg.json",
     text: JSON.stringify({
       nudg: "0.1",
@@ -123,8 +123,28 @@ test("the initial state plays no kick", () => {
       initial: "liked",
       states: { liked: { enter: { "heart.scale": { kick: 6, spring: { duration: 0.4, bounce: 0.5 } } } } },
     }),
-  });
-  assert.equal(createRuntime(program!).sample(0.1)["heart.scale"], 1);
+  }).program!;
+  const keyframes = compile({
+    path: "main.nudg.json",
+    text: JSON.stringify({
+      nudg: "0.8",
+      targets: ["field"],
+      values: { "field.x": 0 },
+      initial: "invalid",
+      states: {
+        invalid: {
+          enter: {
+            "field.x": {
+              keyframes: [{ at: 0.5, value: 12 }],
+              duration: 0.4,
+            },
+          },
+        },
+      },
+    }),
+  }).program!;
+  assert.equal(createRuntime(kick).sample(0.1)["heart.scale"], 1);
+  assert.equal(createRuntime(keyframes).sample(0.1)["field.x"], 0);
 });
 
 test("simulate summarizes extremes and settle times", () => {

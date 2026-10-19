@@ -50,6 +50,7 @@ export interface Runtime {
 /** A property's behavior since its last change, evaluated in closed form. */
 type Segment =
   | { kind: "motion"; t0: number; from: Channels; v0: Channels; to: Channels; motion?: Motion }
+  | { kind: "keyframes"; t0: number; from: Channels; to: Channels; frames: { at: number; value: Channels }[]; duration: number; ease: import("./types.ts").Ease; owner: State }
   | { kind: "follow"; t0: number; anchor: number; input0: number; follow: Follow; owner: State };
 
 type StatesMachine = Machine & { kind: "states" };
@@ -258,6 +259,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       }
       return [[value], [velocityAt(follow.input, t) * factor]];
     }
+    if (segment.kind === "keyframes") return evaluateKeyframes(segment, t);
     return evaluateMotion(segment, t);
   }
 
@@ -335,6 +337,8 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     for (const transition of fired) for (const [key, motion] of transition.animate) overrides.set(key, motion);
     const targets = resolveTargets(active);
     const follows = activeFollows(active);
+    const activeStates = new Set<State>();
+    walkActive(active, (state) => activeStates.add(state));
 
     for (const [key, prop] of program.properties) {
       if (prop.map) continue;
@@ -348,6 +352,10 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
         continue;
       }
       const to = targets.get(key)!;
+      if (segment.kind === "keyframes" && activeStates.has(segment.owner) && !entered.includes(segment.owner)) {
+        segment.to = to;
+        continue;
+      }
       // Leaving a follow always hands off, carrying the input's velocity into the motion.
       if (segment.kind === "motion" && sameChannels(segment.to, to)) continue;
       if (snap) {
@@ -361,15 +369,20 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       segments.set(key, { kind: "motion", t0: t, from: pos, v0: vel, to, motion: motion && reduced ? REDUCED : motion });
     }
 
-    // Kicks keep the target and add velocity, then their own spring carries the value.
+    // Entry effects are transient: kicks add velocity; keyframes travel through authored
+    // intermediate values from the exact current position back to the state target.
     if (reduced) return;
     for (const state of entered) {
-      for (const [key, kick] of state.enter) {
+      for (const [key, effect] of state.enter) {
         const segment = segments.get(key)!;
         if (segment.kind === "follow") continue;
         const [pos, vel] = evaluate(segment, t);
-        vel[0] += kick.kick ?? 0;
-        segments.set(key, { kind: "motion", t0: t, from: pos, v0: vel, to: segment.to, motion: kick });
+        if (effect.kind === "keyframes") {
+          segments.set(key, { kind: "keyframes", t0: t, from: pos, to: segment.to, frames: effect.frames, duration: effect.duration, ease: effect.ease, owner: state });
+        } else {
+          vel[0] += effect.kick ?? 0;
+          segments.set(key, { kind: "motion", t0: t, from: pos, v0: vel, to: segment.to, motion: effect });
+        }
       }
     }
   }
@@ -540,7 +553,9 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
         const source = prop.map ? prop.map.source : key;
         const segment = segments.get(source)!;
         // A followed value moves only when its input does; nothing is animating it.
-        if (segment.kind === "follow" || !segment.motion) return true;
+        if (segment.kind === "follow") return true;
+        if (segment.kind === "keyframes") return t - segment.t0 >= segment.duration;
+        if (!segment.motion) return true;
         const motion = segment.motion;
         if (motion.kind === "tween") return t - segment.t0 >= motion.duration;
         // Remaining amplitude from the spring's energy. Energy never increases, so once
@@ -574,6 +589,22 @@ function evaluateMotion(segment: Segment & { kind: "motion" }, t: number): [Chan
     vel.push(v);
   });
   return [pos, vel];
+}
+
+function evaluateKeyframes(segment: Segment & { kind: "keyframes" }, t: number): [Channels, Channels] {
+  const u = (t - segment.t0) / segment.duration;
+  if (u >= 1) return [segment.to.slice(), segment.to.map(() => 0)];
+  const points = [{ at: 0, value: segment.from }, ...segment.frames, { at: 1, value: segment.to }];
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1];
+    const b = points[i];
+    if (u > b.at) continue;
+    const local = Math.max(0, (u - a.at) / (b.at - a.at));
+    const progress = easeAt(segment.ease, local);
+    const slope = easeSlope(segment.ease, local) / ((b.at - a.at) * segment.duration);
+    return [a.value.map((value, channel) => value + (b.value[channel] - value) * progress), a.value.map((value, channel) => (b.value[channel] - value) * slope)];
+  }
+  return [segment.to.slice(), segment.to.map(() => 0)];
 }
 
 function collectFollowInputs(machine: Machine, out: Set<string>) {

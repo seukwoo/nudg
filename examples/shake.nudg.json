@@ -1,6 +1,6 @@
 {
-  "nudg": "0.2",
-  "note": "A field that shakes and turns red when the app rejects it. The shake is a kick on x with a bouncy spring, so it's real motion, not keyframes. Rejecting again re-enters the state and shakes again.",
+  "nudg": "0.8",
+  "note": "A field that turns red and plays an authored multi-beat shake when the app rejects it. Rejecting again restarts from the current position; reduced motion skips the shake.",
   "targets": ["field"],
   "values": { "field.x": 0, "field.color": "#D1D5DB" },
   "animate": {
@@ -13,7 +13,18 @@
     "idle": {},
     "invalid": {
       "set": { "field.color": "#F87171" },
-      "enter": { "field.x": { "kick": -600, "spring": { "duration": 0.3, "bounce": 0.7 } } }
+      "enter": {
+        "field.x": {
+          "keyframes": [
+            { "at": 0.16, "value": -10 },
+            { "at": 0.36, "value": 9 },
+            { "at": 0.58, "value": -6 },
+            { "at": 0.78, "value": 4 }
+          ],
+          "duration": 0.42,
+          "ease": "out-quad"
+        }
+      }
     }
   }
 }

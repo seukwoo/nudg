@@ -51,11 +51,12 @@ A motion is an object with exactly one of `spring` or `tween`, or the name of a 
   - Not `tension`/`friction` (ambiguous across tools).
 - `tween` — `duration` and `ease`: `linear`, `in`, `out`, `in-out` (default), `in-`/`out-`/`in-out-` + `sine`, `quad`, `cubic`, `quart`, `quint`, `expo`, `circ`, `back` (e.g. `out-cubic`), or `[x1, y1, x2, y2]`.
 - `kick` — velocity (units/second) added on state entry without changing the target; always with a `spring`. Only in a state's `enter`, only on numbers. `{ "kick": 6, "spring": { "duration": 0.4, "bounce": 0.5 } }` on `scale` pops; `{ "kick": -400, "spring": { "duration": 0.25, "bounce": 0.7 } }` on `x` shakes.
+- `keyframes` (format 0.8) — intermediate values played on state entry. The current value at 0 and state target at 1 are implicit; list `{ "at", "value" }` points strictly between them with a positive `duration` and optional `ease`.
 
 ## Structure
 
 - Machine: `initial` + `states`, or `regions` (named machines that run in parallel). States can nest a machine.
-- State: `set`, `enter` (kicks on entry through a transition; not on first load), `when` (event → sibling state, or `{ "to": "...", "animate": { ... } }` to override motion for that transition).
+- State: `set`, `enter` (kicks or keyframes on entry through a transition; not on first load), `when` (event → sibling state, or `{ "to": "...", "animate": { ... } }` to override motion for that transition).
 - Two parallel regions may not set the same property.
 - Named motions: `"motions": { "snappy": { "spring": { "duration": 0.3, "bounce": 0.15 } } }`, then use `"snappy"` anywhere a motion goes. `"import": ["./motion/brand.nudg.json"]` brings in another file's named motions (paths relative to the file). A name defined twice is an error.
 
@@ -93,7 +94,7 @@ Declare `"nudg": "0.3"` to use these.
 - **Timers:** `"after:3s": "hidden"` in a state's `when` fires that long after the state was entered, if it's still active; re-entering restarts it. Not on a machine's `when`.
 - **`step` and `commit`** change a property's base value for good: `{ "step": { "thumb.x": 10 } }` adds (no `to` needed: stay in the state); `{ "to": "idle", "commit": ["thumb.x"] }` keeps the current value when leaving a `follow`. Both clamp to the property's bounds.
 - **Bounds:** `"thumb.x": { "base": 0, "min": 0, "max": 200 }`. They clamp `step`/`commit`, default a `follow`'s `range`, and make an out-of-range `set` an error.
-- **Reduced motion** is a runtime option (`reducedMotion: true`; the DOM adapter follows `prefers-reduced-motion`; CLI/MCP `--reduced-motion`): springs and tweens become 0.15 s linear tweens, kicks do nothing. Don't put it in the file.
+- **Reduced motion** is a runtime option (`reducedMotion: true`; the DOM adapter follows `prefers-reduced-motion`; CLI/MCP `--reduced-motion`): springs and tweens become 0.15 s linear tweens; kicks and entry keyframes are skipped. Don't put it in the file.
 
 ## Layout: measured values (formats 0.4 and 0.6)
 
@@ -132,6 +133,26 @@ When an auto-dismiss or control timeout must preserve the person's remaining tim
 ```
 
 The first active reason freezes the remaining duration and the last matching `off` resumes it. Re-entering the state resets both the timer and its pause reasons. Put `pause` only on an `after:` transition.
+
+## Entry keyframes (format 0.8)
+
+Use keyframes for a precisely authored transient response, such as a multi-beat validation shake:
+
+```json
+"enter": {
+  "field.x": {
+    "keyframes": [
+      { "at": 0.2, "value": -10 },
+      { "at": 0.45, "value": 8 },
+      { "at": 0.7, "value": -5 }
+    ],
+    "duration": 0.4,
+    "ease": "linear"
+  }
+}
+```
+
+The current value is implicit at 0 and the state's target is implicit at 1. Re-entry restarts from the current position; interruption hands the current velocity to the next ordinary motion. Keep keyframes inline under `enter`; use a kick when a physical impulse is enough.
 
 ## Platform motion
 
@@ -185,7 +206,7 @@ Pattern words live in external recipe metadata, not core syntax. Every shipped e
 | faster, snappier | lower `duration` (e.g. 0.35 → 0.25) |
 | slower, softer, more relaxed | raise `duration`; optionally lower `bounce` |
 | pop, punchier feedback | add or raise a `kick` on `scale` in the state's `enter` |
-| shake on error | `enter` kick on `x` with high `bounce` |
+| shake on error | format 0.8 `enter` keyframes on `x`; use a kick only for a less-authored physical wobble |
 | change it everywhere | edit the shared motion library, not each file |
 | make it draggable | add a `dragging` state with `follow`, entered on `dragstart`, left on `dragend` with `nearest` |
 | harder to pull past the end | lower `overdrag` (0 stops dead) |

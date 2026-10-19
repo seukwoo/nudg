@@ -179,6 +179,10 @@ Status: first cut implemented as format 0.5: `map` and `follow` read app and scr
 
 Status: implemented as format 0.7. An `after:` transition owns its timeout and may list independent `{ "on", "off" }` reasons. The first active reason freezes remaining time and the final reason to clear resumes it. Leaving or re-entering the state resets the timer and all reasons; a timer due at the same timestamp still fires before an incoming event. The host reports lifecycle events such as suspension or scrubbing, while the core remains deterministic and platform-neutral.
 
+## Transient entry keyframes
+
+Status: implemented as format 0.8. Keyframes live only under a state's `enter`: the sampled current value is the implicit start and the resolved state target is the implicit end. This makes re-entry continuous, gives interruption a well-defined outgoing velocity, lets relayout change the destination, and keeps the state responsible for every resting value. Reduced motion skips the authored sequence. General delay, sequence and stagger semantics remain separate because current recipes do not require them.
+
 ## Open questions
 
 These are unresolved design choices. Scheduling and completion status live in the [roadmap](roadmap.md); examples of possible syntax below are proposals.
@@ -196,6 +200,6 @@ These are unresolved design choices. Scheduling and completion status live in th
 - `nearest` limited to neighbors of the current state (a carousel that moves one slide per swipe however hard the flick), instead of tuning `momentum` down.
 - Pinch, rotate and other multi-pointer gestures.
 - Continuous app inputs and scroll: see [the proposal above](#proposal-continuous-app-inputs).
-- More primitives and combinators: `keyframes`, `sequence`, `delay`, `stagger`.
+- More combinators: `sequence`, `delay`, `stagger`. Format 0.8 deliberately keeps keyframes as inline transient state-entry effects rather than making them a general sequence primitive.
 - Tweaking a named motion at the point of use, for example `{ "use": "snappy", "duration": 0.5 }`.
 - Schemes: which names a scheme may supply or override, how the host passes one in, and how the validator still catches misspelled names. The built-in Apple-like and Material-like libraries.

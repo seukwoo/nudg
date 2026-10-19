@@ -40,6 +40,22 @@ export interface TweenMotion {
 
 export type Motion = SpringMotion | TweenMotion;
 
+export interface Keyframe {
+  /** Normalized time strictly between 0 and 1; the current value and state target are implicit endpoints. */
+  at: number;
+  value: Channels;
+}
+
+/** A transient authored sequence played when a state is entered (v0.8). */
+export interface KeyframesEffect {
+  kind: "keyframes";
+  frames: Keyframe[];
+  duration: number;
+  ease: Ease;
+}
+
+export type EntryEffect = SpringMotion | KeyframesEffect;
+
 /** A property computed from another at every moment (v0.2). */
 export interface PropertyMap {
   source: string;
@@ -112,7 +128,7 @@ export interface State {
   /** Entries of `set` that are measured (v0.4); their `set` value is a placeholder. */
   measure: Map<string, Measure>;
   follow: Map<string, Follow>;
-  enter: Map<string, SpringMotion>;
+  enter: Map<string, EntryEffect>;
   when: Map<string, Transition>;
   timers: Timer[];
   machine?: Machine;

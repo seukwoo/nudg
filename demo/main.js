@@ -205,7 +205,9 @@ const HOOKS = {
       status.value = message;
       elapsed.textContent = "00:00";
       elapsed.dateTime = "PT0S";
-      camera.setAttribute("aria-pressed", "false");
+      camera.textContent = "Camera on";
+      camera.setAttribute("aria-label", "Camera on");
+      camera.setAttribute("aria-pressed", "true");
       mute.setAttribute("aria-pressed", "false");
       mute.disabled = false;
       mute.textContent = "Mute";
@@ -241,7 +243,9 @@ const HOOKS = {
       cameraOn = !cameraOn;
       media.setVideoEnabled(cameraOn);
       player.send(cameraOn ? "host.camera-on" : "host.camera-off");
-      camera.setAttribute("aria-pressed", String(!cameraOn));
+      camera.textContent = cameraOn ? "Camera on" : "Camera off";
+      camera.setAttribute("aria-label", camera.textContent);
+      camera.setAttribute("aria-pressed", String(cameraOn));
       status.value = cameraOn ? "Connected · camera on" : "Connected · camera off";
     });
     mute?.addEventListener("click", () => {

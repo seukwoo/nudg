@@ -19,8 +19,9 @@
     .controls { position: absolute; z-index: 3; inset: auto 10px 10px; height: 34px; }
     .join, .actions { position: absolute; inset: 0; }
     .join { width: 100%; border: 0; border-radius: 6px; color: #173d35; background: #effbf6; font: inherit; font-weight: 800; cursor: pointer; }
-    .actions { display: grid; grid-template-columns: repeat(3, 1fr) 1.2fr; gap: 6px; }
-    .actions button { min-width: 0; border: 1px solid rgba(255,255,255,.22); border-radius: 6px; color: #17221f; background: #f5f7f4; font: inherit; font-weight: 750; cursor: pointer; }
+    .actions { display: grid; grid-template-columns: 1.25fr .85fr .8fr 1.1fr; gap: 6px; }
+    .actions button { min-width: 0; padding: 2px; border: 1px solid rgba(255,255,255,.22); border-radius: 6px; color: #17221f; background: #f5f7f4; font: inherit; font-weight: 750; white-space: nowrap; cursor: pointer; }
+    .actions .camera { font-size: 10px; }
     .actions .leave { border-color: #efc2c5; color: #8f252d; background: #fff0f1; }
     .join[data-nudg-state~="live"], .actions[data-nudg-state~="ready"], .actions[data-nudg-state~="connecting"] { pointer-events: none; }
   </style>
@@ -37,7 +38,7 @@
     <div class="controls">
       <button class="join" type="button" data-nudg="join">Join video</button>
       <div class="actions" data-nudg="actions">
-        <button class="camera" type="button" data-nudg="camera" aria-pressed="false">Camera</button>
+        <button class="camera" type="button" data-nudg="camera" aria-label="Camera on" aria-pressed="true">Camera on</button>
         <button class="mute" type="button" data-nudg="mute" aria-label="Mute microphone" aria-pressed="false">Mute</button>
         <button class="flip" type="button" data-nudg="flip">Flip</button>
         <button class="leave" type="button">Leave</button>
@@ -79,7 +80,9 @@
       status.value = message;
       elapsed.textContent = "00:00";
       elapsed.dateTime = "PT0S";
-      camera.setAttribute("aria-pressed", "false");
+      camera.textContent = "Camera on";
+      camera.setAttribute("aria-label", "Camera on");
+      camera.setAttribute("aria-pressed", "true");
       mute.setAttribute("aria-pressed", "false");
       mute.disabled = false;
       mute.textContent = "Mute";
@@ -113,7 +116,9 @@
       cameraOn = !cameraOn;
       media.setVideoEnabled(cameraOn);
       player.send(cameraOn ? "host.camera-on" : "host.camera-off");
-      camera.setAttribute("aria-pressed", String(!cameraOn));
+      camera.textContent = cameraOn ? "Camera on" : "Camera off";
+      camera.setAttribute("aria-label", camera.textContent);
+      camera.setAttribute("aria-pressed", String(cameraOn));
       status.value = cameraOn ? "Connected · camera on" : "Connected · camera off";
     });
     mute.addEventListener("click", () => {

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.8.0
+
+Semantic recipes, continuous app and scroll inputs, native drag and keyboard parity, direct Swift Package and JitPack installation, and complete voice, camera, video-call, music-player and video-player examples. The same interaction contracts now reach Web, React Native, SwiftUI and Jetpack Compose.
+
 - **Semantic recipes for natural-language UI.** A versioned catalog maps human terms and aliases such as `toggle`, `sheet`, `video chat` and `audio player` to expected parts, states, events, inputs, host responsibilities, motion, known format gaps and a validated starter. Every shipped example belongs to one recipe. `nudg recipe [name] [--json|--source]` and the new `nudg_recipe` MCP tool expose the same contracts; the package ships the catalog, schema and starter files. Runtime syntax remains component-neutral.
 - **Format 0.5: continuous app and scroll inputs.** `map` and `follow` can read finite values supplied as `host.<name>` and `target.scroll.x/y`; inputs start at 0 and only names referenced by the program are accepted. The DOM adapter reports referenced scroll offsets automatically. The compiled form distinguishes property and input sources, and the TypeScript, Swift and Kotlin runtimes pass the same conformance case. New microphone-level and shrinking-app-bar examples; schema 0.5.
 - **Cross-platform support is visible in the examples site.** The browse view names the Web, React Native, SwiftUI and Jetpack Compose hosts and their shared conformance status. Every example detail now includes React Native, SwiftUI and Compose integration snippets beside the existing nudg, HTML and React tabs. The microphone example also supplies its live app input inside the demo, with stream cleanup on reset and navigation.

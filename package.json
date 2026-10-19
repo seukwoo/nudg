@@ -1,7 +1,7 @@
 {
   "name": "@nudg/core",
   "version": "0.7.0",
-  "description": "The interaction format your AI can nudge.",
+  "description": "Standard interaction recipes and portable motion your AI can nudge.",
   "keywords": [
     "animation",
     "motion",
@@ -46,6 +46,8 @@
       "default": "./dist/node/index.js"
     },
     "./schema.json": "./spec/nudg-0.5.schema.json",
+    "./recipes.json": "./recipes/index.json",
+    "./recipes.schema.json": "./recipes/schema.json",
     "./guide.md": "./spec/guide.md",
     "./motion/*": "./examples/motion/*",
     "./package.json": "./package.json"
@@ -60,9 +62,10 @@
   "files": [
     "dist",
     "spec/guide.md",
-    "examples/motion/apple.nudg.json",
-    "examples/motion/material-expressive.nudg.json",
-    "examples/motion/material-standard.nudg.json",
+    "recipes/index.json",
+    "recipes/schema.json",
+    "examples/*.nudg.json",
+    "examples/motion/*.nudg.json",
     "spec/nudg-0.1.schema.json",
     "spec/nudg-0.2.schema.json",
     "spec/nudg-0.3.schema.json",

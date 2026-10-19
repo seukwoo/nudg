@@ -10,3 +10,5 @@ export type { ComparePageOptions } from "./compare-page.ts";
 export type { HostAction, Observation, ObserveOptions } from "./observe.ts";
 export { frameTimes, renderFrames } from "./render.ts";
 export type { RenderedFrame, RenderOptions, RenderResult } from "./render.ts";
+export { findRecipe, formatRecipe, recipeCatalog, recipeSource } from "./recipes.ts";
+export type { Recipe, RecipeGap } from "./recipes.ts";

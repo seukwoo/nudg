@@ -132,6 +132,18 @@ npx nudg simulate toggle.nudg.json --send track.tap@0.1
 
 Node 22.4 or later. See [Using nudg](docs/usage.md) for every command and option.
 
+## Natural-language UI starts from a recipe
+
+nudg maps familiar UI terms to versioned interaction contracts instead of asking an AI to reinvent them. A recipe names the expected parts, states, events, continuous inputs, host responsibilities, motion, known format gaps, and a validated starter:
+
+```sh
+npx nudg recipe "video chat"
+npx nudg recipe sheet --json
+npx nudg recipe toggle --source > toggle.nudg.json
+```
+
+The first catalog covers every shipped example, from switches, tabs and sheets to voice chat, camera and media players. Recipes remain ordinary nudg documents at runtime; they guide generation without making the core component-specific.
+
 ## The simple case is one line
 
 A press, a hover, a toggle or a toast needs no file. Presets are ready-made nudg documents:
@@ -158,6 +170,7 @@ An agent can't watch an animation, so nudg tells it what happened, in text and i
 
 | Tool | What the agent gets |
 |---|---|
+| `recipe` | A standard interaction contract and validated starter for a human UI term such as toggle, sheet or video chat. |
 | `validate` | Each problem with a stable code, a JSON pointer, and a hint that says how to fix it. |
 | `simulate` | States and values over time for a list of events: "the knob overshoots to 20.57 and is at rest from 0.84 s". |
 | `plot` | A motion graph of every property, like the one below. |

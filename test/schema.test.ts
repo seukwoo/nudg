@@ -11,6 +11,7 @@ const schema = read(new URL("../spec/nudg-0.5.schema.json", import.meta.url));
 const schema04 = read(new URL("../spec/nudg-0.4.schema.json", import.meta.url));
 const schema02 = read(new URL("../spec/nudg-0.2.schema.json", import.meta.url));
 const schema01 = read(new URL("../spec/nudg-0.1.schema.json", import.meta.url));
+const recipeSchema = read(new URL("../recipes/schema.json", import.meta.url));
 const validate = new Ajv2020({ allErrors: true, strict: false }).compile(schema);
 
 function valid(doc: unknown): boolean {
@@ -22,6 +23,12 @@ function filesIn(dir: URL): URL[] {
     e.isDirectory() ? filesIn(new URL(`${e.name}/`, dir)) : e.name.endsWith(".json") && e.name !== "index.json" ? [new URL(e.name, dir)] : [],
   );
 }
+
+test("the semantic recipe catalog matches its schema", () => {
+  const validateRecipes = new Ajv2020({ allErrors: true, strict: false }).compile(recipeSchema);
+  const catalog = read(new URL("../recipes/index.json", import.meta.url));
+  assert.ok(validateRecipes(catalog), JSON.stringify(validateRecipes.errors, null, 2));
+});
 
 test("the 0.2 schema still compiles and accepts the 0.2 examples", () => {
   const validate02 = new Ajv2020({ allErrors: true, strict: false }).compile(schema02);

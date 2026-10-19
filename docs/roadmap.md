@@ -14,7 +14,7 @@ The order below follows real app needs. Release numbers and dates are assigned w
 | Press, hover, toggle and toast presets; platform motion libraries | Implemented | [Agent guide](../spec/guide.md#presets), [usage](usage.md#native-feel-on-every-platform) |
 | `compare` and `observe` | Released; review fixes are in the unreleased changelog | [Changelog](../CHANGELOG.md) |
 | Exit/presence handling and live A/B in the playground | Released in package 0.5.0; the old next-step note is complete | [Changelog](../CHANGELOG.md#050) |
-| Semantic UI vocabulary | Initial guidance documented; reusable recipes remain planned | [Agent guide](../spec/guide.md#semantic-ui-words) |
+| Semantic UI recipes | Versioned contracts cover every shipped example; CLI and MCP resolve names and aliases to contracts and starters | [Recipe catalog](../recipes/index.json), [agent guide](../spec/guide.md#semantic-ui-words) |
 | Layout measurement, natural size, relative units and decay | Open design work | [Open questions](design.md#open-questions) |
 
 ## Product Stages
@@ -26,12 +26,20 @@ The original stage numbers remain useful when reading the spec and changelog. Se
 | 0 | Single element | Toggle, button, like; states, transitions, springs, DOM adapter | Implemented |
 | 1 | Component | Tabs, accordion, swipe row, carousel, bottom sheet; coordinated targets, gestures, React adapter | Core behavior implemented; layout measurement remains open |
 | 2 | Screens and flows | Onboarding, modals, screen transitions, list/grid coordination; data inputs and machine composition | Planned; nested states and a dialog example already exist |
-| 3 | Native | iOS and Android; SwiftUI and Compose adapters or code generation | Planned |
+| 3 | Native | iOS and Android; React Native, SwiftUI and Compose adapters plus matching runtimes | Initial platform support implemented; distribution awaits a release tag |
 | 4 | Standalone content | Physics, canvas, game-like scenes; host rendering and physics integration | Exploratory |
 
-## Now: Meet People Where Their Components Are
+## Now: Harden Recipes Before Widening the Catalog
 
-Status: web component bridges, React Native, SwiftUI and Compose adapters are released in 0.7. Native drag and keys plus Swift Package and JitPack distribution are merged for the next release; the first tag will prove the remote install paths. Format 0.5 continuous app and scroll inputs are in development, with microphone and shrinking-header examples. Next: use [coverage](coverage.md) by trigger × response × structure to choose examples from its remaining empty cells.
+Status: the first versioned recipe catalog covers every shipped example. `nudg recipe` and `nudg_recipe` resolve human aliases to expected parts, states, events, inputs, host responsibilities, motion, known gaps and a validated starter. Recipe metadata stays outside runtime syntax.
+
+- Improve existing recipes from real prompts and host integrations before adding broad new component categories.
+- Keep examples as executable evidence for recipes, not as a component-count target.
+- Add a new recipe only when it names a recurring interaction contract meaningfully different from the existing set.
+- Collect format gaps in recipe data. Promote a gap into runtime syntax only when multiple recipes need the same primitive and TypeScript, Swift and Kotlin can share a conformance case.
+- Keep generated results mobile-first, then make the same contract adapt naturally to larger web layouts.
+
+Done when: the same common UI request consistently selects the same contract and starter, leaving motion taste as the main thing a person needs to tune.
 
 ## Then: Prove the Workflow in Playsnack
 
@@ -44,7 +52,7 @@ Goal: find the cases where nudg is plainly better than ad hoc code or a one-line
 - Harden the judge loop: after an AI changes motion, it should validate, compare, and show a live A/B page without being asked. Done for the first steps (unreleased): `nudg_compare` takes the running app's `url`, snapshots the component and opens the before/after in the browser, and `before: "HEAD"` supplies the old version from git so nothing is copied. Next: record one real playsnack session as a "turns: N" case.
 - Improve `observe` from field reports, because the real app is the source of truth.
 - Add examples that show the say -> see -> judge loop, not only static JSON snippets.
-- Start semantic recipes that fit the existing format, such as FAB press feedback and toast/snackbar presence. Record what the host must provide and what still needs new runtime support.
+- Exercise semantic recipes in real prompts and record contract corrections or missing motion capabilities in the recipe catalog.
 
 Done when: a real playsnack interaction is easier to tune with nudg than by editing component code, and the docs can point to that workflow honestly.
 
@@ -62,18 +70,23 @@ Goal: support the component patterns whose motion depends on measured size or po
 
 Done when: `tab-bar`, `accordion`, `bottom-sheet`, and `swipe-row` no longer need hard-coded pixel guesses for their essential behavior.
 
-## Then: Expand Semantic Pattern Recipes
+## Then: Add Motion From Recipe Evidence
 
-Goal: turn common UI words into high-quality starting points for AI-built interfaces. Simple recipes start during dogfooding; measured patterns build on the layout work above.
+Goal: deepen the interaction and motion language where current recipes demonstrably run out of vocabulary.
 
-- Expand the initial vocabulary in the [agent guide](../spec/guide.md#semantic-ui-words) with examples and contextual aliases for `fab`, `tab-bar`, `bottom-sheet`, `toast` / `snackbar`, `swipe-row`, `carousel`, `switch`, `slider`, `dialog`, `list`, `grid`, `voice-chat`, `video-call`, `camera`, `music-player`, `video-player`, navigation bars, side nav, GNB and LNB. Media playback examples now establish the shared host contract for lifecycle events and normalized progress, buffer and volume inputs.
-- Expand presets or introduce a recipe layer that compiles patterns into ordinary nudg documents.
-- Keep pattern metadata outside the runtime unless several patterns prove they need a shared lower-level feature.
-- Define expected parts, states, events and motion for each recipe.
-- Document host responsibilities for markup, responsive layout, focus and accessibility. Check touch, pointer, keyboard and reduced-motion behavior on mobile and desktop examples.
-- Add examples and prompts that start from natural language: "make this a FAB", "add swipe actions", "show it as a bottom sheet".
+| Candidate | Evidence in current recipes | Decision gate |
+|---|---|---|
+| Layout arithmetic and relative snap points | Bottom sheet, swipe row and segmented control duplicate measured dimensions as constants | First priority: one expression model must work identically across all runtimes |
+| Pausable timers | Toast dismissal and video control auto-hide must pause for focus, hover, scrubbing or app suspension | Design timer ownership and deterministic resume semantics |
+| Keyframes | Reaction bursts and authored validation shakes need more than one kick | Add only with reduced-motion and interruption rules |
+| Sequence | Accordion requests already ask for the chevron and panel to move in order | Wait for a second independent recipe before adding syntax |
+| Decay | Free-scrolling carousel variants need inertial travel before snapping | Define velocity, bounds and interruption across platforms |
+| Continuous active motion | Pull-to-refresh still uses a CSS spinner workaround | Decide whether indefinite loops belong in nudg or remain a host visual |
+| Scroll direction and velocity | App bars can map position but cannot hide on down and reveal on up | Generalize as derived continuous inputs, not a header-only feature |
 
-Done when: an AI can reliably scaffold the same standard interaction from the same UI word, then only tune the motion values for taste.
+For each promoted primitive: start with the recipe contract and conformance case, implement TypeScript, Swift and Kotlin parity, then update the starter and judge tooling. `stagger`, collection coordination and screen transitions wait until recipes for lists, grids or flows supply concrete evidence.
+
+Done when: the highest-value current recipes no longer need duplicated layout constants or undocumented host animation, without turning nudg into a component library.
 
 ## Later: Screens, Flows and Richer Motion
 
@@ -98,7 +111,7 @@ Goal: make the TypeScript implementation and format stable enough for other peop
 - Mark the stable API for `@nudg/core`, `@nudg/core/dom`, `@nudg/core/react`, and `@nudg/core/node`.
 - Lock the judge workflow: `validate`, `simulate`, `compare`, `render`, `observe`, MCP, and the live demo.
 - Document upgrade paths for older `.nudg.json` files.
-- Decide whether semantic role metadata belongs in files, recipe metadata, or both.
+- Revisit semantic role metadata in files only if external recipe metadata proves insufficient; external metadata is the current decision.
 
 Done when: a user can adopt nudg in a production web/React component and trust that the format will not churn under them.
 

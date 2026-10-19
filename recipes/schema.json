@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nudg.dev/recipes/schema.json",
+  "title": "nudg recipe catalog",
+  "type": "object",
+  "required": ["version", "recipes"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "integer", "minimum": 1 },
+    "recipes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/recipe" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "stringList": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "recipe": {
+      "type": "object",
+      "required": ["id", "aliases", "summary", "starter", "examples", "parts", "states", "events", "inputs", "hostResponsibilities", "motion", "gaps"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "aliases": { "$ref": "#/$defs/stringList" },
+        "summary": { "type": "string", "minLength": 1 },
+        "starter": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "examples": { "$ref": "#/$defs/stringList" },
+        "parts": {
+          "type": "object",
+          "required": ["required", "optional"],
+          "properties": {
+            "required": { "$ref": "#/$defs/stringList" },
+            "optional": { "$ref": "#/$defs/stringList" }
+          },
+          "additionalProperties": false
+        },
+        "states": { "$ref": "#/$defs/stringList" },
+        "events": { "$ref": "#/$defs/stringList" },
+        "inputs": { "$ref": "#/$defs/stringList" },
+        "hostResponsibilities": { "$ref": "#/$defs/stringList" },
+        "motion": { "$ref": "#/$defs/stringList" },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["capability", "status", "need"],
+            "properties": {
+              "capability": { "type": "string", "minLength": 1 },
+              "status": { "enum": ["missing", "workaround"] },
+              "need": { "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -125,7 +125,7 @@ Libraries in `examples/motion/` carry the platforms' published spring values: `a
 
 ## Semantic UI words
 
-When a person describes UI in natural language, prefer a standard mobile-first pattern over inventing one-off motion code. Use the word to infer expected parts, states, gestures and motion, then express them with ordinary nudg fields.
+When a person describes UI in natural language, call `nudg_recipe` (or `nudg recipe <term>`) before writing the file. It resolves aliases to a versioned mobile-first contract with expected parts, states, events, inputs, host responsibilities, motion, known gaps and a validated starter. Then express any requested variation with ordinary nudg fields.
 
 | User says | Prefer |
 |---|---|
@@ -147,7 +147,7 @@ When a person describes UI in natural language, prefer a standard mobile-first p
 | app bar, toolbar, command bar | actions tied to the current view; show/hide or collapse on scroll only when the host supplies that input |
 | bottom nav, navigation bar, navigation rail, drawer, side nav, GNB, LNB | navigation selection and indicator motion; do not treat navigation items as destructive actions |
 
-Pattern words are guidance, not core syntax yet. If a file needs the intent, put it in `note` and use stable target names (`sheet`, `backdrop`, `handle`, `content`, `action`, `indicator`) so the next edit can find the right part.
+Pattern words live in external recipe metadata, not core syntax. Every shipped example links to one recipe, and recipe gaps are the evidence for adding lower-level motion features. If a file needs extra intent, put it in `note` and keep stable target names (`sheet`, `scrim`, `handle`, `content`, `action`, `indicator`) so the next edit can find the right part.
 
 ## Presets
 

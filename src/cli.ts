@@ -24,6 +24,7 @@ import { serveMcp } from "./node/mcp.ts";
 import { frameTimes, renderFrames } from "./node/render.ts";
 import { ACTIONS, checkAction, observe, type HostAction } from "./node/observe.ts";
 import { actionTarget, actionsToEvents, judgeHost } from "./core/observe.ts";
+import { findRecipe, formatRecipe, recipeCatalog, recipeSource } from "./node/recipes.ts";
 
 /** The package version, for what --share reports. */
 const VERSION_PKG: string = (() => {
@@ -68,6 +69,9 @@ simulate and plot options
   preset <name> [--options '{"scale":0.9}']
                             Print a preset (press, hover, toggle, toast) as a nudg file,
                             to save and edit: nudg preset press > press.nudg.json
+  recipe [name] [--json|--source]
+                            List semantic interaction contracts, or resolve a human UI term
+                            such as toggle, video chat or sheet. --source prints its starter file.
   compare <a> <b>           Two versions under the same events: says first whether a person
                             would notice the difference, then shows it. --html gives real A/B
                             filmstrips in rows; without it, both curves on one graph.
@@ -145,7 +149,7 @@ function parseArgs(argv: string[]): Args {
       continue;
     }
     const [name, inline] = arg.slice(2).split(/=(.*)/s, 2);
-    const boolean = ["json", "help", "reduced-motion", "open", "clear", "path", "print", "user", "share", "strict"].includes(name);
+    const boolean = ["json", "help", "reduced-motion", "open", "clear", "path", "print", "user", "share", "strict", "source"].includes(name);
     const value = boolean ? "" : (inline ?? argv[++i]);
     if (value === undefined || (!boolean && (value === "" || value.startsWith("--")))) fail(`Option --${name} needs a value.`);
     flags.set(name, [...(flags.get(name) ?? []), value]);
@@ -588,6 +592,25 @@ if (command === "critique") {
   process.exit(args.flags.has("strict") && warnings > 0 ? 1 : 0);
 }
 if (command === "compare") process.exit(await runCompare(args, json));
+if (command === "recipe") {
+  if (args.positional.length > 1) fail("recipe takes at most one name.");
+  const name = args.positional[0];
+  if (!name) {
+    if (args.flags.has("source")) fail("recipe --source needs a recipe name.");
+    const recipes = recipeCatalog().recipes;
+    process.stdout.write(
+      json
+        ? JSON.stringify({ recipes }, null, 2) + "\n"
+        : recipes.map((recipe) => `${recipe.id.padEnd(21)} ${recipe.summary}`).join("\n") + "\n",
+    );
+    process.exit(0);
+  }
+  const recipe = findRecipe(name);
+  if (!recipe) fail(`Unknown recipe "${name}". Run nudg recipe to list names and aliases.`);
+  if (args.flags.has("source")) process.stdout.write(recipeSource(recipe));
+  else process.stdout.write(json ? JSON.stringify(recipe, null, 2) + "\n" : formatRecipe(recipe) + "\n");
+  process.exit(0);
+}
 if (command === "preset") {
   const name = args.positional[0] as PresetName | undefined;
   if (!name || !(name in presets)) fail(`preset needs one of: ${Object.keys(presets).join(", ")}.`);
@@ -644,4 +667,4 @@ if (command === "mcp") {
   await serveMcp();
   process.exit(0);
 }
-fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, compile, critique, observe, preset, log, skill, mcp.`);
+fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, compile, critique, observe, recipe, preset, log, skill, mcp.`);

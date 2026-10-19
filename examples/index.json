@@ -37,6 +37,7 @@
   "examples": [
     {
       "id": "ios-toggle",
+      "recipe": "switch",
       "title": "iOS toggle",
       "category": "platform",
       "tags": [
@@ -53,6 +54,7 @@
     },
     {
       "id": "material-switch",
+      "recipe": "switch",
       "title": "Material switch",
       "category": "platform",
       "tags": [
@@ -69,6 +71,7 @@
     },
     {
       "id": "toggle",
+      "recipe": "switch",
       "title": "Toggle",
       "category": "toggles",
       "tags": [
@@ -84,6 +87,7 @@
     },
     {
       "id": "toggle-press",
+      "recipe": "switch",
       "title": "Toggle with press",
       "category": "toggles",
       "tags": [
@@ -100,6 +104,7 @@
     },
     {
       "id": "toggle-drag",
+      "recipe": "switch",
       "title": "Draggable toggle",
       "category": "toggles",
       "tags": [
@@ -118,6 +123,7 @@
     },
     {
       "id": "button-press",
+      "recipe": "button",
       "title": "Button press",
       "category": "buttons",
       "tags": [
@@ -133,6 +139,7 @@
     },
     {
       "id": "hover-card",
+      "recipe": "card",
       "title": "Hover card",
       "category": "buttons",
       "tags": [
@@ -149,6 +156,7 @@
     },
     {
       "id": "like",
+      "recipe": "reaction",
       "title": "Like",
       "category": "buttons",
       "tags": [
@@ -165,6 +173,7 @@
     },
     {
       "id": "swipe-row",
+      "recipe": "swipe-row",
       "title": "Swipe row",
       "category": "lists",
       "tags": [
@@ -182,6 +191,7 @@
     },
     {
       "id": "accordion",
+      "recipe": "accordion",
       "title": "Accordion",
       "category": "lists",
       "tags": [
@@ -199,6 +209,7 @@
     },
     {
       "id": "carousel",
+      "recipe": "carousel",
       "title": "Carousel",
       "category": "lists",
       "tags": [
@@ -216,6 +227,7 @@
     },
     {
       "id": "pull-to-refresh",
+      "recipe": "pull-to-refresh",
       "title": "Pull to refresh",
       "category": "lists",
       "tags": [
@@ -234,6 +246,7 @@
     },
     {
       "id": "segmented",
+      "recipe": "segmented-control",
       "title": "Segmented control",
       "category": "navigation",
       "tags": [
@@ -250,6 +263,7 @@
     },
     {
       "id": "tabs",
+      "recipe": "tabs",
       "title": "Tabs",
       "category": "navigation",
       "tags": [
@@ -266,6 +280,7 @@
     },
     {
       "id": "bottom-sheet",
+      "recipe": "bottom-sheet",
       "title": "Bottom sheet",
       "category": "overlays",
       "tags": [
@@ -285,6 +300,7 @@
     },
     {
       "id": "toast",
+      "recipe": "toast",
       "title": "Toast",
       "category": "feedback",
       "tags": [
@@ -302,6 +318,7 @@
     },
     {
       "id": "shake",
+      "recipe": "validation-feedback",
       "title": "Shake on error",
       "category": "feedback",
       "tags": [
@@ -318,6 +335,7 @@
     },
     {
       "id": "slider",
+      "recipe": "slider",
       "title": "Slider",
       "category": "toggles",
       "tags": [
@@ -337,6 +355,7 @@
     },
     {
       "id": "tooltip",
+      "recipe": "tooltip",
       "title": "Tooltip",
       "category": "feedback",
       "tags": [
@@ -354,6 +373,7 @@
     },
     {
       "id": "dialog",
+      "recipe": "dialog",
       "title": "Dialog",
       "category": "overlays",
       "tags": [
@@ -372,6 +392,7 @@
     },
     {
       "id": "microphone",
+      "recipe": "voice-chat",
       "title": "Voice chat",
       "category": "media",
       "tags": [
@@ -389,6 +410,7 @@
     },
     {
       "id": "video-call",
+      "recipe": "video-call",
       "title": "Video call",
       "category": "media",
       "tags": [
@@ -406,6 +428,7 @@
     },
     {
       "id": "camera",
+      "recipe": "camera",
       "title": "Camera",
       "category": "media",
       "tags": [
@@ -423,6 +446,7 @@
     },
     {
       "id": "music-player",
+      "recipe": "music-player",
       "title": "Music player",
       "category": "media",
       "tags": [
@@ -440,6 +464,7 @@
     },
     {
       "id": "video-player",
+      "recipe": "video-player",
       "title": "Video player",
       "category": "media",
       "tags": [
@@ -457,6 +482,7 @@
     },
     {
       "id": "scroll-header",
+      "recipe": "app-bar",
       "title": "Shrinking app bar",
       "category": "navigation",
       "tags": [

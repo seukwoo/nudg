@@ -4,7 +4,7 @@ The CLI, the MCP server, the React and DOM adapters, and the platform motion lib
 
 ## CLI
 
-`nudg validate`, `simulate`, `plot`, `render`, `compare`, `observe` and `preset` are the same tools an agent gets over MCP. Every command takes `--json` for machine-readable output, and `nudg --help` lists all options. From a clone, run `node src/cli.ts` in place of `npx nudg`.
+`nudg recipe`, `validate`, `simulate`, `plot`, `render`, `compare`, `observe` and `preset` are the same tools an agent gets over MCP. Every command takes `--json` for machine-readable output, and `nudg --help` lists all options. From a clone, run `node src/cli.ts` in place of `npx nudg`.
 
 ### validate
 
@@ -156,6 +156,17 @@ nudg preset toast --options '{"duration": 5}'
 ```
 
 Prints a preset (`press`, `hover`, `toggle`, `toast`) as a nudg file. The same presets are `presets.*` in `@nudg/core` and `@nudg/core/react`, for use without a file: `useNudg(presets.press())`, `playDoc(presets.hover(), element)`.
+
+### recipe
+
+```sh
+nudg recipe
+nudg recipe "video chat"
+nudg recipe sheet --json
+nudg recipe toggle --source > toggle.nudg.json
+```
+
+With no name, lists the semantic interaction contracts. A name or alias returns the recipe's parts, states, events, inputs, host responsibilities, motion, starter and known format gaps. `--source` prints the validated starter `.nudg.json` instead. The same lookup is available to agents as `nudg_recipe`; the package exports the raw catalog as `@nudg/core/recipes.json` and its schema as `@nudg/core/recipes.schema.json`.
 
 ### Layout without a page
 

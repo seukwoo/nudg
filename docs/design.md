@@ -182,7 +182,7 @@ These are unresolved design choices. Scheduling and completion status live in th
 - Transitions that cross machine levels (to a parent's sibling, into a nested state).
 - A final state in the grammar (`"final": true`, as in statecharts) to say "this state means the component is gone". Today the host names exit states in the adapter options (`exit: "hidden"`), because mounting and unmounting are the host's lifecycle; a file-level marker would let the tools (`observe`, the guide) know it too.
 - Layout: see [the proposal above](#proposal-layout-as-input-format-04). Still open: arithmetic on measurements (`times`, `plus`) and measuring across players.
-- Pattern metadata: whether files should eventually declare a role such as `"role": "bottom-sheet"` or whether roles remain external recipe metadata.
+- Pattern metadata currently lives in the versioned external recipe catalog. Revisit a file-level role such as `"role": "bottom-sheet"` only if generation or validation needs cannot be met without changing runtime documents.
 - Pattern aliases and locale: how to map common design words such as FAB, snackbar, toast, tabs, tab bar, bottom nav, GNB, LNB and side nav without making the core format depend on one design system's names.
 - Decay (fling, inertia) as a motion of its own, for scroll-like content without snap points. Snapping is covered by `nearest`.
 - Reduced motion inside the format: a way for a file to say which properties must not be reduced (a progress bar's width), beyond the runtime's blanket option.

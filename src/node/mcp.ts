@@ -24,6 +24,7 @@ import { comparePage, lastRuntimeInlined, readWithImports } from "./compare-page
 import { compilePath } from "./load.ts";
 import { ACTIONS, checkAction, observe, type HostAction } from "./observe.ts";
 import { frameTimes, renderFrames } from "./render.ts";
+import { findRecipe, formatRecipe, recipeCatalog, recipeSource } from "./recipes.ts";
 
 const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const GUIDE = resolve(dirname(fileURLToPath(import.meta.url)), "../../spec/guide.md");
@@ -38,7 +39,7 @@ const PACKAGE_VERSION: string = (() => {
 })();
 
 const INSTRUCTIONS = `nudg files (*.nudg.json) describe UI interactions: states, events, and spring or tween motion.
-If you haven't written one before, call nudg_guide first. After any edit, call nudg_validate and apply its hints until it reports no errors.
+When the person names a standard UI pattern such as a switch, sheet, video chat, or media player, call nudg_recipe first. It gives the expected parts, states, events, host responsibilities, motion and a validated starter without expanding the runtime vocabulary. If you haven't written a nudg file before, call nudg_guide. After any edit, call nudg_validate and apply its hints until it reports no errors.
 When you change motion for a person to judge, call nudg_compare with the version before and after: it says first whether the difference is perceptible, then shows both side by side (real A/B filmstrips when the host page's HTML is given). Pass its headline on to the person; if it suggests an exaggerated version, offer that. When nudg_compare says a change has taken several rounds, ask the person once whether they'd share what made it hard; if they agree, call nudg_share with their words and give them the link (they submit it; never claim it was sent). After writing or changing a file, call nudg_critique once and fix its warnings: it checks the motion against the platforms' guidelines (too slow, late press feedback, invisible, bouncy fades, slow exits). Use nudg_simulate for numbers, nudg_plot for one version's graph, nudg_render for one version's frames. The file says what should happen; nudg_observe says what the real page showed: after wiring a file into an app, or when the person says it doesn't look right, call it with the running page's URL and the file, and report what it found (a page that never shows the motion, an element that unmounts mid-motion, a CSS transition fighting the spring).`;
 
 type Json = Record<string, unknown>;
@@ -91,6 +92,19 @@ const TOOLS = [
     title: "nudg format guide",
     description: "The nudg format in one page: skeleton, vocabulary, motion forms, structure rules, and which field to change for requests like \"bouncier\" or \"snappier\". Read it before writing your first nudg file.",
     inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true },
+  },
+  {
+    name: "nudg_recipe",
+    title: "Resolve a semantic UI recipe",
+    description: "Turn a common UI term such as toggle, FAB, sheet, voice call, video chat, or media player into a stable interaction contract: required and optional parts, states, events, continuous inputs, host responsibilities, motion, known format gaps, and a validated starter example. Omit name to list available recipes.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Recipe name or human alias, e.g. switch, toggle, video chat, sheet, or audio player." },
+        source: { type: "boolean", description: "Include the starter .nudg.json source. Default false." },
+      },
+    },
     annotations: { readOnlyHint: true },
   },
   {
@@ -311,6 +325,24 @@ async function runTool(name: string, args: Json): Promise<ToolResult> {
     switch (name) {
       case "nudg_guide":
         return { content: [text(readFileSync(GUIDE, "utf8"))] };
+      case "nudg_recipe": {
+        const name = optionalString(args.name, "name");
+        if (!name) {
+          const recipes = recipeCatalog().recipes;
+          return {
+            content: [text(recipes.map((recipe) => `${recipe.id}: ${recipe.summary}`).join("\n"))],
+            structuredContent: { recipes: recipes.map(({ id, aliases, summary }) => ({ id, aliases, summary })) } as unknown as Json,
+          };
+        }
+        const recipe = findRecipe(name);
+        if (!recipe) throw new ToolError(`Unknown recipe "${name}". Call nudg_recipe without a name to list recipes and aliases.`);
+        if (args.source !== undefined && typeof args.source !== "boolean") throw new ToolError("`source` must be a boolean.");
+        const starterSource = args.source ? recipeSource(recipe) : undefined;
+        return {
+          content: [text(`${formatRecipe(recipe)}${starterSource ? `\n\nStarter source:\n\`\`\`json\n${starterSource.trim()}\n\`\`\`` : ""}`)],
+          structuredContent: { recipe, ...(starterSource ? { source: starterSource } : {}) } as unknown as Json,
+        };
+      }
       case "nudg_validate":
         return validateTool(args);
       case "nudg_simulate":

@@ -49,7 +49,7 @@ test("lists the tools with input schemas", async () => {
   const { result } = await request("tools/list");
   assert.deepEqual(
     result.tools.map((t: { name: string }) => t.name),
-    ["nudg_guide", "nudg_validate", "nudg_simulate", "nudg_plot", "nudg_compare", "nudg_render", "nudg_critique", "nudg_share", "nudg_observe"],
+    ["nudg_guide", "nudg_recipe", "nudg_validate", "nudg_simulate", "nudg_plot", "nudg_compare", "nudg_render", "nudg_critique", "nudg_share", "nudg_observe"],
   );
   for (const tool of result.tools) assert.equal(tool.inputSchema.type, "object");
 });
@@ -63,6 +63,16 @@ test("answers unknown methods and tools with JSON-RPC errors", async () => {
 test("guide returns the format reference", async () => {
   const result = await call("nudg_guide", {});
   assert.match(result.content[0].text, /Words to edits/);
+});
+
+test("recipe resolves human UI terms and can return a starter", async () => {
+  const listed = await call("nudg_recipe", {});
+  assert.ok(listed.structuredContent.recipes.some((recipe: any) => recipe.id === "bottom-sheet"));
+  const result = await call("nudg_recipe", { name: "video chat", source: true });
+  assert.equal(result.structuredContent.recipe.id, "video-call");
+  assert.match(result.structuredContent.source, /"host\.camera-off"/);
+  const missing = await call("nudg_recipe", { name: "mystery control" });
+  assert.equal(missing.isError, true);
 });
 
 test("validate reports codes, paths and hints for inline source", async () => {

@@ -358,11 +358,12 @@ test("music player connects transport controls to real media and nudg inputs", {
       return {
         label: root.querySelector(".music-player").getAttribute("aria-label"),
         title: root.querySelector(".meta strong").textContent,
+        artwork: [root.querySelector(".artwork").getAttribute("src"), root.querySelector(".artwork").complete, root.querySelector(".artwork").naturalWidth],
         controls: [".media-back", ".media-toggle", ".media-stop", ".media-forward", ".media-repeat", ".media-mute", ".media-volume", ".media-rate"].every((selector) => root.querySelector(selector)),
         muteLabel: root.querySelector(".media-mute").getAttribute("aria-label"),
       };
     })()`),
-    { label: "Music player", title: "Afterglow", controls: true, muteLabel: "Mute" },
+    { label: "Music player", title: "Afterglow", artwork: ["../examples/media/afterglow-cover.png", true, 320], controls: true, muteLabel: "Mute" },
   );
   const musicDuration = await browser.evaluate(`(() => { const root = document.getElementById("detail-stage").shadowRoot; return [root.querySelector("audio").duration, root.querySelector(".media-seek").max]; })()`);
   assert.ok(musicDuration[0] > 11 && musicDuration[0] < 13, `audio duration was ${musicDuration[0]}`);
@@ -401,7 +402,7 @@ test("music player connects transport controls to real media and nudg inputs", {
   assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.media-repeat').getAttribute('aria-pressed')"), "true");
   await browser.evaluate("document.getElementById('detail-reset').click()");
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('paused') ? true : undefined"), 5_000);
-  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('audio').getAttribute('src')"), "/examples/media/afterglow.mp3");
+  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('audio').getAttribute('src')"), "../examples/media/afterglow.mp3");
 });
 
 test("video player exposes playback, auto-hide, PiP and fullscreen controls", { skip }, async () => {
@@ -412,11 +413,12 @@ test("video player exposes playback, auto-hide, PiP and fullscreen controls", { 
       const root = document.getElementById("detail-stage").shadowRoot;
       return {
         label: root.querySelector(".video-player").getAttribute("aria-label"),
+        source: root.querySelector("video").getAttribute("src"),
         dimensions: [root.querySelector("video").videoWidth, root.querySelector("video").videoHeight],
         controls: [".media-toggle", ".media-stop", ".media-seek", ".media-mute", ".media-volume", ".media-rate", ".media-pip", ".media-fullscreen"].every((selector) => root.querySelector(selector)),
       };
     })()`),
-    { label: "Video player", dimensions: [640, 360], controls: true },
+    { label: "Video player", source: "../examples/media/color-drift.webm", dimensions: [640, 360], controls: true },
   );
 
   await browser.evaluate(`(() => {

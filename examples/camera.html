@@ -15,10 +15,11 @@
     .recording::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #ff5a61; }
     .start, .capture-controls, .review { position: absolute; z-index: 4; }
     .start { inset: auto 10px 10px; width: calc(100% - 20px); height: 34px; border: 0; border-radius: 6px; color: #173d35; background: #effbf6; font: inherit; font-weight: 800; cursor: pointer; }
-    .capture-controls { inset: auto 10px 8px; height: 48px; display: grid; grid-template-columns: 70px 1fr 70px; align-items: end; }
-    .modes { position: relative; align-self: center; height: 24px; display: grid; grid-template-columns: 1fr 1fr; border-radius: 5px; background: rgba(8, 23, 19, 0.68); }
-    .mode-indicator { position: absolute; width: 46px; height: 24px; border-radius: 5px; background: #effbf6; }
-    .modes button { position: relative; z-index: 1; width: 46px; padding: 0; border: 0; color: #fff; background: transparent; font: inherit; font-weight: 750; cursor: pointer; mix-blend-mode: difference; }
+    .capture-controls { inset: auto 10px 8px; height: 48px; display: grid; grid-template-columns: 1fr 42px 1fr; gap: 8px; align-items: end; }
+    .modes { position: relative; width: 96px; height: 24px; align-self: center; justify-self: start; display: grid; grid-template-columns: repeat(2, 48px); overflow: hidden; border-radius: 5px; background: rgba(8, 23, 19, 0.76); }
+    .mode-indicator { position: absolute; width: 48px; height: 24px; border-radius: 5px; background: #effbf6; }
+    .modes button { position: relative; z-index: 1; width: 48px; padding: 0; border: 0; color: #fff; background: transparent; font: inherit; font-weight: 750; cursor: pointer; }
+    .modes button[aria-pressed="true"] { color: #173d35; }
     .shutter { justify-self: center; width: 42px; height: 42px; padding: 4px; border: 2px solid #fff; border-radius: 50%; background: transparent; cursor: pointer; }
     .shutter::after { content: ""; display: block; width: 100%; height: 100%; border-radius: 50%; background: currentColor; }
     .flip { justify-self: end; width: 52px; height: 28px; border: 1px solid rgba(255,255,255,.25); border-radius: 5px; color: #fff; background: rgba(8, 23, 19, 0.68); font: inherit; font-weight: 750; cursor: pointer; }
@@ -84,14 +85,14 @@
     document.querySelector(".start").addEventListener("click", async () => {
       player.send("host.start");
       status.value = "Requesting camera";
-      try { await media.start(); player.send("host.ready"); status.value = "Camera ready"; }
+      try { await media.start(); player.send("host.ready"); status.value = media.hasAudio ? "Camera ready" : "Camera ready · no mic"; }
       catch { player.send("host.failed"); status.value = "Camera unavailable"; }
     });
     document.querySelector(".photo-mode").addEventListener("click", () => setMode("photo"));
     document.querySelector(".video-mode").addEventListener("click", () => setMode("video"));
     document.querySelector(".flip").addEventListener("click", async () => {
       status.value = "Switching camera";
-      try { await media.switchFacing(); status.value = "Camera ready"; }
+      try { await media.switchFacing(); status.value = media.hasAudio ? "Camera ready" : "Camera ready · no mic"; }
       catch { status.value = "Could not switch camera"; }
     });
     document.querySelector(".shutter").addEventListener("click", () => {

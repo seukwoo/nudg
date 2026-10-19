@@ -38,7 +38,7 @@
       <button class="join" type="button" data-nudg="join">Join video</button>
       <div class="actions" data-nudg="actions">
         <button class="camera" type="button" data-nudg="camera" aria-pressed="false">Camera</button>
-        <button class="mute" type="button" data-nudg="mute" aria-pressed="false">Mute</button>
+        <button class="mute" type="button" data-nudg="mute" aria-label="Mute microphone" aria-pressed="false">Mute</button>
         <button class="flip" type="button" data-nudg="flip">Flip</button>
         <button class="leave" type="button">Leave</button>
       </div>
@@ -81,6 +81,17 @@
       elapsed.dateTime = "PT0S";
       camera.setAttribute("aria-pressed", "false");
       mute.setAttribute("aria-pressed", "false");
+      mute.disabled = false;
+      mute.textContent = "Mute";
+      mute.setAttribute("aria-label", "Mute microphone");
+    };
+    const syncMicrophone = () => {
+      micOn = media.hasAudio;
+      mute.disabled = !media.hasAudio;
+      mute.textContent = media.hasAudio ? "Mute" : "Mic";
+      mute.setAttribute("aria-label", media.hasAudio ? "Mute microphone" : "Microphone unavailable");
+      mute.setAttribute("aria-pressed", "false");
+      return media.hasAudio;
     };
     join.addEventListener("click", async () => {
       if (media.stream) return;
@@ -89,7 +100,7 @@
       try {
         await media.start();
         player.send("host.connected");
-        status.value = "Connected · camera on";
+        status.value = syncMicrophone() ? "Connected · camera on" : "Connected · camera only";
         started = performance.now();
         showTime();
         timer = setInterval(showTime, 1000);
@@ -114,7 +125,7 @@
     flip.addEventListener("click", async () => {
       player.send("host.flip");
       flip.disabled = true;
-      try { await media.switchFacing(); player.send("host.flipped"); }
+      try { await media.switchFacing(); syncMicrophone(); player.send("host.flipped"); }
       catch { player.send("host.failed"); status.value = "Could not switch camera"; }
       flip.disabled = false;
     });

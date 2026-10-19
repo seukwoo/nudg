@@ -5,7 +5,7 @@ import { oklabToHex } from "./color.ts";
 import { easeAt, easeSlope } from "./ease.ts";
 import { interpolate } from "./map.ts";
 import { springAt } from "./spring.ts";
-import type { Channels, Follow, Machine, Measure, Motion, Program, State, Transition } from "./types.ts";
+import type { Channels, Follow, Machine, Measure, Motion, Program, State, TimerPause, Transition } from "./types.ts";
 
 export type Value = number | string;
 
@@ -61,6 +61,9 @@ interface Pending {
   machine: StatesMachine;
   state: State;
   transition: Transition;
+  pause: TimerPause[];
+  blockers: Set<number>;
+  pausedAt?: number;
 }
 
 /** Rest thresholds for `settled`, per channel. Advisory: values are never snapped. */
@@ -113,7 +116,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     act.set(machine, name);
     const state = machine.states.get(name)!;
     entered.push(state);
-    if (act === active) for (const timer of state.timers) pending.push({ due: t + timer.delay, order: order++, machine, state, transition: timer.transition });
+    if (act === active) for (const timer of state.timers) pending.push({ due: t + timer.delay, order: order++, machine, state, transition: timer.transition, pause: timer.pause, blockers: new Set() });
     if (state.machine) enterMachine(state.machine, act, entered, t);
   }
 
@@ -375,7 +378,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
   function fireDue(t: number) {
     for (;;) {
       let next: Pending | undefined;
-      for (const p of pending) if (p.due <= t + 1e-9 && (!next || p.due < next.due || (p.due === next.due && p.order < next.order))) next = p;
+      for (const p of pending) if (p.pausedAt === undefined && p.due <= t + 1e-9 && (!next || p.due < next.due || (p.due === next.due && p.order < next.order))) next = p;
       if (!next) return;
       pending.splice(pending.indexOf(next), 1);
       const fired: Transition[] = [];
@@ -383,6 +386,27 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       perform(next.machine, next.transition, next.due, fired, entered);
       settle(next.due, fired, entered);
     }
+  }
+
+  /** Applies all pause reasons owned by timers that were active when this event arrived. */
+  function controlTimers(event: string, t: number): boolean {
+    let handled = false;
+    for (const timer of pending) {
+      timer.pause.forEach((pair, i) => {
+        if (event === pair.on) {
+          handled = true;
+          if (timer.blockers.has(i)) return;
+          if (timer.blockers.size === 0) timer.pausedAt = t;
+          timer.blockers.add(i);
+        } else if (event === pair.off) {
+          handled = true;
+          if (!timer.blockers.delete(i) || timer.blockers.size !== 0) return;
+          timer.due += t - timer.pausedAt!;
+          timer.pausedAt = undefined;
+        }
+      });
+    }
+    return handled;
   }
 
   function advanceTo(t: number) {
@@ -414,7 +438,8 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       }
       const fired: Transition[] = [];
       const entered: State[] = [];
-      if (!handle(program.machine, event, t, fired, entered)) return false;
+      const timerHandled = controlTimers(event, t);
+      if (!handle(program.machine, event, t, fired, entered)) return timerHandled;
       settle(t, fired, entered);
       return true;
     },
@@ -506,7 +531,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
 
     settled(t, property) {
       advanceTo(t);
-      if (property === undefined && pending.length) return false;
+      if (property === undefined && pending.some((timer) => timer.pausedAt === undefined)) return false;
       const keys = property === undefined ? [...program.properties.keys()] : [property];
       return keys.every((key) => {
         const prop = program.properties.get(key);

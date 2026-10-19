@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Format 0.6: arithmetic on layout measurements.** Measured sizes and aligned positions accept optional `times` and `plus` fields, evaluated as `measurement * times + plus`. TypeScript, Swift and Kotlin share the same conformance case and compiled-program representation. Bottom-sheet snap states and swipe-row resting width now derive from host layout; the segmented indicator measures each segment directly. Schema 0.6.
+- **Format 0.7: pausable timers.** An `after:` transition can declare independent `{ "on", "off" }` pause reasons. The first active reason freezes the remaining duration and the final one resumes it; state re-entry resets everything, and a due timer still wins a same-time event tie. TypeScript, Swift and Kotlin share conformance and compiled-program behavior. Toast reading time now pauses for hover, focus and app suspension; video-control auto-hide pauses for hover, focus, scrubbing and suspension. Schema 0.7.
 
 ## 0.8.0
 

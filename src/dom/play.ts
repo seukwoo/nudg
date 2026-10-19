@@ -268,8 +268,8 @@ export function play(program: Program, root: ParentNode | null = document, optio
       ],
       ["pointerenter", (e) => (e as PointerEvent).pointerType !== "touch" && emit(`${name}.hoverstart`)],
       ["pointerleave", (e) => (e as PointerEvent).pointerType !== "touch" && emit(`${name}.hoverend`)],
-      ["focus", () => emit(`${name}.focus`)],
-      ["blur", () => emit(`${name}.blur`)],
+      ["focusin", () => emit(`${name}.focus`)],
+      ["focusout", (e) => !el.contains((e as FocusEvent).relatedTarget as Node | null) && emit(`${name}.blur`)],
       [
         "keydown",
         (e) => {
@@ -476,6 +476,7 @@ function keyEventsOf(program: Program): Set<string> {
     addEvents(machine.when.keys());
     for (const state of machine.states.values()) {
       addEvents(state.when.keys());
+      for (const timer of state.timers) for (const pair of timer.pause) addEvents([pair.on, pair.off]);
       if (state.machine) walk(state.machine);
     }
   };
@@ -500,6 +501,7 @@ function dragTargets(program: Program): Set<string> {
     addEvents(machine.when.keys());
     for (const state of machine.states.values()) {
       addEvents(state.when.keys());
+      for (const timer of state.timers) for (const pair of timer.pause) addEvents([pair.on, pair.off]);
       for (const follow of state.follow.values()) out.add(follow.input.split(".")[0]);
       if (state.machine) walk(state.machine);
     }

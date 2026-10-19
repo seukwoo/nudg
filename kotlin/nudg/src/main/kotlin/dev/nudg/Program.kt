@@ -21,7 +21,8 @@ data class Follow(val input: String, val range: Pair<Double, Double>?, val overd
 data class Nearest(val states: List<String>, val by: String, val momentum: Double)
 
 class Transition(val to: String?, val nearest: Nearest?, val animate: List<Pair<String, Motion>>, val step: List<Pair<String, Double>>?, val commit: List<String>?)
-class Timer(val key: String, val delay: Double, val transition: Transition)
+data class TimerPause(val on: String, val off: String)
+class Timer(val key: String, val delay: Double, val transition: Transition, val pause: List<TimerPause>)
 
 class State(
     val name: String,
@@ -119,7 +120,14 @@ class Program(val version: String, val targets: List<String>, val properties: Li
                 },
                 list(s["enter"]).map { e -> obj(e).let { (it["key"] as String) to motion(it["motion"]) } },
                 list(s["when"]).map { w -> obj(w).let { (it["event"] as String) to transition(it) } },
-                list(s["timers"]).map { t -> obj(t).let { Timer(it["key"] as String, it["delay"] as Double, transition(it["transition"])) } },
+                list(s["timers"]).map { t -> obj(t).let {
+                    Timer(
+                        it["key"] as String,
+                        it["delay"] as Double,
+                        transition(it["transition"]),
+                        list(it["pause"]).map { p -> obj(p).let { pair -> TimerPause(pair["on"] as String, pair["off"] as String) } },
+                    )
+                } },
                 s["machine"]?.let(::machine),
             )
         }

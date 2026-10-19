@@ -1250,6 +1250,92 @@ def validation_v06_cases():
     })
 
 
+# --- v0.7: pausable timers --------------------------------------------------
+
+PAUSABLE_TIMER = {
+    "nudg": "0.7",
+    "targets": ["toast"],
+    "values": {"toast.opacity": 0},
+    "initial": "hidden",
+    "when": {"host.show": "shown"},
+    "states": {
+        "hidden": {},
+        "shown": {
+            "set": {"toast.opacity": 1},
+            "when": {
+                "after:1s": {
+                    "to": "hidden",
+                    "pause": [
+                        {"on": "toast.hoverstart", "off": "toast.hoverend"},
+                        {"on": "toast.focus", "off": "toast.blur"},
+                        {"on": "host.suspend", "off": "host.resume"},
+                    ],
+                },
+            },
+        },
+    },
+}
+
+
+def pausable_timer_cases():
+    steps = [
+        {"t": 0, "send": "host.show"},
+        {"t": 0.4, "send": "toast.hoverstart"},
+        {"t": 0.8, "send": "toast.focus"},
+        {"t": 1.0, "send": "toast.hoverend"},
+        {"t": 2.0, "expect": {"state": ["shown"], "values": {"toast.opacity": 1}}},
+        {"t": 2.2, "send": "toast.blur"},
+        {"t": 2.79, "expect": {"state": ["shown"]}},
+        {"t": 2.8, "expect": {"state": ["hidden"], "values": {"toast.opacity": 0}}},
+        # Re-entering the state resets both remaining time and pause blockers.
+        {"t": 3.0, "send": "host.show"},
+        {"t": 3.2, "send": "host.suspend"},
+        {"t": 3.5, "send": "host.show"},
+        {"t": 4.49, "expect": {"state": ["shown"]}},
+        {"t": 4.5, "expect": {"state": ["hidden"]}},
+        # A timer due at the same instant fires before the incoming pause event.
+        {"t": 5.0, "send": "host.show"},
+        {"t": 6.0, "send": "toast.hoverstart", "handled": False},
+        {"t": 6.0, "expect": {"state": ["hidden"]}},
+    ]
+    write("timer-pause", {
+        "conformance": "0.7",
+        "name": "Timer pause: overlapping reasons preserve remaining time; re-entry resets; a due timer wins a tie",
+        "doc": PAUSABLE_TIMER,
+        "steps": steps,
+    })
+
+
+def validation_v07_cases():
+    def doc():
+        return json.loads(json.dumps(PAUSABLE_TIMER))
+
+    out = []
+    d = doc()
+    d["nudg"] = "0.6"
+    out.append(("needs-version", d, [("needs-version", "/states/shown/when/after:1s/pause")]))
+    d = doc()
+    d["states"]["shown"]["when"]["after:1s"]["pause"] = "hover"
+    out.append(("pause-not-array", d, [("invalid-timer-pause", "/states/shown/when/after:1s/pause")]))
+    d = doc()
+    del d["states"]["shown"]["when"]["after:1s"]["pause"][0]["off"]
+    out.append(("missing-off", d, [("invalid-timer-pause", "/states/shown/when/after:1s/pause/0/off")]))
+    d = doc()
+    d["states"]["shown"]["when"]["after:1s"]["pause"][0]["on"] = "toast.over"
+    out.append(("invalid-event", d, [("unknown-event", "/states/shown/when/after:1s/pause/0/on")]))
+    d = doc()
+    d["states"]["shown"]["when"]["after:1s"]["pause"][0]["off"] = "toast.hoverstart"
+    out.append(("same-events", d, [("invalid-timer-pause", "/states/shown/when/after:1s/pause/0/off")]))
+    d = doc()
+    d["states"]["shown"]["when"]["toast.tap"] = {"to": "hidden", "pause": [{"on": "toast.hoverstart", "off": "toast.hoverend"}]}
+    out.append(("pause-on-event-transition", d, [("unknown-key", "/states/shown/when/toast.tap/pause")]))
+    write("validation-0.7", {
+        "conformance": "0.7",
+        "name": "Validator (0.7): pausable timers",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 if __name__ == "__main__":
     toggle_cases()
     spring_form_cases()
@@ -1271,4 +1357,6 @@ if __name__ == "__main__":
     validation_v05_cases()
     layout_arithmetic_cases()
     validation_v06_cases()
+    pausable_timer_cases()
+    validation_v07_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

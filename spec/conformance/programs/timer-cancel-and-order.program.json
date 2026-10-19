@@ -82,6 +82,7 @@
      {
       "key": "after:500ms",
       "delay": 0.5,
+      "pause": [],
       "transition": {
        "animate": [],
        "to": "hidden"

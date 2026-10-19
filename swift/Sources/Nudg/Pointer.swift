@@ -16,7 +16,11 @@ public extension Program {
       case let .regions(regions): for (_, r) in regions { walk(r) }
       case let .states(_, states, when):
         for (e, _) in when { out.insert(e) }
-        for s in states { for (e, _) in s.when { out.insert(e) }; if let inner = s.machine { walk(inner) } }
+        for s in states {
+          for (e, _) in s.when { out.insert(e) }
+          for timer in s.timers { for pair in timer.pause { out.insert(pair.on); out.insert(pair.off) } }
+          if let inner = s.machine { walk(inner) }
+        }
       }
     }
     walk(machine)

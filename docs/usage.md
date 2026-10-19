@@ -108,12 +108,10 @@ nudg critique toast.nudg.json
 Valid isn't the same as good. `critique` plays every transition from rest and checks it against the platforms' motion guidelines and accessibility rules:
 
 ```
-toast.nudg.json: 0 warnings, 1 suggestions (5 transitions checked).
-
-suggestion short-timeout at /states/shown/when/after:3s: shown goes away after 3 s, and nothing pauses it.
-  fix: Give people time to read it: Material snackbars stay 4–10 s. Pause it while hovered or focused, or let it be dismissed instead.
-  from: WCAG 2.2.2 Pause, Stop, Hide / 2.2.1 Timing Adjustable
+toast.nudg.json: 0 warnings, 0 suggestions (5 transitions checked).
 ```
+
+The toast passes because its 3 s timer pauses for hover, focus and app suspension. The same timer without 0.7 `pause` pairs produces `short-timeout` with its WCAG source and a concrete fix.
 
 | Code | When |
 |---|---|
@@ -122,7 +120,7 @@ suggestion short-timeout at /states/shown/when/after:3s: shown goes away after 3
 | `invisible-change` | Everything a transition moves stays under a pixel or 2%. |
 | `bouncy-fade` | Opacity or a color springs with overshoot, which is clipped and only delays settling. |
 | `slow-exit` | Going back to the initial state takes clearly longer than leaving it (not a press's release). |
-| `short-timeout` | Something shown goes away by itself in under 4 s. |
+| `short-timeout` | Something shown goes away by itself in under 4 s without a pause mechanism. |
 | `no-escape` | A dialog, sheet, menu or popover can be closed, but not with Escape. |
 
 Findings are warnings or suggestions, never errors; `--strict` exits 1 on warnings, for CI. Over MCP it is `nudg_critique`, and the server tells the agent to run it after every change.

@@ -79,6 +79,12 @@ export function handledEvents(program: Program): Set<string> {
     for (const key of machine.when.keys()) out.add(key);
     for (const state of machine.states.values()) {
       for (const key of state.when.keys()) out.add(key);
+      for (const timer of state.timers) {
+        for (const pair of timer.pause) {
+          out.add(pair.on);
+          out.add(pair.off);
+        }
+      }
       if (state.machine) walk(state.machine);
     }
   };

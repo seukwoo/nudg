@@ -1,0 +1,141 @@
+{
+  "conformance": "0.7",
+  "name": "Timer pause: overlapping reasons preserve remaining time; re-entry resets; a due timer wins a tie",
+  "doc": {
+    "nudg": "0.7",
+    "targets": [
+      "toast"
+    ],
+    "values": {
+      "toast.opacity": 0
+    },
+    "initial": "hidden",
+    "when": {
+      "host.show": "shown"
+    },
+    "states": {
+      "hidden": {},
+      "shown": {
+        "set": {
+          "toast.opacity": 1
+        },
+        "when": {
+          "after:1s": {
+            "to": "hidden",
+            "pause": [
+              {
+                "on": "toast.hoverstart",
+                "off": "toast.hoverend"
+              },
+              {
+                "on": "toast.focus",
+                "off": "toast.blur"
+              },
+              {
+                "on": "host.suspend",
+                "off": "host.resume"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "send": "host.show"
+    },
+    {
+      "t": 0.4,
+      "send": "toast.hoverstart"
+    },
+    {
+      "t": 0.8,
+      "send": "toast.focus"
+    },
+    {
+      "t": 1.0,
+      "send": "toast.hoverend"
+    },
+    {
+      "t": 2.0,
+      "expect": {
+        "state": [
+          "shown"
+        ],
+        "values": {
+          "toast.opacity": 1
+        }
+      }
+    },
+    {
+      "t": 2.2,
+      "send": "toast.blur"
+    },
+    {
+      "t": 2.79,
+      "expect": {
+        "state": [
+          "shown"
+        ]
+      }
+    },
+    {
+      "t": 2.8,
+      "expect": {
+        "state": [
+          "hidden"
+        ],
+        "values": {
+          "toast.opacity": 0
+        }
+      }
+    },
+    {
+      "t": 3.0,
+      "send": "host.show"
+    },
+    {
+      "t": 3.2,
+      "send": "host.suspend"
+    },
+    {
+      "t": 3.5,
+      "send": "host.show"
+    },
+    {
+      "t": 4.49,
+      "expect": {
+        "state": [
+          "shown"
+        ]
+      }
+    },
+    {
+      "t": 4.5,
+      "expect": {
+        "state": [
+          "hidden"
+        ]
+      }
+    },
+    {
+      "t": 5.0,
+      "send": "host.show"
+    },
+    {
+      "t": 6.0,
+      "send": "toast.hoverstart",
+      "handled": false
+    },
+    {
+      "t": 6.0,
+      "expect": {
+        "state": [
+          "hidden"
+        ]
+      }
+    }
+  ]
+}

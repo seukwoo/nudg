@@ -138,14 +138,14 @@ export function critique(program: Program): { findings: CritiqueFinding[]; trans
     // Short auto-dismiss without a way to keep it.
     for (const timer of state.timers) {
       const movesSomething = state.set.size > 0;
-      const pausable = [...state.when.keys()].some((e) => /\.(hoverstart|focus)$/.test(e));
-      if (movesSomething && timer.delay < 4 && timer.transition.to !== undefined) {
+      const pausable = timer.pause.length > 0;
+      if (movesSomething && timer.delay < 4 && timer.transition.to !== undefined && !pausable) {
         add({
           code: "short-timeout",
           severity: "suggestion",
           path: `${path}/when/${escape(timer.key)}`,
-          message: `${state.name} goes away after ${timer.delay} s${pausable ? "" : ", and nothing pauses it"}.`,
-          hint: `Give people time to read it: Material snackbars stay 4–10 s. Pause it while hovered or focused (a "hoverstart" state without the timer), or let it be dismissed instead.`,
+          message: `${state.name} goes away after ${timer.delay} s, and nothing pauses it.`,
+          hint: `Give people time to read it: Material snackbars stay 4–10 s. Add "pause" pairs for hover, focus and app suspension, or let it be dismissed instead.`,
           source: SOURCES.wcag222,
         });
       }

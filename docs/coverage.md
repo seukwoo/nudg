@@ -13,7 +13,7 @@ Legend: **yes** supported, with an example; **yes, no example** supported but no
 | Hover in and out | yes | hover-card, tooltip |
 | Focus and blur | yes, no example | |
 | Keys | yes | slider, dialog |
-| Time (auto-dismiss, delays) | yes | toast, tooltip |
+| Time (auto-dismiss, delays, pause/resume reasons) | yes | toast, tooltip, video player |
 | Events from the app (`host.*`) | yes | toast, pull-to-refresh, shake, voice chat, video call, camera, music player, video player |
 | A library's own state (`data-state`, `aria-*`) | yes, no example in the site | tested with MUI and Radix |
 | Layout (sizes and positions on the page) | yes | tabs, accordion |

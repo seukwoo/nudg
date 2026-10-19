@@ -19,7 +19,11 @@ val Program.handledEvents: Set<String>
                 is Machine.Regions -> m.regions.forEach { walk(it.second) }
                 is Machine.States -> {
                     m.`when`.forEach { out.add(it.first) }
-                    for (s in m.states) { s.`when`.forEach { out.add(it.first) }; s.machine?.let(::walk) }
+                    for (s in m.states) {
+                        s.`when`.forEach { out.add(it.first) }
+                        s.timers.forEach { timer -> timer.pause.forEach { out.add(it.on); out.add(it.off) } }
+                        s.machine?.let(::walk)
+                    }
                 }
             }
         }

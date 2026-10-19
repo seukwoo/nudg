@@ -362,3 +362,13 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Problem:** Music and video assets used root-absolute `/examples/media/...` URLs. They worked on the local root server, but a project-site deployment resolved them outside the repository path, leaving the music player with a broken cover and an `Unavailable` state.
 - **Resolution:** Media examples now use `../examples/media/...`, which resolves to the same asset from both standalone example pages and the embedded demo, including a repository subpath. The browser test checks the authored URLs and verifies that the album cover decodes at its real width.
 - **Lesson:** Example hosts are consumed in more than one document context. Asset URLs must be portable across both contexts, and browser tests should assert visible media rather than only the surrounding controls.
+
+### A video call cannot disappear behind device permission
+- **Problem:** The video-call example showed only `Join video` until camera permission succeeded. If both camera attempts failed, it silently returned to that same screen, so none of the advertised camera, microphone, flip or leave behavior could be explored. Muting and then flipping the camera also made the microphone button claim it was unmuted while the replacement track remained disabled.
+- **Resolution:** A call now joins with unavailable devices turned off, exposes the complete control surface, and lets the camera button retry permission in place. Media capability and enabled state are separate; switching cameras preserves mute, leaving resets both for the next call, and status text names missing devices. Browser tests cover denial, retry, video-only fallback, mute across camera switching and cleanup.
+- **Lesson:** Permission is a host capability, not the interaction's gatekeeper. A portable call recipe needs explicit degraded states and recovery, especially in a public example where the visitor may deny every device.
+
+### Critique must enter parallel state configurations
+- **Problem:** `nudg critique` reported zero transitions for the video call because its transition walker skipped every machine whose root used parallel regions. The example looked clean only because it had never been played by the critic.
+- **Resolution:** The critic now builds complete state configurations across regions, measures each regional transition once with the other regions present, and retains exact JSON pointers. A test proves two independent regions are both exercised. This also exposed and fixed an imperceptible music-player error-state change.
+- **Lesson:** A clean report is meaningful only when coverage is nonzero. Structural features supported by the runtime must either be exercised by judge tools or called out as unmeasured.

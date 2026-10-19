@@ -196,6 +196,8 @@ const HOOKS = {
     const reset = (message = "Call ended", send = true) => {
       clearInterval(timer);
       media.stop();
+      media.setVideoEnabled(true);
+      media.setAudioEnabled(true);
       cameraOn = true;
       micOn = true;
       if (send) {
@@ -207,20 +209,33 @@ const HOOKS = {
       elapsed.textContent = "00:00";
       elapsed.dateTime = "PT0S";
       camera.textContent = "Camera on";
-      camera.setAttribute("aria-label", "Camera on");
+      camera.setAttribute("aria-label", "Turn camera off");
       camera.setAttribute("aria-pressed", "true");
       mute.setAttribute("aria-pressed", "false");
       mute.disabled = false;
       mute.textContent = "Mute";
       mute.setAttribute("aria-label", "Mute microphone");
+      flip.disabled = false;
     };
     const syncMicrophone = () => {
-      micOn = media.hasAudio;
-      mute.disabled = !media.hasAudio;
-      mute.textContent = media.hasAudio ? "Mute" : "Mic";
-      mute.setAttribute("aria-label", media.hasAudio ? "Mute microphone" : "Microphone unavailable");
-      mute.setAttribute("aria-pressed", "false");
-      return media.hasAudio;
+      const available = media.hasAudio;
+      micOn = available && media.audioEnabled;
+      mute.disabled = !available;
+      mute.textContent = available ? (micOn ? "Mute" : "Unmute") : "No mic";
+      mute.setAttribute("aria-label", available ? (micOn ? "Mute microphone" : "Unmute microphone") : "Microphone unavailable");
+      mute.setAttribute("aria-pressed", String(available && !micOn));
+      return available;
+    };
+    const connectedStatus = () => {
+      if (!media.stream) return "Joined · camera unavailable";
+      const microphone = !media.hasAudio ? " · no microphone" : micOn ? "" : " · muted";
+      return `Connected · camera ${cameraOn ? "on" : "off"}${microphone}`;
+    };
+    const startClock = () => {
+      started = performance.now();
+      showTime();
+      clearInterval(timer);
+      timer = setInterval(showTime, 1000);
     };
 
     join?.addEventListener("click", async () => {
@@ -231,29 +246,65 @@ const HOOKS = {
         await media.start();
         if (!alive) return media.stop();
         player.send("host.connected");
-        status.value = syncMicrophone() ? "Connected · camera on" : "Connected · camera only";
-        started = performance.now();
-        showTime();
-        timer = setInterval(showTime, 1000);
+        cameraOn = true;
+        flip.disabled = false;
+        syncMicrophone();
+        status.value = connectedStatus();
+        startClock();
       } catch {
-        reset("Camera or microphone unavailable");
-        player.send("host.failed");
+        cameraOn = false;
+        micOn = false;
+        player.send("host.connected");
+        player.send("host.camera-off");
+        player.send("host.mute");
+        camera.textContent = "Retry camera";
+        camera.setAttribute("aria-label", "Retry camera permission");
+        camera.setAttribute("aria-pressed", "false");
+        mute.textContent = "No mic";
+        mute.disabled = true;
+        mute.setAttribute("aria-label", "Microphone unavailable");
+        flip.disabled = true;
+        status.value = connectedStatus();
+        startClock();
       }
     });
-    camera?.addEventListener("click", () => {
+    camera?.addEventListener("click", async () => {
+      if (!media.stream) {
+        camera.disabled = true;
+        status.value = "Requesting camera permission";
+        try {
+          await media.start();
+          if (!alive) return media.stop();
+          cameraOn = true;
+          player.send("host.camera-on");
+          syncMicrophone();
+          player.send(media.hasAudio ? (micOn ? "host.unmute" : "host.mute") : "host.mute");
+          flip.disabled = false;
+          camera.textContent = "Camera on";
+          camera.setAttribute("aria-label", "Turn camera off");
+          camera.setAttribute("aria-pressed", "true");
+          status.value = connectedStatus();
+        } catch {
+          status.value = "Joined · camera unavailable";
+        }
+        camera.disabled = false;
+        return;
+      }
       cameraOn = !cameraOn;
       media.setVideoEnabled(cameraOn);
       player.send(cameraOn ? "host.camera-on" : "host.camera-off");
       camera.textContent = cameraOn ? "Camera on" : "Camera off";
-      camera.setAttribute("aria-label", camera.textContent);
+      camera.setAttribute("aria-label", cameraOn ? "Turn camera off" : "Turn camera on");
       camera.setAttribute("aria-pressed", String(cameraOn));
-      status.value = cameraOn ? "Connected · camera on" : "Connected · camera off";
+      status.value = connectedStatus();
     });
     mute?.addEventListener("click", () => {
+      if (!media.hasAudio) return;
       micOn = !micOn;
       media.setAudioEnabled(micOn);
       player.send(micOn ? "host.unmute" : "host.mute");
-      mute.setAttribute("aria-pressed", String(!micOn));
+      syncMicrophone();
+      status.value = connectedStatus();
     });
     flip?.addEventListener("click", async () => {
       player.send("host.flip");
@@ -262,6 +313,7 @@ const HOOKS = {
         await media.switchFacing();
         syncMicrophone();
         player.send("host.flipped");
+        status.value = connectedStatus();
       } catch {
         player.send("host.failed");
         status.value = "Could not switch camera";

@@ -27,7 +27,7 @@
         "buffering": { "set": { "artwork.scale": 1, "status.opacity": 1, "play.scale": 0.94 }, "when": { "host.play": "playing", "host.pause": "paused", "host.stop": "stopped", "host.error": "error" } },
         "stopped": { "set": { "artwork.scale": 0.98, "status.opacity": 1, "play.scale": 1 }, "when": { "host.play": "playing", "host.load": "loading" } },
         "ended": { "set": { "artwork.scale": 1, "status.opacity": 1, "play.scale": 1.08 }, "when": { "host.play": "playing", "host.stop": "stopped", "host.load": "loading" } },
-        "error": { "set": { "artwork.scale": 0.96, "status.opacity": 1, "play.scale": 0.92 }, "when": { "host.load": "loading", "host.stop": "stopped" } }
+        "error": { "set": { "artwork.scale": 0.96, "status.opacity": 1, "play.scale": 0.90 }, "when": { "host.load": "loading", "host.stop": "stopped" } }
       }
     },
     "repeat-mode": {

@@ -240,8 +240,8 @@ test("video call shares real camera controls without collapsing them into captur
   assert.equal(await browser.evaluate("window.__cameraRequests[1].video.facingMode"), "environment");
   assert.equal(await browser.evaluate("window.__cameraStreams[0].video.stopped"), true);
   assert.deepEqual(
-    await browser.evaluate(`(() => { const button = document.getElementById("detail-stage").shadowRoot.querySelector(".camera"); return [button.textContent, button.getAttribute("aria-pressed")]; })()`),
-    ["Camera on", "true"],
+    await browser.evaluate(`(() => { const root = document.getElementById("detail-stage").shadowRoot; const camera = root.querySelector(".camera"); const mute = root.querySelector(".mute"); return [camera.textContent, camera.getAttribute("aria-pressed"), mute.textContent, mute.getAttribute("aria-pressed"), window.__cameraStreams[1].audio.enabled]; })()`),
+    ["Camera on", "true", "Unmute", "true", false],
   );
 
   await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.leave').click()");
@@ -269,10 +269,51 @@ test("video call shares real camera controls without collapsing them into captur
   })()`);
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('live') ? true : undefined"), 5_000);
   assert.deepEqual(await browser.evaluate("window.__cameraRequests.map((request) => request.audio)"), [true, false]);
-  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.status').value"), "Connected · camera only");
+  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.status').value"), "Connected · camera on · no microphone");
   assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.mute').disabled"), true);
   assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.mute').getAttribute('aria-label')"), "Microphone unavailable");
+  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.mute').textContent"), "No mic");
   assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('video').srcObject === window.__cameraStreams[0]"), true);
+  await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.leave').click()");
+
+  await browser.evaluate(`(() => {
+    window.__cameraRequests = [];
+    navigator.mediaDevices.getUserMedia = async (constraints) => {
+      window.__cameraRequests.push(constraints);
+      throw new DOMException("Camera denied", "NotAllowedError");
+    };
+    document.getElementById("detail-stage").shadowRoot.querySelector(".join").click();
+  })()`);
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('live') && document.getElementById('detail-state').textContent.includes('camera-off') ? true : undefined"), 5_000);
+  assert.deepEqual(
+    await browser.evaluate(`(() => { const root = document.getElementById("detail-stage").shadowRoot; return {
+      status: root.querySelector(".status").value,
+      controls: [...root.querySelectorAll(".actions button")].map((button) => button.textContent),
+      disabled: [root.querySelector(".camera").disabled, root.querySelector(".mute").disabled, root.querySelector(".flip").disabled],
+    }; })()`),
+    { status: "Joined · camera unavailable", controls: ["Retry camera", "No mic", "Flip", "Leave"], disabled: [false, true, true] },
+  );
+
+  await browser.evaluate(`(() => {
+    navigator.mediaDevices.getUserMedia = async (constraints) => {
+      const video = { kind: "video", enabled: true, stop() {} };
+      const audio = { kind: "audio", enabled: true, stop() {} };
+      const stream = new MediaStream();
+      Object.defineProperties(stream, {
+        getTracks: { value: () => [video, audio] },
+        getVideoTracks: { value: () => [video] },
+        getAudioTracks: { value: () => [audio] },
+      });
+      window.__retryStream = stream;
+      return stream;
+    };
+    document.getElementById("detail-stage").shadowRoot.querySelector(".camera").click();
+  })()`);
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('camera-on') && document.getElementById('detail-state').textContent.includes('mic-on') ? true : undefined"), 5_000);
+  assert.deepEqual(
+    await browser.evaluate(`(() => { const root = document.getElementById("detail-stage").shadowRoot; return [root.querySelector(".status").value, root.querySelector(".camera").textContent, root.querySelector(".mute").disabled, root.querySelector("video").srcObject === window.__retryStream]; })()`),
+    ["Connected · camera on", "Camera on", false, true],
+  );
   await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.leave').click()");
 });
 

@@ -250,7 +250,7 @@
       "states": ["ready", "connecting", "live", "camera-on", "camera-off", "mic-on", "mic-off", "flipping"],
       "events": ["host.connect", "host.connected", "host.failed", "host.camera-on", "host.camera-off", "host.mute", "host.unmute", "host.flip", "host.flipped", "host.leave"],
       "inputs": [],
-      "hostResponsibilities": ["Request permissions, attach media streams, switch devices, normalize volume, and report lifecycle events."],
+      "hostResponsibilities": ["Request permissions, attach local and remote media streams, own room signaling, switch devices, and report lifecycle events. Let a person join with unavailable devices and retry them in place."],
       "motion": ["Coordinate parallel call, camera, and microphone regions so each control has independent feedback."],
       "gaps": []
     },

@@ -90,6 +90,30 @@ test("short-timeout: a toast gone in 2 s with nothing to pause it", () => {
   assert.ok(codes(doc).includes("short-timeout /states/shown/when/after:2s"), JSON.stringify(run(doc)));
 });
 
+test("parallel regions are exercised as complete state configurations", () => {
+  const { program } = compile({
+    path: "main.nudg.json",
+    text: JSON.stringify({
+      nudg: "0.3",
+      targets: ["panel", "button"],
+      values: { "panel.opacity": 0, "button.scale": 1 },
+      regions: {
+        visibility: {
+          initial: "hidden",
+          states: { hidden: { when: { "panel.tap": "shown" } }, shown: { set: { "panel.opacity": 1 } } },
+        },
+        press: {
+          initial: "up",
+          states: { up: { when: { "button.down": "down" } }, down: { set: { "button.scale": 0.94 } } },
+        },
+      },
+    }),
+  });
+  const result = critique(program!);
+  assert.deepEqual(result.transitions.map((transition) => transition.event).sort(), ["button.down", "panel.tap"]);
+  assert.ok(result.transitions.every((transition) => transition.to.split(" ").length === 2));
+});
+
 test("the curated examples are clean", () => {
   const all: string[] = [];
   for (const f of readdirSync("examples").filter((n) => n.endsWith(".nudg.json"))) {

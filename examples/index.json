@@ -423,7 +423,7 @@
         "media-stream"
       ],
       "html": "video-call.html",
-      "summary": "A complete video-call shell with join, camera, microphone, front/rear switch, elapsed time and leave. Independent nudg regions keep call, camera and microphone states coordinated while the host owns MediaStream.",
+      "summary": "A local video-call control shell with join, camera, microphone, front/rear switch, elapsed time, permission recovery and leave. Independent nudg regions coordinate the controls while the host owns media and call transport.",
       "prompts": [
         "Make turning the camera off feel more immediate than joining the call.",
         "Make the front/rear camera switch feel like a physical flip."

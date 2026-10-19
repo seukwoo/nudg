@@ -82,5 +82,11 @@ export function createCameraController(video, { audio = false } = {}) {
     get hasAudio() {
       return Boolean(stream?.getAudioTracks().length);
     },
+    get videoEnabled() {
+      return videoEnabled;
+    },
+    get audioEnabled() {
+      return audioEnabled;
+    },
   };
 }

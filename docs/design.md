@@ -142,10 +142,10 @@ Status: first cut implemented as format 0.4 (`measure` in `values` and `set`, re
 
 - **Position (`x`, `y`) aligns.** `{ "measure": "seg2.x" }` on `indicator.x` is the translation that puts the indicator's box where seg2's box is: `seg2.layout.x - indicator.layout.x`. That is what a tab indicator, a highlight, or a shared-element move needs, and it never depends on which coordinate space the host chose.
 - **Size (`width`, `height`, `naturalWidth`, `naturalHeight`) is the size.** `{ "measure": "content.naturalHeight" }` on `content.height` opens an accordion to exactly its content.
-- **Arithmetic is not added.** An inset, a gap or a fraction (half a sheet) is the next case to settle; the likely shape is `{ "measure": "sheet.height", "times": 0.5, "plus": -16 }`, two fixed fields, not an expression language. Not in the first cut.
+- **Arithmetic stays deliberately small.** Format 0.6 adds `{ "measure": "sheet.height", "times": 0.5, "plus": -16 }`: multiply the measured size or aligned position, then add a logical-unit offset. It is not an expression language.
 - **Relayout retargets.** When a measured input changes while the value is resting on it, the value moves to the new target with the property's motion, as if a state set it. A window resize slides the indicator; it doesn't jump.
 - **Before the first report** a measured value is its property's base value, and the runtime reports which measurements it is still waiting for, the same way it reports unbound targets.
-- **`%` units** become `{ "measure": "parent.width", "times": 0.5 }` once `times` exists; no separate unit system.
+- **`%`-like values** use `{ "measure": "parent.width", "times": 0.5 }`; there is no separate unit system.
 
 **Tools.** `simulate`, `plot`, `compare` and the conformance suite take a layout table (`--layout seg2.x=72,seg2.width=88`, or `layout` in the MCP tools); `render` and `observe` measure the real page. The validator checks the target exists, the measurement name, and that `x`/`y` only measure into position properties.
 

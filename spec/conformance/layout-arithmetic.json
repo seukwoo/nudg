@@ -1,0 +1,155 @@
+{
+  "conformance": "0.6",
+  "name": "Layout arithmetic: measured sizes and aligned positions are scaled and offset, including on relayout",
+  "doc": {
+    "nudg": "0.6",
+    "targets": [
+      "sheet",
+      "indicator",
+      "seg2"
+    ],
+    "values": {
+      "sheet.y": {
+        "measure": "sheet.height",
+        "times": 1,
+        "plus": 12
+      },
+      "indicator.x": 0
+    },
+    "animate": {
+      "sheet.y": {
+        "spring": {
+          "duration": 0.3,
+          "bounce": 0.1
+        }
+      },
+      "indicator.x": {
+        "spring": {
+          "duration": 0.3,
+          "bounce": 0.1
+        }
+      }
+    },
+    "initial": "closed",
+    "states": {
+      "closed": {
+        "when": {
+          "sheet.tap": "half"
+        }
+      },
+      "half": {
+        "set": {
+          "sheet.y": {
+            "measure": "sheet.height",
+            "times": 0.5,
+            "plus": -8
+          },
+          "indicator.x": {
+            "measure": "seg2.x",
+            "times": 0.5,
+            "plus": 4
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "closed"
+        ],
+        "values": {
+          "sheet.y": 0,
+          "indicator.x": 0
+        }
+      }
+    },
+    {
+      "t": 0,
+      "input": "sheet.layout.height",
+      "value": 200
+    },
+    {
+      "t": 0,
+      "expect": {
+        "values": {
+          "sheet.y": 212
+        }
+      }
+    },
+    {
+      "t": 0,
+      "input": "indicator.layout.x",
+      "value": 20
+    },
+    {
+      "t": 0,
+      "input": "seg2.layout.x",
+      "value": 140
+    },
+    {
+      "t": 0.1,
+      "send": "sheet.tap"
+    },
+    {
+      "t": 0.1,
+      "expect": {
+        "state": [
+          "half"
+        ]
+      }
+    },
+    {
+      "t": 0.15,
+      "expect": {
+        "values": {
+          "sheet.y": 176.527106791,
+          "indicator.x": 18.918876378
+        }
+      }
+    },
+    {
+      "t": 0.25,
+      "expect": {
+        "values": {
+          "sheet.y": 107.783105899,
+          "indicator.x": 55.582343521
+        }
+      }
+    },
+    {
+      "t": 0.5,
+      "expect": {
+        "values": {
+          "sheet.y": 91.880041259,
+          "indicator.x": 64.063977995
+        }
+      }
+    },
+    {
+      "t": 0.5,
+      "input": "sheet.layout.height",
+      "value": 240
+    },
+    {
+      "t": 0.6,
+      "expect": {
+        "values": {
+          "sheet.y": 105.160595414,
+          "indicator.x": 64.011308087
+        }
+      }
+    },
+    {
+      "t": 0.9,
+      "expect": {
+        "values": {
+          "sheet.y": 112.020070506,
+          "indicator.x": 63.999958729
+        }
+      }
+    }
+  ]
+}

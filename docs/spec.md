@@ -316,7 +316,7 @@ For each bound target the host reports `target.layout.x`, `.y`, `.width`, `.heig
 - **Not reported yet:** a measured value is its property's base value (a measured base is 0), until everything it reads has been reported.
 - **First report places, later reports move.** When a layout input is reported for the first time, the values it changes take their new targets at once, without motion: that is where things are. When it changes later (a resize, a font loading, a longer label), each value whose target changed moves there with its property's motion, keeping its velocity, as if a state had set it.
 - `nearest` compares measured targets like any others. `step` from a measured base starts from its measured value; `step` and `commit` replace the measurement with a number from then on.
-- No arithmetic in 0.4: an offset or a fraction of a size is an open question.
+- In 0.4, measurements have no arithmetic. Format 0.6 adds optional `times` and `plus`; see below.
 
 ### Errors
 
@@ -333,6 +333,17 @@ Continuous app and scroll inputs. A file that uses these declares `"nudg": "0.5"
 - Runtimes accept only inputs referenced by the program and return false for unknown names or non-finite values. Device APIs remain the host's responsibility.
 
 The conformance cases `continuous-inputs.json` and `validation-0.5.json` define the behavior.
+
+## Additions in 0.6 (draft)
+
+Arithmetic on layout measurements. A file that uses it declares `"nudg": "0.6"`; a 0.6 runtime also reads older files.
+
+- `{ "measure": "sheet.height", "times": 0.5, "plus": -16 }` evaluates the measured size as `height * 0.5 - 16`.
+- For positions, alignment happens first: `{ "measure": "tab.x", "times": 0.5, "plus": 4 }` on `indicator.x` is `(tab.layout.x - indicator.layout.x) * 0.5 + 4`.
+- `times` defaults to 1 and `plus` defaults to 0. Both must be finite numbers. Arithmetic applies equally in `values` and state `set` entries, including relayout retargeting and `nearest` targets.
+- The compiled program always includes both numbers so TypeScript, Swift and Kotlin execute identical math.
+
+The conformance cases `layout-arithmetic.json` and `validation-0.6.json` define the behavior.
 
 ## Compiled programs (for native runtimes)
 

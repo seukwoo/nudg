@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Format 0.6: arithmetic on layout measurements.** Measured sizes and aligned positions accept optional `times` and `plus` fields, evaluated as `measurement * times + plus`. TypeScript, Swift and Kotlin share the same conformance case and compiled-program representation. Bottom-sheet snap states and swipe-row resting width now derive from host layout; the segmented indicator measures each segment directly. Schema 0.6.
+
 ## 0.8.0
 
 Semantic recipes, continuous app and scroll inputs, native drag and keyboard parity, direct Swift Package and JitPack installation, and complete voice, camera, video-call, music-player and video-player examples. The same interaction contracts now reach Web, React Native, SwiftUI and Jetpack Compose.

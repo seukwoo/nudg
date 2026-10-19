@@ -23,7 +23,9 @@
    ],
    "measure": {
     "target": "seg1",
-    "of": "width"
+    "of": "width",
+    "times": 1,
+    "plus": 0
    }
   }
  ],
@@ -65,7 +67,9 @@
      {
       "key": "indicator.x",
       "target": "seg1",
-      "of": "x"
+      "of": "x",
+      "times": 1,
+      "plus": 0
      }
     ],
     "follow": [],
@@ -93,12 +97,16 @@
      {
       "key": "indicator.x",
       "target": "seg2",
-      "of": "x"
+      "of": "x",
+      "times": 1,
+      "plus": 0
      },
      {
       "key": "indicator.width",
       "target": "seg2",
-      "of": "width"
+      "of": "width",
+      "times": 1,
+      "plus": 0
      }
     ],
     "follow": [],
@@ -126,12 +134,16 @@
      {
       "key": "indicator.x",
       "target": "seg3",
-      "of": "x"
+      "of": "x",
+      "times": 1,
+      "plus": 0
      },
      {
       "key": "indicator.width",
       "target": "seg3",
-      "of": "width"
+      "of": "width",
+      "times": 1,
+      "plus": 0
      }
     ],
     "follow": [],

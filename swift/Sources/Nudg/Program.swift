@@ -18,6 +18,8 @@ public enum Motion {
 public struct Measure {
   public let target: String
   public let of: String
+  public let times: Double
+  public let plus: Double
 }
 
 public struct PropertyMap {
@@ -125,7 +127,9 @@ public struct Program {
 
 private func number(_ v: Any?) -> Double? { (v as? NSNumber)?.doubleValue }
 private func doubles(_ v: Any?) -> [Double] { (v as? [Any] ?? []).map { ($0 as! NSNumber).doubleValue } }
-private func readMeasure(_ m: [String: Any]) -> Measure { Measure(target: m["target"] as! String, of: m["of"] as! String) }
+private func readMeasure(_ m: [String: Any]) -> Measure {
+  Measure(target: m["target"] as! String, of: m["of"] as! String, times: number(m["times"]) ?? 1, plus: number(m["plus"]) ?? 0)
+}
 
 private func readMotion(_ v: Any) -> Motion {
   let m = v as! [String: Any]

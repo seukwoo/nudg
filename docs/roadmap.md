@@ -15,7 +15,9 @@ The order below follows real app needs. Release numbers and dates are assigned w
 | `compare` and `observe` | Released | [Changelog](../CHANGELOG.md) |
 | Exit/presence handling and live A/B in the playground | Released in package 0.5.0; the old next-step note is complete | [Changelog](../CHANGELOG.md#050) |
 | Semantic UI recipes | Versioned contracts cover every shipped example; CLI and MCP resolve names and aliases to contracts and starters | [Recipe catalog](../recipes/index.json), [agent guide](../spec/guide.md#semantic-ui-words) |
-| Layout measurement, natural size, relative units and decay | Open design work | [Open questions](design.md#open-questions) |
+| Layout measurement and natural size | Implemented in format 0.4 | [Spec](spec.md#layout-inputs) |
+| Layout arithmetic and relative measured values | Implemented for the next release in format 0.6 | [Spec](spec.md#additions-in-06-draft) |
+| Decay | Open design work | [Open questions](design.md#open-questions) |
 
 ## Product Stages
 
@@ -24,24 +26,24 @@ The original stage numbers remain useful when reading the spec and changelog. Se
 | Stage | Scope | Examples and needs | Status |
 |---|---|---|---|
 | 0 | Single element | Toggle, button, like; states, transitions, springs, DOM adapter | Implemented |
-| 1 | Component | Tabs, accordion, swipe row, carousel, bottom sheet; coordinated targets, gestures, React adapter | Core behavior implemented; layout measurement remains open |
+| 1 | Component | Tabs, accordion, swipe row, carousel, bottom sheet; coordinated targets, gestures, React adapter | Measurement and arithmetic implemented; measured follow/map bounds remain open |
 | 2 | Screens and flows | Onboarding, modals, screen transitions, list/grid coordination; data inputs and machine composition | Planned; nested states and a dialog example already exist |
 | 3 | Native | iOS and Android; React Native, SwiftUI and Compose adapters plus matching runtimes | Initial platform support implemented; 0.8.0 is the first distribution tag |
 | 4 | Standalone content | Physics, canvas, game-like scenes; host rendering and physics integration | Exploratory |
 
-## Now: Harden Recipes Before Widening the Catalog
+## Now: Deepen Motion From Recipe Evidence
 
-Status: the first versioned recipe catalog covers every shipped example. `nudg recipe` and `nudg_recipe` resolve human aliases to expected parts, states, events, inputs, host responsibilities, motion, known gaps and a validated starter. Recipe metadata stays outside runtime syntax.
+Status: the first versioned recipe catalog covers every shipped example. Broad catalog growth and Playsnack workflow validation are deferred while the repeated lower-level gaps are implemented.
 
-- Improve existing recipes from real prompts and host integrations before adding broad new component categories.
-- Keep examples as executable evidence for recipes, not as a component-count target.
-- Add a new recipe only when it names a recurring interaction contract meaningfully different from the existing set.
-- Collect format gaps in recipe data. Promote a gap into runtime syntax only when multiple recipes need the same primitive and TypeScript, Swift and Kotlin can share a conformance case.
-- Keep generated results mobile-first, then make the same contract adapt naturally to larger web layouts.
+- Finish format 0.6 layout arithmetic across TypeScript, Swift and Kotlin, then release it with responsive bottom-sheet and swipe-row resting states.
+- Add pausable timers next for toast dismissal and video-control auto-hide.
+- Add keyframes after timer semantics, with interruption and reduced-motion rules included from the start.
+- Keep examples as executable evidence for recipes, not as a component-count target; do not widen the catalog during this work.
+- Follow with derived scroll direction/velocity and decay only when the earlier primitives are complete.
 
-Done when: the same common UI request consistently selects the same contract and starter, leaving motion taste as the main thing a person needs to tune.
+Done when: the current recipes no longer duplicate essential measured resting points or rely on undocumented timer and multi-beat motion workarounds.
 
-## Then: Prove the Workflow in Playsnack
+## Deferred: Prove the Workflow in Playsnack
 
 Goal: find the cases where nudg is plainly better than ad hoc code or a one-line animation helper.
 
@@ -56,27 +58,25 @@ Goal: find the cases where nudg is plainly better than ad hoc code or a one-line
 
 Done when: a real playsnack interaction is easier to tune with nudg than by editing component code, and the docs can point to that workflow honestly.
 
-## Next: Layout-Aware Interactions
+## Layout-Aware Foundation
 
-Status: format 0.4 measures positions and sizes: `tabs` and `accordion` no longer guess. Still ahead: arithmetic on measurements (offsets, fractions, `%`), bottom sheet snap points, a responsive swipe row.
+Status: format 0.4 measures positions and sizes; format 0.6 adds arithmetic for offsets and fractions. Still ahead: measured bounds for `follow` and measured points for `map`.
 
 Goal: support the component patterns whose motion depends on measured size or position.
 
-- Add measured values such as tab indicator `x` / `width`, content height, sheet bounds, and action width.
-- Support natural size / `auto`-like cases for accordion, collapsing rows, and sheets.
-- Define `%` and relative units in a way that stays portable across web and native.
-- Add conformance cases that separate runtime behavior from host measurement.
-- Ship examples: tab indicator, accordion auto height, bottom sheet snap points, responsive swipe row.
+- Done: measured tab indicator position and width, accordion natural height, bottom-sheet snap states, and swipe-row resting width.
+- Done: portable fractions and offsets through format 0.6 `times` and `plus`, with cross-runtime conformance.
+- Next within this area: let `follow.range` and `map.from` reuse measured values instead of duplicating their numeric endpoints.
 
 Done when: `tab-bar`, `accordion`, `bottom-sheet`, and `swipe-row` no longer need hard-coded pixel guesses for their essential behavior.
 
-## Then: Add Motion From Recipe Evidence
+## Queue Details
 
 Goal: deepen the interaction and motion language where current recipes demonstrably run out of vocabulary.
 
 | Candidate | Evidence in current recipes | Decision gate |
 |---|---|---|
-| Layout arithmetic and relative snap points | Bottom sheet, swipe row and segmented control duplicate measured dimensions as constants | First priority: one expression model must work identically across all runtimes |
+| Layout arithmetic and relative snap points | Bottom sheet and swipe row resting states depended on constants | Implemented for format 0.6; measured follow/map endpoints remain separate work |
 | Pausable timers | Toast dismissal and video control auto-hide must pause for focus, hover, scrubbing or app suspension | Design timer ownership and deterministic resume semantics |
 | Keyframes | Reaction bursts and authored validation shakes need more than one kick | Add only with reduced-motion and interruption rules |
 | Sequence | Accordion requests already ask for the chevron and panel to move in order | Wait for a second independent recipe before adding syntax |
@@ -119,7 +119,7 @@ Done when: a user can adopt nudg in a production web/React component and trust t
 
 Goal: make the same interaction intent portable beyond web.
 
-- SwiftUI and Jetpack Compose: adapters with press, drag and keys are in; next, distribution.
+- SwiftUI and Jetpack Compose: adapters, matching runtimes and tagged distribution are in; next, harden native host guidance and accessibility behavior.
 - A portable core, possibly Rust/WASM/FFI, if maintaining multiple runtimes becomes expensive.
 - Native-specific host guidance for focus, accessibility, gesture systems, and reduced motion.
 - Flutter or React Native if dogfooding points there.

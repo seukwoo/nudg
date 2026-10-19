@@ -148,7 +148,8 @@ public final class Runtime {
   private func measured(_ key: String, _ m: Measure) -> Double? {
     let values = inputsOf(key, m).map { layout[$0] }
     if values.contains(where: { $0 == nil }) { return nil }
-    return m.of == "x" || m.of == "y" ? values[0]! - values[1]! : values[0]!
+    let value = m.of == "x" || m.of == "y" ? values[0]! - values[1]! : values[0]!
+    return value * m.times + m.plus
   }
 
   private func clamp(_ key: String, _ value: Double) -> Double {

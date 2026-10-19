@@ -50,11 +50,15 @@ export interface PropertyMap {
   to: Channels[];
 }
 
-/** A value read from the host's layout report (v0.4): `{ "measure": "seg2.x" }`. */
+/** A value read from the host's layout report (v0.4), optionally scaled and offset (v0.6). */
 export interface Measure {
   target: string;
   /** x and y align (the measured box's position minus this property's own target's); sizes are the size. */
   of: "x" | "y" | "width" | "height" | "naturalWidth" | "naturalHeight";
+  /** Multiplies the measured size or aligned position. Defaults to 1. */
+  times: number;
+  /** Added after multiplication. Defaults to 0. */
+  plus: number;
 }
 
 export interface Property {

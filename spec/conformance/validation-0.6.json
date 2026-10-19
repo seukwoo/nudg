@@ -1,0 +1,209 @@
+{
+  "conformance": "0.6",
+  "name": "Validator (0.6): layout measurement arithmetic",
+  "documents": [
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "0.5",
+        "targets": [
+          "sheet",
+          "indicator",
+          "seg2"
+        ],
+        "values": {
+          "sheet.y": {
+            "measure": "sheet.height",
+            "times": 1,
+            "plus": 12
+          },
+          "indicator.x": 0
+        },
+        "animate": {
+          "sheet.y": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          },
+          "indicator.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          }
+        },
+        "initial": "closed",
+        "states": {
+          "closed": {
+            "when": {
+              "sheet.tap": "half"
+            }
+          },
+          "half": {
+            "set": {
+              "sheet.y": {
+                "measure": "sheet.height",
+                "times": 0.5,
+                "plus": -8
+              },
+              "indicator.x": {
+                "measure": "seg2.x",
+                "times": 0.5,
+                "plus": 4
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/values/sheet.y/times"
+        },
+        {
+          "code": "needs-version",
+          "path": "/values/sheet.y/plus"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/half/set/sheet.y/times"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/half/set/sheet.y/plus"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/half/set/indicator.x/times"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/half/set/indicator.x/plus"
+        }
+      ]
+    },
+    {
+      "name": "times-not-number",
+      "doc": {
+        "nudg": "0.6",
+        "targets": [
+          "sheet",
+          "indicator",
+          "seg2"
+        ],
+        "values": {
+          "sheet.y": {
+            "measure": "sheet.height",
+            "times": 1,
+            "plus": 12
+          },
+          "indicator.x": 0
+        },
+        "animate": {
+          "sheet.y": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          },
+          "indicator.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          }
+        },
+        "initial": "closed",
+        "states": {
+          "closed": {
+            "when": {
+              "sheet.tap": "half"
+            }
+          },
+          "half": {
+            "set": {
+              "sheet.y": {
+                "measure": "sheet.height",
+                "times": "half",
+                "plus": -8
+              },
+              "indicator.x": {
+                "measure": "seg2.x",
+                "times": 0.5,
+                "plus": 4
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-measure-arithmetic",
+          "path": "/states/half/set/sheet.y/times"
+        }
+      ]
+    },
+    {
+      "name": "plus-not-number",
+      "doc": {
+        "nudg": "0.6",
+        "targets": [
+          "sheet",
+          "indicator",
+          "seg2"
+        ],
+        "values": {
+          "sheet.y": {
+            "measure": "sheet.height",
+            "times": 1,
+            "plus": 12
+          },
+          "indicator.x": 0
+        },
+        "animate": {
+          "sheet.y": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          },
+          "indicator.x": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0.1
+            }
+          }
+        },
+        "initial": "closed",
+        "states": {
+          "closed": {
+            "when": {
+              "sheet.tap": "half"
+            }
+          },
+          "half": {
+            "set": {
+              "sheet.y": {
+                "measure": "sheet.height",
+                "times": 0.5,
+                "plus": null
+              },
+              "indicator.x": {
+                "measure": "seg2.x",
+                "times": 0.5,
+                "plus": 4
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-measure-arithmetic",
+          "path": "/states/half/set/sheet.y/plus"
+        }
+      ]
+    }
+  ]
+}

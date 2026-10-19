@@ -177,7 +177,8 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
   function measured(key: string, m: Measure): number | undefined {
     const values = inputsOf(key, m).map((name) => layout.get(name));
     if (values.some((v) => v === undefined)) return undefined;
-    return m.of === "x" || m.of === "y" ? values[0]! - values[1]! : values[0]!;
+    const value = m.of === "x" || m.of === "y" ? values[0]! - values[1]! : values[0]!;
+    return value * m.times + m.plus;
   }
 
   /** Base values (measured ones from the layout report), overridden by every active state's `set`, deeper states last. */

@@ -1,0 +1,110 @@
+{
+ "nudgProgram": 1,
+ "version": "0.6",
+ "targets": [
+  "sheet",
+  "indicator",
+  "seg2"
+ ],
+ "properties": [
+  {
+   "key": "sheet.y",
+   "kind": "length",
+   "base": [
+    0
+   ],
+   "measure": {
+    "target": "sheet",
+    "of": "height",
+    "times": 1,
+    "plus": 12
+   }
+  },
+  {
+   "key": "indicator.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "sheet.y",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 438.6490844928604,
+    "damping": 37.69911184307752,
+    "mass": 1
+   }
+  },
+  {
+   "key": "indicator.x",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 438.6490844928604,
+    "damping": 37.69911184307752,
+    "mass": 1
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "closed",
+  "states": [
+   {
+    "name": "closed",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [
+     {
+      "event": "sheet.tap",
+      "animate": [],
+      "to": "half"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "half",
+    "set": [
+     {
+      "key": "sheet.y",
+      "value": [
+       0
+      ]
+     },
+     {
+      "key": "indicator.x",
+      "value": [
+       0
+      ]
+     }
+    ],
+    "measure": [
+     {
+      "key": "sheet.y",
+      "target": "sheet",
+      "of": "height",
+      "times": 0.5,
+      "plus": -8
+     },
+     {
+      "key": "indicator.x",
+      "target": "seg2",
+      "of": "x",
+      "times": 0.5,
+      "plus": 4
+     }
+    ],
+    "follow": [],
+    "enter": [],
+    "when": [],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

@@ -58,7 +58,9 @@
      {
       "key": "content.height",
       "target": "content",
-      "of": "naturalHeight"
+      "of": "naturalHeight",
+      "times": 1,
+      "plus": 0
      }
     ],
     "follow": [],

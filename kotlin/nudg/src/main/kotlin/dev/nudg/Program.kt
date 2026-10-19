@@ -14,7 +14,7 @@ sealed interface Motion {
     data class Tween(val duration: Double, val ease: Ease) : Motion
 }
 
-data class Measure(val target: String, val of: String)
+data class Measure(val target: String, val of: String, val times: Double, val plus: Double)
 data class PropertyMap(val source: String, val sourceKind: String, val from: List<Double>, val to: List<List<Double>>)
 data class Property(val kind: PropertyKind, val base: List<Double>, val map: PropertyMap?, val measure: Measure?, val min: Double?, val max: Double?)
 data class Follow(val input: String, val range: Pair<Double, Double>?, val overdrag: Double)
@@ -72,7 +72,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
         private fun obj(v: Any?) = v as Map<*, *>
         private fun list(v: Any?) = (v as? List<*>) ?: emptyList<Any?>()
         private fun doubles(v: Any?) = list(v).map { it as Double }
-        private fun measure(m: Map<*, *>) = Measure(m["target"] as String, m["of"] as String)
+        private fun measure(m: Map<*, *>) = Measure(m["target"] as String, m["of"] as String, m["times"] as? Double ?: 1.0, m["plus"] as? Double ?: 0.0)
 
         private fun motion(v: Any?): Motion {
             val m = obj(v)

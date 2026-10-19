@@ -139,7 +139,8 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
 
     private fun measured(key: String, m: Measure): Double? {
         val values = inputsOf(key, m).map { layout[it] ?: return null }
-        return if (m.of == "x" || m.of == "y") values[0] - values[1] else values[0]
+        val value = if (m.of == "x" || m.of == "y") values[0] - values[1] else values[0]
+        return value * m.times + m.plus
     }
 
     private fun clamp(key: String, value: Double): Double {

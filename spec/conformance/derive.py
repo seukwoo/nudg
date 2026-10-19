@@ -1093,7 +1093,7 @@ def validation_v04_cases():
     out.append(("measure-color", d, [("invalid-measure", "/values/track.color")]))
     d = doc()
     d["states"]["second"]["set"]["indicator.x"] = {"measure": "seg2.x", "plus": 4}
-    out.append(("unknown-key", d, [("unknown-key", "/states/second/set/indicator.x/plus")]))
+    out.append(("arithmetic-needs-version", d, [("needs-version", "/states/second/set/indicator.x/plus")]))
     write("validation-0.4", {
         "conformance": "0.4",
         "name": "Validator (0.4): each document produces exactly these errors (code and JSON pointer)",
@@ -1168,6 +1168,88 @@ def validation_v05_cases():
     })
 
 
+# --- v0.6: arithmetic on layout measurements -------------------------------
+
+MEASURE_ARITHMETIC = {
+    "nudg": "0.6",
+    "targets": ["sheet", "indicator", "seg2"],
+    "values": {
+        "sheet.y": {"measure": "sheet.height", "times": 1, "plus": 12},
+        "indicator.x": 0,
+    },
+    "animate": {
+        "sheet.y": spring_json(0.3, 0.1),
+        "indicator.x": spring_json(0.3, 0.1),
+    },
+    "initial": "closed",
+    "states": {
+        "closed": {"when": {"sheet.tap": "half"}},
+        "half": {
+            "set": {
+                "sheet.y": {"measure": "sheet.height", "times": 0.5, "plus": -8},
+                "indicator.x": {"measure": "seg2.x", "times": 0.5, "plus": 4},
+            },
+        },
+    },
+}
+
+
+def layout_arithmetic_cases():
+    steps = [
+        {"t": 0, "expect": {"state": ["closed"], "values": {"sheet.y": 0, "indicator.x": 0}}},
+        {"t": 0, "input": "sheet.layout.height", "value": 200},
+        {"t": 0, "expect": {"values": {"sheet.y": 212}}},
+        {"t": 0, "input": "indicator.layout.x", "value": 20},
+        {"t": 0, "input": "seg2.layout.x", "value": 140},
+        {"t": 0.1, "send": "sheet.tap"},
+        {"t": 0.1, "expect": {"state": ["half"]}},
+    ]
+    sheet, indicator = Prop(212), Prop(0)
+    motion = spring(0.3, 0.1)
+    sheet.retarget(92, motion, 0.1)  # 200 * 0.5 - 8
+    indicator.retarget(64, motion, 0.1)  # (140 - 20) * 0.5 + 4
+    for t in (0.15, 0.25, 0.5):
+        steps.append({"t": t, "expect": {"values": {"sheet.y": sheet.value(t), "indicator.x": indicator.value(t)}}})
+    steps.append({"t": 0.5, "input": "sheet.layout.height", "value": 240})
+    sheet.retarget(112, motion, 0.5)
+    for t in (0.6, 0.9):
+        steps.append({"t": t, "expect": {"values": {"sheet.y": sheet.value(t), "indicator.x": indicator.value(t)}}})
+    write("layout-arithmetic", {
+        "conformance": "0.6",
+        "name": "Layout arithmetic: measured sizes and aligned positions are scaled and offset, including on relayout",
+        "doc": MEASURE_ARITHMETIC,
+        "steps": steps,
+    })
+
+
+def validation_v06_cases():
+    def doc():
+        return json.loads(json.dumps(MEASURE_ARITHMETIC))
+
+    out = []
+    d = doc()
+    d["nudg"] = "0.5"
+    out.append(("needs-version", d, [
+        ("needs-version", "/values/sheet.y/times"),
+        ("needs-version", "/values/sheet.y/plus"),
+        ("needs-version", "/states/half/set/sheet.y/times"),
+        ("needs-version", "/states/half/set/sheet.y/plus"),
+        ("needs-version", "/states/half/set/indicator.x/times"),
+        ("needs-version", "/states/half/set/indicator.x/plus"),
+    ]))
+    d = doc()
+    d["states"]["half"]["set"]["sheet.y"]["times"] = "half"
+    out.append(("times-not-number", d, [("invalid-measure-arithmetic", "/states/half/set/sheet.y/times")]))
+    d = doc()
+    d["states"]["half"]["set"]["sheet.y"]["plus"] = None
+    out.append(("plus-not-number", d, [("invalid-measure-arithmetic", "/states/half/set/sheet.y/plus")]))
+    write("validation-0.6", {
+        "conformance": "0.6",
+        "name": "Validator (0.6): layout measurement arithmetic",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 if __name__ == "__main__":
     toggle_cases()
     spring_form_cases()
@@ -1187,4 +1269,6 @@ if __name__ == "__main__":
     validation_v04_cases()
     continuous_input_cases()
     validation_v05_cases()
+    layout_arithmetic_cases()
+    validation_v06_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

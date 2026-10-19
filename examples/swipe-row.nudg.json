@@ -1,5 +1,5 @@
 {
-  "nudg": "0.2",
+  "nudg": "0.6",
   "note": "A list row that swipes left to reveal a delete action. A short or slow swipe snaps back; a long or quick one stays open. The action fades in with the swipe.",
   "targets": ["row", "content", "action"],
   "values": {
@@ -17,7 +17,7 @@
       "when": { "content.dragstart": "dragging" }
     },
     "open": {
-      "set": { "content.x": -88 },
+      "set": { "content.x": { "measure": "action.width", "times": -1 } },
       "when": { "content.dragstart": "dragging", "content.tap": "closed", "action.tap": "deleted" }
     },
     "dragging": {

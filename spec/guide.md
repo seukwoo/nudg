@@ -95,13 +95,14 @@ Declare `"nudg": "0.3"` to use these.
 - **Bounds:** `"thumb.x": { "base": 0, "min": 0, "max": 200 }`. They clamp `step`/`commit`, default a `follow`'s `range`, and make an out-of-range `set` an error.
 - **Reduced motion** is a runtime option (`reducedMotion: true`; the DOM adapter follows `prefers-reduced-motion`; CLI/MCP `--reduced-motion`): springs and tweens become 0.15 s linear tweens, kicks do nothing. Don't put it in the file.
 
-## Layout: measured values (format 0.4)
+## Layout: measured values (formats 0.4 and 0.6)
 
 When a value depends on the page (an underline under a tab whose width depends on its label, a panel that opens to its content), don't guess a number: measure it. The host reports each target's box; the file names what it needs.
 
 - `{ "measure": "tab2.x" }` on `underline.x` moves the underline to where tab2 is (positions align: x into `.x`, y into `.y`).
 - `{ "measure": "tab2.width" }` on `underline.width` takes tab2's width. `{ "measure": "panel.naturalHeight" }` on `panel.height` opens to the content (`naturalWidth`/`naturalHeight` are CSS's `auto`).
-- Works in `values` and in a state's `set`; needs `"nudg": "0.4"`. No arithmetic: if you need an offset, put it in the markup (padding, a wrapper), not the file.
+- Works in `values` and in a state's `set`; basic measurement needs `"nudg": "0.4"`.
+- Format 0.6 adds optional arithmetic: `{ "measure": "sheet.height", "times": 0.5, "plus": -16 }`. The measured size or aligned position is multiplied first, then the logical-unit offset is added. `times` defaults to 1 and `plus` to 0.
 - When the page relayouts (resize, font, longer label), the value moves to the new place with its usual motion. The DOM adapter measures and re-measures by itself.
 - To simulate or compare without a page, pass what the page would measure: `layout: { "tab2.x": 96, "tab2.width": 88, "underline.x": 8 }` (CLI `--layout tab2.x=96,...`). Tools say which measurements are missing.
 - Prefer measuring to hard-coding whenever a number would come from the layout: tab bars, accordions, swipe actions as wide as their labels, sheets sized by their content.

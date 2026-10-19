@@ -1,10 +1,11 @@
 {
-  "nudg": "0.2",
+  "nudg": "0.4",
   "note": "A three-way segmented control. Tapping a segment moves the indicator; dragging anywhere on the control slides it, and on release it snaps to the nearest segment. Transitions live on the machine, so each tap is listed once instead of once per state.",
   "targets": ["control", "seg1", "seg2", "seg3", "indicator"],
-  "values": { "indicator.x": 0 },
+  "values": { "indicator.x": 0, "indicator.width": { "measure": "seg1.width" } },
   "animate": {
-    "indicator.x": { "spring": { "duration": 0.3, "bounce": 0.1 } }
+    "indicator.x": { "spring": { "duration": 0.3, "bounce": 0.1 } },
+    "indicator.width": { "spring": { "duration": 0.3, "bounce": 0.1 } }
   },
   "initial": "first",
   "when": {
@@ -14,9 +15,9 @@
     "control.dragstart": "dragging"
   },
   "states": {
-    "first": {},
-    "second": { "set": { "indicator.x": 72 } },
-    "third": { "set": { "indicator.x": 144 } },
+    "first": { "set": { "indicator.x": { "measure": "seg1.x" } } },
+    "second": { "set": { "indicator.x": { "measure": "seg2.x" }, "indicator.width": { "measure": "seg2.width" } } },
+    "third": { "set": { "indicator.x": { "measure": "seg3.x" }, "indicator.width": { "measure": "seg3.width" } } },
     "dragging": {
       "follow": { "indicator.x": { "input": "control.drag.x", "range": [0, 144], "overdrag": 0.2 } },
       "when": { "control.dragend": { "nearest": ["first", "second", "third"], "by": "indicator.x" } }

@@ -45,13 +45,13 @@ function property(p: Property): Record<string, Json> {
 function readProperty(p: any): Property {
   const out: Property = { kind: p.kind, base: p.base };
   if (p.map) out.map = { ...p.map, sourceKind: p.map.sourceKind ?? "property" };
-  if (p.measure) out.measure = p.measure;
+  if (p.measure) out.measure = { ...p.measure, times: p.measure.times ?? 1, plus: p.measure.plus ?? 0 };
   if (p.min !== undefined) out.min = p.min;
   if (p.max !== undefined) out.max = p.max;
   return out;
 }
 
-const measure = (m: Measure): Json => ({ target: m.target, of: m.of });
+const measure = (m: Measure): Json => ({ target: m.target, of: m.of, times: m.times, plus: m.plus });
 
 function motion(m: Motion): Json {
   if (m.kind === "tween") return { kind: "tween", duration: m.duration, ease: m.ease === "linear" ? "linear" : [...m.ease] };
@@ -88,7 +88,7 @@ function readState(j: any): State {
   const s: State = {
     name: j.name,
     set: new Map(j.set.map((e: any) => [e.key, e.value])),
-    measure: new Map(j.measure.map((e: any) => [e.key, { target: e.target, of: e.of }])),
+    measure: new Map(j.measure.map((e: any) => [e.key, { target: e.target, of: e.of, times: e.times ?? 1, plus: e.plus ?? 0 }])),
     follow: new Map(j.follow.map((e: any) => [e.key, readFollow(e)])),
     enter: new Map(j.enter.map((e: any) => [e.key, e.motion as SpringMotion])),
     when: new Map(j.when.map((w: any) => [w.event, readTransition(w)])),

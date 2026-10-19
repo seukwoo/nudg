@@ -465,7 +465,7 @@
       ]
     },
     {
-      "name": "unknown-key",
+      "name": "arithmetic-needs-version",
       "doc": {
         "nudg": "0.4",
         "targets": [
@@ -533,7 +533,7 @@
       },
       "errors": [
         {
-          "code": "unknown-key",
+          "code": "needs-version",
           "path": "/states/second/set/indicator.x/plus"
         }
       ]

@@ -40,7 +40,7 @@ Legend: **yes** supported, with an example; **yes, no example** supported but no
 | Sequence, delay, stagger (menu items one after another) | no: [open question](design.md#open-questions) | |
 | Keyframes | no: [open question](design.md#open-questions) | |
 | Decay (a fling that slows down without a snap point) | no: [open question](design.md#open-questions) | |
-| Arithmetic on measurements (an offset, half a sheet) | no: [open question](design.md#open-questions) | |
+| Arithmetic on measurements (an offset, half a sheet) | yes | bottom-sheet, swipe-row |
 
 ## Structure: how states fit together
 

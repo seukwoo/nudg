@@ -121,7 +121,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.5.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.6.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -250,11 +250,11 @@ class ComponentCompiler {
     return this.needsVersion("0.3", p, what);
   }
 
-  /** `{ "measure": "seg2.x" }` (v0.4): a value the host's layout report supplies. */
+  /** `{ "measure": "sheet.height", "times": 0.5, "plus": -16 }` (v0.6). */
   private parseMeasure(kind: PropertyKind, key: string, raw: JsonObject, p: string): Measure | undefined {
     const r = this.r;
     if (!this.needsVersion("0.4", p, "A measured value")) return undefined;
-    r.keys(raw, p, ["measure"]);
+    r.keys(raw, p, ["measure", "times", "plus"]);
     if (kind === "color") {
       r.error("invalid-measure", p, `"${key}" is a color; layout measures positions and sizes.`, "Measure into a numeric property such as x, y, width or height.");
       return undefined;
@@ -284,7 +284,21 @@ class ComponentCompiler {
       );
       return undefined;
     }
-    return { target, of: of as Measure["of"] };
+    let times = 1;
+    let plus = 0;
+    for (const field of ["times", "plus"] as const) {
+      if (!(field in raw)) continue;
+      const fp = ptr(p, field);
+      if (!this.needsVersion("0.6", fp, `Measurement ${field}`)) continue;
+      const value = raw[field];
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        r.error("invalid-measure-arithmetic", fp, `"${field}" must be a finite number.`, field === "times" ? "Use 0.5 for half, -1 to reverse, or omit it for 1." : "Use a logical-unit offset such as -16, or omit it for 0.");
+        continue;
+      }
+      if (field === "times") times = value;
+      else plus = value;
+    }
+    return { target, of: of as Measure["of"], times, plus };
   }
 
   compile(doc: JsonObject): Program | undefined {

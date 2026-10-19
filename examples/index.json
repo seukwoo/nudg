@@ -180,7 +180,8 @@
         "drag",
         "follow",
         "nearest",
-        "map"
+        "map",
+        "measure"
       ],
       "html": "swipe-row.html",
       "summary": "Swipe left to reveal Delete. A short or slow swipe snaps back; a long or quick one stays open. The action fades in through a map.",
@@ -252,7 +253,8 @@
       "tags": [
         "any-state-when",
         "drag",
-        "nearest"
+        "nearest",
+        "measure"
       ],
       "html": "segmented.html",
       "summary": "Tap a segment to move the indicator, or drag it and let it snap. Transitions are listed once on the machine, not once per state.",
@@ -288,6 +290,7 @@
         "follow",
         "nearest",
         "map",
+        "measure",
         "any-state-when",
         "host-event"
       ],

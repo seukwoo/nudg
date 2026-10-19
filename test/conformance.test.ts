@@ -104,3 +104,24 @@ test("programs/ holds every case compiled by the current compiler (run spec/conf
     assert.equal(readFileSync(new URL(`programs/${name}`, dir), "utf8"), text, `programs/${name} is out of date`);
   }
 });
+
+test("compiled programs from before 0.6 default measurement arithmetic to identity", () => {
+  const c: Case = JSON.parse(readFileSync(new URL("layout-tabs.json", dir), "utf8"));
+  const { program } = compileCase(c.doc);
+  const json = programToJson(program!) as any;
+  delete json.properties.find((p: any) => p.measure).measure.times;
+  delete json.properties.find((p: any) => p.measure).measure.plus;
+  const stateEntry = json.machine.states.flatMap((s: any) => s.measure).find((m: any) => m);
+  delete stateEntry.times;
+  delete stateEntry.plus;
+  const decoded = programFromJson(json);
+  const measure = [...decoded.properties.values()].find((p) => p.measure)?.measure;
+  assert.equal(measure?.times, 1);
+  assert.equal(measure?.plus, 0);
+  assert.equal(decoded.machine.kind, "states");
+  if (decoded.machine.kind === "states") {
+    const stateMeasure = [...decoded.machine.states.values()].flatMap((s) => [...s.measure.values()])[0];
+    assert.equal(stateMeasure.times, 1);
+    assert.equal(stateMeasure.plus, 0);
+  }
+});

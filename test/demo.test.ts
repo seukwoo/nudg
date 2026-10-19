@@ -371,8 +371,7 @@ test("music player connects transport controls to real media and nudg inputs", {
   await mouse("mousePressed", musicX, musicY);
   await mouse("mouseReleased", musicX, musicY);
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('playing') ? true : undefined"), 5_000);
-  await sleep(450);
-  assert.ok((await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('audio').currentTime")) > 0.2);
+  await waitFor(() => browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('audio').currentTime > 0.2 ? true : undefined"), 2_000);
   await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.media-stop').click()");
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('stopped') ? true : undefined"), 2_000);
   await waitFor(() => browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.artwork-status').value === 'Stopped' ? true : undefined"), 2_000);

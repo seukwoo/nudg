@@ -20,13 +20,20 @@
     .progress { background: #1b7d67; }
     .media-seek { position: absolute; inset: 0; width: 100%; height: 14px; margin: 0; opacity: 0; cursor: pointer; }
     .time { display: flex; justify-content: space-between; color: #6d756f; font: 10px ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
-    .controls { display: grid; grid-template-columns: 28px 34px 28px 28px; gap: 5px; align-items: center; }
-    button { width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 1px solid #d9e0db; border-radius: 6px; color: #21302a; background: #f4f7f5; font: inherit; font-weight: 800; cursor: pointer; }
+    .controls { display: grid; grid-template-columns: 28px 34px 28px 28px 28px; gap: 5px; align-items: center; }
+    button { position: relative; width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 1px solid #d9e0db; border-radius: 6px; color: #21302a; background: #f4f7f5; font: inherit; font-weight: 800; cursor: pointer; }
     .media-toggle { width: 34px; height: 34px; border-color: #1b7d67; color: #fff; background: #1b7d67; font-size: 13px; }
     button[aria-pressed="true"] { border-color: #dc9d37; color: #805610; background: #fff4d8; }
     .secondary { grid-column: 1 / -1; display: grid; grid-template-columns: 28px 1fr 54px; gap: 7px; align-items: center; }
     .media-volume { min-width: 0; width: 100%; accent-color: #1b7d67; }
     .media-rate { width: 54px; height: 28px; border: 1px solid #d9e0db; border-radius: 6px; color: #29352f; background: #fff; font: inherit; }
+    .stop-icon { width: 10px; height: 10px; border-radius: 1px; background: currentColor; }
+    .speaker-icon { position: relative; width: 15px; height: 14px; display: block; }
+    .speaker-icon::before { content: ""; position: absolute; left: 1px; top: 5px; width: 5px; height: 5px; border-radius: 1px; background: currentColor; }
+    .speaker-icon::after { content: ""; position: absolute; left: 5px; top: 2px; width: 8px; height: 11px; background: currentColor; clip-path: polygon(0 30%, 100% 0, 100% 100%, 0 70%); }
+    .media-mute::before { content: ""; position: absolute; right: 3px; width: 5px; height: 9px; border-right: 2px solid currentColor; border-radius: 50%; }
+    .media-mute[aria-pressed="true"]::before { display: none; }
+    .media-mute[aria-pressed="true"]::after { content: ""; position: absolute; width: 17px; border-top: 2px solid currentColor; transform: rotate(45deg); }
   </style>
 </head>
 <body>
@@ -47,11 +54,12 @@
       <div class="controls">
         <button class="media-back" type="button" aria-label="Back 10 seconds">-10</button>
         <button class="media-toggle" data-nudg="play" type="button" aria-label="Play">&#9654;</button>
+        <button class="media-stop" type="button" aria-label="Stop"><span class="stop-icon" aria-hidden="true"></span></button>
         <button class="media-forward" type="button" aria-label="Forward 10 seconds">+10</button>
         <button class="media-repeat" data-nudg="repeat" type="button" aria-label="Repeat" aria-pressed="false">&#8635;</button>
       </div>
       <div class="secondary">
-        <button class="media-mute" data-nudg="mute" type="button" aria-label="Mute" aria-pressed="false">&#9835;</button>
+        <button class="media-mute" data-nudg="mute" type="button" aria-label="Mute" aria-pressed="false"><span class="speaker-icon" aria-hidden="true"></span></button>
         <input class="media-volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volume">
         <select class="media-rate" aria-label="Playback speed"><option value="0.75">0.75x</option><option value="1" selected>1x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option></select>
       </div>
@@ -64,7 +72,10 @@
     const { program } = await compileUrl("./music-player.nudg.json");
     const root = document.querySelector(".music-player");
     const player = play(program, document.body, {
-      onState(state) { root.querySelector(".artwork-status").value = state.includes("playing") ? "Playing" : state.includes("ended") ? "Ended" : state.includes("loading") || state.includes("buffering") ? "Loading" : "Paused"; },
+      onState(state) {
+        const has = (name) => state.some((path) => path === name || path.endsWith(`/${name}`));
+        root.querySelector(".artwork-status").value = has("playing") ? "Playing" : has("stopped") ? "Stopped" : has("ended") ? "Ended" : has("loading") || has("buffering") ? "Loading" : "Paused";
+      },
     });
     const media = createMediaController(root.querySelector("audio"), player, root);
     addEventListener("beforeunload", () => media.dispose(), { once: true });

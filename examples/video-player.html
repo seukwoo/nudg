@@ -17,11 +17,20 @@
     .buffered { background: rgba(255,255,255,.52); }
     .progress { background: #63dab8; }
     .media-seek { position: absolute; inset: 0; width: 100%; height: 12px; margin: 0; opacity: 0; cursor: pointer; }
-    .control-row { display: grid; grid-template-columns: 26px 26px 1fr 60px 44px 26px 26px; gap: 4px; align-items: center; }
-    button { width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 1px solid rgba(255,255,255,.28); border-radius: 5px; color: #fff; background: rgba(9, 27, 21, .76); font: inherit; font-weight: 800; cursor: pointer; }
+    .control-row { display: grid; grid-template-columns: 26px 26px 26px minmax(54px, 1fr) 42px 26px 26px; gap: 4px; align-items: center; }
+    button { position: relative; width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 1px solid rgba(255,255,255,.28); border-radius: 5px; color: #fff; background: rgba(9, 27, 21, .76); font: inherit; font-weight: 800; cursor: pointer; }
     .time { min-width: 0; color: #fff; font: 9px ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .media-volume { min-width: 0; width: 60px; accent-color: #63dab8; }
+    .volume-control { position: relative; width: 26px; height: 26px; }
+    .media-volume { position: absolute; z-index: 2; left: -21px; bottom: 31px; width: 68px; height: 24px; margin: 0; padding: 0 7px; border-radius: 5px; opacity: 0; pointer-events: none; background: rgba(9, 27, 21, .9); accent-color: #63dab8; transition: opacity .14s ease-out; }
+    .volume-control:hover .media-volume, .volume-control:focus-within .media-volume { opacity: 1; pointer-events: auto; }
     .media-rate { width: 44px; height: 26px; border: 1px solid rgba(255,255,255,.28); border-radius: 5px; color: #fff; background: rgba(9, 27, 21, .76); font: inherit; }
+    .stop-icon { width: 10px; height: 10px; border-radius: 1px; background: currentColor; }
+    .speaker-icon { position: relative; width: 14px; height: 13px; display: block; }
+    .speaker-icon::before { content: ""; position: absolute; left: 1px; top: 4px; width: 5px; height: 5px; border-radius: 1px; background: currentColor; }
+    .speaker-icon::after { content: ""; position: absolute; left: 5px; top: 1px; width: 8px; height: 11px; background: currentColor; clip-path: polygon(0 30%, 100% 0, 100% 100%, 0 70%); }
+    .media-mute::before { content: ""; position: absolute; right: 2px; width: 5px; height: 9px; border-right: 2px solid currentColor; border-radius: 50%; }
+    .media-mute[aria-pressed="true"]::before { display: none; }
+    .media-mute[aria-pressed="true"]::after { content: ""; position: absolute; width: 17px; border-top: 2px solid currentColor; transform: rotate(45deg); }
   </style>
 </head>
 <body>
@@ -34,9 +43,12 @@
       <div class="timeline"><span class="track"></span><span class="buffered" data-nudg="buffered"></span><span class="progress" data-nudg="progress"></span><input class="media-seek" type="range" min="0" max="0" value="0" aria-label="Seek"></div>
       <div class="control-row">
         <button class="media-toggle" data-nudg="play" type="button" aria-label="Play">&#9654;</button>
-        <button class="media-mute" data-nudg="mute" type="button" aria-label="Mute" aria-pressed="false">&#9835;</button>
+        <button class="media-stop" type="button" aria-label="Stop"><span class="stop-icon" aria-hidden="true"></span></button>
+        <div class="volume-control">
+          <button class="media-mute" data-nudg="mute" type="button" aria-label="Mute" aria-pressed="false"><span class="speaker-icon" aria-hidden="true"></span></button>
+          <input class="media-volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volume">
+        </div>
         <span class="time"><span class="media-current">00:00</span> / <span class="media-duration">00:00</span></span>
-        <input class="media-volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volume">
         <select class="media-rate" aria-label="Playback speed"><option value="0.75">.75x</option><option value="1" selected>1x</option><option value="1.5">1.5x</option><option value="2">2x</option></select>
         <button class="media-pip" type="button" aria-label="Picture in picture">PiP</button>
         <button class="media-fullscreen" type="button" aria-label="Fullscreen">&#x26F6;</button>
@@ -49,7 +61,10 @@
     const { program } = await compileUrl("./video-player.nudg.json");
     const root = document.querySelector(".video-player");
     const player = play(program, document.body, {
-      onState(state) { root.querySelector(".video-status").value = state.includes("playing") ? "Playing" : state.includes("ended") ? "Replay" : state.includes("error") ? "Unavailable" : state.includes("loading") || state.includes("buffering") ? "Loading" : "Paused"; },
+      onState(state) {
+        const has = (name) => state.some((path) => path === name || path.endsWith(`/${name}`));
+        root.querySelector(".video-status").value = has("playing") ? "Playing" : has("stopped") ? "Stopped" : has("ended") ? "Replay" : has("error") ? "Unavailable" : has("loading") || has("buffering") ? "Loading" : "Paused";
+      },
     });
     const media = createMediaController(root.querySelector("video"), player, root, { autoHide: true });
     addEventListener("beforeunload", () => media.dispose(), { once: true });

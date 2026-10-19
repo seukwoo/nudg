@@ -25,12 +25,13 @@
     "playback": {
       "initial": "loading",
       "states": {
-        "loading": { "set": { "status.opacity": 1, "center-play.opacity": 0, "center-play.scale": 0.9, "play.scale": 0.92 }, "when": { "host.ready": "paused", "host.pause": "paused", "host.play": "playing", "host.error": "error" } },
-        "paused": { "set": { "status.opacity": 1, "center-play.opacity": 1, "center-play.scale": 1, "play.scale": 1 }, "when": { "host.load": "loading", "host.play": "playing", "host.buffering": "buffering", "host.ended": "ended", "host.error": "error" } },
-        "playing": { "set": { "status.opacity": 0, "center-play.opacity": 0, "center-play.scale": 0.9, "play.scale": 1 }, "when": { "host.pause": "paused", "host.buffering": "buffering", "host.ended": "ended", "host.error": "error" } },
-        "buffering": { "set": { "status.opacity": 1, "center-play.opacity": 0, "center-play.scale": 0.9, "play.scale": 0.92 }, "when": { "host.play": "playing", "host.pause": "paused", "host.error": "error" } },
-        "ended": { "set": { "status.opacity": 1, "center-play.opacity": 1, "center-play.scale": 1.1, "play.scale": 1 }, "when": { "host.play": "playing", "host.load": "loading" } },
-        "error": { "set": { "status.opacity": 1, "center-play.opacity": 0.5, "center-play.scale": 0.9, "play.scale": 0.9 }, "when": { "host.load": "loading" } }
+        "loading": { "set": { "status.opacity": 1, "center-play.opacity": 0, "center-play.scale": 0.9, "play.scale": 0.92 }, "when": { "host.ready": "paused", "host.pause": "paused", "host.play": "playing", "host.stop": "stopped", "host.error": "error" } },
+        "paused": { "set": { "status.opacity": 1, "center-play.opacity": 1, "center-play.scale": 1, "play.scale": 1 }, "when": { "host.load": "loading", "host.play": "playing", "host.stop": "stopped", "host.buffering": "buffering", "host.ended": "ended", "host.error": "error" } },
+        "playing": { "set": { "status.opacity": 0, "center-play.opacity": 0, "center-play.scale": 0.9, "play.scale": 1 }, "when": { "host.pause": "paused", "host.stop": "stopped", "host.buffering": "buffering", "host.ended": "ended", "host.error": "error" } },
+        "buffering": { "set": { "status.opacity": 1, "center-play.opacity": 0, "center-play.scale": 0.9, "play.scale": 0.92 }, "when": { "host.play": "playing", "host.pause": "paused", "host.stop": "stopped", "host.error": "error" } },
+        "stopped": { "set": { "status.opacity": 1, "center-play.opacity": 1, "center-play.scale": 1, "play.scale": 1 }, "when": { "host.play": "playing", "host.load": "loading" } },
+        "ended": { "set": { "status.opacity": 1, "center-play.opacity": 1, "center-play.scale": 1.1, "play.scale": 1 }, "when": { "host.play": "playing", "host.stop": "stopped", "host.load": "loading" } },
+        "error": { "set": { "status.opacity": 1, "center-play.opacity": 0.5, "center-play.scale": 0.9, "play.scale": 0.9 }, "when": { "host.load": "loading", "host.stop": "stopped" } }
       }
     },
     "control-visibility": {

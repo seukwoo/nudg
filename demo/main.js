@@ -386,7 +386,8 @@ const HOOKS = {
     const controller = createMediaController(root.querySelector("audio"), player, root);
     return {
       onState(state) {
-        status.value = state.includes("playing") ? "Playing" : state.includes("ended") ? "Ended" : state.includes("error") ? "Unavailable" : state.includes("loading") || state.includes("buffering") ? "Loading" : "Paused";
+        const has = (name) => state.some((path) => path === name || path.endsWith(`/${name}`));
+        status.value = has("playing") ? "Playing" : has("stopped") ? "Stopped" : has("ended") ? "Ended" : has("error") ? "Unavailable" : has("loading") || has("buffering") ? "Loading" : "Paused";
       },
       dispose: () => controller.dispose(),
     };
@@ -396,7 +397,8 @@ const HOOKS = {
     const controller = createMediaController(root.querySelector("video"), player, root, { autoHide: true });
     return {
       onState(state) {
-        status.value = state.includes("playing") ? "Playing" : state.includes("ended") ? "Replay" : state.includes("error") ? "Unavailable" : state.includes("loading") || state.includes("buffering") ? "Loading" : "Paused";
+        const has = (name) => state.some((path) => path === name || path.endsWith(`/${name}`));
+        status.value = has("playing") ? "Playing" : has("stopped") ? "Stopped" : has("ended") ? "Replay" : has("error") ? "Unavailable" : has("loading") || has("buffering") ? "Loading" : "Paused";
       },
       dispose: () => controller.dispose(),
     };

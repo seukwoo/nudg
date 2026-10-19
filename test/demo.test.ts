@@ -356,10 +356,11 @@ test("music player connects transport controls to real media and nudg inputs", {
       return {
         label: root.querySelector(".music-player").getAttribute("aria-label"),
         title: root.querySelector(".meta strong").textContent,
-        controls: [".media-back", ".media-toggle", ".media-forward", ".media-repeat", ".media-mute", ".media-volume", ".media-rate"].every((selector) => root.querySelector(selector)),
+        controls: [".media-back", ".media-toggle", ".media-stop", ".media-forward", ".media-repeat", ".media-mute", ".media-volume", ".media-rate"].every((selector) => root.querySelector(selector)),
+        muteLabel: root.querySelector(".media-mute").getAttribute("aria-label"),
       };
     })()`),
-    { label: "Music player", title: "Afterglow", controls: true },
+    { label: "Music player", title: "Afterglow", controls: true, muteLabel: "Mute" },
   );
   const musicDuration = await browser.evaluate(`(() => { const root = document.getElementById("detail-stage").shadowRoot; return [root.querySelector("audio").duration, root.querySelector(".media-seek").max]; })()`);
   assert.ok(musicDuration[0] > 11 && musicDuration[0] < 13, `audio duration was ${musicDuration[0]}`);
@@ -372,6 +373,13 @@ test("music player connects transport controls to real media and nudg inputs", {
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('playing') ? true : undefined"), 5_000);
   await sleep(450);
   assert.ok((await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('audio').currentTime")) > 0.2);
+  await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.media-stop').click()");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('stopped') ? true : undefined"), 2_000);
+  await waitFor(() => browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.artwork-status').value === 'Stopped' ? true : undefined"), 2_000);
+  assert.deepEqual(
+    await browser.evaluate(`(() => { const root = document.getElementById("detail-stage").shadowRoot; const audio = root.querySelector("audio"); return [audio.paused, audio.currentTime, root.querySelector(".artwork-status").value]; })()`),
+    [true, 0, "Stopped"],
+  );
 
   await browser.evaluate(`(() => {
     const root = document.getElementById("detail-stage").shadowRoot;
@@ -404,7 +412,7 @@ test("video player exposes playback, auto-hide, PiP and fullscreen controls", { 
       return {
         label: root.querySelector(".video-player").getAttribute("aria-label"),
         dimensions: [root.querySelector("video").videoWidth, root.querySelector("video").videoHeight],
-        controls: [".media-toggle", ".media-seek", ".media-mute", ".media-volume", ".media-rate", ".media-pip", ".media-fullscreen"].every((selector) => root.querySelector(selector)),
+        controls: [".media-toggle", ".media-stop", ".media-seek", ".media-mute", ".media-volume", ".media-rate", ".media-pip", ".media-fullscreen"].every((selector) => root.querySelector(selector)),
       };
     })()`),
     { label: "Video player", dimensions: [640, 360], controls: true },
@@ -430,6 +438,13 @@ test("video player exposes playback, auto-hide, PiP and fullscreen controls", { 
   })()`);
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('visible') ? true : undefined"), 2_000);
   assert.deepEqual(await browser.evaluate("[window.__fullscreenRequested, window.__pipRequested]"), [true, true]);
+  await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.media-stop').click()");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('stopped') ? true : undefined"), 2_000);
+  await waitFor(() => browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.video-status').value === 'Stopped' ? true : undefined"), 2_000);
+  assert.deepEqual(
+    await browser.evaluate(`(() => { const root = document.getElementById("detail-stage").shadowRoot; const video = root.querySelector("video"); return [video.paused, video.currentTime, root.querySelector(".video-status").value]; })()`),
+    [true, 0, "Stopped"],
+  );
 });
 
 test("playground: a typo gets a hint; a pasted file gets generic boxes", { skip }, async () => {

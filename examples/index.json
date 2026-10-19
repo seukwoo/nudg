@@ -432,7 +432,7 @@
         "media"
       ],
       "html": "music-player.html",
-      "summary": "A complete audio player with play/pause, seek, skip, volume, mute, speed and repeat. The host owns HTMLMediaElement while nudg standardizes playback states and continuous progress feedback.",
+      "summary": "A complete audio player with play/pause, stop, seek, skip, volume, mute, speed and repeat. The host owns HTMLMediaElement while nudg standardizes playback states and continuous progress feedback.",
       "prompts": [
         "Make play feel more energetic without making pause bouncy.",
         "Make the artwork response calmer and the repeat toggle clearer."
@@ -449,7 +449,7 @@
         "media"
       ],
       "html": "video-player.html",
-      "summary": "A complete video player with play/pause, seek, volume, mute, speed, Picture in Picture, fullscreen and auto-hiding controls. Media commands stay in the host while nudg coordinates playback and control visibility.",
+      "summary": "A complete video player with play/pause, stop, seek, volume, mute, speed, Picture in Picture, fullscreen and auto-hiding controls. Media commands stay in the host while nudg coordinates playback and control visibility.",
       "prompts": [
         "Keep the controls visible longer before they hide.",
         "Make replay feel inviting without distracting from the video."

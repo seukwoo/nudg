@@ -113,6 +113,14 @@ export function createMediaController(media, player, root, { autoHide = false } 
     media.currentTime = Number(seek.value);
     syncTime();
   });
+  listen(root.querySelector(".media-stop"), "click", () => {
+    media.pause();
+    media.currentTime = 0;
+    syncTime();
+    syncPlaying();
+    showControls();
+    player.send("host.stop");
+  });
   listen(volume, "input", () => {
     media.volume = Number(volume.value);
     media.muted = false;

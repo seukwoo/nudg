@@ -6,6 +6,7 @@
   --line: #e4e4df;
   --code-bg: #f2f2ee;
   --accent: #2563eb;
+  --success: #13735b;
   --error: #c2410c;
   --warning: #a16207;
   color-scheme: light;
@@ -20,6 +21,7 @@
     --line: #2f2f2c;
     --code-bg: #262624;
     --accent: #60a5fa;
+    --success: #70c9a8;
     --error: #fb923c;
     --warning: #facc15;
     color-scheme: dark;
@@ -102,6 +104,31 @@ main { padding: 32px 32px 64px; min-width: 0; }
 .view-head { margin-bottom: 20px; }
 .view-head p { margin: 0; color: var(--muted); max-width: 64ch; }
 
+/* Runtime support is part of the work surface, not a separate marketing hero. */
+.runtime-band {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(420px, 2fr) minmax(150px, 0.7fr);
+  gap: 24px;
+  align-items: center;
+  margin: 0 0 20px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.runtime-lead h2 { margin: 2px 0 3px; font-size: 17px; }
+.runtime-lead p { margin: 0; color: var(--muted); font-size: 13px; }
+.runtime-label { color: var(--accent); font-size: 12px; font-weight: 700; }
+.runtime-platforms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.runtime-platforms div { min-width: 0; padding: 3px 14px; border-left: 1px solid var(--line); }
+.runtime-platforms strong, .runtime-platforms span { display: block; }
+.runtime-platforms strong { font-size: 13px; }
+.runtime-platforms span { color: var(--muted); font-size: 12px; }
+.runtime-check { padding-left: 16px; border-left: 3px solid var(--success); }
+.runtime-check strong, .runtime-check span, .runtime-check small { display: block; }
+.runtime-check strong { color: var(--success); font-size: 19px; font-variant-numeric: tabular-nums; }
+.runtime-check span { font-size: 12px; font-weight: 700; }
+.runtime-check small { color: var(--muted); font-size: 11px; }
+
 /* Tag chips, shared by the browse filter and the detail view. */
 .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
 .tag {
@@ -175,8 +202,9 @@ main { padding: 32px 32px 64px; min-width: 0; }
 .prompts li { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
 
 .code { margin-top: 24px; }
-.tabs { display: flex; gap: 2px; }
+.tabs { display: flex; gap: 2px; overflow-x: auto; }
 .tabs button {
+  flex: 0 0 auto;
   padding: 8px 14px;
   border: 1px solid transparent;
   border-bottom: 0;
@@ -240,6 +268,9 @@ textarea {
   #categories a { padding: 4px 8px; gap: 6px; }
   .lnb-foot { margin: 0; flex-direction: row; width: 100%; }
   main { padding: 20px 16px 48px; }
+  .runtime-band { grid-template-columns: 1fr; gap: 14px; padding: 16px 0; }
+  .runtime-platforms div:nth-child(odd) { border-left: 0; padding-left: 0; }
+  .runtime-check { padding: 10px 0 0; border-left: 0; border-top: 3px solid var(--success); }
   .detail, .playground { grid-template-columns: 1fr; }
   .playground.compare .stages { grid-template-columns: 1fr; }
 }

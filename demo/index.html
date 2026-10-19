@@ -48,6 +48,24 @@
           <h1 id="browse-title">All examples</h1>
           <p>Each one is a plain JSON file played by the same headless core. Interact with them, open one for its source, or edit it in the playground.</p>
         </header>
+        <section class="runtime-band" aria-labelledby="runtime-title">
+          <div class="runtime-lead">
+            <span class="runtime-label">Runtime support</span>
+            <h2 id="runtime-title">One motion file, across web and native.</h2>
+            <p>The TypeScript reference and native runtimes read the same compiled program.</p>
+          </div>
+          <div class="runtime-platforms" role="list" aria-label="Supported UI hosts">
+            <div role="listitem"><strong>Web + React</strong><span>TypeScript</span></div>
+            <div role="listitem"><strong>React Native</strong><span>TypeScript core</span></div>
+            <div role="listitem"><strong>SwiftUI</strong><span>Swift runtime</span></div>
+            <div role="listitem"><strong>Jetpack Compose</strong><span>Kotlin runtime</span></div>
+          </div>
+          <div class="runtime-check" aria-label="All 26 shared conformance cases pass">
+            <strong>26 / 26</strong>
+            <span>shared conformance</span>
+            <small>TypeScript · Swift · Kotlin</small>
+          </div>
+        </section>
         <div class="tags" id="tags" aria-label="Filter by concept"></div>
         <div class="grid" id="grid"></div>
         <p class="empty" id="empty" hidden>No examples match.</p>
@@ -79,6 +97,9 @@
             <button type="button" role="tab" data-tab="nudg" aria-selected="true">nudg</button>
             <button type="button" role="tab" data-tab="html" aria-selected="false">HTML</button>
             <button type="button" role="tab" data-tab="react" aria-selected="false">React</button>
+            <button type="button" role="tab" data-tab="react-native" aria-selected="false">React Native</button>
+            <button type="button" role="tab" data-tab="swiftui" aria-selected="false">SwiftUI</button>
+            <button type="button" role="tab" data-tab="compose" aria-selected="false">Compose</button>
           </div>
           <pre><code id="detail-code"></code></pre>
         </div>

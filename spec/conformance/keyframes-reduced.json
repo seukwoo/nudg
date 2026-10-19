@@ -1,0 +1,83 @@
+{
+  "conformance": "0.8",
+  "name": "Keyframes: reduced motion skips transient entry frames and keeps the state target",
+  "doc": {
+    "nudg": "0.8",
+    "targets": [
+      "field"
+    ],
+    "values": {
+      "field.x": 0
+    },
+    "animate": {
+      "field.x": {
+        "spring": {
+          "duration": 0.3,
+          "bounce": 0
+        }
+      }
+    },
+    "initial": "idle",
+    "when": {
+      "host.invalid": "invalid",
+      "host.valid": "idle"
+    },
+    "states": {
+      "idle": {},
+      "invalid": {
+        "enter": {
+          "field.x": {
+            "keyframes": [
+              {
+                "at": 0.2,
+                "value": -10
+              },
+              {
+                "at": 0.45,
+                "value": 8
+              },
+              {
+                "at": 0.7,
+                "value": -5
+              }
+            ],
+            "duration": 0.4,
+            "ease": "linear"
+          }
+        },
+        "when": {
+          "host.invalid": "invalid"
+        }
+      }
+    }
+  },
+  "reducedMotion": true,
+  "steps": [
+    {
+      "t": 0.1,
+      "send": "host.invalid"
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "state": [
+          "invalid"
+        ],
+        "values": {
+          "field.x": 0
+        }
+      }
+    },
+    {
+      "t": 0.6,
+      "expect": {
+        "state": [
+          "invalid"
+        ],
+        "values": {
+          "field.x": 0
+        }
+      }
+    }
+  ]
+}

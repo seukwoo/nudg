@@ -4,7 +4,7 @@
 // of entries, because order matters (regions, states) and not every JSON reader keeps
 // object key order.
 
-import type { Follow, Machine, Measure, Motion, Program, Property, SpringMotion, State, Timer, Transition } from "./types.ts";
+import type { EntryEffect, Follow, Machine, Measure, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
 
 export const PROGRAM_FORMAT = 1;
 
@@ -60,6 +60,17 @@ function motion(m: Motion): Json {
   return out;
 }
 
+function entryEffect(effect: EntryEffect): Json {
+  if (effect.kind !== "keyframes") return motion(effect);
+  return { kind: "keyframes", frames: effect.frames.map((frame) => ({ at: frame.at, value: frame.value })), duration: effect.duration, ease: effect.ease === "linear" ? "linear" : [...effect.ease] };
+}
+
+function readEntryEffect(effect: any): EntryEffect {
+  return effect.kind === "keyframes"
+    ? { kind: "keyframes", frames: effect.frames.map((frame: any) => ({ at: frame.at, value: frame.value })), duration: effect.duration, ease: effect.ease }
+    : (effect as Motion & EntryEffect);
+}
+
 function machine(m: Machine): Json {
   if (m.kind === "regions") return { kind: "regions", regions: [...m.regions].map(([name, r]) => ({ name, machine: machine(r) })) };
   return { kind: "states", initial: m.initial, states: [...m.states.values()].map(state), when: [...m.when].map(([event, t]) => ({ event, ...transition(t) })) };
@@ -76,7 +87,7 @@ function state(s: State): Json {
     set: [...s.set].map(([key, value]) => ({ key, value })),
     measure: [...s.measure].map(([key, m]) => ({ key, ...(measure(m) as Record<string, Json>) })),
     follow: [...s.follow].map(([key, f]) => ({ key, ...follow(f) })),
-    enter: [...s.enter].map(([key, m]) => ({ key, motion: motion(m) })),
+    enter: [...s.enter].map(([key, effect]) => ({ key, effect: entryEffect(effect) })),
     when: [...s.when].map(([event, t]) => ({ event, ...transition(t) })),
     timers: s.timers.map((t: Timer) => ({ key: t.key, delay: t.delay, pause: t.pause.map((p) => ({ ...p })), transition: transition(t.transition) })),
   };
@@ -90,7 +101,7 @@ function readState(j: any): State {
     set: new Map(j.set.map((e: any) => [e.key, e.value])),
     measure: new Map(j.measure.map((e: any) => [e.key, { target: e.target, of: e.of, times: e.times ?? 1, plus: e.plus ?? 0 }])),
     follow: new Map(j.follow.map((e: any) => [e.key, readFollow(e)])),
-    enter: new Map(j.enter.map((e: any) => [e.key, e.motion as SpringMotion])),
+    enter: new Map(j.enter.map((e: any) => [e.key, readEntryEffect(e.effect ?? e.motion)])),
     when: new Map(j.when.map((w: any) => [w.event, readTransition(w)])),
     timers: j.timers.map((t: any) => ({ key: t.key, delay: t.delay, pause: (t.pause ?? []).map((p: any) => ({ on: p.on, off: p.off })), transition: readTransition(t.transition) })),
   };

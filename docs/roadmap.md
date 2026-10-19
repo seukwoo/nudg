@@ -38,7 +38,8 @@ Status: the first versioned recipe catalog covers every shipped example. Broad c
 
 - Done: format 0.6 layout arithmetic across TypeScript, Swift and Kotlin, with responsive bottom-sheet and swipe-row resting states.
 - Done: format 0.7 pausable timers for toast dismissal and video-control auto-hide.
-- Next: add keyframes with interruption and reduced-motion rules included from the start.
+- Done: format 0.8 entry keyframes with interruption, relayout and reduced-motion rules shared across all three runtimes; validation feedback now uses them.
+- Next: let measured `follow.range` and `map.from` endpoints remove the remaining duplicated layout constants.
 - Keep examples as executable evidence for recipes, not as a component-count target; do not widen the catalog during this work.
 - Follow with derived scroll direction/velocity and decay only when the earlier primitives are complete.
 
@@ -79,7 +80,7 @@ Goal: deepen the interaction and motion language where current recipes demonstra
 |---|---|---|
 | Layout arithmetic and relative snap points | Bottom sheet and swipe row resting states depended on constants | Implemented for format 0.6; measured follow/map endpoints remain separate work |
 | Pausable timers | Toast dismissal and video control auto-hide pause for focus, hover, scrubbing or app suspension | Implemented for format 0.7 with deterministic remaining-time semantics |
-| Keyframes | Reaction bursts and authored validation shakes need more than one kick | Add only with reduced-motion and interruption rules |
+| Keyframes | Reaction bursts and authored validation shakes need more than one kick | Implemented for format 0.8 as transient entry effects with deterministic interruption and reduced motion |
 | Sequence | Accordion requests already ask for the chevron and panel to move in order | Wait for a second independent recipe before adding syntax |
 | Decay | Free-scrolling carousel variants need inertial travel before snapping | Define velocity, bounds and interruption across platforms |
 | Continuous active motion | Pull-to-refresh still uses a CSS spinner workaround | Decide whether indefinite loops belong in nudg or remain a host visual |
@@ -95,7 +96,7 @@ Goal: deliver the original stage 2 scope with patterns proven in app workflows.
 
 - Build onboarding, modal flows, screen transitions and collection insertion/removal/reorder examples. Use them to establish requirements for data inputs and composing machines beyond today's nested states.
 - Add decay / inertia for fling and scroll-like motion without snap points.
-- Add small compositional primitives where real patterns need them: `delay`, `sequence`, `stagger`, or keyframes.
+- Add small compositional primitives where real patterns need them: `delay`, `sequence`, or `stagger`.
 - Explore reusable behavior composition for patterns such as toast = presence + timer + dismiss + hover pause.
 - Add continuous active-state motion for spinners or marquees if CSS state hooks are not enough.
 - Keep every new primitive tied to at least one real pattern and one conformance case.

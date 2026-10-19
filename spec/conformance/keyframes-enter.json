@@ -1,0 +1,156 @@
+{
+  "conformance": "0.8",
+  "name": "Keyframes: entry starts from the current value, re-entry restarts, interruption hands velocity to the next spring",
+  "doc": {
+    "nudg": "0.8",
+    "targets": [
+      "field"
+    ],
+    "values": {
+      "field.x": 0
+    },
+    "animate": {
+      "field.x": {
+        "spring": {
+          "duration": 0.3,
+          "bounce": 0
+        }
+      }
+    },
+    "initial": "idle",
+    "when": {
+      "host.invalid": "invalid",
+      "host.valid": "idle"
+    },
+    "states": {
+      "idle": {},
+      "invalid": {
+        "enter": {
+          "field.x": {
+            "keyframes": [
+              {
+                "at": 0.2,
+                "value": -10
+              },
+              {
+                "at": 0.45,
+                "value": 8
+              },
+              {
+                "at": 0.7,
+                "value": -5
+              }
+            ],
+            "duration": 0.4,
+            "ease": "linear"
+          }
+        },
+        "when": {
+          "host.invalid": "invalid"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0.1,
+      "send": "host.invalid"
+    },
+    {
+      "t": 0.12,
+      "expect": {
+        "state": [
+          "invalid"
+        ],
+        "values": {
+          "field.x": -2.5
+        }
+      }
+    },
+    {
+      "t": 0.17,
+      "expect": {
+        "state": [
+          "invalid"
+        ],
+        "values": {
+          "field.x": -8.75
+        }
+      }
+    },
+    {
+      "t": 0.24,
+      "expect": {
+        "state": [
+          "invalid"
+        ],
+        "values": {
+          "field.x": 0.8
+        }
+      }
+    },
+    {
+      "t": 0.25,
+      "send": "host.invalid"
+    },
+    {
+      "t": 0.27,
+      "expect": {
+        "state": [
+          "invalid"
+        ],
+        "values": {
+          "field.x": -0.55
+        }
+      }
+    },
+    {
+      "t": 0.34,
+      "expect": {
+        "state": [
+          "invalid"
+        ],
+        "values": {
+          "field.x": -8.2
+        }
+      }
+    },
+    {
+      "t": 0.38,
+      "send": "host.valid"
+    },
+    {
+      "t": 0.4,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "field.x": 1.434705978
+        }
+      }
+    },
+    {
+      "t": 0.5,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "field.x": 1.46507168
+        }
+      }
+    },
+    {
+      "t": 0.8,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "field.x": 0.00995395
+        }
+      }
+    }
+  ]
+}

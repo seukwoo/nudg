@@ -1,0 +1,320 @@
+{
+  "conformance": "0.8",
+  "name": "Validator (0.8): entry keyframes",
+  "documents": [
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "0.7",
+        "targets": [
+          "field"
+        ],
+        "values": {
+          "field.x": 0
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.invalid": "invalid"
+            }
+          },
+          "invalid": {
+            "enter": {
+              "field.x": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": 8
+                  }
+                ],
+                "duration": 0.3
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/states/invalid/enter/field.x/keyframes"
+        }
+      ]
+    },
+    {
+      "name": "empty",
+      "doc": {
+        "nudg": "0.8",
+        "targets": [
+          "field"
+        ],
+        "values": {
+          "field.x": 0
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.invalid": "invalid"
+            }
+          },
+          "invalid": {
+            "enter": {
+              "field.x": {
+                "keyframes": [],
+                "duration": 0.3
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-keyframes",
+          "path": "/states/invalid/enter/field.x/keyframes"
+        }
+      ]
+    },
+    {
+      "name": "endpoint",
+      "doc": {
+        "nudg": "0.8",
+        "targets": [
+          "field"
+        ],
+        "values": {
+          "field.x": 0
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.invalid": "invalid"
+            }
+          },
+          "invalid": {
+            "enter": {
+              "field.x": {
+                "keyframes": [
+                  {
+                    "at": 1,
+                    "value": 8
+                  }
+                ],
+                "duration": 0.3
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-keyframe-time",
+          "path": "/states/invalid/enter/field.x/keyframes/0/at"
+        }
+      ]
+    },
+    {
+      "name": "unordered",
+      "doc": {
+        "nudg": "0.8",
+        "targets": [
+          "field"
+        ],
+        "values": {
+          "field.x": 0
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.invalid": "invalid"
+            }
+          },
+          "invalid": {
+            "enter": {
+              "field.x": {
+                "keyframes": [
+                  {
+                    "at": 0.7,
+                    "value": 8
+                  },
+                  {
+                    "at": 0.4,
+                    "value": -4
+                  }
+                ],
+                "duration": 0.3
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-keyframe-time",
+          "path": "/states/invalid/enter/field.x/keyframes/1/at"
+        }
+      ]
+    },
+    {
+      "name": "missing-value",
+      "doc": {
+        "nudg": "0.8",
+        "targets": [
+          "field"
+        ],
+        "values": {
+          "field.x": 0
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.invalid": "invalid"
+            }
+          },
+          "invalid": {
+            "enter": {
+              "field.x": {
+                "keyframes": [
+                  {
+                    "at": 0.5
+                  }
+                ],
+                "duration": 0.3
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-keyframes",
+          "path": "/states/invalid/enter/field.x/keyframes/0/value"
+        }
+      ]
+    },
+    {
+      "name": "bad-value",
+      "doc": {
+        "nudg": "0.8",
+        "targets": [
+          "field"
+        ],
+        "values": {
+          "field.x": 0
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.invalid": "invalid"
+            }
+          },
+          "invalid": {
+            "enter": {
+              "field.x": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": "far"
+                  }
+                ],
+                "duration": 0.3
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/states/invalid/enter/field.x/keyframes/0/value"
+        }
+      ]
+    },
+    {
+      "name": "duration",
+      "doc": {
+        "nudg": "0.8",
+        "targets": [
+          "field"
+        ],
+        "values": {
+          "field.x": 0
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.invalid": "invalid"
+            }
+          },
+          "invalid": {
+            "enter": {
+              "field.x": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": 8
+                  }
+                ],
+                "duration": 0
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/states/invalid/enter/field.x/duration"
+        }
+      ]
+    },
+    {
+      "name": "mixed-effect",
+      "doc": {
+        "nudg": "0.8",
+        "targets": [
+          "field"
+        ],
+        "values": {
+          "field.x": 0
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.invalid": "invalid"
+            }
+          },
+          "invalid": {
+            "enter": {
+              "field.x": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": 8
+                  }
+                ],
+                "duration": 0.3,
+                "kick": 20,
+                "spring": {
+                  "duration": 0.3
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "enter-effect-conflict",
+          "path": "/states/invalid/enter/field.x"
+        }
+      ]
+    }
+  ]
+}

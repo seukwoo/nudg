@@ -29,7 +29,8 @@ Legend: **yes** supported, with an example; **yes, no example** supported but no
 |---|---|---|
 | Spring (duration and bounce, or stiffness and damping) | yes | most examples |
 | Tween (named curves, Bézier) | yes | accordion, toast |
-| Kick (a pop or a shake on entering a state) | yes | like, shake |
+| Kick (a physical impulse on entering a state) | yes | like |
+| Entry keyframes (authored multi-beat feedback) | yes | shake |
 | Follow an input, with rubber banding | yes | toggle-drag, swipe-row |
 | Snap to the nearest state, with momentum | yes | toggle-drag, carousel, segmented |
 | Derived values (`map`), including colors | yes | toggle-drag, swipe-row |
@@ -38,7 +39,6 @@ Legend: **yes** supported, with an example; **yes, no example** supported but no
 | Reduced motion | yes, runtime-wide | every example |
 | Continuous motion while a state is active (a spinner, a marquee) | partly: CSS through `data-nudg-state` | pull-to-refresh |
 | Sequence, delay, stagger (menu items one after another) | no: [open question](design.md#open-questions) | |
-| Keyframes | no: [open question](design.md#open-questions) | |
 | Decay (a fling that slows down without a snap point) | no: [open question](design.md#open-questions) | |
 | Arithmetic on measurements (an offset, half a sheet) | yes | bottom-sheet, swipe-row |
 

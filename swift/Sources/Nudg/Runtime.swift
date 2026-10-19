@@ -15,8 +15,14 @@ public enum RuntimeError: Error { case timeWentBackwards(Double, Double), badSta
 
 private enum Segment {
   case motion(t0: Double, from: [Double], v0: [Double], to: [Double], motion: Motion?)
+  case keyframes(t0: Double, from: [Double], to: [Double], frames: [Keyframe], duration: Double, ease: Ease, owner: State)
   case follow(t0: Double, anchor: Double, input0: Double, follow: Follow, owner: State)
-  var to: [Double]? { if case let .motion(_, _, _, to, _) = self { return to }; return nil }
+  var to: [Double]? {
+    switch self {
+    case let .motion(_, _, _, to, _), let .keyframes(_, _, to, _, _, _, _): return to
+    case .follow: return nil
+    }
+  }
 }
 
 private final class Pending {
@@ -217,7 +223,23 @@ public final class Runtime {
       return ([value], [velocityAt(follow.input, t) * factor])
     case let .motion(t0, from, v0, to, motion):
       return evaluateMotion(t0: t0, from: from, v0: v0, to: to, motion: motion, t: t)
+    case let .keyframes(t0, from, to, frames, duration, ease, _):
+      return evaluateKeyframes(t0: t0, from: from, to: to, frames: frames, duration: duration, ease: ease, t: t)
     }
+  }
+
+  private func evaluateKeyframes(t0: Double, from: [Double], to: [Double], frames: [Keyframe], duration: Double, ease: Ease, t: Double) -> ([Double], [Double]) {
+    let u = (t - t0) / duration
+    if u >= 1 { return (to, to.map { _ in 0 }) }
+    let points = [Keyframe(at: 0, value: from)] + frames + [Keyframe(at: 1, value: to)]
+    for i in 1..<points.count where u <= points[i].at {
+      let a = points[i - 1], b = points[i]
+      let local = max(0, (u - a.at) / (b.at - a.at))
+      let progress = easeAt(ease, local)
+      let slope = easeSlope(ease, local) / ((b.at - a.at) * duration)
+      return (zip(a.value, b.value).map { $0 + ($1 - $0) * progress }, zip(a.value, b.value).map { ($1 - $0) * slope })
+    }
+    return (to, to.map { _ in 0 })
   }
 
   private func evaluateMotion(t0: Double, from: [Double], v0: [Double], to: [Double], motion: Motion?, t: Double) -> ([Double], [Double]) {
@@ -298,6 +320,8 @@ public final class Runtime {
     for transition in fired { for (key, m) in transition.animate { overrides[key] = m } }
     let targets = resolveTargets(active)
     let follows = activeFollows(active)
+    var activeStates = Set<ObjectIdentifier>()
+    walkActive(active) { activeStates.insert(ObjectIdentifier($0)) }
 
     for (key, prop) in program.properties where prop.map == nil {
       let segment = segments[key]!
@@ -308,7 +332,12 @@ public final class Runtime {
         continue
       }
       let to = targets[key]!
-      if let current = segment.to, current == to { continue }
+      if case let .keyframes(t0, from, _, frames, duration, ease, owner) = segment,
+         activeStates.contains(ObjectIdentifier(owner)), !entered.contains(where: { $0 === owner }) {
+        segments[key] = .keyframes(t0: t0, from: from, to: to, frames: frames, duration: duration, ease: ease, owner: owner)
+        continue
+      }
+      if case let .motion(_, _, _, current, _) = segment, current == to { continue }
       if snap {
         segments[key] = .motion(t0: t, from: to, v0: to.map { _ in 0 }, to: to, motion: nil)
         continue
@@ -321,13 +350,18 @@ public final class Runtime {
 
     if reduced { return }
     for state in entered {
-      for (key, kick) in state.enter {
+      for (key, effect) in state.enter {
         let segment = segments[key]!
-        guard case .motion = segment, let to = segment.to else { continue }
+        guard let to = segment.to else { continue }
         let (pos, v) = evaluate(segment, t)
-        var vel = v
-        if case let .spring(_, _, _, k) = kick { vel[0] += k ?? 0 }
-        segments[key] = .motion(t0: t, from: pos, v0: vel, to: to, motion: kick)
+        switch effect {
+        case let .keyframes(frames, duration, ease):
+          segments[key] = .keyframes(t0: t, from: pos, to: to, frames: frames, duration: duration, ease: ease, owner: state)
+        case let .kick(kick):
+          var vel = v
+          if case let .spring(_, _, _, k) = kick { vel[0] += k ?? 0 }
+          segments[key] = .motion(t0: t, from: pos, v0: vel, to: to, motion: kick)
+        }
       }
     }
   }
@@ -454,6 +488,7 @@ public final class Runtime {
       let prop = program.property(key)!
       if prop.map?.sourceKind == "input" { return true }
       let source = prop.map?.source ?? key
+      if case let .keyframes(t0, _, _, _, duration, _, _) = segments[source]! { return t - t0 >= duration }
       guard case let .motion(t0, from, v0, to, motion) = segments[source]!, let motion else { return true }
       switch motion {
       case let .tween(duration, _): return t - t0 >= duration

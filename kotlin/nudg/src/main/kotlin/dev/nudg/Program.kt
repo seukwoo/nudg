@@ -14,6 +14,12 @@ sealed interface Motion {
     data class Tween(val duration: Double, val ease: Ease) : Motion
 }
 
+data class Keyframe(val at: Double, val value: List<Double>)
+sealed interface EntryEffect {
+    data class Kick(val motion: Motion) : EntryEffect
+    data class Keyframes(val frames: List<Keyframe>, val duration: Double, val ease: Ease) : EntryEffect
+}
+
 data class Measure(val target: String, val of: String, val times: Double, val plus: Double)
 data class PropertyMap(val source: String, val sourceKind: String, val from: List<Double>, val to: List<List<Double>>)
 data class Property(val kind: PropertyKind, val base: List<Double>, val map: PropertyMap?, val measure: Measure?, val min: Double?, val max: Double?)
@@ -29,7 +35,7 @@ class State(
     val set: List<Pair<String, List<Double>>>,
     val measure: Map<String, Measure>,
     val follow: List<Pair<String, Follow>>,
-    val enter: List<Pair<String, Motion>>,
+    val enter: List<Pair<String, EntryEffect>>,
     val `when`: List<Pair<String, Transition>>,
     val timers: List<Timer>,
     val machine: Machine?,
@@ -85,6 +91,17 @@ class Program(val version: String, val targets: List<String>, val properties: Li
             return Motion.Spring(m["stiffness"] as Double, m["damping"] as Double, m["mass"] as Double, m["kick"] as? Double)
         }
 
+        private fun ease(v: Any?): Ease = if (v is List<*>) doubles(v).let { Ease.Bezier(it[0], it[1], it[2], it[3]) } else Ease.Linear
+
+        private fun entryEffect(v: Any?): EntryEffect {
+            val e = obj(v)
+            if (e["kind"] == "keyframes") {
+                val frames = list(e["frames"]).map { f -> obj(f).let { Keyframe(it["at"] as Double, doubles(it["value"])) } }
+                return EntryEffect.Keyframes(frames, e["duration"] as Double, ease(e["ease"]))
+            }
+            return EntryEffect.Kick(motion(v))
+        }
+
         private fun transition(v: Any?): Transition {
             val t = obj(v)
             return Transition(
@@ -118,7 +135,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
                         (f["key"] as String) to Follow(f["input"] as String, if (r.size == 2) r[0] to r[1] else null, f["overdrag"] as Double)
                     }
                 },
-                list(s["enter"]).map { e -> obj(e).let { (it["key"] as String) to motion(it["motion"]) } },
+                list(s["enter"]).map { e -> obj(e).let { (it["key"] as String) to entryEffect(it["effect"] ?: it["motion"]) } },
                 list(s["when"]).map { w -> obj(w).let { (it["event"] as String) to transition(it) } },
                 list(s["timers"]).map { t -> obj(t).let {
                     Timer(

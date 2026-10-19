@@ -1,0 +1,98 @@
+{
+ "nudgProgram": 1,
+ "version": "0.8",
+ "targets": [
+  "field"
+ ],
+ "properties": [
+  {
+   "key": "field.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "field.x",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 438.6490844928604,
+    "damping": 41.88790204786391,
+    "mass": 1
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "idle",
+  "states": [
+   {
+    "name": "idle",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [],
+    "timers": []
+   },
+   {
+    "name": "invalid",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [
+     {
+      "key": "field.x",
+      "effect": {
+       "kind": "keyframes",
+       "frames": [
+        {
+         "at": 0.2,
+         "value": [
+          -10
+         ]
+        },
+        {
+         "at": 0.45,
+         "value": [
+          8
+         ]
+        },
+        {
+         "at": 0.7,
+         "value": [
+          -5
+         ]
+        }
+       ],
+       "duration": 0.4,
+       "ease": "linear"
+      }
+     }
+    ],
+    "when": [
+     {
+      "event": "host.invalid",
+      "animate": [],
+      "to": "invalid"
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": [
+   {
+    "event": "host.invalid",
+    "animate": [],
+    "to": "invalid"
+   },
+   {
+    "event": "host.valid",
+    "animate": [],
+    "to": "idle"
+   }
+  ]
+ }
+}

@@ -61,7 +61,7 @@
     "enter": [
      {
       "key": "panel.y",
-      "motion": {
+      "effect": {
        "kind": "spring",
        "stiffness": 438.6490844928604,
        "damping": 29.321531433504735,

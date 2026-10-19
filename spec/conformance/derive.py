@@ -318,6 +318,125 @@ def kick_cases():
     })
 
 
+# --- v0.8: entry keyframes --------------------------------------------------
+
+def keyframes_at(start, target, frames, duration, t0, t):
+    """Linear entry keyframes: current value at 0, state target at 1."""
+    u = (t - t0) / duration
+    if u >= 1:
+        return float(target), 0.0
+    points = [(0.0, float(start))] + [(float(at), float(value)) for at, value in frames] + [(1.0, float(target))]
+    for (a0, v0), (a1, v1) in zip(points, points[1:]):
+        if u <= a1:
+            p = (u - a0) / (a1 - a0)
+            return v0 + (v1 - v0) * p, (v1 - v0) / ((a1 - a0) * duration)
+    return float(target), 0.0
+
+
+def keyframe_cases():
+    frames = [(0.2, -10), (0.45, 8), (0.7, -5)]
+    doc = {
+        "nudg": "0.8",
+        "targets": ["field"],
+        "values": {"field.x": 0},
+        "animate": {"field.x": spring_json(0.3, 0)},
+        "initial": "idle",
+        "when": {"host.invalid": "invalid", "host.valid": "idle"},
+        "states": {
+            "idle": {},
+            "invalid": {
+                "enter": {
+                    "field.x": {
+                        "keyframes": [{"at": at, "value": value} for at, value in frames],
+                        "duration": 0.4,
+                        "ease": "linear",
+                    }
+                },
+                "when": {"host.invalid": "invalid"},
+            },
+        },
+    }
+
+    steps = [{"t": 0.1, "send": "host.invalid"}]
+    for t in (0.12, 0.17, 0.24):
+        value, _ = keyframes_at(0, 0, frames, 0.4, 0.1, t)
+        steps.append({"t": t, "expect": {"state": ["invalid"], "values": {"field.x": round(value, 9)}}})
+
+    # Re-enter while the first sequence is running: position is continuous and the
+    # authored sequence restarts from that exact current value.
+    restart = 0.25
+    start, _ = keyframes_at(0, 0, frames, 0.4, 0.1, restart)
+    steps.append({"t": restart, "send": "host.invalid"})
+    for t in (0.27, 0.34):
+        value, _ = keyframes_at(start, 0, frames, 0.4, restart, t)
+        steps.append({"t": t, "expect": {"state": ["invalid"], "values": {"field.x": round(value, 9)}}})
+
+    # Leaving hands the keyframe's current velocity to the ordinary spring.
+    leave = 0.38
+    pos, vel = keyframes_at(start, 0, frames, 0.4, restart, leave)
+    steps.append({"t": leave, "send": "host.valid"})
+    x = Prop(0)
+    x.handoff(pos, vel, 0, spring(0.3, 0), leave)
+    for t in (0.4, 0.5, 0.8):
+        steps.append({"t": t, "expect": {"state": ["idle"], "values": {"field.x": x.value(t)}}})
+
+    write("keyframes-enter", {
+        "conformance": "0.8",
+        "name": "Keyframes: entry starts from the current value, re-entry restarts, interruption hands velocity to the next spring",
+        "doc": doc,
+        "steps": steps,
+    })
+
+    write("keyframes-reduced", {
+        "conformance": "0.8",
+        "name": "Keyframes: reduced motion skips transient entry frames and keeps the state target",
+        "doc": doc,
+        "reducedMotion": True,
+        "steps": [
+            {"t": 0.1, "send": "host.invalid"},
+            {"t": 0.2, "expect": {"state": ["invalid"], "values": {"field.x": 0}}},
+            {"t": 0.6, "expect": {"state": ["invalid"], "values": {"field.x": 0}}},
+        ],
+    })
+
+
+def validation_v08_cases():
+    def doc():
+        return {
+            "nudg": "0.8",
+            "targets": ["field"],
+            "values": {"field.x": 0},
+            "initial": "idle",
+            "states": {
+                "idle": {"when": {"host.invalid": "invalid"}},
+                "invalid": {"enter": {"field.x": {"keyframes": [{"at": 0.5, "value": 8}], "duration": 0.3}}},
+            },
+        }
+
+    out = []
+    d = doc(); d["nudg"] = "0.7"
+    out.append(("needs-version", d, [("needs-version", "/states/invalid/enter/field.x/keyframes")]))
+    d = doc(); d["states"]["invalid"]["enter"]["field.x"]["keyframes"] = []
+    out.append(("empty", d, [("invalid-keyframes", "/states/invalid/enter/field.x/keyframes")]))
+    d = doc(); d["states"]["invalid"]["enter"]["field.x"]["keyframes"][0]["at"] = 1
+    out.append(("endpoint", d, [("invalid-keyframe-time", "/states/invalid/enter/field.x/keyframes/0/at")]))
+    d = doc(); d["states"]["invalid"]["enter"]["field.x"]["keyframes"] = [{"at": 0.7, "value": 8}, {"at": 0.4, "value": -4}]
+    out.append(("unordered", d, [("invalid-keyframe-time", "/states/invalid/enter/field.x/keyframes/1/at")]))
+    d = doc(); del d["states"]["invalid"]["enter"]["field.x"]["keyframes"][0]["value"]
+    out.append(("missing-value", d, [("invalid-keyframes", "/states/invalid/enter/field.x/keyframes/0/value")]))
+    d = doc(); d["states"]["invalid"]["enter"]["field.x"]["keyframes"][0]["value"] = "far"
+    out.append(("bad-value", d, [("invalid-value", "/states/invalid/enter/field.x/keyframes/0/value")]))
+    d = doc(); d["states"]["invalid"]["enter"]["field.x"]["duration"] = 0
+    out.append(("duration", d, [("invalid-value", "/states/invalid/enter/field.x/duration")]))
+    d = doc(); d["states"]["invalid"]["enter"]["field.x"]["kick"] = 20; d["states"]["invalid"]["enter"]["field.x"]["spring"] = {"duration": 0.3}
+    out.append(("mixed-effect", d, [("enter-effect-conflict", "/states/invalid/enter/field.x")]))
+    write("validation-0.8", {
+        "conformance": "0.8",
+        "name": "Validator (0.8): entry keyframes",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 def machine_cases():
     doc = {
         "nudg": "0.1",
@@ -1359,4 +1478,6 @@ if __name__ == "__main__":
     validation_v06_cases()
     pausable_timer_cases()
     validation_v07_cases()
+    keyframe_cases()
+    validation_v08_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

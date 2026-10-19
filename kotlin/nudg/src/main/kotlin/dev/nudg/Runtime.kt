@@ -16,6 +16,7 @@ sealed interface Value {
 
 private sealed interface Segment {
     data class MotionSeg(val t0: Double, val from: List<Double>, val v0: List<Double>, val to: List<Double>, val motion: Motion?) : Segment
+    data class KeyframesSeg(val t0: Double, val from: List<Double>, val to: List<Double>, val frames: List<Keyframe>, val duration: Double, val ease: Ease, val owner: State) : Segment
     data class FollowSeg(val t0: Double, val anchor: Double, val input0: Double, val follow: Follow, val owner: State) : Segment
 }
 
@@ -206,6 +207,23 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
             listOf(value) to listOf(velocityAt(seg.follow.input, t) * factor)
         }
         is Segment.MotionSeg -> evaluateMotion(seg, t)
+        is Segment.KeyframesSeg -> evaluateKeyframes(seg, t)
+    }
+
+    private fun evaluateKeyframes(seg: Segment.KeyframesSeg, t: Double): Pair<List<Double>, List<Double>> {
+        val u = (t - seg.t0) / seg.duration
+        if (u >= 1) return seg.to to seg.to.map { 0.0 }
+        val points = listOf(Keyframe(0.0, seg.from)) + seg.frames + Keyframe(1.0, seg.to)
+        for (i in 1 until points.size) {
+            val a = points[i - 1]
+            val b = points[i]
+            if (u > b.at) continue
+            val local = maxOf(0.0, (u - a.at) / (b.at - a.at))
+            val progress = easeAt(seg.ease, local)
+            val slope = easeSlope(seg.ease, local) / ((b.at - a.at) * seg.duration)
+            return a.value.zip(b.value) { from, to -> from + (to - from) * progress } to a.value.zip(b.value) { from, to -> (to - from) * slope }
+        }
+        return seg.to to seg.to.map { 0.0 }
     }
 
     private fun evaluateMotion(seg: Segment.MotionSeg, t: Double): Pair<List<Double>, List<Double>> {
@@ -291,6 +309,8 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         for (tr in fired) for ((key, m) in tr.animate) overrides[key] = m
         val targets = resolveTargets(active)
         val follows = activeFollows(active)
+        val activeStates = HashSet<State>()
+        walkActive(active) { activeStates.add(it) }
         for ((key, prop) in program.properties) {
             if (prop.map != null) continue
             val seg = segments.getValue(key)
@@ -301,6 +321,10 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
                 continue
             }
             val to = targets.getValue(key)
+            if (seg is Segment.KeyframesSeg && seg.owner in activeStates && entered.none { it === seg.owner }) {
+                segments[key] = seg.copy(to = to)
+                continue
+            }
             if (seg is Segment.MotionSeg && seg.to == to) continue
             if (snap) { segments[key] = Segment.MotionSeg(t, to, to.map { 0.0 }, to, null); continue }
             val (pos, v) = evaluate(seg, t)
@@ -310,13 +334,23 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         }
         if (reducedMotion) return
         for (s in entered) {
-            for ((key, kick) in s.enter) {
+            for ((key, effect) in s.enter) {
                 val seg = segments.getValue(key)
-                if (seg !is Segment.MotionSeg) continue
+                val to = when (seg) {
+                    is Segment.MotionSeg -> seg.to
+                    is Segment.KeyframesSeg -> seg.to
+                    is Segment.FollowSeg -> continue
+                }
                 val (pos, v) = evaluate(seg, t)
-                val vel = v.toMutableList()
-                if (kick is Motion.Spring) vel[0] += kick.kick ?: 0.0
-                segments[key] = Segment.MotionSeg(t, pos, vel, seg.to, kick)
+                when (effect) {
+                    is EntryEffect.Keyframes -> segments[key] = Segment.KeyframesSeg(t, pos, to, effect.frames, effect.duration, effect.ease, s)
+                    is EntryEffect.Kick -> {
+                        val vel = v.toMutableList()
+                        val kick = effect.motion
+                        if (kick is Motion.Spring) vel[0] += kick.kick ?: 0.0
+                        segments[key] = Segment.MotionSeg(t, pos, vel, to, kick)
+                    }
+                }
             }
         }
     }
@@ -438,6 +472,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
             if (program.property(key).map?.sourceKind == "input") return@all true
             val source = program.property(key).map?.source ?: key
             val seg = segments.getValue(source)
+            if (seg is Segment.KeyframesSeg) return@all t - seg.t0 >= seg.duration
             if (seg !is Segment.MotionSeg || seg.motion == null) return@all true
             when (val m = seg.motion) {
                 is Motion.Tween -> t - seg.t0 >= m.duration

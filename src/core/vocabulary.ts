@@ -1,8 +1,8 @@
 import type { PropertyKind } from "./types.ts";
 
 /** The newest format version; every listed version is read. */
-export const VERSION = "0.7";
-export const VERSIONS = ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7"];
+export const VERSION = "0.8";
+export const VERSIONS = ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8"];
 
 /** What a host reports about each target's layout, as target.layout.<name> inputs (v0.4). */
 export const MEASUREMENTS = ["x", "y", "width", "height", "naturalWidth", "naturalHeight"] as const;

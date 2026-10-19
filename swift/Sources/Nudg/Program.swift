@@ -15,6 +15,16 @@ public enum Motion {
   case tween(duration: Double, ease: Ease)
 }
 
+public struct Keyframe {
+  public let at: Double
+  public let value: [Double]
+}
+
+public enum EntryEffect {
+  case kick(Motion)
+  case keyframes(frames: [Keyframe], duration: Double, ease: Ease)
+}
+
 public struct Measure {
   public let target: String
   public let of: String
@@ -73,11 +83,11 @@ public final class State {
   public let set: [(String, [Double])]
   public let measure: [String: Measure]
   public let follow: [(String, Follow)]
-  public let enter: [(String, Motion)]
+  public let enter: [(String, EntryEffect)]
   public let when: [(String, Transition)]
   public let timers: [Timer]
   public let machine: Machine?
-  init(name: String, set: [(String, [Double])], measure: [String: Measure], follow: [(String, Follow)], enter: [(String, Motion)], when: [(String, Transition)], timers: [Timer], machine: Machine?) {
+  init(name: String, set: [(String, [Double])], measure: [String: Measure], follow: [(String, Follow)], enter: [(String, EntryEffect)], when: [(String, Transition)], timers: [Timer], machine: Machine?) {
     self.name = name; self.set = set; self.measure = measure; self.follow = follow; self.enter = enter; self.when = when; self.timers = timers; self.machine = machine
   }
   func transition(for event: String) -> Transition? { when.first { $0.0 == event }?.1 }
@@ -147,6 +157,20 @@ private func readMotion(_ v: Any) -> Motion {
   return .spring(stiffness: number(m["stiffness"])!, damping: number(m["damping"])!, mass: number(m["mass"])!, kick: number(m["kick"]))
 }
 
+private func readEase(_ v: Any?) -> Ease {
+  if let e = v as? [Any] { let d = doubles(e); return .bezier(d[0], d[1], d[2], d[3]) }
+  return .linear
+}
+
+private func readEntryEffect(_ v: Any) -> EntryEffect {
+  let effect = v as! [String: Any]
+  if (effect["kind"] as? String) == "keyframes" {
+    let frames = (effect["frames"] as! [[String: Any]]).map { Keyframe(at: number($0["at"])!, value: doubles($0["value"])) }
+    return .keyframes(frames: frames, duration: number(effect["duration"])!, ease: readEase(effect["ease"]))
+  }
+  return .kick(readMotion(v))
+}
+
 private func readTransition(_ v: Any) -> Transition {
   let t = v as! [String: Any]
   let nearest = (t["nearest"] as? [String: Any]).map { n in (states: n["states"] as! [String], by: n["by"] as! String, momentum: number(n["momentum"])!) }
@@ -179,7 +203,7 @@ private func readState(_ s: [String: Any]) -> State {
       let r = doubles(f["range"])
       return (f["key"] as! String, Follow(input: f["input"] as! String, range: r.count == 2 ? (r[0], r[1]) : nil, overdrag: number(f["overdrag"])!))
     },
-    enter: (s["enter"] as! [[String: Any]]).map { ($0["key"] as! String, readMotion($0["motion"]!)) },
+    enter: (s["enter"] as! [[String: Any]]).map { ($0["key"] as! String, readEntryEffect($0["effect"] ?? $0["motion"]!)) },
     when: (s["when"] as! [[String: Any]]).map { ($0["event"] as! String, readTransition($0)) },
     timers: (s["timers"] as! [[String: Any]]).map { timer in
       Timer(

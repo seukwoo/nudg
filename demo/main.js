@@ -7,6 +7,7 @@
 import { compileText, compileUrl, play } from "../dist/dom/index.js";
 import { compare } from "../dist/index.js";
 import { createCameraController } from "../examples/camera-host.js";
+import { createMediaController } from "../examples/media-host.js";
 
 const catalog = await fetch("../examples/index.json").then((r) => r.json());
 const examples = catalog.examples;
@@ -378,6 +379,26 @@ const HOOKS = {
         recorder?.state === "recording" && recorder.stop();
         media.stop();
       },
+    };
+  },
+  "music-player"(player, root) {
+    const status = root.querySelector(".artwork-status");
+    const controller = createMediaController(root.querySelector("audio"), player, root);
+    return {
+      onState(state) {
+        status.value = state.includes("playing") ? "Playing" : state.includes("ended") ? "Ended" : state.includes("error") ? "Unavailable" : state.includes("loading") || state.includes("buffering") ? "Loading" : "Paused";
+      },
+      dispose: () => controller.dispose(),
+    };
+  },
+  "video-player"(player, root) {
+    const status = root.querySelector(".video-status");
+    const controller = createMediaController(root.querySelector("video"), player, root, { autoHide: true });
+    return {
+      onState(state) {
+        status.value = state.includes("playing") ? "Playing" : state.includes("ended") ? "Replay" : state.includes("error") ? "Unavailable" : state.includes("loading") || state.includes("buffering") ? "Loading" : "Paused";
+      },
+      dispose: () => controller.dispose(),
     };
   },
   // WAI-ARIA slider: aria-valuenow follows the value, frame by frame.

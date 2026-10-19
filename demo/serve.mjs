@@ -19,6 +19,9 @@ const TYPES = {
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".png": "image/png",
+  ".mp3": "audio/mpeg",
+  ".m4a": "audio/mp4",
+  ".webm": "video/webm",
   ".md": "text/markdown; charset=utf-8",
   ".txt": "text/plain; charset=utf-8",
 };
@@ -54,7 +57,26 @@ function handle(req, res) {
     path = join(path, "index.html");
   }
   if (!existsSync(path) || !statSync(path).isFile()) return end(res, 404, "not found");
-  res.writeHead(200, { "content-type": TYPES[extname(path).toLowerCase()] ?? "application/octet-stream", "cache-control": "no-store" });
+  const type = TYPES[extname(path).toLowerCase()] ?? "application/octet-stream";
+  const size = statSync(path).size;
+  const match = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? "");
+  if (match) {
+    const start = match[1] ? Number(match[1]) : 0;
+    const end = match[2] ? Math.min(Number(match[2]), size - 1) : size - 1;
+    if (start > end || start >= size) {
+      res.writeHead(416, { "content-range": `bytes */${size}` });
+      return res.end();
+    }
+    res.writeHead(206, {
+      "accept-ranges": "bytes",
+      "content-length": end - start + 1,
+      "content-range": `bytes ${start}-${end}/${size}`,
+      "content-type": type,
+      "cache-control": "no-store",
+    });
+    return createReadStream(path, { start, end }).pipe(res);
+  }
+  res.writeHead(200, { "accept-ranges": "bytes", "content-length": size, "content-type": type, "cache-control": "no-store" });
   createReadStream(path).pipe(res);
 }
 

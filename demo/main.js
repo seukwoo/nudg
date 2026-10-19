@@ -76,6 +76,46 @@ const HOOKS = {
   dialog: (player, root) => ({
     onState: (state) => root.querySelector(state.includes("open") ? ".close" : ".opener")?.focus({ preventScroll: true }),
   }),
+  microphone(player, root) {
+    const button = root.querySelector("button");
+    const status = root.querySelector("output");
+    let context;
+    let stream;
+    let frame = 0;
+    let alive = true;
+    button?.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (!alive) return stream.getTracks().forEach((track) => track.stop());
+        context = new AudioContext();
+        const analyser = context.createAnalyser();
+        analyser.fftSize = 512;
+        context.createMediaStreamSource(stream).connect(analyser);
+        const samples = new Float32Array(analyser.fftSize);
+        status.value = "Listening";
+        const update = () => {
+          if (!alive) return;
+          analyser.getFloatTimeDomainData(samples);
+          const rms = Math.sqrt(samples.reduce((sum, value) => sum + value * value, 0) / samples.length);
+          player.input("host.volume", Math.min(1, rms * 8));
+          frame = requestAnimationFrame(update);
+        };
+        update();
+      } catch {
+        button.disabled = false;
+        status.value = "Microphone unavailable";
+      }
+    });
+    return {
+      dispose() {
+        alive = false;
+        cancelAnimationFrame(frame);
+        stream?.getTracks().forEach((track) => track.stop());
+        context?.close().catch(() => {});
+      },
+    };
+  },
   // WAI-ARIA slider: aria-valuenow follows the value, frame by frame.
   slider: (player, root) => ({
     onFrame: (values) => root.querySelector("[role=slider]")?.setAttribute("aria-valuenow", String(Math.round(values["thumb.x"] / 2))),
@@ -141,6 +181,7 @@ function mount(stage, program, content, { hook, onState, onEvent, speed } = {}) 
     onState?.(player.runtime.state());
     const stop = () => {
       alive = false;
+      late?.dispose?.();
       for (const id of timers) clearTimeout(id);
       timers.clear();
       player.destroy();
@@ -222,6 +263,93 @@ ${refs}
     </div>
   );
 }${host}
+`;
+}
+
+function componentName(ex) {
+  return ex.title.replace(/[^A-Za-z0-9]+/g, "") || "Component";
+}
+
+function reactNativeSnippet(ex, program) {
+  const name = componentName(ex);
+  const bindings = program.targets.map((target, i) => `  const target${i} = bind(${JSON.stringify(target)});`).join("\n");
+  const views = program.targets
+    .map((_, i) => `      <Animated.View {...target${i}.gesture} onLayout={target${i}.onLayout} style={target${i}.style} />`)
+    .join("\n");
+  return `import { Animated, View } from "react-native";
+import { useNudg } from "@nudg/core/native";
+import doc from "./${ex.id}.nudg.json";
+
+export function ${name}() {
+  const { bind, state } = useNudg(doc);
+${bindings}
+  return (
+    <View accessibilityLabel={state.join(" ")}>
+${views}
+    </View>
+  );
+}
+`;
+}
+
+function swiftSnippet(ex, program) {
+  const name = componentName(ex);
+  const target = program.targets[0] ?? "target";
+  return `import Nudg
+import NudgSwiftUI
+import SwiftUI
+
+struct ${name}Motion: View {
+  @StateObject private var motion: NudgModel
+
+  init() {
+    let url = Bundle.main.url(forResource: "${ex.id}", withExtension: "program.json")!
+    let program = try! Program.decode(Data(contentsOf: url))
+    _motion = StateObject(wrappedValue: NudgModel(program))
+  }
+
+  var body: some View {
+    RoundedRectangle(cornerRadius: 8)
+      .nudgLayout(motion, "${target}")
+      .nudg(motion, "${target}")
+      .nudgPress(motion, "${target}")
+      .nudgKeys(motion, "${target}")
+  }
+}
+`;
+}
+
+function composeSnippet(ex, program) {
+  const name = componentName(ex);
+  const target = program.targets[0] ?? "target";
+  return `import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import dev.nudg.Program
+import dev.nudg.compose.nudg
+import dev.nudg.compose.nudgKeys
+import dev.nudg.compose.nudgLayout
+import dev.nudg.compose.nudgPress
+import dev.nudg.compose.rememberNudg
+
+@Composable
+fun ${name}Motion() {
+    val context = LocalContext.current
+    val program = remember {
+        Program.decode(context.assets.open("${ex.id}.program.json").bufferedReader().use { it.readText() })
+    }
+    val motion = rememberNudg(program)
+
+    Box(
+        Modifier
+            .nudgLayout(motion, "${target}")
+            .nudg(motion, "${target}")
+            .nudgPress(motion, "${target}")
+            .nudgKeys(motion, "${target}")
+    )
+}
 `;
 }
 
@@ -332,7 +460,14 @@ async function renderDetail(id) {
   else stateLabel.textContent = `${diagnostics.length} problems`;
 
   const code = document.getElementById("detail-code");
-  const tabs = { nudg: source, html: `<style>\n${content.style.trim()}\n</style>\n\n${content.markup}`, react: program ? reactSnippet(ex, program) : "" };
+  const tabs = {
+    nudg: source,
+    html: `<style>\n${content.style.trim()}\n</style>\n\n${content.markup}`,
+    react: program ? reactSnippet(ex, program) : "",
+    "react-native": program ? reactNativeSnippet(ex, program) : "",
+    swiftui: program ? swiftSnippet(ex, program) : "",
+    compose: program ? composeSnippet(ex, program) : "",
+  };
   const tablist = document.getElementById("detail-tabs");
   const select = (name) => {
     detailTab = name;

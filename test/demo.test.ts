@@ -54,6 +54,8 @@ test("the site starts and shows every cataloged example", { skip }, async () => 
   assert.equal(await browser.evaluate("document.querySelectorAll('#grid .card').length"), catalog.examples.length);
   assert.equal(await browser.evaluate("document.getElementById('boot-error').hidden"), true);
   assert.equal(await browser.evaluate("document.querySelectorAll('#categories a').length"), catalog.categories.length + 1);
+  assert.equal(await browser.evaluate("document.querySelectorAll('.runtime-platforms [role=listitem]').length"), 4);
+  assert.match(await browser.evaluate("document.querySelector('.runtime-check').textContent"), /26 \/ 26.*TypeScript.*Swift.*Kotlin/s);
 });
 
 test("no example overflows its card stage, at wide and narrow widths", { skip }, async () => {
@@ -108,6 +110,12 @@ test("detail: a drag inside the shadow root, tabs, reset, open in playground", {
 
   await browser.evaluate("document.querySelector('[data-tab=react]').click()");
   assert.match(await browser.evaluate("document.getElementById('detail-code').textContent"), /useNudg/);
+  await browser.evaluate("document.querySelector('[data-tab=react-native]').click()");
+  assert.match(await browser.evaluate("document.getElementById('detail-code').textContent"), /@nudg\/core\/native.*gesture/s);
+  await browser.evaluate("document.querySelector('[data-tab=swiftui]').click()");
+  assert.match(await browser.evaluate("document.getElementById('detail-code').textContent"), /NudgModel.*nudgPress/s);
+  await browser.evaluate("document.querySelector('[data-tab=compose]').click()");
+  assert.match(await browser.evaluate("document.getElementById('detail-code').textContent"), /rememberNudg.*nudgKeys/s);
   await browser.evaluate("document.querySelector('[data-tab=nudg]').click()");
 
   await browser.evaluate("document.getElementById('detail-open').click()");

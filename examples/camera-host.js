@@ -24,7 +24,9 @@ export function createCameraController(video, { audio = false } = {}) {
     video.srcObject = stream;
     video.muted = true;
     video.playsInline = true;
-    Promise.resolve(video.play?.()).catch(() => {});
+    const playPreview = () => Promise.resolve(video.play?.()).catch(() => {});
+    playPreview();
+    video.addEventListener?.("loadedmetadata", playPreview, { once: true });
     return stream;
   }
 
@@ -32,6 +34,7 @@ export function createCameraController(video, { audio = false } = {}) {
     stopTracks(stream);
     stream = undefined;
     video.srcObject = null;
+    video.load?.();
   }
 
   async function switchFacing() {

@@ -192,7 +192,7 @@ test("video call shares real camera controls without collapsing them into captur
         controls: [...root.querySelectorAll("button")].map((button) => button.textContent),
       };
     })()`),
-    { label: "Video call with Mina Lee", status: "Ready to join", controls: ["Join video", "Camera", "Mute", "Flip", "Leave"] },
+    { label: "Video call with Mina Lee", status: "Ready to join", controls: ["Join video", "Camera on", "Mute", "Flip", "Leave"] },
   );
 
   await browser.evaluate(`(() => {
@@ -216,10 +216,18 @@ test("video call shares real camera controls without collapsing them into captur
     document.getElementById("detail-stage").shadowRoot.querySelector(".join").click();
   })()`);
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('live') ? true : undefined"), 5_000);
+  assert.equal(
+    await browser.evaluate(`(() => { const button = document.getElementById("detail-stage").shadowRoot.querySelector(".camera"); return button.scrollWidth <= button.clientWidth && button.scrollHeight <= button.clientHeight; })()`),
+    true,
+  );
 
   await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.camera').click()");
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('camera-off') ? true : undefined"), 5_000);
   assert.equal(await browser.evaluate("window.__cameraStreams[0].video.enabled"), false);
+  assert.deepEqual(
+    await browser.evaluate(`(() => { const button = document.getElementById("detail-stage").shadowRoot.querySelector(".camera"); return [button.textContent, button.getAttribute("aria-pressed")]; })()`),
+    ["Camera off", "false"],
+  );
 
   await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.mute').click()");
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('mic-off') ? true : undefined"), 5_000);
@@ -229,6 +237,10 @@ test("video call shares real camera controls without collapsing them into captur
   await waitFor(() => browser.evaluate("window.__cameraRequests.length === 2 && document.getElementById('detail-state').textContent.includes('camera-on') ? true : undefined"), 5_000);
   assert.equal(await browser.evaluate("window.__cameraRequests[1].video.facingMode"), "environment");
   assert.equal(await browser.evaluate("window.__cameraStreams[0].video.stopped"), true);
+  assert.deepEqual(
+    await browser.evaluate(`(() => { const button = document.getElementById("detail-stage").shadowRoot.querySelector(".camera"); return [button.textContent, button.getAttribute("aria-pressed")]; })()`),
+    ["Camera on", "true"],
+  );
 
   await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.leave').click()");
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('ready') ? true : undefined"), 5_000);

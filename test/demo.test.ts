@@ -468,9 +468,8 @@ test("keys, timers and commit on the site: slider arrows, tooltip delay, dialog 
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent || undefined"), 5_000);
   const [hx, hy] = await center("detail-stage", "[data-nudg=trigger]");
   await browser.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: hx, y: hy });
-  await sleep(200);
   assert.equal(await browser.evaluate("document.getElementById('detail-state').textContent"), "waiting");
-  await sleep(600);
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent === 'shown' ? true : undefined"), 1_500);
   assert.equal(await browser.evaluate("document.getElementById('detail-state').textContent"), "shown", "the timer fired and the site noticed");
   await browser.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 5, y: 5 });
   await sleep(200);

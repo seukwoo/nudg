@@ -24,7 +24,8 @@
     .actions .camera { font-size: 10px; line-height: 1.05; white-space: normal; }
     .actions button:disabled { cursor: not-allowed; opacity: .55; }
     .actions .leave { border-color: #efc2c5; color: #8f252d; background: #fff0f1; }
-    .join[data-nudg-state~="live"], .actions[data-nudg-state~="ready"], .actions[data-nudg-state~="connecting"] { pointer-events: none; }
+    .join[data-nudg-state*="/live"] { visibility: hidden; pointer-events: none; }
+    .actions[data-nudg-state*="/ready"], .actions[data-nudg-state*="/connecting"] { visibility: hidden; pointer-events: none; }
   </style>
 </head>
 <body>

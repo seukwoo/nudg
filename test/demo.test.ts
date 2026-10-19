@@ -218,6 +218,11 @@ test("video call shares real camera controls without collapsing them into captur
     document.getElementById("detail-stage").shadowRoot.querySelector(".join").click();
   })()`);
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('live') ? true : undefined"), 5_000);
+  assert.deepEqual(
+    await browser.evaluate(`(() => { const root = document.getElementById("detail-stage").shadowRoot; return [getComputedStyle(root.querySelector(".join")).visibility, getComputedStyle(root.querySelector(".actions")).visibility]; })()`),
+    ["hidden", "visible"],
+  );
+  await waitFor(() => browser.evaluate(`(() => { const root = document.getElementById("detail-stage").shadowRoot; return getComputedStyle(root.querySelector(".join")).opacity === "0" && getComputedStyle(root.querySelector(".actions")).opacity === "1" ? true : undefined; })()`), 5_000);
   assert.equal(
     await browser.evaluate(`(() => { const button = document.getElementById("detail-stage").shadowRoot.querySelector(".camera"); return button.scrollWidth <= button.clientWidth && button.scrollHeight <= button.clientHeight; })()`),
     true,

@@ -77,14 +77,53 @@ const HOOKS = {
     onState: (state) => root.querySelector(state.includes("open") ? ".close" : ".opener")?.focus({ preventScroll: true }),
   }),
   microphone(player, root) {
-    const button = root.querySelector("button");
-    const status = root.querySelector("output");
+    const join = root.querySelector(".join");
+    const mute = root.querySelector(".mute");
+    const leave = root.querySelector(".leave");
+    const status = root.querySelector(".status");
+    const elapsed = root.querySelector("time");
+    const meter = root.querySelector("[role=meter]");
     let context;
     let stream;
     let frame = 0;
+    let timer = 0;
+    let started = 0;
+    let muted = false;
     let alive = true;
-    button?.addEventListener("click", async () => {
-      button.disabled = true;
+
+    const showTime = () => {
+      const seconds = Math.floor((performance.now() - started) / 1000);
+      elapsed.textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+      elapsed.dateTime = `PT${seconds}S`;
+    };
+    const stopAudio = (message = "Call ended", send = true) => {
+      cancelAnimationFrame(frame);
+      clearInterval(timer);
+      stream?.getTracks().forEach((track) => track.stop());
+      context?.close().catch(() => {});
+      stream = undefined;
+      context = undefined;
+      muted = false;
+      player.input("host.volume", 0);
+      if (send) player.send("host.leave");
+      status.value = message;
+      elapsed.textContent = "00:00";
+      elapsed.dateTime = "PT0S";
+      meter.setAttribute("aria-valuenow", "0");
+    };
+    const syncState = (state) => {
+      const connecting = state.includes("connecting");
+      const active = state.includes("live") || state.includes("muted");
+      join.disabled = connecting;
+      join.textContent = connecting ? "Connecting..." : active ? "In call" : "Join voice";
+      mute.setAttribute("aria-pressed", String(state.includes("muted")));
+      mute.textContent = state.includes("muted") ? "Unmute" : "Mute";
+    };
+
+    join?.addEventListener("click", async () => {
+      if (stream) return;
+      player.send("host.connect");
+      status.value = "Connecting microphone";
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         if (!alive) return stream.getTracks().forEach((track) => track.stop());
@@ -93,26 +132,42 @@ const HOOKS = {
         analyser.fftSize = 512;
         context.createMediaStreamSource(stream).connect(analyser);
         const samples = new Float32Array(analyser.fftSize);
-        status.value = "Listening";
+        stream.getAudioTracks()[0].addEventListener("ended", () => stopAudio("Microphone disconnected"), { once: true });
+        status.value = "Connected · microphone on";
+        player.send("host.connected");
+        started = performance.now();
+        showTime();
+        timer = setInterval(showTime, 1000);
         const update = () => {
           if (!alive) return;
           analyser.getFloatTimeDomainData(samples);
           const rms = Math.sqrt(samples.reduce((sum, value) => sum + value * value, 0) / samples.length);
-          player.input("host.volume", Math.min(1, rms * 8));
+          const volume = muted ? 0 : Math.min(1, rms * 8);
+          player.input("host.volume", volume);
+          meter.setAttribute("aria-valuenow", String(Math.round(volume * 100)));
           frame = requestAnimationFrame(update);
         };
         update();
       } catch {
-        button.disabled = false;
-        status.value = "Microphone unavailable";
+        stopAudio("Microphone unavailable");
+        player.send("host.failed");
       }
     });
+    mute?.addEventListener("click", () => {
+      const track = stream?.getAudioTracks()[0];
+      if (!track) return;
+      muted = !muted;
+      track.enabled = !muted;
+      if (muted) player.input("host.volume", 0);
+      player.send(muted ? "host.mute" : "host.unmute");
+      status.value = muted ? "Connected · microphone muted" : "Connected · microphone on";
+    });
+    leave?.addEventListener("click", () => stopAudio());
     return {
+      onState: syncState,
       dispose() {
         alive = false;
-        cancelAnimationFrame(frame);
-        stream?.getTracks().forEach((track) => track.stop());
-        context?.close().catch(() => {});
+        stopAudio("", false);
       },
     };
   },
@@ -480,11 +535,13 @@ async function renderDetail(id) {
   document.getElementById("detail-reset").onclick = () => live.get(ex.id)?.reset();
   document.getElementById("detail-open").onclick = () => {
     playgroundSeed = ex.id;
+    playgroundLoaded = null;
     setCompare(false);
     location.hash = "#playground";
   };
   document.getElementById("detail-compare").onclick = () => {
     playgroundSeed = ex.id;
+    playgroundLoaded = null;
     setCompare(true);
     location.hash = "#playground";
   };

@@ -126,7 +126,64 @@ test("detail: a drag inside the shadow root, tabs, reset, open in playground", {
   assert.match(await browser.evaluate("document.getElementById('playground-diagnostics').textContent"), /No problems/);
 });
 
+test("voice chat exposes the complete local call surface", { skip }, async () => {
+  await go("#example/microphone");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent === 'ready' ? true : undefined"), 5_000);
+  const surface = await browser.evaluate(`(() => {
+    const root = document.getElementById("detail-stage").shadowRoot;
+    return {
+      room: root.querySelector(".room")?.textContent,
+      participant: root.querySelector(".identity strong")?.textContent,
+      status: root.querySelector(".status")?.value,
+      elapsed: root.querySelector("time")?.textContent,
+      meter: root.querySelector("[role=meter]")?.getAttribute("aria-valuenow"),
+      controls: [...root.querySelectorAll("button")].map((button) => button.textContent),
+      muted: root.querySelector(".mute")?.getAttribute("aria-pressed"),
+    };
+  })()`);
+  assert.deepEqual(surface, {
+    room: "DESIGN ROOM · 2 PARTICIPANTS",
+    participant: "Mina Lee",
+    status: "Ready to join",
+    elapsed: "00:00",
+    meter: "0",
+    controls: ["Join voice", "Mute", "Leave"],
+    muted: "false",
+  });
+
+  await browser.evaluate(`(() => {
+    const track = { enabled: true, stopped: false, addEventListener() {}, stop() { this.stopped = true; } };
+    window.__voiceTrack = track;
+    navigator.mediaDevices.getUserMedia = async () => ({ getTracks: () => [track], getAudioTracks: () => [track] });
+    window.AudioContext = class {
+      createAnalyser() { return { fftSize: 0, getFloatTimeDomainData(samples) { samples.fill(0.05); } }; }
+      createMediaStreamSource() { return { connect() {} }; }
+      close() { return Promise.resolve(); }
+    };
+    document.getElementById("detail-stage").shadowRoot.querySelector(".join").click();
+  })()`);
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent === 'live' ? true : undefined"), 5_000);
+  assert.ok(Number(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('[role=meter]').getAttribute('aria-valuenow')")) > 0);
+
+  await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.mute').click()");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent === 'muted' ? true : undefined"), 5_000);
+  assert.equal(await browser.evaluate("window.__voiceTrack.enabled"), false);
+  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.mute').getAttribute('aria-pressed')"), "true");
+
+  await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.mute').click()");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent === 'live' ? true : undefined"), 5_000);
+  assert.equal(await browser.evaluate("window.__voiceTrack.enabled"), true);
+
+  await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.leave').click()");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent === 'ready' ? true : undefined"), 5_000);
+  assert.equal(await browser.evaluate("window.__voiceTrack.stopped"), true);
+  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('[role=meter]').getAttribute('aria-valuenow')"), "0");
+});
+
 test("playground: a typo gets a hint; a pasted file gets generic boxes", { skip }, async () => {
+  await go("#playground");
+  await browser.evaluate("(() => { const p = document.getElementById('playground-example'); p.value = 'toggle'; p.dispatchEvent(new Event('change')); })()");
+  await waitFor(() => browser.evaluate("document.getElementById('playground-source').value.includes('knob.x') ? true : undefined"), 5_000);
   await browser.evaluate(`(() => { const t = document.getElementById("playground-source"); t.value = t.value.replace('"set"', '"sett"'); t.dispatchEvent(new Event("input")); })()`);
   await sleep(500);
   assert.match(await browser.evaluate("document.getElementById('playground-diagnostics').textContent"), /Did you mean "set"/);

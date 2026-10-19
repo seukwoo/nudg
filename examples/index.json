@@ -368,18 +368,19 @@
     },
     {
       "id": "microphone",
-      "title": "Microphone level",
+      "title": "Voice chat",
       "category": "feedback",
       "tags": [
         "continuous-input",
         "host-input",
+        "host-event",
         "map"
       ],
       "html": "microphone.html",
-      "summary": "The app reads microphone loudness and supplies one number; mapped rings respond every frame. The device API stays in the host, outside nudg.",
+      "summary": "A complete voice-chat shell: join, connection state, elapsed time, live input level, mute and leave. The host owns the microphone; nudg drives speaking feedback and control transitions.",
       "prompts": [
-        "Make quiet sounds affect the ring more strongly.",
-        "Make the glow grow less than the outline."
+        "Make quiet speech light up the avatar more strongly.",
+        "Make mute feel more immediate while keeping join and leave calm."
       ]
     },
     {

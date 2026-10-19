@@ -1,29 +1,38 @@
 {
   "nudg": "0.5",
-  "note": "The app reports microphone loudness as host.volume. The rings map that number directly to scale and opacity; nudg never opens the microphone itself.",
-  "targets": [
-    "ring",
-    "glow"
-  ],
+  "note": "A voice-chat host owns microphone permission, MediaStream lifetime, mute and elapsed time. It supplies host.volume continuously and sends connection events; nudg keeps the speaking feedback and control-state transitions consistent across hosts.",
+  "targets": ["pulse", "avatar", "level", "join", "actions", "mute"],
   "values": {
-    "ring.scale": {
-      "map": "host.volume",
-      "from": [0, 0.35, 1],
-      "to": [1, 1.18, 1.65]
-    },
-    "glow.scale": {
-      "map": "host.volume",
-      "from": [0, 1],
-      "to": [0.7, 1.5]
-    },
-    "glow.opacity": {
-      "map": "host.volume",
-      "from": [0, 0.15, 1],
-      "to": [0.12, 0.35, 0.85]
-    }
+    "pulse.scale": { "map": "host.volume", "from": [0, 0.35, 1], "to": [0.84, 1.12, 1.48] },
+    "pulse.opacity": { "map": "host.volume", "from": [0, 0.12, 1], "to": [0.08, 0.28, 0.72] },
+    "avatar.scale": { "map": "host.volume", "from": [0, 1], "to": [1, 1.08] },
+    "level.scaleX": { "map": "host.volume", "from": [0, 1], "to": [0, 1] },
+    "join.opacity": { "base": 1, "min": 0, "max": 1 },
+    "actions.opacity": { "base": 0, "min": 0, "max": 1 },
+    "mute.color": "#F0F2EF"
   },
-  "initial": "listening",
+  "animate": {
+    "join.opacity": { "tween": { "duration": 0.16, "ease": "out" } },
+    "actions.opacity": { "tween": { "duration": 0.16, "ease": "out" } },
+    "mute.color": { "tween": { "duration": 0.16, "ease": "out" } }
+  },
+  "initial": "ready",
   "states": {
-    "listening": {}
+    "ready": {
+      "set": { "join.opacity": 1, "actions.opacity": 0, "mute.color": "#F0F2EF" },
+      "when": { "host.connect": "connecting" }
+    },
+    "connecting": {
+      "set": { "join.opacity": 0.6, "actions.opacity": 0, "mute.color": "#F0F2EF" },
+      "when": { "host.connected": "live", "host.failed": "ready", "host.leave": "ready" }
+    },
+    "live": {
+      "set": { "join.opacity": 0, "actions.opacity": 1, "mute.color": "#F0F2EF" },
+      "when": { "host.mute": "muted", "host.leave": "ready" }
+    },
+    "muted": {
+      "set": { "join.opacity": 0, "actions.opacity": 1, "mute.color": "#F8D9DB" },
+      "when": { "host.unmute": "live", "host.leave": "ready" }
+    }
   }
 }

@@ -18,7 +18,7 @@ Legend: **yes** supported, with an example; **yes, no example** supported but no
 | A library's own state (`data-state`, `aria-*`) | yes, no example in the site | tested with MUI and Radix |
 | Layout (sizes and positions on the page) | yes | tabs, accordion |
 | Long press, double tap | partly: a state entered on `down` with an `after:` timer | |
-| A continuous value from the app (a microphone level, a tilt, a download's progress) | yes | microphone |
+| A continuous value from the app (a microphone level, a tilt, a download's progress) | yes | voice chat (`microphone`) |
 | Scroll position | yes | scroll-header |
 | Scroll direction | no: direction events remain in the [proposal](design.md#proposal-continuous-app-inputs) | |
 | Pinch, rotate (two fingers) | no: [open question](design.md#open-questions) | |

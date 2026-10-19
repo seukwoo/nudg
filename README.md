@@ -211,7 +211,7 @@ Interactive animation usually lives in binary files made in a dedicated studio. 
 
 ## Status
 
-**Early, and moving.** Version 0.8 (format 0.5) is [on npm](https://www.npmjs.com/package/@nudg/core) with semantic recipes, taps, hovers, drags and throws, keyboard events, timers, continuous app and scroll inputs, layout measurement, reduced motion, and adapters for the DOM, React (with bridges to MUI, Radix and shadcn/ui), React Native, SwiftUI and Jetpack Compose. The format may still change before 1.0; see the [changelog](CHANGELOG.md).
+**Early, and moving.** Version 0.9 (format 0.8) is [on npm](https://www.npmjs.com/package/@nudg/core) with semantic recipes, taps, hovers, drags and throws, keyboard events, pausable timers, continuous app and scroll inputs, measured layout arithmetic, entry keyframes, reduced motion, and adapters for the DOM, React (with bridges to MUI, Radix and shadcn/ui), React Native, SwiftUI and Jetpack Compose. The format may still change before 1.0; see the [changelog](CHANGELOG.md).
 
 The [roadmap](docs/roadmap.md) tracks development priorities and stage status, from component interactions through screens and flows, native adapters and exploratory standalone content. Mobile-first semantic patterns build on that progression.
 

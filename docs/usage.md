@@ -310,7 +310,7 @@ For other hosts (a canvas, a game loop), `createPlayer(program, { host: { now, f
 The Swift runtime runs the same files on Apple platforms. Add it with Swift Package Manager by this repository's URL (Xcode: File › Add Package Dependencies), from a release tag:
 
 ```swift
-.package(url: "https://github.com/seukwoo/nudg", from: "0.8.0")
+.package(url: "https://github.com/seukwoo/nudg", from: "0.9.0")
 // targets: .product(name: "Nudg", package: "nudg"), .product(name: "NudgSwiftUI", package: "nudg")
 ```
 
@@ -347,7 +347,7 @@ The Kotlin runtime (plain JVM, no dependencies) reads compiled programs like the
 
 ```kotlin
 // settings.gradle.kts: dependencyResolutionManagement { repositories { google(); mavenCentral(); maven("https://jitpack.io") } }
-implementation("com.github.seukwoo.nudg:compose:0.8.0")   // brings com.github.seukwoo.nudg:nudg
+implementation("com.github.seukwoo.nudg:compose:0.9.0")   // brings com.github.seukwoo.nudg:nudg
 ```
 
 Compile files with `npx @nudg/core compile toggle.nudg.json --out app/src/main/assets/toggle.program.json`.

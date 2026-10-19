@@ -2,9 +2,15 @@
 
 ## Unreleased
 
+## 0.9.0
+
+Measured layout arithmetic, pausable state timers and authored entry keyframes deepen the motion language without expanding nudg into a component library. TypeScript, Swift and Kotlin share the same format 0.8 behavior.
+
 - **Format 0.6: arithmetic on layout measurements.** Measured sizes and aligned positions accept optional `times` and `plus` fields, evaluated as `measurement * times + plus`. TypeScript, Swift and Kotlin share the same conformance case and compiled-program representation. Bottom-sheet snap states and swipe-row resting width now derive from host layout; the segmented indicator measures each segment directly. Schema 0.6.
 - **Format 0.7: pausable timers.** An `after:` transition can declare independent `{ "on", "off" }` pause reasons. The first active reason freezes the remaining duration and the final one resumes it; state re-entry resets everything, and a due timer still wins a same-time event tie. TypeScript, Swift and Kotlin share conformance and compiled-program behavior. Toast reading time now pauses for hover, focus and app suspension; video-control auto-hide pauses for hover, focus, scrubbing and suspension. Schema 0.7.
 - **Format 0.8: transient entry keyframes.** A state's `enter` can list normalized intermediate `{ "at", "value" }` points between the implicit current value and state target. Re-entry restarts continuously, interruption hands velocity to the next spring, unrelated parallel transitions leave the sequence alone, and relayout updates its final target. Reduced motion skips the transient sequence. TypeScript, Swift and Kotlin share conformance; the validation-feedback recipe and shake example now use authored multi-beat motion. Schema 0.8.
+- **Stronger media examples.** Project-site-safe media URLs keep artwork, audio and video available after deployment. The video-call recipe can join with unavailable devices, retry camera permission in place, preserve mute while switching cameras and reset tracks cleanly between calls.
+- **Parallel-region critique coverage.** `nudg critique` now measures transitions inside parallel state machines instead of returning a misleading zero-transition clean report.
 
 ## 0.8.0
 

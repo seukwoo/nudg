@@ -4,7 +4,7 @@ nudg is early. The format can still change before 1.0, but the development direc
 
 This is the single development plan for priorities, stage status and completion criteria. It consolidates the stages previously listed in the README and design doc, and the next steps previously kept in `CLAUDE.md`. Design rationale and unresolved technical choices stay in [Design](design.md#open-questions); implemented behavior is defined by [the spec](spec.md), and release history stays in the [changelog](../CHANGELOG.md). The [devlog](devlog.md) records findings at the time, not the current queue.
 
-The order below follows real app needs. Release numbers and dates are assigned when scope is established; the earlier 0.6-0.9 headings were provisional. Package and format versions are separate: package 0.8.0 ships format 0.5.
+The order below follows real app needs. Release numbers and dates are assigned when scope is established; the earlier 0.6-0.9 headings were provisional. Package and format versions are separate: package 0.9.0 ships format 0.8.
 
 ## Current Baseline
 
@@ -16,8 +16,9 @@ The order below follows real app needs. Release numbers and dates are assigned w
 | Exit/presence handling and live A/B in the playground | Released in package 0.5.0; the old next-step note is complete | [Changelog](../CHANGELOG.md#050) |
 | Semantic UI recipes | Versioned contracts cover every shipped example; CLI and MCP resolve names and aliases to contracts and starters | [Recipe catalog](../recipes/index.json), [agent guide](../spec/guide.md#semantic-ui-words) |
 | Layout measurement and natural size | Implemented in format 0.4 | [Spec](spec.md#layout-inputs) |
-| Layout arithmetic and relative measured values | Implemented for the next release in format 0.6 | [Spec](spec.md#additions-in-06) |
-| Pausable timers | Implemented for the next release in format 0.7; TypeScript, Swift and Kotlin share conformance | [Spec](spec.md#additions-in-07-draft) |
+| Layout arithmetic and relative measured values | Released in package 0.9.0 as format 0.6 | [Spec](spec.md#additions-in-06) |
+| Pausable timers | Released in package 0.9.0 as format 0.7; TypeScript, Swift and Kotlin share conformance | [Spec](spec.md#additions-in-07-draft) |
+| Entry keyframes | Released in package 0.9.0 as format 0.8; TypeScript, Swift and Kotlin share conformance | [Spec](spec.md#additions-in-08) |
 | Decay | Open design work | [Open questions](design.md#open-questions) |
 
 ## Product Stages
@@ -29,7 +30,7 @@ The original stage numbers remain useful when reading the spec and changelog. Se
 | 0 | Single element | Toggle, button, like; states, transitions, springs, DOM adapter | Implemented |
 | 1 | Component | Tabs, accordion, swipe row, carousel, bottom sheet; coordinated targets, gestures, React adapter | Measurement and arithmetic implemented; measured follow/map bounds remain open |
 | 2 | Screens and flows | Onboarding, modals, screen transitions, list/grid coordination; data inputs and machine composition | Planned; nested states and a dialog example already exist |
-| 3 | Native | iOS and Android; React Native, SwiftUI and Compose adapters plus matching runtimes | Initial platform support implemented; 0.8.0 is the first distribution tag |
+| 3 | Native | iOS and Android; React Native, SwiftUI and Compose adapters plus matching runtimes | Initial platform support implemented; 0.9.0 carries format 0.8 across all runtimes |
 | 4 | Standalone content | Physics, canvas, game-like scenes; host rendering and physics integration | Exploratory |
 
 ## Now: Deepen Motion From Recipe Evidence

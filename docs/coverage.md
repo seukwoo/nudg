@@ -14,11 +14,11 @@ Legend: **yes** supported, with an example; **yes, no example** supported but no
 | Focus and blur | yes, no example | |
 | Keys | yes | slider, dialog |
 | Time (auto-dismiss, delays) | yes | toast, tooltip |
-| Events from the app (`host.*`) | yes | toast, pull-to-refresh, shake, voice chat, video call, camera |
+| Events from the app (`host.*`) | yes | toast, pull-to-refresh, shake, voice chat, video call, camera, music player, video player |
 | A library's own state (`data-state`, `aria-*`) | yes, no example in the site | tested with MUI and Radix |
 | Layout (sizes and positions on the page) | yes | tabs, accordion |
 | Long press, double tap | partly: a state entered on `down` with an `after:` timer | |
-| A continuous value from the app (a microphone level, a tilt, a download's progress) | yes | voice chat (`microphone`) |
+| A continuous value from the app (a microphone level, media progress, a tilt, a download's progress) | yes | voice chat, music player, video player |
 | Scroll position | yes | scroll-header |
 | Scroll direction | no: direction events remain in the [proposal](design.md#proposal-continuous-app-inputs) | |
 | Pinch, rotate (two fingers) | no: [open question](design.md#open-questions) | |

@@ -1,0 +1,44 @@
+{
+  "nudg": "0.5",
+  "note": "A video player host owns media playback, seeking, volume, rate, fullscreen and picture-in-picture. nudg coordinates playback feedback and auto-hiding controls from semantic events and normalized values.",
+  "targets": ["status", "center-play", "controls", "buffered", "progress", "play", "mute"],
+  "values": {
+    "status.opacity": { "base": 1, "min": 0, "max": 1 },
+    "center-play.opacity": { "base": 1, "min": 0, "max": 1 },
+    "center-play.scale": 1,
+    "controls.opacity": { "base": 1, "min": 0, "max": 1 },
+    "controls.y": 0,
+    "buffered.scaleX": { "map": "host.buffered", "from": [0, 1], "to": [0, 1] },
+    "progress.scaleX": { "map": "host.progress", "from": [0, 1], "to": [0, 1] },
+    "play.scale": 1,
+    "mute.opacity": { "map": "host.volume", "from": [0, 1], "to": [0.58, 1] }
+  },
+  "animate": {
+    "status.opacity": { "tween": { "duration": 0.16, "ease": "out" } },
+    "center-play.opacity": { "tween": { "duration": 0.14, "ease": "out" } },
+    "center-play.scale": { "spring": { "duration": 0.28, "bounce": 0.16 } },
+    "controls.opacity": { "tween": { "duration": 0.18, "ease": "out" } },
+    "controls.y": { "spring": { "duration": 0.28, "bounce": 0.06 } },
+    "play.scale": { "spring": { "duration": 0.22, "bounce": 0.18 } }
+  },
+  "regions": {
+    "playback": {
+      "initial": "loading",
+      "states": {
+        "loading": { "set": { "status.opacity": 1, "center-play.opacity": 0, "center-play.scale": 0.9, "play.scale": 0.92 }, "when": { "host.ready": "paused", "host.pause": "paused", "host.play": "playing", "host.error": "error" } },
+        "paused": { "set": { "status.opacity": 1, "center-play.opacity": 1, "center-play.scale": 1, "play.scale": 1 }, "when": { "host.load": "loading", "host.play": "playing", "host.buffering": "buffering", "host.ended": "ended", "host.error": "error" } },
+        "playing": { "set": { "status.opacity": 0, "center-play.opacity": 0, "center-play.scale": 0.9, "play.scale": 1 }, "when": { "host.pause": "paused", "host.buffering": "buffering", "host.ended": "ended", "host.error": "error" } },
+        "buffering": { "set": { "status.opacity": 1, "center-play.opacity": 0, "center-play.scale": 0.9, "play.scale": 0.92 }, "when": { "host.play": "playing", "host.pause": "paused", "host.error": "error" } },
+        "ended": { "set": { "status.opacity": 1, "center-play.opacity": 1, "center-play.scale": 1.1, "play.scale": 1 }, "when": { "host.play": "playing", "host.load": "loading" } },
+        "error": { "set": { "status.opacity": 1, "center-play.opacity": 0.5, "center-play.scale": 0.9, "play.scale": 0.9 }, "when": { "host.load": "loading" } }
+      }
+    },
+    "control-visibility": {
+      "initial": "visible",
+      "states": {
+        "visible": { "set": { "controls.opacity": 1, "controls.y": 0 }, "when": { "host.controls-hide": "hidden" } },
+        "hidden": { "set": { "controls.opacity": 0, "controls.y": 8 }, "when": { "host.controls-show": "visible", "host.pause": "visible", "host.ended": "visible" } }
+      }
+    }
+  }
+}

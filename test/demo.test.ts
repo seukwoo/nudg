@@ -347,6 +347,91 @@ test("camera covers photo, recording and review states", { skip }, async () => {
   assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.result-video').style.display"), "block");
 });
 
+test("music player connects transport controls to real media and nudg inputs", { skip }, async () => {
+  await go("#example/music-player");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('paused') ? true : undefined"), 5_000);
+  assert.deepEqual(
+    await browser.evaluate(`(() => {
+      const root = document.getElementById("detail-stage").shadowRoot;
+      return {
+        label: root.querySelector(".music-player").getAttribute("aria-label"),
+        title: root.querySelector(".meta strong").textContent,
+        controls: [".media-back", ".media-toggle", ".media-forward", ".media-repeat", ".media-mute", ".media-volume", ".media-rate"].every((selector) => root.querySelector(selector)),
+      };
+    })()`),
+    { label: "Music player", title: "Afterglow", controls: true },
+  );
+  const musicDuration = await browser.evaluate(`(() => { const root = document.getElementById("detail-stage").shadowRoot; return [root.querySelector("audio").duration, root.querySelector(".media-seek").max]; })()`);
+  assert.ok(musicDuration[0] > 11 && musicDuration[0] < 13, `audio duration was ${musicDuration[0]}`);
+  assert.ok(Number(musicDuration[1]) > 11, `seek max was ${musicDuration[1]}`);
+
+  await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('audio').muted = true");
+  const [musicX, musicY] = await center("detail-stage", ".media-toggle");
+  await mouse("mousePressed", musicX, musicY);
+  await mouse("mouseReleased", musicX, musicY);
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('playing') ? true : undefined"), 5_000);
+  await sleep(450);
+  assert.ok((await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('audio').currentTime")) > 0.2);
+
+  await browser.evaluate(`(() => {
+    const root = document.getElementById("detail-stage").shadowRoot;
+    const audio = root.querySelector("audio");
+    const seek = root.querySelector(".media-seek");
+    seek.value = "6";
+    seek.dispatchEvent(new Event("input", { bubbles: true }));
+    const volume = root.querySelector(".media-volume");
+    volume.value = "0.35";
+    volume.dispatchEvent(new Event("input", { bubbles: true }));
+    const rate = root.querySelector(".media-rate");
+    rate.value = "1.5";
+    rate.dispatchEvent(new Event("change", { bubbles: true }));
+    root.querySelector(".media-repeat").click();
+    window.__musicValues = [audio.currentTime, audio.volume, audio.playbackRate, audio.loop];
+  })()`);
+  assert.deepEqual(await browser.evaluate("window.__musicValues"), [6, 0.35, 1.5, true]);
+  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.media-repeat').getAttribute('aria-pressed')"), "true");
+  await browser.evaluate("document.getElementById('detail-reset').click()");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('paused') ? true : undefined"), 5_000);
+  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('audio').getAttribute('src')"), "/examples/media/afterglow.mp3");
+});
+
+test("video player exposes playback, auto-hide, PiP and fullscreen controls", { skip }, async () => {
+  await go("#example/video-player");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('paused') ? true : undefined"), 5_000);
+  assert.deepEqual(
+    await browser.evaluate(`(() => {
+      const root = document.getElementById("detail-stage").shadowRoot;
+      return {
+        label: root.querySelector(".video-player").getAttribute("aria-label"),
+        dimensions: [root.querySelector("video").videoWidth, root.querySelector("video").videoHeight],
+        controls: [".media-toggle", ".media-seek", ".media-mute", ".media-volume", ".media-rate", ".media-pip", ".media-fullscreen"].every((selector) => root.querySelector(selector)),
+      };
+    })()`),
+    { label: "Video player", dimensions: [640, 360], controls: true },
+  );
+
+  await browser.evaluate(`(() => {
+    const root = document.getElementById("detail-stage").shadowRoot;
+    const video = root.querySelector("video");
+    video.muted = true;
+    root.querySelector("[data-nudg=play]").click();
+  })()`);
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('playing') ? true : undefined"), 5_000);
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('hidden') ? true : undefined"), 4_000);
+  await browser.evaluate(`(() => {
+    const root = document.getElementById("detail-stage").shadowRoot;
+    const shell = root.querySelector(".video-player");
+    const video = root.querySelector("video");
+    shell.requestFullscreen = () => { window.__fullscreenRequested = true; };
+    video.requestPictureInPicture = async () => { window.__pipRequested = true; };
+    root.querySelector(".media-fullscreen").click();
+    root.querySelector(".media-pip").click();
+    shell.dispatchEvent(new PointerEvent("pointermove", { bubbles: true }));
+  })()`);
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('visible') ? true : undefined"), 2_000);
+  assert.deepEqual(await browser.evaluate("[window.__fullscreenRequested, window.__pipRequested]"), [true, true]);
+});
+
 test("playground: a typo gets a hint; a pasted file gets generic boxes", { skip }, async () => {
   await go("#playground");
   await browser.evaluate("(() => { const p = document.getElementById('playground-example'); p.value = 'toggle'; p.dispatchEvent(new Event('change')); })()");

@@ -1,0 +1,40 @@
+{
+  "nudg": "0.5",
+  "note": "A music player host owns audio playback, seeking, volume and rate. nudg receives normalized media values and lifecycle events so playback, mute and repeat feedback stay portable.",
+  "targets": ["artwork", "status", "buffered", "progress", "play", "mute", "repeat"],
+  "values": {
+    "artwork.scale": 1,
+    "status.opacity": { "base": 1, "min": 0, "max": 1 },
+    "buffered.scaleX": { "map": "host.buffered", "from": [0, 1], "to": [0, 1] },
+    "progress.scaleX": { "map": "host.progress", "from": [0, 1], "to": [0, 1] },
+    "play.scale": 1,
+    "mute.opacity": { "map": "host.volume", "from": [0, 1], "to": [0.55, 1] },
+    "repeat.scale": 1
+  },
+  "animate": {
+    "artwork.scale": { "spring": { "duration": 0.36, "bounce": 0.08 } },
+    "status.opacity": { "tween": { "duration": 0.16, "ease": "out" } },
+    "play.scale": { "spring": { "duration": 0.24, "bounce": 0.2 } },
+    "repeat.scale": { "spring": { "duration": 0.24, "bounce": 0.16 } }
+  },
+  "regions": {
+    "playback": {
+      "initial": "loading",
+      "states": {
+        "loading": { "set": { "artwork.scale": 0.96, "status.opacity": 1, "play.scale": 0.94 }, "when": { "host.ready": "paused", "host.pause": "paused", "host.play": "playing", "host.error": "error" } },
+        "paused": { "set": { "artwork.scale": 1, "status.opacity": 1, "play.scale": 1 }, "when": { "host.load": "loading", "host.play": "playing", "host.buffering": "buffering", "host.ended": "ended", "host.error": "error" } },
+        "playing": { "set": { "artwork.scale": 1.04, "status.opacity": 0.72, "play.scale": 1 }, "when": { "host.pause": "paused", "host.buffering": "buffering", "host.ended": "ended", "host.error": "error" } },
+        "buffering": { "set": { "artwork.scale": 1, "status.opacity": 1, "play.scale": 0.94 }, "when": { "host.play": "playing", "host.pause": "paused", "host.error": "error" } },
+        "ended": { "set": { "artwork.scale": 1, "status.opacity": 1, "play.scale": 1.08 }, "when": { "host.play": "playing", "host.load": "loading" } },
+        "error": { "set": { "artwork.scale": 0.96, "status.opacity": 1, "play.scale": 0.92 }, "when": { "host.load": "loading" } }
+      }
+    },
+    "repeat-mode": {
+      "initial": "once",
+      "states": {
+        "once": { "set": { "repeat.scale": 1 }, "when": { "host.repeat-on": "loop" } },
+        "loop": { "set": { "repeat.scale": 1.12 }, "when": { "host.repeat-off": "once" } }
+      }
+    }
+  }
+}

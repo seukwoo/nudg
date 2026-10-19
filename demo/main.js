@@ -4,12 +4,12 @@
 // and played on its host page's markup, which lives in a shadow root so the pages'
 // styles can't collide with each other or with this site.
 
-import { compileText, compileUrl, play } from "../dist/dom/index.js";
+import { compileText, play } from "../dist/dom/index.js";
 import { compare } from "../dist/index.js";
 import { createCameraController } from "../examples/camera-host.js";
 import { createMediaController } from "../examples/media-host.js";
 
-const catalog = await fetch("../examples/index.json").then((r) => r.json());
+const catalog = await fetch("../examples/index.json", { cache: "no-store" }).then((r) => r.json());
 const examples = catalog.examples;
 const byId = new Map(examples.map((e) => [e.id, e]));
 
@@ -23,8 +23,8 @@ const pages = new Map();
 async function load(ex) {
   if (!programs.has(ex.id)) {
     const url = `../examples/${ex.id}.nudg.json`;
-    const [result, text] = await Promise.all([compileUrl(url), fetch(url).then((r) => r.text())]);
-    programs.set(ex.id, result);
+    const text = await fetch(url, { cache: "no-store" }).then((r) => r.text());
+    programs.set(ex.id, await compileText(text, url));
     sources.set(ex.id, text);
   }
   return { ...programs.get(ex.id), source: sources.get(ex.id) };
@@ -33,7 +33,7 @@ async function load(ex) {
 /** A host page's style and markup, without its scripts. */
 async function page(file) {
   if (!pages.has(file)) {
-    const html = await fetch(`../examples/${file}`).then((r) => r.text());
+    const html = await fetch(`../examples/${file}`, { cache: "no-store" }).then((r) => r.text());
     const doc = new DOMParser().parseFromString(html, "text/html");
     const style = [...doc.querySelectorAll("style")].map((s) => s.textContent).join("\n");
     doc.querySelectorAll("script").forEach((s) => s.remove());
@@ -176,6 +176,7 @@ const HOOKS = {
   "video-call"(player, root) {
     const video = root.querySelector("video");
     const join = root.querySelector(".join");
+    const actions = root.querySelector(".actions");
     const camera = root.querySelector(".camera");
     const mute = root.querySelector(".mute");
     const flip = root.querySelector(".flip");
@@ -237,6 +238,12 @@ const HOOKS = {
       clearInterval(timer);
       timer = setInterval(showTime, 1000);
     };
+    const syncCallControls = (state) => {
+      const live = state.includes("call/live");
+      join.style.visibility = live ? "hidden" : "visible";
+      actions.style.visibility = live ? "visible" : "hidden";
+    };
+    syncCallControls(["call/ready"]);
 
     join?.addEventListener("click", async () => {
       if (media.stream) return;
@@ -322,6 +329,7 @@ const HOOKS = {
     });
     root.querySelector(".leave")?.addEventListener("click", () => reset());
     return {
+      onState: syncCallControls,
       dispose() {
         alive = false;
         reset("", false);

@@ -180,6 +180,119 @@ test("voice chat exposes the complete local call surface", { skip }, async () =>
   assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('[role=meter]').getAttribute('aria-valuenow')"), "0");
 });
 
+test("video call shares real camera controls without collapsing them into capture", { skip }, async () => {
+  await go("#example/video-call");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('ready') ? true : undefined"), 5_000);
+  assert.deepEqual(
+    await browser.evaluate(`(() => {
+      const root = document.getElementById("detail-stage").shadowRoot;
+      return {
+        label: root.querySelector(".video-call")?.getAttribute("aria-label"),
+        status: root.querySelector(".status")?.value,
+        controls: [...root.querySelectorAll("button")].map((button) => button.textContent),
+      };
+    })()`),
+    { label: "Video call with Mina Lee", status: "Ready to join", controls: ["Join video", "Camera", "Mute", "Flip", "Leave"] },
+  );
+
+  await browser.evaluate(`(() => {
+    const makeTrack = (kind) => ({ kind, enabled: true, stopped: false, stop() { this.stopped = true; } });
+    window.__cameraRequests = [];
+    window.__cameraStreams = [];
+    navigator.mediaDevices.getUserMedia = async (constraints) => {
+      const video = makeTrack("video");
+      const audio = makeTrack("audio");
+      const stream = new MediaStream();
+      Object.assign(stream, { video, audio });
+      Object.defineProperties(stream, {
+        getTracks: { value: () => [video, audio] },
+        getVideoTracks: { value: () => [video] },
+        getAudioTracks: { value: () => [audio] },
+      });
+      window.__cameraRequests.push(constraints);
+      window.__cameraStreams.push(stream);
+      return stream;
+    };
+    document.getElementById("detail-stage").shadowRoot.querySelector(".join").click();
+  })()`);
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('live') ? true : undefined"), 5_000);
+
+  await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.camera').click()");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('camera-off') ? true : undefined"), 5_000);
+  assert.equal(await browser.evaluate("window.__cameraStreams[0].video.enabled"), false);
+
+  await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.mute').click()");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('mic-off') ? true : undefined"), 5_000);
+  assert.equal(await browser.evaluate("window.__cameraStreams[0].audio.enabled"), false);
+
+  await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.camera').click(); document.getElementById('detail-stage').shadowRoot.querySelector('.flip').click()");
+  await waitFor(() => browser.evaluate("window.__cameraRequests.length === 2 && document.getElementById('detail-state').textContent.includes('camera-on') ? true : undefined"), 5_000);
+  assert.equal(await browser.evaluate("window.__cameraRequests[1].video.facingMode"), "environment");
+  assert.equal(await browser.evaluate("window.__cameraStreams[0].video.stopped"), true);
+
+  await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.leave').click()");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('ready') ? true : undefined"), 5_000);
+  assert.equal(await browser.evaluate("window.__cameraStreams[1].video.stopped && window.__cameraStreams[1].audio.stopped"), true);
+});
+
+test("camera covers photo, recording and review states", { skip }, async () => {
+  await go("#example/camera");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent === 'idle' ? true : undefined"), 5_000);
+  assert.deepEqual(
+    await browser.evaluate(`(() => {
+      const root = document.getElementById("detail-stage").shadowRoot;
+      return {
+        label: root.querySelector(".camera-app")?.getAttribute("aria-label"),
+        status: root.querySelector(".status")?.value,
+        modes: [...root.querySelectorAll(".modes button")].map((button) => button.textContent),
+        actions: [root.querySelector(".shutter")?.getAttribute("aria-label"), root.querySelector(".flip")?.textContent, root.querySelector(".retake")?.textContent, root.querySelector(".use")?.textContent],
+      };
+    })()`),
+    { label: "Camera", status: "Camera off", modes: ["Photo", "Video"], actions: ["Take photo", "Flip", "Retake", "Use"] },
+  );
+
+  await browser.evaluate(`(() => {
+    const makeTrack = (kind) => ({ kind, enabled: true, stopped: false, stop() { this.stopped = true; } });
+    navigator.mediaDevices.getUserMedia = async () => {
+      const video = makeTrack("video");
+      const audio = makeTrack("audio");
+      const stream = new MediaStream();
+      Object.defineProperties(stream, {
+        getTracks: { value: () => [video, audio] },
+        getVideoTracks: { value: () => [video] },
+        getAudioTracks: { value: () => [audio] },
+      });
+      return stream;
+    };
+    window.MediaRecorder = class {
+      state = "inactive";
+      mimeType = "video/webm";
+      constructor(stream) { this.stream = stream; }
+      start() { this.state = "recording"; }
+      stop() {
+        this.state = "inactive";
+        this.ondataavailable?.({ data: new Blob(["frame"], { type: this.mimeType }) });
+        this.onstop?.();
+      }
+    };
+    document.getElementById("detail-stage").shadowRoot.querySelector(".start").click();
+  })()`);
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent === 'photo' ? true : undefined"), 5_000);
+
+  await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.shutter').click()");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent === 'photo-review' ? true : undefined"), 5_000);
+  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.result-photo').style.display"), "block");
+  await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.retake').click()");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent === 'photo' ? true : undefined"), 5_000);
+
+  await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.video-mode').click(); document.getElementById('detail-stage').shadowRoot.querySelector('.shutter').click()");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent === 'recording' ? true : undefined"), 5_000);
+  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.shutter').getAttribute('aria-label')"), "Start recording");
+  await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.shutter').click()");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent === 'video-review' ? true : undefined"), 5_000);
+  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.result-video').style.display"), "block");
+});
+
 test("playground: a typo gets a hint; a pasted file gets generic boxes", { skip }, async () => {
   await go("#playground");
   await browser.evaluate("(() => { const p = document.getElementById('playground-example'); p.value = 'toggle'; p.dispatchEvent(new Event('change')); })()");

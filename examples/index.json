@@ -28,6 +28,10 @@
     {
       "id": "feedback",
       "title": "Feedback"
+    },
+    {
+      "id": "media",
+      "title": "Media"
     }
   ],
   "examples": [
@@ -369,7 +373,7 @@
     {
       "id": "microphone",
       "title": "Voice chat",
-      "category": "feedback",
+      "category": "media",
       "tags": [
         "continuous-input",
         "host-input",
@@ -381,6 +385,40 @@
       "prompts": [
         "Make quiet speech light up the avatar more strongly.",
         "Make mute feel more immediate while keeping join and leave calm."
+      ]
+    },
+    {
+      "id": "video-call",
+      "title": "Video call",
+      "category": "media",
+      "tags": [
+        "camera",
+        "host-event",
+        "parallel",
+        "media-stream"
+      ],
+      "html": "video-call.html",
+      "summary": "A complete video-call shell with join, camera, microphone, front/rear switch, elapsed time and leave. Independent nudg regions keep call, camera and microphone states coordinated while the host owns MediaStream.",
+      "prompts": [
+        "Make turning the camera off feel more immediate than joining the call.",
+        "Make the front/rear camera switch feel like a physical flip."
+      ]
+    },
+    {
+      "id": "camera",
+      "title": "Camera",
+      "category": "media",
+      "tags": [
+        "camera",
+        "host-event",
+        "capture",
+        "media-stream"
+      ],
+      "html": "camera.html",
+      "summary": "A mobile camera with permission, photo/video modes, shutter, recording, front/rear switch and review. Media APIs stay in the host; nudg standardizes the capture states and feedback.",
+      "prompts": [
+        "Give the photo shutter a crisper response without changing video recording.",
+        "Make the transition into review feel calmer than the capture itself."
       ]
     },
     {

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Camera</title>
+  <style>
+    body { margin: 0; min-height: 220px; display: grid; place-items: center; background: #f4f6f3; font: 11px ui-sans-serif, system-ui, sans-serif; color: #fff; }
+    .camera-app { position: relative; width: min(292px, 100%); height: 184px; overflow: hidden; border-radius: 8px; color: #fff; background: #172421; box-shadow: 0 8px 24px rgba(21, 43, 36, 0.18); }
+    .preview, .result-photo, .result-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #18342f; }
+    .preview { transform: scaleX(-1); }
+    .result-photo, .result-video { display: none; }
+    .top { position: absolute; z-index: 3; inset: 8px 9px auto; display: flex; justify-content: space-between; align-items: center; }
+    .status { padding: 3px 6px; border-radius: 4px; background: rgba(9, 24, 20, 0.62); }
+    .recording { display: flex; align-items: center; gap: 5px; padding: 3px 6px; border-radius: 4px; background: rgba(9, 24, 20, 0.62); }
+    .recording::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #ff5a61; }
+    .start, .capture-controls, .review { position: absolute; z-index: 4; }
+    .start { inset: auto 10px 10px; width: calc(100% - 20px); height: 34px; border: 0; border-radius: 6px; color: #173d35; background: #effbf6; font: inherit; font-weight: 800; cursor: pointer; }
+    .capture-controls { inset: auto 10px 8px; height: 48px; display: grid; grid-template-columns: 70px 1fr 70px; align-items: end; }
+    .modes { position: relative; align-self: center; height: 24px; display: grid; grid-template-columns: 1fr 1fr; border-radius: 5px; background: rgba(8, 23, 19, 0.68); }
+    .mode-indicator { position: absolute; width: 46px; height: 24px; border-radius: 5px; background: #effbf6; }
+    .modes button { position: relative; z-index: 1; width: 46px; padding: 0; border: 0; color: #fff; background: transparent; font: inherit; font-weight: 750; cursor: pointer; mix-blend-mode: difference; }
+    .shutter { justify-self: center; width: 42px; height: 42px; padding: 4px; border: 2px solid #fff; border-radius: 50%; background: transparent; cursor: pointer; }
+    .shutter::after { content: ""; display: block; width: 100%; height: 100%; border-radius: 50%; background: currentColor; }
+    .flip { justify-self: end; width: 52px; height: 28px; border: 1px solid rgba(255,255,255,.25); border-radius: 5px; color: #fff; background: rgba(8, 23, 19, 0.68); font: inherit; font-weight: 750; cursor: pointer; }
+    .review { inset: auto 10px 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 7px; width: calc(100% - 20px); }
+    .review button { height: 34px; border: 1px solid rgba(255,255,255,.22); border-radius: 6px; font: inherit; font-weight: 800; cursor: pointer; }
+    .retake { color: #fff; background: rgba(8, 23, 19, 0.76); }
+    .use { color: #173d35; background: #effbf6; }
+    .start[data-nudg-state~="photo"], .start[data-nudg-state~="video"], .start[data-nudg-state~="recording"], .start[data-nudg-state$="review"],
+    .capture-controls[data-nudg-state="idle"], .capture-controls[data-nudg-state="connecting"], .capture-controls[data-nudg-state$="review"],
+    .review:not([data-nudg-state$="review"]) { pointer-events: none; }
+  </style>
+</head>
+<body>
+  <section class="camera-app" aria-label="Camera">
+    <video class="preview" data-nudg="preview" autoplay muted playsinline></video>
+    <canvas class="result-photo" aria-label="Captured photo"></canvas>
+    <video class="result-video" aria-label="Recorded video" playsinline controls></video>
+    <div class="top"><output class="status" aria-live="polite">Camera off</output><output class="recording" data-nudg="recording">REC 00:00</output></div>
+    <button class="start" type="button" data-nudg="start">Enable camera</button>
+    <div class="capture-controls" data-nudg="capture-controls">
+      <div class="modes" aria-label="Capture mode">
+        <span class="mode-indicator" data-nudg="mode-indicator"></span>
+        <button class="photo-mode" type="button" aria-pressed="true">Photo</button>
+        <button class="video-mode" type="button" aria-pressed="false">Video</button>
+      </div>
+      <button class="shutter" type="button" data-nudg="shutter" aria-label="Take photo"></button>
+      <button class="flip" type="button">Flip</button>
+    </div>
+    <div class="review" data-nudg="review">
+      <button class="retake" type="button">Retake</button>
+      <button class="use" type="button">Use</button>
+    </div>
+  </section>
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    import { createCameraController } from "./camera-host.js";
+    const { program } = await compileUrl("./camera.nudg.json");
+    const preview = document.querySelector(".preview");
+    const photo = document.querySelector(".result-photo");
+    const recorded = document.querySelector(".result-video");
+    const status = document.querySelector(".status");
+    const recording = document.querySelector(".recording");
+    const media = createCameraController(preview, { audio: true });
+    const player = play(program, document.body);
+    let mode = "photo";
+    let recorder;
+    let chunks = [];
+    let timer = 0;
+    let started = 0;
+
+    const setMode = (next) => {
+      mode = next;
+      player.send(`host.${next}`);
+      document.querySelector(".photo-mode").setAttribute("aria-pressed", String(next === "photo"));
+      document.querySelector(".video-mode").setAttribute("aria-pressed", String(next === "video"));
+      document.querySelector(".shutter").setAttribute("aria-label", next === "photo" ? "Take photo" : "Start recording");
+    };
+    const showPreview = () => {
+      photo.style.display = "none";
+      recorded.style.display = "none";
+      preview.style.display = "block";
+    };
+    document.querySelector(".start").addEventListener("click", async () => {
+      player.send("host.start");
+      status.value = "Requesting camera";
+      try { await media.start(); player.send("host.ready"); status.value = "Camera ready"; }
+      catch { player.send("host.failed"); status.value = "Camera unavailable"; }
+    });
+    document.querySelector(".photo-mode").addEventListener("click", () => setMode("photo"));
+    document.querySelector(".video-mode").addEventListener("click", () => setMode("video"));
+    document.querySelector(".flip").addEventListener("click", async () => {
+      status.value = "Switching camera";
+      try { await media.switchFacing(); status.value = "Camera ready"; }
+      catch { status.value = "Could not switch camera"; }
+    });
+    document.querySelector(".shutter").addEventListener("click", () => {
+      if (mode === "photo") {
+        media.capture(photo);
+        preview.style.display = "none";
+        photo.style.display = "block";
+        player.send("host.capture");
+        status.value = "Photo captured";
+        return;
+      }
+      if (recorder?.state === "recording") {
+        recorder.stop();
+        return;
+      }
+      if (!media.stream || typeof MediaRecorder === "undefined") { status.value = "Recording unavailable"; return; }
+      chunks = [];
+      recorder = new MediaRecorder(media.stream);
+      recorder.ondataavailable = (event) => event.data.size && chunks.push(event.data);
+      recorder.onstop = () => {
+        clearInterval(timer);
+        recorded.src = URL.createObjectURL(new Blob(chunks, { type: recorder.mimeType || "video/webm" }));
+        preview.style.display = "none";
+        recorded.style.display = "block";
+        player.send("host.stop");
+        status.value = "Video recorded";
+      };
+      recorder.start();
+      player.send("host.record");
+      status.value = "Recording";
+      started = performance.now();
+      const tick = () => {
+        const seconds = Math.floor((performance.now() - started) / 1000);
+        recording.value = `REC ${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+      };
+      tick();
+      timer = setInterval(tick, 1000);
+    });
+    document.querySelector(".retake").addEventListener("click", () => { showPreview(); player.send("host.retake"); status.value = "Camera ready"; });
+    document.querySelector(".use").addEventListener("click", () => status.value = mode === "photo" ? "Photo selected" : "Video selected");
+    addEventListener("beforeunload", () => { clearInterval(timer); media.stop(); }, { once: true });
+  </script>
+</body>
+</html>

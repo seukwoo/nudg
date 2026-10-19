@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Video call</title>
+  <style>
+    body { margin: 0; min-height: 220px; display: grid; place-items: center; background: #f4f6f3; font: 12px ui-sans-serif, system-ui, sans-serif; color: #fff; }
+    .video-call { position: relative; width: min(292px, 100%); height: 176px; overflow: hidden; border-radius: 8px; color: #fff; background: #163b35; box-shadow: 0 8px 24px rgba(21, 43, 36, 0.18); }
+    .video, .poster, .camera-cover { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .video { object-fit: cover; transform: scaleX(-1); background: #163b35; }
+    .poster, .camera-cover { display: grid; place-items: center; background: #1d574d; }
+    .camera-cover { background: #21443e; }
+    .avatar { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 50%; background: #e7f4ef; color: #1b5d50; font-size: 16px; font-weight: 800; }
+    .top { position: absolute; z-index: 2; inset: 10px 10px auto; display: flex; justify-content: space-between; align-items: flex-start; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); }
+    .identity strong, .identity output { display: block; }
+    .identity strong { font-size: 13px; }
+    .identity output { color: #e4ece9; font-size: 11px; }
+    time { font: 11px ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
+    .controls { position: absolute; z-index: 3; inset: auto 10px 10px; height: 34px; }
+    .join, .actions { position: absolute; inset: 0; }
+    .join { width: 100%; border: 0; border-radius: 6px; color: #173d35; background: #effbf6; font: inherit; font-weight: 800; cursor: pointer; }
+    .actions { display: grid; grid-template-columns: repeat(3, 1fr) 1.2fr; gap: 6px; }
+    .actions button { min-width: 0; border: 1px solid rgba(255,255,255,.22); border-radius: 6px; color: #17221f; background: #f5f7f4; font: inherit; font-weight: 750; cursor: pointer; }
+    .actions .leave { border-color: #efc2c5; color: #8f252d; background: #fff0f1; }
+    .join[data-nudg-state~="live"], .actions[data-nudg-state~="ready"], .actions[data-nudg-state~="connecting"] { pointer-events: none; }
+  </style>
+</head>
+<body>
+  <section class="video-call" aria-label="Video call with Mina Lee">
+    <video class="video" data-nudg="video" autoplay muted playsinline></video>
+    <div class="poster" data-nudg="poster"><span class="avatar">ML</span></div>
+    <div class="camera-cover" data-nudg="camera-cover"><span class="avatar">OFF</span></div>
+    <div class="top">
+      <div class="identity"><strong>Mina Lee</strong><output class="status" aria-live="polite">Ready to join</output></div>
+      <time datetime="PT0S">00:00</time>
+    </div>
+    <div class="controls">
+      <button class="join" type="button" data-nudg="join">Join video</button>
+      <div class="actions" data-nudg="actions">
+        <button class="camera" type="button" data-nudg="camera" aria-pressed="false">Camera</button>
+        <button class="mute" type="button" data-nudg="mute" aria-pressed="false">Mute</button>
+        <button class="flip" type="button" data-nudg="flip">Flip</button>
+        <button class="leave" type="button">Leave</button>
+      </div>
+    </div>
+  </section>
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    import { createCameraController } from "./camera-host.js";
+    const { program } = await compileUrl("./video-call.nudg.json");
+    const video = document.querySelector("video");
+    const join = document.querySelector(".join");
+    const camera = document.querySelector(".camera");
+    const mute = document.querySelector(".mute");
+    const flip = document.querySelector(".flip");
+    const leave = document.querySelector(".leave");
+    const status = document.querySelector(".status");
+    const elapsed = document.querySelector("time");
+    const media = createCameraController(video, { audio: true });
+    let cameraOn = true;
+    let micOn = true;
+    let timer = 0;
+    let started = 0;
+    const player = play(program, document.body);
+
+    const showTime = () => {
+      const seconds = Math.floor((performance.now() - started) / 1000);
+      elapsed.textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+      elapsed.dateTime = `PT${seconds}S`;
+    };
+    const reset = (message = "Call ended") => {
+      clearInterval(timer);
+      media.stop();
+      cameraOn = true;
+      micOn = true;
+      player.send("host.camera-on");
+      player.send("host.unmute");
+      player.send("host.leave");
+      status.value = message;
+      elapsed.textContent = "00:00";
+      elapsed.dateTime = "PT0S";
+      camera.setAttribute("aria-pressed", "false");
+      mute.setAttribute("aria-pressed", "false");
+    };
+    join.addEventListener("click", async () => {
+      if (media.stream) return;
+      player.send("host.connect");
+      status.value = "Connecting camera";
+      try {
+        await media.start();
+        player.send("host.connected");
+        status.value = "Connected · camera on";
+        started = performance.now();
+        showTime();
+        timer = setInterval(showTime, 1000);
+      } catch {
+        reset("Camera or microphone unavailable");
+        player.send("host.failed");
+      }
+    });
+    camera.addEventListener("click", () => {
+      cameraOn = !cameraOn;
+      media.setVideoEnabled(cameraOn);
+      player.send(cameraOn ? "host.camera-on" : "host.camera-off");
+      camera.setAttribute("aria-pressed", String(!cameraOn));
+      status.value = cameraOn ? "Connected · camera on" : "Connected · camera off";
+    });
+    mute.addEventListener("click", () => {
+      micOn = !micOn;
+      media.setAudioEnabled(micOn);
+      player.send(micOn ? "host.unmute" : "host.mute");
+      mute.setAttribute("aria-pressed", String(!micOn));
+    });
+    flip.addEventListener("click", async () => {
+      player.send("host.flip");
+      flip.disabled = true;
+      try { await media.switchFacing(); player.send("host.flipped"); }
+      catch { player.send("host.failed"); status.value = "Could not switch camera"; }
+      flip.disabled = false;
+    });
+    leave.addEventListener("click", () => reset());
+    addEventListener("beforeunload", () => media.stop(), { once: true });
+  </script>
+</body>
+</html>

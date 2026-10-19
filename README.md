@@ -102,7 +102,7 @@ See [platform motion](docs/usage.md#native-feel-on-every-platform) for every nam
 
 People don't usually ask for `duration: 0.35` and `bounce: 0.2`. They say "make this a FAB", "use tabs", "show it as a bottom sheet", "let the row swipe to delete", or "make the toast feel more iOS". nudg is built to make those words map to reusable interaction patterns instead of one-off code guesses.
 
-The direction is mobile-first: patterns such as `fab`, `tab-bar`, `bottom-sheet`, `toast` / `snackbar`, `swipe-row`, `carousel`, `switch`, `slider`, `dialog`, `list` and `grid` should come with expected parts, states, gestures and platform motion. The host still owns the markup and layout; nudg supplies the interaction behavior that an AI can edit and a person can judge.
+The direction is mobile-first: patterns such as `fab`, `tab-bar`, `bottom-sheet`, `toast` / `snackbar`, `swipe-row`, `carousel`, `switch`, `slider`, `dialog`, `list`, `grid`, `voice-chat`, `video-call` and `camera` should come with expected parts, states, gestures and platform motion. The host still owns the markup, layout and device APIs; nudg supplies the interaction behavior that an AI can edit and a person can judge.
 
 ```txt
 human UI words

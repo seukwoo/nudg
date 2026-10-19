@@ -233,6 +233,33 @@ test("video call shares real camera controls without collapsing them into captur
   await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.leave').click()");
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('ready') ? true : undefined"), 5_000);
   assert.equal(await browser.evaluate("window.__cameraStreams[1].video.stopped && window.__cameraStreams[1].audio.stopped"), true);
+
+  await browser.evaluate(`(() => {
+    window.__cameraRequests = [];
+    window.__cameraStreams = [];
+    navigator.mediaDevices.getUserMedia = async (constraints) => {
+      window.__cameraRequests.push(constraints);
+      if (constraints.audio) throw new DOMException("Microphone denied", "NotAllowedError");
+      const video = { enabled: true, stopped: false, stop() { this.stopped = true; } };
+      const stream = new MediaStream();
+      Object.assign(stream, { video });
+      Object.defineProperties(stream, {
+        getTracks: { value: () => [video] },
+        getVideoTracks: { value: () => [video] },
+        getAudioTracks: { value: () => [] },
+      });
+      window.__cameraStreams.push(stream);
+      return stream;
+    };
+    document.getElementById("detail-stage").shadowRoot.querySelector(".join").click();
+  })()`);
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('live') ? true : undefined"), 5_000);
+  assert.deepEqual(await browser.evaluate("window.__cameraRequests.map((request) => request.audio)"), [true, false]);
+  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.status').value"), "Connected · camera only");
+  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.mute').disabled"), true);
+  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.mute').getAttribute('aria-label')"), "Microphone unavailable");
+  assert.equal(await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('video').srcObject === window.__cameraStreams[0]"), true);
+  await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.leave').click()");
 });
 
 test("camera covers photo, recording and review states", { skip }, async () => {
@@ -278,6 +305,21 @@ test("camera covers photo, recording and review states", { skip }, async () => {
     document.getElementById("detail-stage").shadowRoot.querySelector(".start").click();
   })()`);
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent === 'photo' ? true : undefined"), 5_000);
+  assert.deepEqual(
+    await browser.evaluate(`(() => {
+      const root = document.getElementById("detail-stage").shadowRoot;
+      const app = root.querySelector(".camera-app").getBoundingClientRect();
+      const modes = root.querySelector(".modes").getBoundingClientRect();
+      const buttons = [...root.querySelectorAll(".modes button")].map((button) => button.getBoundingClientRect().width);
+      const shutter = root.querySelector(".shutter").getBoundingClientRect();
+      return {
+        modes: modes.width,
+        buttons,
+        shutterOffset: Math.round((shutter.x + shutter.width / 2) - (app.x + app.width / 2)),
+      };
+    })()`),
+    { modes: 96, buttons: [48, 48], shutterOffset: 0 },
+  );
 
   await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.shutter').click()");
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent === 'photo-review' ? true : undefined"), 5_000);

@@ -9,10 +9,14 @@ export function createCameraController(video, { audio = false } = {}) {
   const stopTracks = (value) => value?.getTracks().forEach((track) => track.stop());
 
   async function start() {
-    const next = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode },
-      audio,
-    });
+    let next;
+    try {
+      next = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio });
+    } catch (error) {
+      if (!audio) throw error;
+      // A denied or unavailable microphone must not prevent a usable camera preview.
+      next = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: false });
+    }
     stopTracks(stream);
     stream = next;
     stream.getVideoTracks().forEach((track) => (track.enabled = videoEnabled));
@@ -71,6 +75,9 @@ export function createCameraController(video, { audio = false } = {}) {
     },
     get facingMode() {
       return facingMode;
+    },
+    get hasAudio() {
+      return Boolean(stream?.getAudioTracks().length);
     },
   };
 }

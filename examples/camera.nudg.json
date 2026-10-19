@@ -39,11 +39,11 @@
       "when": { "host.video": "video", "host.capture": "photo-review", "host.leave": "idle" }
     },
     "video": {
-      "set": { "preview.opacity": 1, "preview.scale": 1, "start.opacity": 0, "capture-controls.opacity": 1, "mode-indicator.x": 46, "shutter.scale": 1, "shutter.color": "#F04D55", "recording.opacity": 0, "review.opacity": 0 },
+      "set": { "preview.opacity": 1, "preview.scale": 1, "start.opacity": 0, "capture-controls.opacity": 1, "mode-indicator.x": 48, "shutter.scale": 1, "shutter.color": "#F04D55", "recording.opacity": 0, "review.opacity": 0 },
       "when": { "host.photo": "photo", "host.record": "recording", "host.leave": "idle" }
     },
     "recording": {
-      "set": { "preview.opacity": 1, "start.opacity": 0, "capture-controls.opacity": 1, "mode-indicator.x": 46, "shutter.scale": 0.72, "shutter.color": "#F04D55", "recording.opacity": 1, "review.opacity": 0 },
+      "set": { "preview.opacity": 1, "start.opacity": 0, "capture-controls.opacity": 1, "mode-indicator.x": 48, "shutter.scale": 0.72, "shutter.color": "#F04D55", "recording.opacity": 1, "review.opacity": 0 },
       "when": { "host.stop": "video-review", "host.leave": "idle" }
     },
     "photo-review": {

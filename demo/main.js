@@ -207,6 +207,17 @@ const HOOKS = {
       elapsed.dateTime = "PT0S";
       camera.setAttribute("aria-pressed", "false");
       mute.setAttribute("aria-pressed", "false");
+      mute.disabled = false;
+      mute.textContent = "Mute";
+      mute.setAttribute("aria-label", "Mute microphone");
+    };
+    const syncMicrophone = () => {
+      micOn = media.hasAudio;
+      mute.disabled = !media.hasAudio;
+      mute.textContent = media.hasAudio ? "Mute" : "Mic";
+      mute.setAttribute("aria-label", media.hasAudio ? "Mute microphone" : "Microphone unavailable");
+      mute.setAttribute("aria-pressed", "false");
+      return media.hasAudio;
     };
 
     join?.addEventListener("click", async () => {
@@ -217,7 +228,7 @@ const HOOKS = {
         await media.start();
         if (!alive) return media.stop();
         player.send("host.connected");
-        status.value = "Connected · camera on";
+        status.value = syncMicrophone() ? "Connected · camera on" : "Connected · camera only";
         started = performance.now();
         showTime();
         timer = setInterval(showTime, 1000);
@@ -244,6 +255,7 @@ const HOOKS = {
       flip.disabled = true;
       try {
         await media.switchFacing();
+        syncMicrophone();
         player.send("host.flipped");
       } catch {
         player.send("host.failed");
@@ -296,7 +308,7 @@ const HOOKS = {
         await media.start();
         if (!alive) return media.stop();
         player.send("host.ready");
-        status.value = "Camera ready";
+        status.value = media.hasAudio ? "Camera ready" : "Camera ready · no mic";
       } catch {
         player.send("host.failed");
         status.value = "Camera unavailable";
@@ -308,7 +320,7 @@ const HOOKS = {
       status.value = "Switching camera";
       try {
         await media.switchFacing();
-        status.value = "Camera ready";
+        status.value = media.hasAudio ? "Camera ready" : "Camera ready · no mic";
       } catch {
         status.value = "Could not switch camera";
       }

@@ -14,7 +14,7 @@ Legend: **yes** supported, with an example; **yes, no example** supported but no
 | Focus and blur | yes, no example | |
 | Keys | yes | slider, dialog |
 | Time (auto-dismiss, delays) | yes | toast, tooltip |
-| Events from the app (`host.*`) | yes | toast, pull-to-refresh, shake |
+| Events from the app (`host.*`) | yes | toast, pull-to-refresh, shake, voice chat, video call, camera |
 | A library's own state (`data-state`, `aria-*`) | yes, no example in the site | tested with MUI and Radix |
 | Layout (sizes and positions on the page) | yes | tabs, accordion |
 | Long press, double tap | partly: a state entered on `down` with an `after:` timer | |
@@ -49,7 +49,7 @@ Legend: **yes** supported, with an example; **yes, no example** supported but no
 | States and transitions | yes | every example |
 | Transitions from any state | yes | segmented, tabs |
 | Nested states | yes, no example in the site | conformance: nested-states |
-| Parallel regions (press feedback beside on/off) | yes | toggle-press |
+| Parallel regions (independent controls beside a primary state) | yes | toggle-press, video call |
 | Presence (stay until the exit has played) | yes, in the adapters | toast |
 | Several components coordinated (a list's items, a screen and its sheet) | no: stage 2 in the [roadmap](roadmap.md) | |
 | Transitions across levels (into a nested state, out to a parent's sibling) | no: [open question](design.md#open-questions) | |

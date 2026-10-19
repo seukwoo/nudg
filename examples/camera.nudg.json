@@ -1,0 +1,58 @@
+{
+  "nudg": "0.5",
+  "note": "A mobile camera host owns permission, MediaStream, canvas capture and MediaRecorder. nudg expresses the familiar photo/video modes, recording feedback and review flow without taking over media APIs.",
+  "targets": ["preview", "start", "capture-controls", "mode-indicator", "shutter", "recording", "review"],
+  "values": {
+    "preview.opacity": { "base": 0, "min": 0, "max": 1 },
+    "preview.scale": 1.04,
+    "start.opacity": { "base": 1, "min": 0, "max": 1 },
+    "capture-controls.opacity": { "base": 0, "min": 0, "max": 1 },
+    "mode-indicator.x": 0,
+    "shutter.scale": 1,
+    "shutter.color": "#FFFFFF",
+    "recording.opacity": { "base": 0, "min": 0, "max": 1 },
+    "review.opacity": { "base": 0, "min": 0, "max": 1 }
+  },
+  "animate": {
+    "preview.opacity": { "tween": { "duration": 0.18, "ease": "out" } },
+    "preview.scale": { "spring": { "duration": 0.34, "bounce": 0.08 } },
+    "start.opacity": { "tween": { "duration": 0.14, "ease": "out" } },
+    "capture-controls.opacity": { "tween": { "duration": 0.16, "ease": "out" } },
+    "mode-indicator.x": { "spring": { "duration": 0.3, "bounce": 0.12 } },
+    "shutter.scale": { "spring": { "duration": 0.2, "bounce": 0.1 } },
+    "shutter.color": { "tween": { "duration": 0.14, "ease": "out" } },
+    "recording.opacity": { "tween": { "duration": 0.12, "ease": "out" } },
+    "review.opacity": { "tween": { "duration": 0.16, "ease": "out" } }
+  },
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "set": { "preview.opacity": 0, "preview.scale": 1.04, "start.opacity": 1, "capture-controls.opacity": 0, "review.opacity": 0 },
+      "when": { "host.start": "connecting" }
+    },
+    "connecting": {
+      "set": { "preview.opacity": 0, "start.opacity": 0.6, "capture-controls.opacity": 0, "review.opacity": 0 },
+      "when": { "host.ready": "photo", "host.failed": "idle" }
+    },
+    "photo": {
+      "set": { "preview.opacity": 1, "preview.scale": 1, "start.opacity": 0, "capture-controls.opacity": 1, "mode-indicator.x": 0, "shutter.scale": 1, "shutter.color": "#FFFFFF", "recording.opacity": 0, "review.opacity": 0 },
+      "when": { "host.video": "video", "host.capture": "photo-review", "host.leave": "idle" }
+    },
+    "video": {
+      "set": { "preview.opacity": 1, "preview.scale": 1, "start.opacity": 0, "capture-controls.opacity": 1, "mode-indicator.x": 46, "shutter.scale": 1, "shutter.color": "#F04D55", "recording.opacity": 0, "review.opacity": 0 },
+      "when": { "host.photo": "photo", "host.record": "recording", "host.leave": "idle" }
+    },
+    "recording": {
+      "set": { "preview.opacity": 1, "start.opacity": 0, "capture-controls.opacity": 1, "mode-indicator.x": 46, "shutter.scale": 0.72, "shutter.color": "#F04D55", "recording.opacity": 1, "review.opacity": 0 },
+      "when": { "host.stop": "video-review", "host.leave": "idle" }
+    },
+    "photo-review": {
+      "set": { "preview.opacity": 1, "start.opacity": 0, "capture-controls.opacity": 0, "recording.opacity": 0, "review.opacity": 1 },
+      "when": { "host.retake": "photo", "host.leave": "idle" }
+    },
+    "video-review": {
+      "set": { "preview.opacity": 1, "start.opacity": 0, "capture-controls.opacity": 0, "recording.opacity": 0, "review.opacity": 1 },
+      "when": { "host.retake": "video", "host.leave": "idle" }
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "nudg": "0.5",
+  "note": "A video-call host owns camera and microphone tracks. Three parallel regions keep the call, camera and microphone controls independent while nudg coordinates their visible feedback.",
+  "targets": ["video", "poster", "camera-cover", "join", "actions", "camera", "mute", "flip"],
+  "values": {
+    "video.opacity": { "base": 0, "min": 0, "max": 1 },
+    "video.scale": 1.04,
+    "poster.opacity": { "base": 1, "min": 0, "max": 1 },
+    "camera-cover.opacity": { "base": 0, "min": 0, "max": 1 },
+    "join.opacity": { "base": 1, "min": 0, "max": 1 },
+    "actions.opacity": { "base": 0, "min": 0, "max": 1 },
+    "camera.color": "#F5F7F4",
+    "mute.color": "#F5F7F4",
+    "flip.rotation": 0
+  },
+  "animate": {
+    "video.opacity": { "tween": { "duration": 0.18, "ease": "out" } },
+    "video.scale": { "spring": { "duration": 0.34, "bounce": 0.08 } },
+    "poster.opacity": { "tween": { "duration": 0.16, "ease": "out" } },
+    "camera-cover.opacity": { "tween": { "duration": 0.16, "ease": "out" } },
+    "join.opacity": { "tween": { "duration": 0.14, "ease": "out" } },
+    "actions.opacity": { "tween": { "duration": 0.16, "ease": "out" } },
+    "camera.color": { "tween": { "duration": 0.14, "ease": "out" } },
+    "mute.color": { "tween": { "duration": 0.14, "ease": "out" } },
+    "flip.rotation": { "spring": { "duration": 0.32, "bounce": 0.12 } }
+  },
+  "regions": {
+    "call": {
+      "initial": "ready",
+      "states": {
+        "ready": {
+          "set": { "video.opacity": 0, "video.scale": 1.04, "poster.opacity": 1, "join.opacity": 1, "actions.opacity": 0 },
+          "when": { "host.connect": "connecting" }
+        },
+        "connecting": {
+          "set": { "video.opacity": 0, "poster.opacity": 1, "join.opacity": 0.6, "actions.opacity": 0 },
+          "when": { "host.connected": "live", "host.failed": "ready", "host.leave": "ready" }
+        },
+        "live": {
+          "set": { "video.opacity": 1, "video.scale": 1, "poster.opacity": 0, "join.opacity": 0, "actions.opacity": 1 },
+          "when": { "host.leave": "ready" }
+        }
+      }
+    },
+    "camera-state": {
+      "initial": "camera-on",
+      "states": {
+        "camera-on": {
+          "set": { "camera-cover.opacity": 0, "camera.color": "#F5F7F4" },
+          "when": { "host.camera-off": "camera-off", "host.flip": "flipping" }
+        },
+        "camera-off": {
+          "set": { "camera-cover.opacity": 1, "camera.color": "#F6C9CC" },
+          "when": { "host.camera-on": "camera-on" }
+        },
+        "flipping": {
+          "set": { "camera-cover.opacity": 0, "camera.color": "#F5F7F4", "flip.rotation": 180 },
+          "when": { "host.flipped": "camera-on", "host.failed": "camera-on" }
+        }
+      }
+    },
+    "microphone-state": {
+      "initial": "mic-on",
+      "states": {
+        "mic-on": {
+          "set": { "mute.color": "#F5F7F4" },
+          "when": { "host.mute": "mic-off" }
+        },
+        "mic-off": {
+          "set": { "mute.color": "#F6C9CC" },
+          "when": { "host.unmute": "mic-on" }
+        }
+      }
+    }
+  }
+}

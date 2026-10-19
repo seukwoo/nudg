@@ -6,6 +6,7 @@
 
 import { compileText, compileUrl, play } from "../dist/dom/index.js";
 import { compare } from "../dist/index.js";
+import { createCameraController } from "../examples/camera-host.js";
 
 const catalog = await fetch("../examples/index.json").then((r) => r.json());
 const examples = catalog.examples;
@@ -168,6 +169,198 @@ const HOOKS = {
       dispose() {
         alive = false;
         stopAudio("", false);
+      },
+    };
+  },
+  "video-call"(player, root) {
+    const video = root.querySelector("video");
+    const join = root.querySelector(".join");
+    const camera = root.querySelector(".camera");
+    const mute = root.querySelector(".mute");
+    const flip = root.querySelector(".flip");
+    const status = root.querySelector(".status");
+    const elapsed = root.querySelector("time");
+    const media = createCameraController(video, { audio: true });
+    let cameraOn = true;
+    let micOn = true;
+    let timer = 0;
+    let started = 0;
+    let alive = true;
+
+    const showTime = () => {
+      const seconds = Math.floor((performance.now() - started) / 1000);
+      elapsed.textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+      elapsed.dateTime = `PT${seconds}S`;
+    };
+    const reset = (message = "Call ended", send = true) => {
+      clearInterval(timer);
+      media.stop();
+      cameraOn = true;
+      micOn = true;
+      if (send) {
+        player.send("host.camera-on");
+        player.send("host.unmute");
+        player.send("host.leave");
+      }
+      status.value = message;
+      elapsed.textContent = "00:00";
+      elapsed.dateTime = "PT0S";
+      camera.setAttribute("aria-pressed", "false");
+      mute.setAttribute("aria-pressed", "false");
+    };
+
+    join?.addEventListener("click", async () => {
+      if (media.stream) return;
+      player.send("host.connect");
+      status.value = "Connecting camera";
+      try {
+        await media.start();
+        if (!alive) return media.stop();
+        player.send("host.connected");
+        status.value = "Connected · camera on";
+        started = performance.now();
+        showTime();
+        timer = setInterval(showTime, 1000);
+      } catch {
+        reset("Camera or microphone unavailable");
+        player.send("host.failed");
+      }
+    });
+    camera?.addEventListener("click", () => {
+      cameraOn = !cameraOn;
+      media.setVideoEnabled(cameraOn);
+      player.send(cameraOn ? "host.camera-on" : "host.camera-off");
+      camera.setAttribute("aria-pressed", String(!cameraOn));
+      status.value = cameraOn ? "Connected · camera on" : "Connected · camera off";
+    });
+    mute?.addEventListener("click", () => {
+      micOn = !micOn;
+      media.setAudioEnabled(micOn);
+      player.send(micOn ? "host.unmute" : "host.mute");
+      mute.setAttribute("aria-pressed", String(!micOn));
+    });
+    flip?.addEventListener("click", async () => {
+      player.send("host.flip");
+      flip.disabled = true;
+      try {
+        await media.switchFacing();
+        player.send("host.flipped");
+      } catch {
+        player.send("host.failed");
+        status.value = "Could not switch camera";
+      }
+      flip.disabled = false;
+    });
+    root.querySelector(".leave")?.addEventListener("click", () => reset());
+    return {
+      dispose() {
+        alive = false;
+        reset("", false);
+      },
+    };
+  },
+  camera(player, root) {
+    const preview = root.querySelector(".preview");
+    const photo = root.querySelector(".result-photo");
+    const recorded = root.querySelector(".result-video");
+    const status = root.querySelector(".status");
+    const recording = root.querySelector(".recording");
+    const shutter = root.querySelector(".shutter");
+    const photoMode = root.querySelector(".photo-mode");
+    const videoMode = root.querySelector(".video-mode");
+    const media = createCameraController(preview, { audio: true });
+    let mode = "photo";
+    let recorder;
+    let chunks = [];
+    let timer = 0;
+    let started = 0;
+    let alive = true;
+
+    const setMode = (next) => {
+      mode = next;
+      player.send(`host.${next}`);
+      photoMode.setAttribute("aria-pressed", String(next === "photo"));
+      videoMode.setAttribute("aria-pressed", String(next === "video"));
+      shutter.setAttribute("aria-label", next === "photo" ? "Take photo" : "Start recording");
+    };
+    const showPreview = () => {
+      photo.style.display = "none";
+      recorded.style.display = "none";
+      preview.style.display = "block";
+    };
+
+    root.querySelector(".start")?.addEventListener("click", async () => {
+      player.send("host.start");
+      status.value = "Requesting camera";
+      try {
+        await media.start();
+        if (!alive) return media.stop();
+        player.send("host.ready");
+        status.value = "Camera ready";
+      } catch {
+        player.send("host.failed");
+        status.value = "Camera unavailable";
+      }
+    });
+    photoMode?.addEventListener("click", () => setMode("photo"));
+    videoMode?.addEventListener("click", () => setMode("video"));
+    root.querySelector(".flip")?.addEventListener("click", async () => {
+      status.value = "Switching camera";
+      try {
+        await media.switchFacing();
+        status.value = "Camera ready";
+      } catch {
+        status.value = "Could not switch camera";
+      }
+    });
+    shutter?.addEventListener("click", () => {
+      if (mode === "photo") {
+        media.capture(photo);
+        preview.style.display = "none";
+        photo.style.display = "block";
+        player.send("host.capture");
+        status.value = "Photo captured";
+        return;
+      }
+      if (recorder?.state === "recording") return recorder.stop();
+      if (!media.stream || typeof MediaRecorder === "undefined") {
+        status.value = "Recording unavailable";
+        return;
+      }
+      chunks = [];
+      recorder = new MediaRecorder(media.stream);
+      recorder.ondataavailable = (event) => event.data.size && chunks.push(event.data);
+      recorder.onstop = () => {
+        clearInterval(timer);
+        recorded.src = URL.createObjectURL(new Blob(chunks, { type: recorder.mimeType || "video/webm" }));
+        preview.style.display = "none";
+        recorded.style.display = "block";
+        player.send("host.stop");
+        status.value = "Video recorded";
+      };
+      recorder.start();
+      player.send("host.record");
+      status.value = "Recording";
+      started = performance.now();
+      const tick = () => {
+        const seconds = Math.floor((performance.now() - started) / 1000);
+        recording.value = `REC ${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+      };
+      tick();
+      timer = setInterval(tick, 1000);
+    });
+    root.querySelector(".retake")?.addEventListener("click", () => {
+      showPreview();
+      player.send("host.retake");
+      status.value = "Camera ready";
+    });
+    root.querySelector(".use")?.addEventListener("click", () => (status.value = mode === "photo" ? "Photo selected" : "Video selected"));
+    return {
+      dispose() {
+        alive = false;
+        clearInterval(timer);
+        recorder?.state === "recording" && recorder.stop();
+        media.stop();
       },
     };
   },

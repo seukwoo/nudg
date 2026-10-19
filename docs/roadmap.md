@@ -66,7 +66,7 @@ Done when: `tab-bar`, `accordion`, `bottom-sheet`, and `swipe-row` no longer nee
 
 Goal: turn common UI words into high-quality starting points for AI-built interfaces. Simple recipes start during dogfooding; measured patterns build on the layout work above.
 
-- Expand the initial vocabulary in the [agent guide](../spec/guide.md#semantic-ui-words) with examples and contextual aliases for `fab`, `tab-bar`, `bottom-sheet`, `toast` / `snackbar`, `swipe-row`, `carousel`, `switch`, `slider`, `dialog`, `list`, `grid`, navigation bars, side nav, GNB and LNB.
+- Expand the initial vocabulary in the [agent guide](../spec/guide.md#semantic-ui-words) with examples and contextual aliases for `fab`, `tab-bar`, `bottom-sheet`, `toast` / `snackbar`, `swipe-row`, `carousel`, `switch`, `slider`, `dialog`, `list`, `grid`, `voice-chat`, `video-call`, `camera`, navigation bars, side nav, GNB and LNB.
 - Expand presets or introduce a recipe layer that compiles patterns into ordinary nudg documents.
 - Keep pattern metadata outside the runtime unless several patterns prove they need a shared lower-level feature.
 - Define expected parts, states, events and motion for each recipe.

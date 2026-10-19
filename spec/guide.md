@@ -139,6 +139,9 @@ When a person describes UI in natural language, prefer a standard mobile-first p
 | switch, toggle | tap and drag; knob follows input; color maps from knob position; keyboard activation |
 | slider, range slider | drag, arrow keys with `step`, `commit` on release, value bounds |
 | dialog, modal, popover | present/dismiss, backdrop or anchor, focus/escape behavior, exit presence |
+| voice chat, audio call | join/connect, input level, mute/unmute, elapsed time, leave; the host owns microphone permission and stream lifetime |
+| video call, video chat | voice-call controls plus camera on/off and front/rear switch; keep call, camera and microphone states independent |
+| camera, capture | permission, photo/video mode, shutter or record/stop, front/rear switch, review and retake; the host owns media capture |
 | app bar, toolbar, command bar | actions tied to the current view; show/hide or collapse on scroll only when the host supplies that input |
 | bottom nav, navigation bar, navigation rail, drawer, side nav, GNB, LNB | navigation selection and indicator motion; do not treat navigation items as destructive actions |
 

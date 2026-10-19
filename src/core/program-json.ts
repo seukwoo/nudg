@@ -78,7 +78,7 @@ function state(s: State): Json {
     follow: [...s.follow].map(([key, f]) => ({ key, ...follow(f) })),
     enter: [...s.enter].map(([key, m]) => ({ key, motion: motion(m) })),
     when: [...s.when].map(([event, t]) => ({ event, ...transition(t) })),
-    timers: s.timers.map((t: Timer) => ({ key: t.key, delay: t.delay, transition: transition(t.transition) })),
+    timers: s.timers.map((t: Timer) => ({ key: t.key, delay: t.delay, pause: t.pause.map((p) => ({ ...p })), transition: transition(t.transition) })),
   };
   if (s.machine) out.machine = machine(s.machine);
   return out;
@@ -92,7 +92,7 @@ function readState(j: any): State {
     follow: new Map(j.follow.map((e: any) => [e.key, readFollow(e)])),
     enter: new Map(j.enter.map((e: any) => [e.key, e.motion as SpringMotion])),
     when: new Map(j.when.map((w: any) => [w.event, readTransition(w)])),
-    timers: j.timers.map((t: any) => ({ key: t.key, delay: t.delay, transition: readTransition(t.transition) })),
+    timers: j.timers.map((t: any) => ({ key: t.key, delay: t.delay, pause: (t.pause ?? []).map((p: any) => ({ on: p.on, off: p.off })), transition: readTransition(t.transition) })),
   };
   if (j.machine) s.machine = readMachine(j.machine);
   return s;

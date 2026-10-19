@@ -334,7 +334,7 @@ Continuous app and scroll inputs. A file that uses these declares `"nudg": "0.5"
 
 The conformance cases `continuous-inputs.json` and `validation-0.5.json` define the behavior.
 
-## Additions in 0.6 (draft)
+## Additions in 0.6
 
 Arithmetic on layout measurements. A file that uses it declares `"nudg": "0.6"`; a 0.6 runtime also reads older files.
 
@@ -344,6 +344,29 @@ Arithmetic on layout measurements. A file that uses it declares `"nudg": "0.6"`;
 - The compiled program always includes both numbers so TypeScript, Swift and Kotlin execute identical math.
 
 The conformance cases `layout-arithmetic.json` and `validation-0.6.json` define the behavior.
+
+## Additions in 0.7 (draft)
+
+Pausable state timers. A file that uses them declares `"nudg": "0.7"`; a 0.7 runtime also reads older files.
+
+```json
+"after:3s": {
+  "to": "hidden",
+  "pause": [
+    { "on": "toast.hoverstart", "off": "toast.hoverend" },
+    { "on": "toast.focus", "off": "toast.blur" },
+    { "on": "host.suspend", "off": "host.resume" }
+  ]
+}
+```
+
+- Each pair is an independent pause reason. The first `on` freezes the remaining duration; the timer resumes only after every active reason receives its `off`.
+- Repeated `on` and inactive `off` events are idempotent. Leaving or re-entering the state clears all reasons and resets the full duration.
+- Pause events are handled while the owning timer is pending and may also drive ordinary transitions. A timer due at the same timestamp fires before the incoming pause event, preserving the existing deterministic ordering.
+- A paused timer does not keep the runtime awake: once its properties rest, `settled` is true until an event resumes it. An unpaused pending timer still keeps `settled` false so real-time hosts wake to fire it.
+- Hosts produce semantic lifecycle events such as `host.suspend`; nudg does not read platform lifecycle APIs itself.
+
+The conformance cases `timer-pause.json` and `validation-0.7.json` define the behavior across TypeScript, Swift and Kotlin.
 
 ## Compiled programs (for native runtimes)
 

@@ -91,11 +91,19 @@ export interface Transition {
   commit?: string[];
 }
 
-/** A transition that fires `delay` seconds after its state was entered (v0.3). */
+export interface TimerPause {
+  /** Pauses the timer while this reason is active (v0.7). */
+  on: string;
+  /** Clears this pause reason. */
+  off: string;
+}
+
+/** A transition that fires `delay` active seconds after its state was entered (v0.3, pause in v0.7). */
 export interface Timer {
   key: string;
   delay: number;
   transition: Transition;
+  pause: TimerPause[];
 }
 
 export interface State {

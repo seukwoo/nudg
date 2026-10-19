@@ -164,11 +164,11 @@
       "examples": ["toast"],
       "parts": { "required": ["toast", "message"], "optional": ["action", "dismiss action", "icon"] },
       "states": ["hidden", "shown"],
-      "events": ["host.show", "host.hide", "toast.tap", "timeout"],
+      "events": ["host.show", "host.hide", "host.suspend", "host.resume", "toast.tap", "toast.hoverstart", "toast.hoverend", "toast.focus", "toast.blur", "timeout"],
       "inputs": [],
       "hostResponsibilities": ["Announce the message accessibly and choose a timeout appropriate to its content and actions."],
-      "motion": ["Enter quickly with position and opacity, wait, then leave without bounce."],
-      "gaps": [{ "capability": "pausable timer", "status": "missing", "need": "Hover, focus, or app suspension should pause and resume auto-dismiss." }]
+      "motion": ["Enter quickly with position and opacity, wait for active reading time while pausing for hover, focus or app suspension, then leave without bounce."],
+      "gaps": []
     },
     {
       "id": "validation-feedback",
@@ -290,11 +290,11 @@
       "examples": ["video-player"],
       "parts": { "required": ["video", "play control", "stop control", "progress", "buffered progress", "controls", "status"], "optional": ["seek control", "volume control", "fullscreen control", "captions control"] },
       "states": ["loading", "paused", "playing", "buffering", "stopped", "ended", "error", "controls-visible", "controls-hidden"],
-      "events": ["host.load", "host.ready", "host.play", "host.pause", "host.stop", "host.buffering", "host.ended", "host.error", "host.controls-show", "host.controls-hide"],
+      "events": ["host.load", "host.ready", "host.play", "host.pause", "host.stop", "host.buffering", "host.ended", "host.error", "host.controls-show", "host.scrub-start", "host.scrub-end", "host.suspend", "host.resume"],
       "inputs": ["host.progress", "host.buffered", "host.volume"],
       "hostResponsibilities": ["Own media playback, seeking, volume and fullscreen; normalize inputs to 0..1 and report lifecycle events."],
-      "motion": ["Map playback values continuously and coordinate lifecycle with control visibility."],
-      "gaps": [{ "capability": "pausable timer", "status": "missing", "need": "Control auto-hide should pause while focused, scrubbing, or a menu is open." }]
+      "motion": ["Map playback values continuously and auto-hide controls after active time while pausing for hover, focus, scrubbing and suspension."],
+      "gaps": []
     },
     {
       "id": "app-bar",

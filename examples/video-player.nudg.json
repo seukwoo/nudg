@@ -1,6 +1,6 @@
 {
-  "nudg": "0.5",
-  "note": "A video player host owns media playback, seeking, volume, rate, fullscreen and picture-in-picture. nudg coordinates playback feedback and auto-hiding controls from semantic events and normalized values.",
+  "nudg": "0.7",
+  "note": "A video player host owns media playback, seeking, volume, rate, fullscreen and picture-in-picture. nudg coordinates playback feedback and pauses control auto-hide while hovered, focused, scrubbing or suspended.",
   "targets": ["status", "center-play", "controls", "buffered", "progress", "play", "mute"],
   "values": {
     "status.opacity": { "base": 1, "min": 0, "max": 1 },
@@ -37,8 +37,26 @@
     "control-visibility": {
       "initial": "visible",
       "states": {
-        "visible": { "set": { "controls.opacity": 1, "controls.y": 0 }, "when": { "host.controls-hide": "hidden" } },
-        "hidden": { "set": { "controls.opacity": 0, "controls.y": 8 }, "when": { "host.controls-show": "visible", "host.pause": "visible", "host.ended": "visible" } }
+        "visible": { "set": { "controls.opacity": 1, "controls.y": 0 }, "when": { "host.play": "timed" } },
+        "timed": {
+          "set": { "controls.opacity": 1, "controls.y": 0 },
+          "when": {
+            "after:2.2s": {
+              "to": "hidden",
+              "pause": [
+                { "on": "controls.hoverstart", "off": "controls.hoverend" },
+                { "on": "controls.focus", "off": "controls.blur" },
+                { "on": "host.scrub-start", "off": "host.scrub-end" },
+                { "on": "host.suspend", "off": "host.resume" }
+              ]
+            },
+            "host.controls-show": "timed",
+            "host.pause": "visible",
+            "host.stop": "visible",
+            "host.ended": "visible"
+          }
+        },
+        "hidden": { "set": { "controls.opacity": 0, "controls.y": 8 }, "when": { "host.controls-show": "timed", "host.pause": "visible", "host.stop": "visible", "host.ended": "visible" } }
       }
     }
   }

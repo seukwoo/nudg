@@ -121,7 +121,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.6.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.7.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -782,15 +782,59 @@ class ComponentCompiler {
       if (event === "note" || event.startsWith("x-")) continue;
       const ep = ptr(wp, event);
       if (event.startsWith("after:") || event === "after") {
-        const transition = this.parseTransition(value, ep);
+        const timer = this.parseTimer(value, ep);
         const delay = this.parseAfter(event, ep, machineLevel);
-        if (transition && delay !== undefined && timers) timers.push({ key: event, delay, transition });
+        if (timer && delay !== undefined && timers) timers.push({ key: event, delay, transition: timer.transition, pause: timer.pause });
         continue;
       }
       const okEvent = this.checkEvent(event, ep);
       const transition = this.parseTransition(value, ep);
       if (okEvent && transition) out.set(event, transition);
     }
+    return out;
+  }
+
+  private parseTimer(raw: Json, p: string): { transition: Transition; pause: Timer["pause"] } | undefined {
+    if (!isObject(raw) || !("pause" in raw)) {
+      const transition = this.parseTransition(raw, p);
+      return transition ? { transition, pause: [] } : undefined;
+    }
+    const transitionRaw = { ...raw };
+    delete transitionRaw.pause;
+    const transition = this.parseTransition(transitionRaw, p);
+    const pause = this.parseTimerPause(raw.pause, ptr(p, "pause"));
+    return transition ? { transition, pause } : undefined;
+  }
+
+  private parseTimerPause(raw: Json, p: string): Timer["pause"] {
+    const r = this.r;
+    if (!this.needsVersion("0.7", p, "A pausable timer")) return [];
+    if (!Array.isArray(raw) || raw.length === 0) {
+      r.error("invalid-timer-pause", p, '"pause" must be a non-empty list of event pairs.', 'For example: "pause": [{ "on": "toast.hoverstart", "off": "toast.hoverend" }].');
+      return [];
+    }
+    const out: Timer["pause"] = [];
+    raw.forEach((pair, i) => {
+      const pp = ptr(p, i);
+      if (!isObject(pair)) {
+        r.error("invalid-timer-pause", pp, "A timer pause reason must have on and off events.", 'Write { "on": "toast.hoverstart", "off": "toast.hoverend" }.');
+        return;
+      }
+      r.keys(pair, pp, ["on", "off"]);
+      let ok = true;
+      for (const field of ["on", "off"] as const) {
+        const fp = ptr(pp, field);
+        if (typeof pair[field] !== "string") {
+          r.error("invalid-timer-pause", fp, `"${field}" must be an event name.`, field === "on" ? "Name the event that pauses this reason." : "Name the event that resumes this reason.");
+          ok = false;
+        } else if (!this.checkEvent(pair[field], fp)) ok = false;
+      }
+      if (typeof pair.on === "string" && pair.on === pair.off) {
+        r.error("invalid-timer-pause", ptr(pp, "off"), "A pause reason needs different on and off events.", "Use the matching end event, such as hoverend, blur, or host.resume.");
+        ok = false;
+      }
+      if (ok) out.push({ on: pair.on as string, off: pair.off as string });
+    });
     return out;
   }
 

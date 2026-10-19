@@ -175,6 +175,10 @@ Status: first cut implemented as format 0.5: `map` and `follow` read app and scr
 
 **First cut:** `map` and `follow` from `host.*` inputs and `target.scroll.*`, a microphone example (the site feeds a level from the Web Audio API) and a shrinking header, with language-neutral conformance cases.
 
+## Pausable state timers
+
+Status: implemented as format 0.7. An `after:` transition owns its timeout and may list independent `{ "on", "off" }` reasons. The first active reason freezes remaining time and the final reason to clear resumes it. Leaving or re-entering the state resets the timer and all reasons; a timer due at the same timestamp still fires before an incoming event. The host reports lifecycle events such as suspension or scrubbing, while the core remains deterministic and platform-neutral.
+
 ## Open questions
 
 These are unresolved design choices. Scheduling and completion status live in the [roadmap](roadmap.md); examples of possible syntax below are proposals.

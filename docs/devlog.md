@@ -347,3 +347,8 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Problem:** Bottom-sheet and swipe-row resting states copied dimensions from their hosts, so changing a sheet height or action width broke the snap target. A general expression language would solve that and much more than the recipes asked for.
 - **Resolution:** Format 0.6 adds only `times` and `plus` to `measure`: multiply the measured size or aligned position, then add a logical-unit offset. TypeScript, Swift and Kotlin share one conformance case. The examples now derive resting states from layout, while their numeric `follow.range` and `map.from` values remain explicit.
 - **Lesson:** Solving measured targets revealed a narrower remaining need: measured range endpoints, not arbitrary expressions. Keep that gap in recipe metadata and let it compete with pausable timers instead of silently expanding 0.6.
+
+### Pausable timers own remaining time
+- **Problem:** Toast dismissal and video-control auto-hide were timers, but hover, keyboard focus, scrubbing and app suspension either needed duplicated states or host-side `setTimeout` code. Overlapping reasons made a single paused flag ambiguous.
+- **Resolution:** Format 0.7 puts `pause` event pairs on an `after:` transition. Reasons block independently; the first `on` freezes remaining time and the final `off` resumes it. Re-entry resets the timer, and the existing rule that due timers fire before same-time events remains intact. The video example now removes its host timeout entirely.
+- **Lesson:** Timer ownership belongs with the state that owns the timeout, while the host only reports semantic lifecycle events. This keeps recipe behavior portable without making nudg own browser or device APIs.

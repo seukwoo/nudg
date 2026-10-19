@@ -16,7 +16,8 @@ The order below follows real app needs. Release numbers and dates are assigned w
 | Exit/presence handling and live A/B in the playground | Released in package 0.5.0; the old next-step note is complete | [Changelog](../CHANGELOG.md#050) |
 | Semantic UI recipes | Versioned contracts cover every shipped example; CLI and MCP resolve names and aliases to contracts and starters | [Recipe catalog](../recipes/index.json), [agent guide](../spec/guide.md#semantic-ui-words) |
 | Layout measurement and natural size | Implemented in format 0.4 | [Spec](spec.md#layout-inputs) |
-| Layout arithmetic and relative measured values | Implemented for the next release in format 0.6 | [Spec](spec.md#additions-in-06-draft) |
+| Layout arithmetic and relative measured values | Implemented for the next release in format 0.6 | [Spec](spec.md#additions-in-06) |
+| Pausable timers | Implemented for the next release in format 0.7; TypeScript, Swift and Kotlin share conformance | [Spec](spec.md#additions-in-07-draft) |
 | Decay | Open design work | [Open questions](design.md#open-questions) |
 
 ## Product Stages
@@ -35,9 +36,9 @@ The original stage numbers remain useful when reading the spec and changelog. Se
 
 Status: the first versioned recipe catalog covers every shipped example. Broad catalog growth and Playsnack workflow validation are deferred while the repeated lower-level gaps are implemented.
 
-- Finish format 0.6 layout arithmetic across TypeScript, Swift and Kotlin, then release it with responsive bottom-sheet and swipe-row resting states.
-- Add pausable timers next for toast dismissal and video-control auto-hide.
-- Add keyframes after timer semantics, with interruption and reduced-motion rules included from the start.
+- Done: format 0.6 layout arithmetic across TypeScript, Swift and Kotlin, with responsive bottom-sheet and swipe-row resting states.
+- Done: format 0.7 pausable timers for toast dismissal and video-control auto-hide.
+- Next: add keyframes with interruption and reduced-motion rules included from the start.
 - Keep examples as executable evidence for recipes, not as a component-count target; do not widen the catalog during this work.
 - Follow with derived scroll direction/velocity and decay only when the earlier primitives are complete.
 
@@ -77,7 +78,7 @@ Goal: deepen the interaction and motion language where current recipes demonstra
 | Candidate | Evidence in current recipes | Decision gate |
 |---|---|---|
 | Layout arithmetic and relative snap points | Bottom sheet and swipe row resting states depended on constants | Implemented for format 0.6; measured follow/map endpoints remain separate work |
-| Pausable timers | Toast dismissal and video control auto-hide must pause for focus, hover, scrubbing or app suspension | Design timer ownership and deterministic resume semantics |
+| Pausable timers | Toast dismissal and video control auto-hide pause for focus, hover, scrubbing or app suspension | Implemented for format 0.7 with deterministic remaining-time semantics |
 | Keyframes | Reaction bursts and authored validation shakes need more than one kick | Add only with reduced-motion and interruption rules |
 | Sequence | Accordion requests already ask for the chevron and panel to move in order | Wait for a second independent recipe before adding syntax |
 | Decay | Free-scrolling carousel variants need inertial travel before snapping | Define velocity, bounds and interruption across platforms |

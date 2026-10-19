@@ -424,6 +424,13 @@ test("video player exposes playback, auto-hide, PiP and fullscreen controls", { 
     root.querySelector("[data-nudg=play]").click();
   })()`);
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('playing') ? true : undefined"), 5_000);
+  await browser.evaluate(`(() => {
+    const controls = document.getElementById("detail-stage").shadowRoot.querySelector("[data-nudg=controls]");
+    controls.dispatchEvent(new PointerEvent("pointerenter", { pointerType: "mouse" }));
+  })()`);
+  await sleep(2_500);
+  assert.match(await browser.evaluate("document.getElementById('detail-state').textContent"), /timed/, "hover pauses control auto-hide");
+  await browser.evaluate(`document.getElementById("detail-stage").shadowRoot.querySelector("[data-nudg=controls]").dispatchEvent(new PointerEvent("pointerleave", { pointerType: "mouse" }))`);
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('hidden') ? true : undefined"), 4_000);
   await browser.evaluate(`(() => {
     const root = document.getElementById("detail-stage").shadowRoot;
@@ -435,7 +442,7 @@ test("video player exposes playback, auto-hide, PiP and fullscreen controls", { 
     root.querySelector(".media-pip").click();
     shell.dispatchEvent(new PointerEvent("pointermove", { bubbles: true }));
   })()`);
-  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('visible') ? true : undefined"), 2_000);
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('timed') ? true : undefined"), 2_000);
   assert.deepEqual(await browser.evaluate("[window.__fullscreenRequested, window.__pipRequested]"), [true, true]);
   await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.media-stop').click()");
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('stopped') ? true : undefined"), 2_000);

@@ -19,7 +19,10 @@ private sealed interface Segment {
     data class FollowSeg(val t0: Double, val anchor: Double, val input0: Double, val follow: Follow, val owner: State) : Segment
 }
 
-private class Pending(val due: Double, val order: Int, val machine: Machine.States, val state: State, val transition: Transition)
+private class Pending(var due: Double, val order: Int, val machine: Machine.States, val state: State, val transition: Transition, val pause: List<TimerPause>) {
+    val blockers = HashSet<Int>()
+    var pausedAt: Double? = null
+}
 
 private const val REST_NUMBER = 1e-3
 private const val REST_COLOR = 1e-4
@@ -71,7 +74,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         act[machine] = name
         val s = machine.state(name)
         entered.add(s)
-        if (live) for (timer in s.timers) pending.add(Pending(t + timer.delay, order++, machine, s, timer.transition))
+        if (live) for (timer in s.timers) pending.add(Pending(t + timer.delay, order++, machine, s, timer.transition, timer.pause))
         s.machine?.let { enterMachine(it, act, entered, t, live) }
     }
 
@@ -321,7 +324,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
     private fun fireDue(t: Double) {
         while (true) {
             var next: Pending? = null
-            for (p in pending) if (p.due <= t + 1e-9 && (next == null || p.due < next.due || (p.due == next.due && p.order < next.order))) next = p
+            for (p in pending) if (p.pausedAt == null && p.due <= t + 1e-9 && (next == null || p.due < next.due || (p.due == next.due && p.order < next.order))) next = p
             val due = next ?: return
             pending.remove(due)
             val fired = ArrayList<Transition>()
@@ -329,6 +332,24 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
             perform(due.machine, due.transition, due.due, fired, entered)
             settle(due.due, fired, entered)
         }
+    }
+
+    private fun controlTimers(event: String, t: Double): Boolean {
+        var handled = false
+        for (timer in pending) for ((i, pair) in timer.pause.withIndex()) {
+            if (event == pair.on) {
+                handled = true
+                if (i in timer.blockers) continue
+                if (timer.blockers.isEmpty()) timer.pausedAt = t
+                timer.blockers.add(i)
+            } else if (event == pair.off) {
+                handled = true
+                if (!timer.blockers.remove(i) || timer.blockers.isNotEmpty()) continue
+                timer.due += t - timer.pausedAt!!
+                timer.pausedAt = null
+            }
+        }
+        return handled
     }
 
     private fun advanceTo(t: Double) {
@@ -357,7 +378,8 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         }
         val fired = ArrayList<Transition>()
         val entered = ArrayList<State>()
-        if (!handle(program.machine, event, t, fired, entered)) return false
+        val timerHandled = controlTimers(event, t)
+        if (!handle(program.machine, event, t, fired, entered)) return timerHandled
         settle(t, fired, entered)
         return true
     }
@@ -407,10 +429,10 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         return out
     }
 
-    /** True when every property (or the given one) has come to rest at `t` and no timer is pending. */
+    /** True when every property has come to rest and no unpaused timer is counting down. */
     fun settled(t: Double, property: String? = null): Boolean {
         advanceTo(t)
-        if (property == null && pending.isNotEmpty()) return false
+        if (property == null && pending.any { it.pausedAt == null }) return false
         val keys = property?.let { listOf(it) } ?: program.properties.map { it.first }
         return keys.all { key ->
             if (program.property(key).map?.sourceKind == "input") return@all true

@@ -1,0 +1,295 @@
+{
+  "conformance": "0.7",
+  "name": "Validator (0.7): pausable timers",
+  "documents": [
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "0.6",
+        "targets": [
+          "toast"
+        ],
+        "values": {
+          "toast.opacity": 0
+        },
+        "initial": "hidden",
+        "when": {
+          "host.show": "shown"
+        },
+        "states": {
+          "hidden": {},
+          "shown": {
+            "set": {
+              "toast.opacity": 1
+            },
+            "when": {
+              "after:1s": {
+                "to": "hidden",
+                "pause": [
+                  {
+                    "on": "toast.hoverstart",
+                    "off": "toast.hoverend"
+                  },
+                  {
+                    "on": "toast.focus",
+                    "off": "toast.blur"
+                  },
+                  {
+                    "on": "host.suspend",
+                    "off": "host.resume"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/states/shown/when/after:1s/pause"
+        }
+      ]
+    },
+    {
+      "name": "pause-not-array",
+      "doc": {
+        "nudg": "0.7",
+        "targets": [
+          "toast"
+        ],
+        "values": {
+          "toast.opacity": 0
+        },
+        "initial": "hidden",
+        "when": {
+          "host.show": "shown"
+        },
+        "states": {
+          "hidden": {},
+          "shown": {
+            "set": {
+              "toast.opacity": 1
+            },
+            "when": {
+              "after:1s": {
+                "to": "hidden",
+                "pause": "hover"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-timer-pause",
+          "path": "/states/shown/when/after:1s/pause"
+        }
+      ]
+    },
+    {
+      "name": "missing-off",
+      "doc": {
+        "nudg": "0.7",
+        "targets": [
+          "toast"
+        ],
+        "values": {
+          "toast.opacity": 0
+        },
+        "initial": "hidden",
+        "when": {
+          "host.show": "shown"
+        },
+        "states": {
+          "hidden": {},
+          "shown": {
+            "set": {
+              "toast.opacity": 1
+            },
+            "when": {
+              "after:1s": {
+                "to": "hidden",
+                "pause": [
+                  {
+                    "on": "toast.hoverstart"
+                  },
+                  {
+                    "on": "toast.focus",
+                    "off": "toast.blur"
+                  },
+                  {
+                    "on": "host.suspend",
+                    "off": "host.resume"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-timer-pause",
+          "path": "/states/shown/when/after:1s/pause/0/off"
+        }
+      ]
+    },
+    {
+      "name": "invalid-event",
+      "doc": {
+        "nudg": "0.7",
+        "targets": [
+          "toast"
+        ],
+        "values": {
+          "toast.opacity": 0
+        },
+        "initial": "hidden",
+        "when": {
+          "host.show": "shown"
+        },
+        "states": {
+          "hidden": {},
+          "shown": {
+            "set": {
+              "toast.opacity": 1
+            },
+            "when": {
+              "after:1s": {
+                "to": "hidden",
+                "pause": [
+                  {
+                    "on": "toast.over",
+                    "off": "toast.hoverend"
+                  },
+                  {
+                    "on": "toast.focus",
+                    "off": "toast.blur"
+                  },
+                  {
+                    "on": "host.suspend",
+                    "off": "host.resume"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-event",
+          "path": "/states/shown/when/after:1s/pause/0/on"
+        }
+      ]
+    },
+    {
+      "name": "same-events",
+      "doc": {
+        "nudg": "0.7",
+        "targets": [
+          "toast"
+        ],
+        "values": {
+          "toast.opacity": 0
+        },
+        "initial": "hidden",
+        "when": {
+          "host.show": "shown"
+        },
+        "states": {
+          "hidden": {},
+          "shown": {
+            "set": {
+              "toast.opacity": 1
+            },
+            "when": {
+              "after:1s": {
+                "to": "hidden",
+                "pause": [
+                  {
+                    "on": "toast.hoverstart",
+                    "off": "toast.hoverstart"
+                  },
+                  {
+                    "on": "toast.focus",
+                    "off": "toast.blur"
+                  },
+                  {
+                    "on": "host.suspend",
+                    "off": "host.resume"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-timer-pause",
+          "path": "/states/shown/when/after:1s/pause/0/off"
+        }
+      ]
+    },
+    {
+      "name": "pause-on-event-transition",
+      "doc": {
+        "nudg": "0.7",
+        "targets": [
+          "toast"
+        ],
+        "values": {
+          "toast.opacity": 0
+        },
+        "initial": "hidden",
+        "when": {
+          "host.show": "shown"
+        },
+        "states": {
+          "hidden": {},
+          "shown": {
+            "set": {
+              "toast.opacity": 1
+            },
+            "when": {
+              "after:1s": {
+                "to": "hidden",
+                "pause": [
+                  {
+                    "on": "toast.hoverstart",
+                    "off": "toast.hoverend"
+                  },
+                  {
+                    "on": "toast.focus",
+                    "off": "toast.blur"
+                  },
+                  {
+                    "on": "host.suspend",
+                    "off": "host.resume"
+                  }
+                ]
+              },
+              "toast.tap": {
+                "to": "hidden",
+                "pause": [
+                  {
+                    "on": "toast.hoverstart",
+                    "off": "toast.hoverend"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-key",
+          "path": "/states/shown/when/toast.tap/pause"
+        }
+      ]
+    }
+  ]
+}

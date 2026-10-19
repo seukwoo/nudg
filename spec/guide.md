@@ -116,6 +116,23 @@ Use a number supplied by the app without inventing frame-by-frame events. The ap
 - On the DOM, a referenced `target.scroll.x` or `target.scroll.y` is reported automatically from the bound scrolling element.
 - Before the first sample an input is 0. Only referenced inputs are accepted. Use one descriptive `host.<name>` segment; the app owns microphones, sensors and downloads, while nudg only receives finite numbers.
 
+## Pausable timers (format 0.7)
+
+When an auto-dismiss or control timeout must preserve the person's remaining time, make the timer transition an object with independent `pause` pairs:
+
+```json
+"after:3s": {
+  "to": "hidden",
+  "pause": [
+    { "on": "toast.hoverstart", "off": "toast.hoverend" },
+    { "on": "toast.focus", "off": "toast.blur" },
+    { "on": "host.suspend", "off": "host.resume" }
+  ]
+}
+```
+
+The first active reason freezes the remaining duration and the last matching `off` resumes it. Re-entering the state resets both the timer and its pause reasons. Put `pause` only on an `after:` transition.
+
 ## Platform motion
 
 Libraries in `examples/motion/` carry the platforms' published spring values: `apple.nudg.json` (SwiftUI `smooth`, `snappy`, `bouncy`), `material-expressive.nudg.json` and `material-standard.nudg.json` (Material 3 `spatial-*` and `effects-*` tokens). Every platform library also defines the common names `standard`, `quick`, `gentle`, `playful` and `fade` (for color and opacity).
@@ -133,7 +150,7 @@ When a person describes UI in natural language, call `nudg_recipe` (or `nudg rec
 | FAB, floating action button | primary floating action; targets `root`, `icon`, optional `label`; press feedback; optional hidden/expanded states |
 | tab, tabs, tab bar | selected state; `tab.*.tap` events; indicator `x` / `width`; keyboard support when focusable |
 | bottom sheet, sheet | `hidden`, `peek` / `expanded`; `sheet.dragstart`; `follow` on `y`; `nearest` snap; backdrop opacity mapped from sheet position |
-| toast, snackbar | `hidden` / `shown`; enter motion; `after:<time>` dismiss; optional action tap; exit presence in the host |
+| toast, snackbar | `hidden` / `shown`; enter motion; pausable `after:<time>` dismiss; optional action tap; exit presence in the host |
 | swipe row, swipe actions | `content.x` follows drag; action opacity maps from `content.x`; `nearest` open/closed or dismiss |
 | list, grid, card list | item press/hover, insertion/removal, reorder or responsive collection behavior; keep the item pattern separate from the collection layout |
 | carousel, pager | drag on content, snap to neighbor, page indicator, optional momentum limit |
@@ -175,7 +192,7 @@ Pattern words live in external recipe metadata, not core syntax. Every shipped e
 | easier to flick across | raise `momentum` (e.g. 0.5 → 0.8); lower it to rely on position |
 | fade or tint with the drag | `map` the opacity or color from the dragged property |
 | feel like iOS / Android | import `motion/apple.nudg.json` / `motion/material-expressive.nudg.json` and use the common names |
-| hide it after N seconds | `"after:Ns": "<state>"` in that state's `when` |
+| hide it after N seconds | `"after:Ns": "<state>"` in that state's `when`; use a 0.7 transition object with `pause` pairs when reading or interaction must freeze the timeout |
 | keyboard support (arrows, Escape) | `target.key.arrowright` etc. in `when`; `step` for values, a `to` for states |
 | make it stay where I drop it | `"commit": ["prop"]` on the transition that leaves the `follow` |
 

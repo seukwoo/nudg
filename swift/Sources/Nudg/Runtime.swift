@@ -20,8 +20,13 @@ private enum Segment {
 }
 
 private final class Pending {
-  let due: Double, order: Int, machine: Machine, state: State, transition: Transition
-  init(due: Double, order: Int, machine: Machine, state: State, transition: Transition) { self.due = due; self.order = order; self.machine = machine; self.state = state; self.transition = transition }
+  var due: Double
+  let order: Int, machine: Machine, state: State, transition: Transition, pause: [TimerPause]
+  var blockers: Set<Int> = []
+  var pausedAt: Double?
+  init(due: Double, order: Int, machine: Machine, state: State, transition: Transition, pause: [TimerPause]) {
+    self.due = due; self.order = order; self.machine = machine; self.state = state; self.transition = transition; self.pause = pause
+  }
 }
 
 private let REST_NUMBER = 1e-3, REST_COLOR = 1e-4
@@ -77,7 +82,7 @@ public final class Runtime {
     act[ObjectIdentifier(machine)] = name
     let state = machine.state(name)!
     entered.append(state)
-    if live { for timer in state.timers { pending.append(Pending(due: t + timer.delay, order: order, machine: machine, state: state, transition: timer.transition)); order += 1 } }
+    if live { for timer in state.timers { pending.append(Pending(due: t + timer.delay, order: order, machine: machine, state: state, transition: timer.transition, pause: timer.pause)); order += 1 } }
     if let inner = state.machine { enterMachine(inner, &act, &entered, t, live: live) }
   }
 
@@ -330,7 +335,7 @@ public final class Runtime {
   private func fireDue(_ t: Double) {
     while true {
       var next: Pending?
-      for p in pending where p.due <= t + 1e-9 {
+      for p in pending where p.pausedAt == nil && p.due <= t + 1e-9 {
         if next == nil || p.due < next!.due || (p.due == next!.due && p.order < next!.order) { next = p }
       }
       guard let due = next else { return }
@@ -339,6 +344,26 @@ public final class Runtime {
       perform(due.machine, due.transition, due.due, &fired, &entered)
       settle(due.due, fired, entered)
     }
+  }
+
+  private func controlTimers(_ event: String, _ t: Double) -> Bool {
+    var handled = false
+    for timer in pending {
+      for (i, pair) in timer.pause.enumerated() {
+        if event == pair.on {
+          handled = true
+          if timer.blockers.contains(i) { continue }
+          if timer.blockers.isEmpty { timer.pausedAt = t }
+          timer.blockers.insert(i)
+        } else if event == pair.off {
+          handled = true
+          if timer.blockers.remove(i) == nil || !timer.blockers.isEmpty { continue }
+          timer.due += t - timer.pausedAt!
+          timer.pausedAt = nil
+        }
+      }
+    }
+    return handled
   }
 
   private func advanceTo(_ t: Double) throws {
@@ -367,7 +392,8 @@ public final class Runtime {
       for axis in ["x", "y"] { inputs["\(target).drag.\(axis)"] = [(t, 0)] }
     }
     var fired: [Transition] = [], entered: [State] = []
-    if !handle(program.machine, event, t, &fired, &entered) { return false }
+    let timerHandled = controlTimers(event, t)
+    if !handle(program.machine, event, t, &fired, &entered) { return timerHandled }
     settle(t, fired, entered)
     return true
   }
@@ -419,10 +445,10 @@ public final class Runtime {
     return out
   }
 
-  /** True when every property (or the given one) has come to rest at `t` and no timer is pending. */
+  /** True when every property has come to rest and no unpaused timer is counting down. */
   public func settled(_ t: Double, property: String? = nil) throws -> Bool {
     try advanceTo(t)
-    if property == nil && !pending.isEmpty { return false }
+    if property == nil && pending.contains(where: { $0.pausedAt == nil }) { return false }
     let keys = property.map { [$0] } ?? program.properties.map { $0.0 }
     return keys.allSatisfy { key in
       let prop = program.property(key)!

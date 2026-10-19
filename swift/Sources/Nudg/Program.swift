@@ -55,11 +55,17 @@ public final class Transition {
   }
 }
 
+public struct TimerPause {
+  public let on: String
+  public let off: String
+}
+
 public final class Timer {
   public let key: String
   public let delay: Double
   public let transition: Transition
-  init(key: String, delay: Double, transition: Transition) { self.key = key; self.delay = delay; self.transition = transition }
+  public let pause: [TimerPause]
+  init(key: String, delay: Double, transition: Transition, pause: [TimerPause]) { self.key = key; self.delay = delay; self.transition = transition; self.pause = pause }
 }
 
 public final class State {
@@ -175,6 +181,12 @@ private func readState(_ s: [String: Any]) -> State {
     },
     enter: (s["enter"] as! [[String: Any]]).map { ($0["key"] as! String, readMotion($0["motion"]!)) },
     when: (s["when"] as! [[String: Any]]).map { ($0["event"] as! String, readTransition($0)) },
-    timers: (s["timers"] as! [[String: Any]]).map { Timer(key: $0["key"] as! String, delay: number($0["delay"])!, transition: readTransition($0["transition"]!)) },
+    timers: (s["timers"] as! [[String: Any]]).map { timer in
+      Timer(
+        key: timer["key"] as! String,
+        delay: number(timer["delay"])!,
+        transition: readTransition(timer["transition"]!),
+        pause: (timer["pause"] as? [[String: Any]] ?? []).map { TimerPause(on: $0["on"] as! String, off: $0["off"] as! String) })
+    },
     machine: s["machine"].map(readMachine))
 }

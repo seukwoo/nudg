@@ -16,7 +16,6 @@ export function createMediaController(media, player, root, { autoHide = false } 
   const duration = root.querySelector(".media-duration");
   const shell = root.querySelector(".media-shell");
   const listeners = [];
-  let controlsTimer = 0;
   let lastMuted = media.muted || media.volume === 0;
 
   const listen = (target, type, handler, options) => {
@@ -26,9 +25,7 @@ export function createMediaController(media, player, root, { autoHide = false } 
   const normalized = (value) => (Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0);
   const showControls = () => {
     if (!autoHide) return;
-    clearTimeout(controlsTimer);
     player.send("host.controls-show");
-    if (!media.paused) controlsTimer = setTimeout(() => player.send("host.controls-hide"), 2200);
   };
   const syncTime = () => {
     const length = Number.isFinite(media.duration) ? media.duration : 0;
@@ -95,7 +92,6 @@ export function createMediaController(media, player, root, { autoHide = false } 
   listen(media, "progress", syncBuffered);
   listen(media, "volumechange", syncVolume);
   listen(shell, "pointermove", showControls);
-  listen(shell, "pointerleave", () => !media.paused && autoHide && player.send("host.controls-hide"));
   listen(shell, "focusin", showControls);
 
   toggles.forEach((toggle) =>
@@ -113,6 +109,8 @@ export function createMediaController(media, player, root, { autoHide = false } 
     media.currentTime = Number(seek.value);
     syncTime();
   });
+  listen(seek, "pointerdown", () => player.send("host.scrub-start"));
+  for (const event of ["pointerup", "pointercancel", "change"]) listen(seek, event, () => player.send("host.scrub-end"));
   listen(root.querySelector(".media-stop"), "click", () => {
     media.pause();
     media.currentTime = 0;
@@ -149,6 +147,7 @@ export function createMediaController(media, player, root, { autoHide = false } 
       // Picture in Picture is optional and may be denied by the host.
     }
   });
+  if (autoHide) listen(document, "visibilitychange", () => player.send(document.hidden ? "host.suspend" : "host.resume"));
 
   syncTime();
   syncBuffered();
@@ -158,7 +157,6 @@ export function createMediaController(media, player, root, { autoHide = false } 
 
   return {
     dispose() {
-      clearTimeout(controlsTimer);
       listeners.splice(0).forEach((remove) => remove());
       media.pause();
     },

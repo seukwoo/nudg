@@ -90,11 +90,11 @@ test("short-timeout: a toast gone in 2 s with nothing to pause it", () => {
   assert.ok(codes(doc).includes("short-timeout /states/shown/when/after:2s"), JSON.stringify(run(doc)));
 });
 
-test("the examples are mostly clean: only the 3 s toast gets a note", () => {
+test("the curated examples are clean", () => {
   const all: string[] = [];
   for (const f of readdirSync("examples").filter((n) => n.endsWith(".nudg.json"))) {
     const { program } = compilePath(`examples/${f}`);
     for (const x of critique(program!).findings) all.push(`${f} ${x.code}`);
   }
-  assert.deepEqual(all, ["toast.nudg.json short-timeout"]);
+  assert.deepEqual(all, []);
 });

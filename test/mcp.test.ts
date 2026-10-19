@@ -173,7 +173,16 @@ test("observe judges the real page against the file", { skip: chrome ? false : "
 });
 
 test("critique names what to fix and where it comes from", async () => {
-  const result = await call("nudg_critique", { file: "examples/toast.nudg.json" });
+  const file = `${root}examples/unpausable-toast.tmp.nudg.json`;
+  const doc = JSON.parse(readFileSync(`${root}examples/toast.nudg.json`, "utf8"));
+  doc.states.shown.when["after:3s"] = "hidden";
+  writeFileSync(file, JSON.stringify(doc));
+  let result;
+  try {
+    result = await call("nudg_critique", { file: "examples/unpausable-toast.tmp.nudg.json" });
+  } finally {
+    rmSync(file, { force: true });
+  }
   assert.equal(result.isError, undefined, result.content[0].text);
   assert.match(result.content[0].text, /suggestion short-timeout at \/states\/shown\/when\/after:3s/);
   assert.match(result.content[0].text, /from: WCAG/);

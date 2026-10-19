@@ -1,0 +1,78 @@
+{
+ "nudgProgram": 1,
+ "version": "0.7",
+ "targets": [
+  "toast"
+ ],
+ "properties": [
+  {
+   "key": "toast.opacity",
+   "kind": "number",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [],
+ "machine": {
+  "kind": "states",
+  "initial": "hidden",
+  "states": [
+   {
+    "name": "hidden",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [],
+    "timers": []
+   },
+   {
+    "name": "shown",
+    "set": [
+     {
+      "key": "toast.opacity",
+      "value": [
+       1
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [],
+    "timers": [
+     {
+      "key": "after:1s",
+      "delay": 1,
+      "pause": [
+       {
+        "on": "toast.hoverstart",
+        "off": "toast.hoverend"
+       },
+       {
+        "on": "toast.focus",
+        "off": "toast.blur"
+       },
+       {
+        "on": "host.suspend",
+        "off": "host.resume"
+       }
+      ],
+      "transition": {
+       "animate": [],
+       "to": "hidden"
+      }
+     }
+    ]
+   }
+  ],
+  "when": [
+   {
+    "event": "host.show",
+    "animate": [],
+    "to": "shown"
+   }
+  ]
+ }
+}

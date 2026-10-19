@@ -2,59 +2,152 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Microphone level</title>
+  <title>Voice chat</title>
   <style>
-    body { margin: 0; min-height: 200px; display: grid; place-items: center; background: #f7f7f5; font: 13px ui-sans-serif, system-ui, sans-serif; color: #252522; }
-    .meter { display: grid; justify-items: center; gap: 12px; }
-    .visual { position: relative; width: 104px; height: 96px; display: grid; place-items: center; }
-    .glow, .ring { position: absolute; border-radius: 50%; transform-origin: center; }
-    .glow { width: 84px; height: 84px; background: #76c7b7; }
-    .ring { width: 72px; height: 72px; border: 3px solid #176f62; background: #ecfffa; box-sizing: border-box; }
-    .core { position: relative; width: 20px; height: 30px; border: 3px solid #174f49; border-radius: 12px; box-sizing: border-box; }
-    .core::after { content: ""; position: absolute; left: 50%; top: 30px; width: 3px; height: 10px; background: #174f49; transform: translateX(-50%); }
-    button { border: 0; border-radius: 6px; padding: 8px 12px; color: #fff; background: #1f6f63; font: inherit; font-weight: 650; cursor: pointer; }
-    button:disabled { opacity: 0.65; cursor: default; }
-    output { min-height: 16px; color: #62625c; }
+    body { margin: 0; min-height: 220px; display: grid; place-items: center; background: #f5f6f4; font: 13px ui-sans-serif, system-ui, sans-serif; color: #202320; }
+    .call { width: min(286px, 100%); padding: 12px; border: 1px solid #dfe2dc; border-radius: 8px; background: #fff; box-sizing: border-box; box-shadow: 0 6px 20px rgba(28, 40, 34, 0.08); }
+    .room { margin-bottom: 8px; color: #737871; font-size: 11px; font-weight: 700; }
+    .participant { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+    .avatar-wrap { position: relative; width: 46px; height: 46px; display: grid; place-items: center; }
+    .pulse, .avatar { position: absolute; border-radius: 50%; transform-origin: center; }
+    .pulse { width: 42px; height: 42px; background: #68c6ad; }
+    .avatar { width: 38px; height: 38px; display: grid; place-items: center; background: #1d7664; color: #fff; font-size: 12px; font-weight: 750; }
+    .identity { min-width: 0; }
+    .identity strong, .identity output { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .identity strong { font-size: 14px; }
+    .identity output { min-height: 18px; color: #6d726b; font-size: 12px; }
+    time { color: #5d625c; font: 12px ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
+    .level-track { height: 4px; margin: 10px 0; overflow: hidden; border-radius: 2px; background: #e8eae6; }
+    .level { width: 100%; height: 100%; background: #209174; transform: scaleX(0); transform-origin: left center; }
+    .controls { position: relative; height: 34px; }
+    .join, .in-call { position: absolute; inset: 0; }
+    .in-call { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    button { min-width: 0; border: 1px solid transparent; border-radius: 6px; padding: 7px 12px; font: inherit; font-weight: 700; cursor: pointer; }
+    button:disabled { cursor: wait; }
+    .join { width: 100%; color: #fff; background: #1d7664; }
+    .mute { border-color: #d9ddd7; color: #252925; background: #f0f2ef; }
+    .leave { color: #a12f36; background: #fff0f0; border-color: #f1d2d4; }
+    .join[data-nudg-state~="live"], .join[data-nudg-state~="muted"],
+    .in-call[data-nudg-state~="ready"], .in-call[data-nudg-state~="connecting"] { pointer-events: none; }
   </style>
 </head>
 <body>
-  <div class="meter">
-    <div class="visual" aria-hidden="true">
-      <div class="glow" data-nudg="glow"></div>
-      <div class="ring" data-nudg="ring"></div>
-      <div class="core"></div>
+  <section class="call" aria-label="Voice chat with Mina Lee">
+    <div class="room">DESIGN ROOM · 2 PARTICIPANTS</div>
+    <div class="participant">
+      <div class="avatar-wrap" aria-hidden="true">
+        <div class="pulse" data-nudg="pulse"></div>
+        <div class="avatar" data-nudg="avatar">ML</div>
+      </div>
+      <div class="identity">
+        <strong>Mina Lee</strong>
+        <output class="status" aria-live="polite">Ready to join</output>
+      </div>
+      <time datetime="PT0S">00:00</time>
     </div>
-    <button type="button">Use microphone</button>
-    <output aria-live="polite"></output>
-  </div>
+    <div class="level-track" role="meter" aria-label="Microphone input level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="level" data-nudg="level"></div>
+    </div>
+    <div class="controls">
+      <button class="join" type="button" data-nudg="join">Join voice</button>
+      <div class="in-call" data-nudg="actions">
+        <button class="mute" type="button" data-nudg="mute" aria-pressed="false">Mute</button>
+        <button class="leave" type="button">Leave</button>
+      </div>
+    </div>
+  </section>
   <script type="module">
     import { compileUrl, play } from "../dist/dom/index.js";
     const { program } = await compileUrl("./microphone.nudg.json");
-    const player = play(program, document.body);
-    const button = document.querySelector("button");
-    const status = document.querySelector("output");
-    button.addEventListener("click", async () => {
-      button.disabled = true;
+    const join = document.querySelector(".join");
+    const mute = document.querySelector(".mute");
+    const leave = document.querySelector(".leave");
+    const status = document.querySelector(".status");
+    const elapsed = document.querySelector("time");
+    const meter = document.querySelector("[role=meter]");
+    let stream;
+    let context;
+    let frame = 0;
+    let timer = 0;
+    let started = 0;
+    let muted = false;
+
+    const player = play(program, document.body, {
+      onState(state) {
+        const connecting = state.includes("connecting");
+        const active = state.includes("live") || state.includes("muted");
+        join.disabled = connecting;
+        join.textContent = connecting ? "Connecting..." : active ? "In call" : "Join voice";
+        mute.setAttribute("aria-pressed", String(state.includes("muted")));
+        mute.textContent = state.includes("muted") ? "Unmute" : "Mute";
+      },
+    });
+
+    function showTime() {
+      const seconds = Math.floor((performance.now() - started) / 1000);
+      elapsed.textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+      elapsed.dateTime = `PT${seconds}S`;
+    }
+
+    function stopAudio(message = "Call ended") {
+      cancelAnimationFrame(frame);
+      clearInterval(timer);
+      stream?.getTracks().forEach((track) => track.stop());
+      context?.close().catch(() => {});
+      stream = undefined;
+      context = undefined;
+      muted = false;
+      player.input("host.volume", 0);
+      player.send("host.leave");
+      status.value = message;
+      elapsed.textContent = "00:00";
+      elapsed.dateTime = "PT0S";
+      meter.setAttribute("aria-valuenow", "0");
+    }
+
+    join.addEventListener("click", async () => {
+      if (stream) return;
+      player.send("host.connect");
+      status.value = "Connecting microphone";
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const context = new AudioContext();
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        context = new AudioContext();
         const analyser = context.createAnalyser();
         analyser.fftSize = 512;
         context.createMediaStreamSource(stream).connect(analyser);
         const samples = new Float32Array(analyser.fftSize);
-        status.value = "Listening";
+        stream.getAudioTracks()[0].addEventListener("ended", () => stopAudio("Microphone disconnected"), { once: true });
+        status.value = "Connected · microphone on";
+        player.send("host.connected");
+        started = performance.now();
+        showTime();
+        timer = setInterval(showTime, 1000);
         const update = () => {
           analyser.getFloatTimeDomainData(samples);
           const rms = Math.sqrt(samples.reduce((sum, value) => sum + value * value, 0) / samples.length);
-          player.input("host.volume", Math.min(1, rms * 8));
-          requestAnimationFrame(update);
+          const volume = muted ? 0 : Math.min(1, rms * 8);
+          player.input("host.volume", volume);
+          meter.setAttribute("aria-valuenow", String(Math.round(volume * 100)));
+          frame = requestAnimationFrame(update);
         };
         update();
       } catch {
-        button.disabled = false;
-        status.value = "Microphone unavailable";
+        stopAudio("Microphone unavailable");
+        player.send("host.failed");
       }
     });
+
+    mute.addEventListener("click", () => {
+      const track = stream?.getAudioTracks()[0];
+      if (!track) return;
+      muted = !muted;
+      track.enabled = !muted;
+      if (muted) player.input("host.volume", 0);
+      player.send(muted ? "host.mute" : "host.unmute");
+      status.value = muted ? "Connected · microphone muted" : "Connected · microphone on";
+    });
+    leave.addEventListener("click", () => stopAudio());
+    addEventListener("beforeunload", () => stopAudio(""), { once: true });
   </script>
 </body>
 </html>

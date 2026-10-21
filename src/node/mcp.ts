@@ -25,7 +25,7 @@ import { comparePage, lastRuntimeInlined, readWithImports } from "./compare-page
 import { compilePath } from "./load.ts";
 import { ACTIONS, checkAction, observe, type HostAction } from "./observe.ts";
 import { frameTimes, renderFrames } from "./render.ts";
-import { findRecipe, formatRecipe, recipeCatalog, recipeSource } from "./recipes.ts";
+import { findRecipe, formatRecipe, noStarter, recipeCatalog, recipeSource } from "./recipes.ts";
 
 const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const GUIDE = resolve(dirname(fileURLToPath(import.meta.url)), "../../spec/guide.md");
@@ -338,16 +338,17 @@ async function runTool(name: string, args: Json): Promise<ToolResult> {
         if (!name) {
           const recipes = recipeCatalog().recipes;
           return {
-            content: [text(recipes.map((recipe) => `${recipe.id}: ${recipe.summary}`).join("\n"))],
-            structuredContent: { recipes: recipes.map(({ id, aliases, summary }) => ({ id, aliases, summary })) } as unknown as Json,
+            content: [text(recipes.map((recipe) => `${recipe.id}: ${recipe.starter ? "" : "(no starter) "}${recipe.summary}`).join("\n"))],
+            structuredContent: { recipes: recipes.map(({ id, aliases, summary, starter }) => ({ id, aliases, summary, starter })) } as unknown as Json,
           };
         }
         const recipe = findRecipe(name);
         if (!recipe) throw new ToolError(`Unknown recipe "${name}". Call nudg_recipe without a name to list recipes and aliases.`);
         if (args.source !== undefined && typeof args.source !== "boolean") throw new ToolError("`source` must be a boolean.");
         const starterSource = args.source ? recipeSource(recipe) : undefined;
+        const sourceNote = starterSource ? `\n\nStarter source:\n\`\`\`json\n${starterSource.trim()}\n\`\`\`` : args.source ? `\n\n${noStarter(recipe)}` : "";
         return {
-          content: [text(`${formatRecipe(recipe)}${starterSource ? `\n\nStarter source:\n\`\`\`json\n${starterSource.trim()}\n\`\`\`` : ""}`)],
+          content: [text(`${formatRecipe(recipe)}${sourceNote}`)],
           structuredContent: { recipe, ...(starterSource ? { source: starterSource } : {}) } as unknown as Json,
         };
       }

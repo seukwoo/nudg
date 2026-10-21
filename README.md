@@ -151,7 +151,7 @@ npx nudg recipe sheet --json
 npx nudg recipe toggle --source > toggle.nudg.json
 ```
 
-The first catalog covers every shipped example, from switches, tabs and sheets to voice chat, camera and media players. Recipes remain ordinary nudg documents at runtime; they guide generation without making the core component-specific.
+The catalog covers every shipped example, from switches, tabs and sheets to voice chat, camera and media players. Patterns the format can't express yet, such as menus, spinners and screen transitions, are listed too, without a starter, so the AI says which part the host does instead of improvising. Recipes remain ordinary nudg documents at runtime; they guide generation without making the core component-specific.
 
 ## The simple case is one line
 

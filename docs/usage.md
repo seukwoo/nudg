@@ -181,9 +181,10 @@ nudg recipe
 nudg recipe "video chat"
 nudg recipe sheet --json
 nudg recipe toggle --source > toggle.nudg.json
+nudg recipe --gaps
 ```
 
-With no name, lists the semantic interaction contracts. A name or alias returns the recipe's parts, states, events, inputs, host responsibilities, motion, starter and known format gaps. `--source` prints the validated starter `.nudg.json` instead. The same lookup is available to agents as `nudg_recipe`; the package exports the raw catalog as `@nudg/core/recipes.json` and its schema as `@nudg/core/recipes.schema.json`.
+With no name, lists the semantic interaction contracts. A name or alias returns the recipe's parts, states, events, inputs, host responsibilities, motion, starter and known format gaps. `--source` prints the validated starter `.nudg.json` instead. Recipes the format can't express yet have no starter: they still give the contract, and their gaps say which part the host does. `--gaps` counts those gaps across the catalog, most needed first, which is how the next motion primitive is chosen. The same lookup is available to agents as `nudg_recipe`; the package exports the raw catalog as `@nudg/core/recipes.json` and its schema as `@nudg/core/recipes.schema.json`.
 
 ### Layout without a page
 

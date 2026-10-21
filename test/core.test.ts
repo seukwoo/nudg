@@ -45,20 +45,23 @@ test("every example belongs to one queryable semantic recipe", async () => {
   const ids = new Set(examples.map((example: { id: string }) => example.id));
   const names = new Set<string>();
   for (const recipe of recipes) {
-    assert.ok(ids.has(recipe.starter), `${recipe.id}: unknown starter ${recipe.starter}`);
-    assert.ok(recipe.examples.includes(recipe.starter), `${recipe.id}: starter is not in examples`);
+    if (recipe.starter !== null) {
+      assert.ok(ids.has(recipe.starter), `${recipe.id}: unknown starter ${recipe.starter}`);
+      assert.ok(recipe.examples.includes(recipe.starter), `${recipe.id}: starter is not in examples`);
+      assert.ok(compilePath(`${root}examples/${recipe.starter}.nudg.json`).program, `${recipe.id}: starter does not compile`);
+    }
     for (const name of [recipe.id, ...recipe.aliases].map((value: string) => value.toLowerCase().replace(/[_\s]+/g, "-"))) {
       assert.ok(!names.has(name), `${recipe.id}: duplicate name or alias ${name}`);
       names.add(name);
     }
     for (const id of recipe.examples) assert.equal(examples.find((example: { id: string }) => example.id === id)?.recipe, recipe.id, `${id}: catalog and recipe disagree`);
-    assert.ok(compilePath(`${root}examples/${recipe.starter}.nudg.json`).program, `${recipe.id}: starter does not compile`);
   }
   for (const example of examples) assert.ok(recipes.some((recipe: { id: string; examples: string[] }) => recipe.id === example.recipe && recipe.examples.includes(example.id)), `${example.id}: recipe not found`);
 
   const { findRecipe } = await import("../src/node/recipes.ts");
   assert.equal(findRecipe("video chat")?.id, "video-call");
   assert.equal(findRecipe("TOGGLE_SWITCH")?.id, "switch");
+  assert.equal(findRecipe("dropdown")?.starter, null);
 });
 
 test("a file without a machine is a library", () => {
@@ -167,6 +170,9 @@ test("cli validate and simulate speak JSON", () => {
   const recipe = JSON.parse(run("recipe", "video chat", "--json"));
   assert.equal(recipe.id, "video-call");
   assert.match(run("recipe", "toggle", "--source"), /"track\.dragend"/);
+  assert.throws(() => execFileSync(process.execPath, [`${root}src/cli.ts`, "recipe", "spinner", "--source"], { encoding: "utf8", stdio: "pipe" }), /no starter.*continuous motion/s);
+  const { gaps } = JSON.parse(run("recipe", "--gaps", "--json"));
+  assert.ok(gaps.some((gap: { capability: string; missing: string[] }) => gap.capability === "stagger" && gap.missing.includes("menu")));
 });
 
 test("plot draws a labeled graph with overshoot and settle marks", async () => {

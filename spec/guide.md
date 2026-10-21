@@ -187,6 +187,8 @@ Libraries in `examples/motion/` carry the platforms' published spring values: `a
 
 When a person describes UI in natural language, call `nudg_recipe` (or `nudg recipe <term>`) before writing the file. It resolves aliases to a versioned mobile-first contract with expected parts, states, events, inputs, host responsibilities, motion, known gaps and a validated starter. Then express any requested variation with ordinary nudg fields.
 
+Some recipes have no starter (`"starter": null`): menus, speed dials, animated lists, spinners, skeletons, typing indicators, hide-on-scroll bars, stack navigation, full-screen modals, shared-element transitions, drawers, image viewers and free-scrolling carousels. Their contract is still the standard answer: use its parts, states and events, write the nudg file for what the format can express (a menu's open and close, a drawer's drag), and tell the person which part the host does and why, from `gaps`. Don't imitate a missing capability with timers or extra states; that is the workaround the gap records.
+
 | User says | Prefer |
 |---|---|
 | FAB, floating action button | primary floating action; targets `root`, `icon`, optional `label`; press feedback; optional hidden/expanded states |

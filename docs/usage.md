@@ -240,6 +240,18 @@ function Toggle({ checked }: { checked: boolean }) {
 
 `bind(name)` returns a stable ref callback. Values go straight to the elements' styles, so the component doesn't re-render while things move; `state` updates only when the state changes. The hook takes a JSON object (compiled once, with `files` for its imports) or a compiled program. React 18 or later is an optional peer dependency.
 
+**App values.** `input(name, value)` supplies a continuous value the file reads with `map` or `follow` (format 0.5), such as a microphone level or playback progress. It writes styles without re-rendering, and returns false for names the file doesn't read. The latest value carries over when the program changes, and a value given before the hook's player starts (a child's layout effect, for example) applies when it does:
+
+```tsx
+function Meter({ level }: { level: number }) {
+  const { bind, input } = useNudg(meter);
+  useEffect(() => void input("host.level", level), [level]);
+  return <div ref={bind("fill")} />;
+}
+```
+
+For values that change every frame, call `input` from your own animation-frame or media callback instead of from React state, so React still doesn't re-render.
+
 **Exits.** A file's `hidden` state can slide a toast out over 0.3 s, but if the component unmounts the moment the app dismisses it, nothing of that is ever seen (`nudg observe` reports it as "never shown"). Tell the hook which states mean gone, and render nothing only once it says so:
 
 ```tsx
@@ -298,7 +310,7 @@ function Toggle() {
 ```
 
 - `bind(name)` gives a target its animated `style` (x, y, rotation and scale as a transform; opacity, width, height; color as background), `press` handlers for a `Pressable` (`down`, `up`, `tap`), and `onLayout`, which reports its box for `measure` (0.4).
-- `send("host.show")`, `state`, `present` and the `exit` / `onExit` options work as in React. Reduce Motion follows the system setting unless `reducedMotion` is passed.
+- `send("host.show")`, `input("host.volume", 0.7)`, `state`, `present` and the `exit` / `onExit` options work as in React. Reduce Motion follows the system setting unless `reducedMotion` is passed.
 - `bind(name).gesture` (spread on any `View`) handles press and drag: `down`, `up`, `tap`, and for targets the file drags, `dragstart`, `drag.x` / `drag.y` and `dragend`, with the same 4-unit slop as the web. Checked on the Android emulator with the drag toggle.
 - Not yet: keys (rare on phones), and the native driver; values are written from JavaScript each frame, which is fine for UI motion and is the next thing to move to Reanimated for heavy screens.
 - Checked on an Android emulator through Expo Go: the toggle springs and recolors, and a held button scales to 0.96.

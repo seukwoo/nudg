@@ -17,7 +17,7 @@ The order below follows real app needs. Release numbers and dates are assigned w
 | Semantic UI recipes | Versioned contracts cover every shipped example; CLI and MCP resolve names and aliases to contracts and starters | [Recipe catalog](../recipes/index.json), [agent guide](../spec/guide.md#semantic-ui-words) |
 | AI editing contract | Versioned JSON Schemas, a published agent guide, MCP tools and an installable agent skill ship with the package | [Package exports](../package.json), [agent guide](../spec/guide.md), [usage](usage.md#skill) |
 | Headless renderer bridge | `createPlayer` accepts events and inputs and emits state/values; DOM and native adapters are consumers of the same core | [Design](design.md#any-platform), [usage](usage.md#headless-renderer-bridge) |
-| Continuous app and scroll inputs | Implemented in format 0.5; low-level, DOM and native APIs expose `input`, while the web React hook still needs parity | [Spec](spec.md#additions-in-05-draft), [usage](usage.md#react-native-adapter) |
+| Continuous app and scroll inputs | Implemented in format 0.5; the headless and DOM players and the React and React Native hooks expose `input` (hook parity unreleased) | [Spec](spec.md#additions-in-05-draft), [usage](usage.md#react-adapter) |
 | Layout measurement and natural size | Implemented in format 0.4 | [Spec](spec.md#layout-inputs) |
 | Layout arithmetic and relative measured values | Released in package 0.9.0 as format 0.6 | [Spec](spec.md#additions-in-06) |
 | Measured follow/map endpoints | Implemented after 0.9.0 as format 0.9; unreleased; bottom sheet and swipe row no longer duplicate layout bounds | [Spec](spec.md#additions-in-09-draft) |
@@ -55,7 +55,7 @@ Completion met: the current recipes no longer duplicate essential measured resti
 Goal: close the adoption gaps exposed by the existing format without adding component-specific runtime syntax.
 
 - Add a `nudg generate` workflow that validates the document and its imports, then emits TypeScript contracts for target names, host-callable events, continuous inputs and state paths. Settle the generated module shape and stale-file story before implementation.
-- Expose format 0.5 `input(name, value)` through the web React hook; the headless player, DOM player and React Native hook already have it.
+- Done (unreleased): format 0.5 `input(name, value)` through the React and React Native hooks. The React Native hook turned out to lack it as well; both keep the latest values across program changes and apply values given before mount.
 - Define one portable settled/transition-complete notification for interrupted motion, parallel regions and timers. Keep `onExit` as the focused unmount API and avoid per-frame React renders.
 - Define server-rendered initial output for values resolvable without the DOM, plus hydration and base-value behavior for layout measurements and app inputs. This is the accepted path to preventing first-paint flashes.
 - Document the existing published schema, AI guide and installable skill as the official editing contract rather than creating a second prompt format.

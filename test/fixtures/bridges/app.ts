@@ -1,5 +1,5 @@
 // A page with real MUI and Radix components driven by nudg, bundled by test/bridges.test.ts.
-import { createElement as h, useState, useRef, useEffect } from "react";
+import { createElement as h, useState, useRef, useEffect, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import Dialog from "@mui/material/Dialog";
 import * as RadixDialog from "@radix-ui/react-dialog";
@@ -17,18 +17,30 @@ const switchDoc = {
   states: { off: {}, on: { set: { "knob.x": 20 } } },
 };
 const radixDoc = presets.appear({ target: "content" });
+const meterDoc = (span: number) => ({ nudg: "0.5", targets: ["fill"], values: { "fill.x": { map: "host.level", from: [0, 1], to: [0, span] } }, initial: "idle", states: { idle: {} } });
+
+// Reports the level from a child's layout effect, which runs before the parent's player exists.
+function Level({ input }: { input: (name: string, value: number) => boolean }) {
+  useLayoutEffect(() => void ((window as any).__early = input("host.level", 0.25)), []);
+  return null;
+}
 
 function App() {
   const [mui, setMui] = useState(false);
   const [radix, setRadix] = useState(false);
   const [checked, setChecked] = useState(false);
-  const api = useRef({ setMui, setRadix, setChecked });
+  const [span, setSpan] = useState(100);
+  const meter = useNudg(meterDoc(span));
+  const api = useRef({ setMui, setRadix, setChecked, setSpan, meter });
+  api.current.meter = meter;
   useEffect(() => void ((window as any).__app = api.current), []);
 
   const sw = useNudg(switchDoc, { watch: true });
   const content = useNudg(radixDoc, { watch: true, exit: "hidden" });
 
   return h("div", null,
+    h(Level, { input: meter.input }),
+    h("div", { id: "fill", ref: meter.bind("fill"), style: { width: 10, height: 10, background: "#000" } }),
     h(Dialog, { open: mui, onClose: () => setMui(false), slots: { transition: muiTransition } }, h("div", { id: "mui-body", style: { padding: 24 } }, "MUI dialog")),
     h(RadixDialog.Root, { open: radix, onOpenChange: setRadix },
       h(RadixDialog.Portal, { forceMount: true },

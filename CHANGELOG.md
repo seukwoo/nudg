@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Format 0.9: measured follow and map endpoints.** `follow.range` and `map.from` accept the existing `{ "measure", "times", "plus" }` object, so responsive drag bounds and derived feedback share the same layout values as resting states. Unmeasured follows stay unconstrained and maps hold their base until the first complete report; relayout updates endpoints without restarting the gesture. TypeScript, Swift and Kotlin share conformance; bottom sheet and swipe row remove their duplicated layout constants. Schema 0.9.
+- **`input` on the React and React Native hooks.** `useNudg(...).input("host.level", 0.5)` supplies format 0.5 app inputs without dropping to the DOM or headless player. The latest values carry over when the program changes or the player restarts, and values given before mount apply when the player starts. Names the file doesn't read return false.
 - **Compiled program format 2.** Measured endpoints survive `nudg compile`; current TypeScript, Swift and Kotlin decoders continue to accept format 1 programs.
 
 ## 0.9.0

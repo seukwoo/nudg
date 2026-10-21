@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.11.0
+
+Completes the host-integration stage: server-rendered pages start on the right frame, and everything an AI tool can rely on is documented as one editing contract. Releases are now published from GitHub.
+
+- **The editing contract for AI tools.** The schema, validator codes, agent guide, recipes, skill and generated host names are documented together as the one contract for anything that writes nudg files.
+- **Releases publish from GitHub.** A published GitHub release puts the same version on npm through trusted publishing, with provenance.
 
 - **Server rendering without a flash.** The first frame (starting states, known app inputs, measured values at their base) is now a pure function. React's `useNudg` returns `style(name)` for the markup, `@nudg/core/dom` exports `initialStyles(program, { state, inputs })` and `cssText(style)` for any server, and `initialValues` is exported from the core. React and React Native take an `inputs` option for app values known before mount. The DOM adapter and the server share one CSS conversion, and a Chrome test checks that server markup hydrates without a mismatch or a jump.
 

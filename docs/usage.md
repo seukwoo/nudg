@@ -392,7 +392,7 @@ This is an adapter/observer API, not a second rendering engine: DOM, Canvas or a
 The Swift runtime runs the same files on Apple platforms. Add it with Swift Package Manager by this repository's URL (Xcode: File › Add Package Dependencies), from a release tag:
 
 ```swift
-.package(url: "https://github.com/seukwoo/nudg", from: "0.10.0")
+.package(url: "https://github.com/seukwoo/nudg", from: "0.11.0")
 // targets: .product(name: "Nudg", package: "nudg"), .product(name: "NudgSwiftUI", package: "nudg")
 ```
 
@@ -429,7 +429,7 @@ The Kotlin runtime (plain JVM, no dependencies) reads compiled programs like the
 
 ```kotlin
 // settings.gradle.kts: dependencyResolutionManagement { repositories { google(); mavenCentral(); maven("https://jitpack.io") } }
-implementation("com.github.seukwoo.nudg:compose:0.10.0")   // brings com.github.seukwoo.nudg:nudg
+implementation("com.github.seukwoo.nudg:compose:0.11.0")   // brings com.github.seukwoo.nudg:nudg
 ```
 
 Compile files with `npx @nudg/core compile toggle.nudg.json --out app/src/main/assets/toggle.program.json`.

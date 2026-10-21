@@ -218,6 +218,17 @@ Hosts asked "is it done?" in several ways: React's transition bridge called a li
 - **Followed and input-mapped values are at rest.** A drag that follows the finger and a meter mapped from a level never report; the release that springs to a state does.
 - **The threshold is part of the spec.** Rest used to be advisory, so runtimes could disagree on the frame motion ended. The spring-energy threshold is now specified and covered by a conformance case, and each language has the same small lifecycle helper that adapters drive.
 
+## Server rendering: the first frame
+
+Status: implemented as `style(name)` in the React hook, `initialStyles` / `cssText` in `@nudg/core/dom`, and an `inputs` option on the hooks.
+
+The DOM adapter writes styles in a layout effect, which prevents a flash in client-rendered apps but not in server-rendered ones: the server's markup paints first, without nudg's values. The decisions:
+
+- **The first frame is a pure function.** Starting states, app inputs as given (others 0), measured values at their base, no entry effects: `initialValues(program, options)` in the core, with no clock or platform API. The DOM adapter and the server share one CSS conversion (`styleOf`), so they cannot disagree.
+- **React gets `style(name)`, not a props bundle.** `bind` stays a ref; the style object merges with the component's own style explicitly. Its value never changes after the first render for a program, so React doesn't fight the adapter's frame writes.
+- **Inputs the server knows are an option.** `inputs: { "host.progress": 0.6 }` sets the first frame and is applied at mount; later values go through `input`. React Native takes the same option for its first frame.
+- **Measured values can't be known on the server.** They render at their base and move to the real layout on the first report. Authors give measured values a base close to the expected layout; a later option could let the server pass expected sizes.
+
 ## Open questions
 
 These are unresolved design choices. Scheduling and completion status live in the [roadmap](roadmap.md); examples of possible syntax below are proposals.
@@ -235,7 +246,6 @@ These are unresolved design choices. Scheduling and completion status live in th
 - `nearest` limited to neighbors of the current state (a carousel that moves one slide per swipe however hard the flick), instead of tuning `momentum` down.
 - Pinch, rotate and other multi-pointer gestures.
 - Continuous app inputs and scroll position are implemented in format 0.5. Still open: portable direction and velocity derivation, including thresholds and how those become deterministic events.
-- SSR initial output: how a server asks a compiled program for initial styles without a clock or platform APIs, how the client hydrates the same values, and how unresolved layout measurements or app inputs use their documented base values without a flash.
 - DOM CSS-variable output: whether an optional adapter mode should write custom properties so host CSS composes transforms and visual properties, rather than writing final inline properties. This stays an adapter concern and needs real Tailwind/design-system cases before it displaces the direct, low-overhead default.
 - More combinators: `sequence`, `delay`, `stagger`. Format 0.8 deliberately keeps keyframes as inline transient state-entry effects rather than making them a general sequence primitive.
 - Tweaking a named motion at the point of use, for example `{ "use": "snappy", "duration": 0.5 }`.

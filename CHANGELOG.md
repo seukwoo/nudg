@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Server rendering without a flash.** The first frame (starting states, known app inputs, measured values at their base) is now a pure function. React's `useNudg` returns `style(name)` for the markup, `@nudg/core/dom` exports `initialStyles(program, { state, inputs })` and `cssText(style)` for any server, and `initialValues` is exported from the core. React and React Native take an `inputs` option for app values known before mount. The DOM adapter and the server share one CSS conversion, and a Chrome test checks that server markup hydrates without a mismatch or a jump.
+
 ## 0.10.0
 
 The first host-integration release: the host's names are type-checked, React can feed app values directly, and every platform says the same thing when motion is over. Measured layout now reaches drag bounds and derived feedback. TypeScript, Swift and Kotlin share format 0.9 and the new rest rule.

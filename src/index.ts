@@ -1,10 +1,10 @@
 export { compile, didYouMean } from "./core/compile.ts";
 export type { CompileResult, ReadFile, Source } from "./core/compile.ts";
 export { createRuntime } from "./core/runtime.ts";
-export { createPlayer, toProgram } from "./core/player.ts";
+export { createPlayer, initialValues, toProgram } from "./core/player.ts";
 export { DRAG_SLOP, PointerTracker, draggableTargets, keyName } from "./core/pointer.ts";
 export type { PointerSink } from "./core/pointer.ts";
-export type { HeadlessOptions, HeadlessPlayer, PlayerHost } from "./core/player.ts";
+export type { HeadlessOptions, HeadlessPlayer, InitialOptions, PlayerHost } from "./core/player.ts";
 export { programFromJson, programToJson, PROGRAM_FORMAT } from "./core/program-json.ts";
 export type { Runtime, Value } from "./core/runtime.ts";
 export { compare, compareFrameTimes, THRESHOLDS } from "./core/compare.ts";

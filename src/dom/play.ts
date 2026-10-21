@@ -4,6 +4,7 @@
 
 import { compile } from "../core/compile.ts";
 import { createLifecycle } from "../core/lifecycle.ts";
+import { propertiesByTarget, styleOf } from "./style.ts";
 import { createRuntime, type Runtime, type Value } from "../core/runtime.ts";
 import type { Machine, NudgContract, Program, StateName } from "../core/types.ts";
 
@@ -84,8 +85,6 @@ export interface Player<C extends NudgContract = NudgContract> {
   destroy(): void;
 }
 
-const TRANSFORM_PROPS = new Set(["x", "y", "rotation", "scale", "scaleX", "scaleY"]);
-
 /**
  * Compiles a document (a preset, or a parsed .nudg.json) and plays it, in one call:
  * `playDoc(presets.press(), button)`. When `root` is an element with no [data-nudg]
@@ -132,31 +131,12 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   const now = () => (manual ? manualTime : ((performance.now() - start) / 1000) * speed);
 
   // Which properties each target has, so we only write the styles the file owns.
-  const byTarget = new Map<string, string[]>();
-  for (const key of program.properties.keys()) {
-    const [target, prop] = key.split(".");
-    byTarget.set(target, [...(byTarget.get(target) ?? []), prop]);
-  }
+  const byTarget = propertiesByTarget(program);
 
   function applyTo(target: string, values: Record<string, Value>, els: Iterable<Element>) {
     const props = byTarget.get(target);
     if (!props) return;
-    const v = (prop: string, fallback: number) => (props.includes(prop) ? (values[`${target}.${prop}`] as number) : fallback);
-    const transform = props.some((p) => TRANSFORM_PROPS.has(p))
-      ? `translate(${v("x", 0)}px, ${v("y", 0)}px) rotate(${v("rotation", 0)}deg) scale(${v("scale", 1) * v("scaleX", 1)}, ${v("scale", 1) * v("scaleY", 1)})`
-      : undefined;
-    for (const el of els) {
-      const style = (el as HTMLElement | SVGElement).style;
-      if (transform !== undefined) style.transform = transform;
-      if (props.includes("opacity")) style.opacity = String(v("opacity", 1));
-      if (props.includes("width")) style.width = `${v("width", 0)}px`;
-      if (props.includes("height")) style.height = `${v("height", 0)}px`;
-      if (props.includes("color")) {
-        const color = values[`${target}.color`] as string;
-        if (el instanceof SVGElement) style.fill = color;
-        else style.backgroundColor = color;
-      }
-    }
+    for (const el of els) Object.assign((el as HTMLElement | SVGElement).style, styleOf(target, props, values, el instanceof SVGElement));
   }
 
   // State changes, settle and presence: the host keeps the element until the exit motion has played.

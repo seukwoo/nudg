@@ -58,7 +58,7 @@ Goal: close the adoption gaps exposed by the existing format without adding comp
 - Done in 0.10.0: format 0.5 `input(name, value)` through the React and React Native hooks. The React Native hook turned out to lack it as well; both keep the latest values across program changes and apply values given before mount.
 - Done in 0.10.0: one portable settle notification, `onSettle`, in the headless and DOM players, React, React Native, SwiftUI and Compose, with the rest rule specified and covered by conformance. SwiftUI and Compose also gained `exit` / `onExit`. Decisions in [Design](design.md#settle-when-motion-is-over).
 - Define server-rendered initial output for values resolvable without the DOM, plus hydration and base-value behavior for layout measurements and app inputs. This is the accepted path to preventing first-paint flashes.
-- Document the existing published schema, AI guide and installable skill as the official editing contract rather than creating a second prompt format.
+- Done: the published schema, validator codes, agent guide, recipes, skill and generated host names are documented as one [editing contract](usage.md#the-editing-contract-for-ai-tools), rather than a second prompt format.
 
 Done when: a TypeScript host cannot misspell its generated target/event/input names, React can supply dynamic values without dropping to the DOM player, lifecycle completion means the same thing across adapters, and a server-rendered initial view hydrates without a visible jump.
 

@@ -6,6 +6,8 @@ import { compile } from "../core/compile.ts";
 import { createRuntime } from "../core/runtime.ts";
 import type { NudgContract, Program, StateName } from "../core/types.ts";
 import { play, type Player } from "../dom/play.ts";
+import { initialValues } from "../core/player.ts";
+import { propertiesByTarget, styleOf, type NudgStyle } from "../dom/style.ts";
 
 export { presets, press, hover, toggle, toast, appear } from "../core/presets.ts";
 export { nudgTransition } from "./transition.ts";
@@ -15,6 +17,12 @@ export type { NudgContract, StateName } from "../core/types.ts";
 export interface UseNudgOptions<C extends NudgContract = NudgContract> {
   /** Leaf state paths to start in instead of `initial`, e.g. ["on"] for a toggle that mounts checked. */
   state?: C["states"][];
+  /**
+   * App inputs known before mount, e.g. { "host.progress": 0.6 }: used for `style(name)`
+   * on the server and the first paint, then applied when the player starts. Read once;
+   * update with `input`.
+   */
+  inputs?: Partial<Record<C["inputs"], number>>;
   /**
    * Files the document imports, when passing a JSON object: `{ "./motion/brand.nudg.json": brand }`,
    * keyed as the import is written (a leading "./" is optional).
@@ -54,6 +62,13 @@ export interface Nudg<C extends NudgContract = NudgContract> {
   input(name: C["inputs"], value: number): boolean;
   /** False once the component has exited (see `exit`); true again if it is shown again. */
   present: boolean;
+  /**
+   * The target's first-frame style, for server rendering and the first paint:
+   * `<div ref={bind("toast")} style={style("toast")} />`. Stable per name; the adapter
+   * writes the moving values itself, so React never re-renders for motion. Pass
+   * `{ svg: true }` for an SVG element, whose color is a fill.
+   */
+  style(name: C["targets"], options?: { svg?: boolean }): NudgStyle;
 }
 
 const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -78,8 +93,9 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
   onExit.current = options.onExit;
   const onSettle = useRef(options.onSettle);
   onSettle.current = options.onSettle;
-  // The latest value per app input, replayed into each new player.
-  const inputs = useRef(new Map<string, number>());
+  // The latest value per app input, replayed into each new player; starts from `inputs`.
+  const inputs = useRef<Map<string, number>>(null as unknown as Map<string, number>);
+  if (!inputs.current) inputs.current = new Map(Object.entries(options.inputs ?? {}) as [string, number][]);
   const reads = useMemo(() => new Set(createRuntime(program).requiredInputs()), [program]);
 
   useIsomorphicLayoutEffect(() => {
@@ -124,6 +140,13 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
     return ref;
   }, []);
 
+  // The first frame as CSS, from the same state and inputs the player will start with.
+  const first = useMemo(() => ({ values: initialValues(program, { state: options.state, inputs: Object.fromEntries(inputs.current) }), props: propertiesByTarget(program) }), [program]);
+  const style = useCallback((name: string, opts: { svg?: boolean } = {}) => {
+    const props = first.props.get(name);
+    return props ? styleOf(name, props, first.values, opts.svg) : EMPTY_STYLE;
+  }, [first]);
+
   const send = useCallback((event: string) => player.current?.send(event) ?? false, []);
   const input = useCallback((name: string, value: number) => {
     const p = player.current;
@@ -131,8 +154,10 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
     if (used) inputs.current.set(name, value);
     return used;
   }, [reads]);
-  return { bind, state, send, input, present };
+  return { bind, state, send, input, present, style };
 }
+
+const EMPTY_STYLE: NudgStyle = {};
 
 function isProgram(source: Program | object): source is Program {
   return "machine" in source && (source as Program).properties instanceof Map;

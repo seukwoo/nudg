@@ -94,3 +94,22 @@ test("useNudg input: applies a value given before mount, follows updates, and su
     close();
   }
 });
+
+test("server rendering: the first frame is in the markup before React runs, and hydration takes over without a mismatch", { skip }, async () => {
+  const { url, close } = await serveIfLocal("test/fixtures/bridges/index.html");
+  const browser = await launchBrowser(chrome!);
+  try {
+    await browser.send("Page.navigate", { url });
+    await waitFor(() => browser.evaluate("window.__ssr ? 'ready' : ''"), 15_000);
+    assert.equal(await browser.evaluate("window.__ssrBefore"), "0", "hidden in the server markup, before hydration");
+    const opacity = () => browser.evaluate(`Number(getComputedStyle(document.getElementById("ssr-toast")).opacity)`);
+    assert.equal(await opacity(), 0, "still hidden once hydrated");
+    assert.deepEqual(await browser.evaluate("window.__hydrationErrors"), [], "no hydration mismatch");
+    await browser.evaluate(`window.__ssr.send("host.show")`);
+    await new Promise((r) => setTimeout(r, 700));
+    assert.ok(Math.abs((await opacity()) - 1) < 0.01, "the adapter plays from there");
+  } finally {
+    await browser.close();
+    close();
+  }
+});

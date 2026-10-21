@@ -93,6 +93,25 @@ export function createPlayer<C extends NudgContract = NudgContract>(program: Pro
   };
 }
 
+export interface InitialOptions {
+  /** Leaf state paths to start in instead of `initial`, as the adapters' `state` option. */
+  state?: string[];
+  /** Continuous app inputs already known, e.g. { "host.progress": 0.6 }. Others start at 0. */
+  inputs?: Record<string, number>;
+}
+
+/**
+ * The values a player shows before anything happens: the starting states, app inputs as
+ * given (others 0), and measured values at their base until the host reports layout.
+ * Entry effects of the starting states don't play on load. A server renders these, and
+ * the adapters start from the same values, so hydration doesn't jump.
+ */
+export function initialValues(program: Program, options: InitialOptions = {}): Record<string, Value> {
+  const runtime = createRuntime(program, { state: options.state });
+  for (const [name, value] of Object.entries(options.inputs ?? {})) runtime.input(name, value, 0);
+  return runtime.sample(0);
+}
+
 /** Compiles a document (with the files it imports) or passes a Program through; throws with every error. */
 export function toProgram(source: Program | object, files: Record<string, unknown> = {}): Program {
   if ("machine" in source && (source as Program).properties instanceof Map) return source as Program;

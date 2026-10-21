@@ -297,6 +297,15 @@ function Toast({ onGone }: { onGone: () => void }) {
 }
 ```
 
+**Server rendering.** The adapter writes styles after mount, so server markup would show elements as CSS left them until the page hydrates: a hidden toast flashes. `style(name)` returns the target's first frame as a style object; put it in the markup and the server sends the right first paint:
+
+```tsx
+const { bind, style } = useNudg(toast, { inputs: { "host.progress": 0.6 } });
+return <div ref={bind("toast")} style={{ ...myStyle, ...style("toast") }}>Saved</div>;
+```
+
+The first frame is the starting states (`state`), app inputs from `inputs` (others 0), and measured values at their `values` base, since the server can't measure; entry effects don't play on load. The client computes the same frame, so hydration matches, and then the adapter writes every frame itself. Pass `{ svg: true }` for an SVG element, whose color is a fill. Measured values move to the real layout when the page first reports it, so give them a base close to what the server expects.
+
 **Settle.** `onSettle(state)` is called each time every value has come to rest after something moved or the state changed: the dialog has finished opening, the sheet has snapped, the toast is fully shown (its dismiss timer doesn't delay it). It is called once per rest, so a motion interrupted by another reports only the second rest, and a drag that only follows the finger reports nothing. Use it to move focus or start work once motion is over; the hook doesn't re-render for it. `nudgTransition` uses it to call the library's `onEntered`.
 
 `present` turns false once the machine has entered an `exit` state and every value has come to rest; `onExit` fires then, once. For a list of toasts, the parent removes the item in `onExit`, not when it decides to dismiss: dismissing is an event (`send("host.hide")`, or the file's own timer), removal is the consequence. Showing the component again (an event that leaves the exit state) makes `present` true again.
@@ -347,7 +356,7 @@ function Toggle() {
 ```
 
 - `bind(name)` gives a target its animated `style` (x, y, rotation and scale as a transform; opacity, width, height; color as background), `press` handlers for a `Pressable` (`down`, `up`, `tap`), and `onLayout`, which reports its box for `measure` (0.4).
-- `send("host.show")`, `input("host.volume", 0.7)`, `state`, `present` and the `exit` / `onExit` / `onSettle` options work as in React. Reduce Motion follows the system setting unless `reducedMotion` is passed.
+- `send("host.show")`, `input("host.volume", 0.7)`, `state`, `present` and the `exit` / `onExit` / `onSettle` / `inputs` options work as in React; `inputs` sets the first frame's app values. Reduce Motion follows the system setting unless `reducedMotion` is passed.
 - `bind(name).gesture` (spread on any `View`) handles press and drag: `down`, `up`, `tap`, and for targets the file drags, `dragstart`, `drag.x` / `drag.y` and `dragend`, with the same 4-unit slop as the web. Checked on the Android emulator with the drag toggle.
 - Not yet: keys (rare on phones), and the native driver; values are written from JavaScript each frame, which is fine for UI motion and is the next thing to move to Reanimated for heavy screens.
 - Checked on an Android emulator through Expo Go: the toggle springs and recolors, and a held button scales to 0.96.
@@ -450,6 +459,7 @@ const player = play(program, document.querySelector(".settings"));
 - **Binding:** elements with `data-nudg="name"` under the root, plus `options.bind`. Unbound targets and undeclared names are reported (`player.unbound`, `player.unknown`) and logged.
 - **Input:** `pointerdown` is `down`, `click` is `tap` (so keyboard activation of a button also taps), and a release is `up` over the element or `cancel` outside it. For targets the file drags, travel past 4 px is `dragstart`, pointer moves become `drag.x` / `drag.y` samples, the release adds `dragend`, the click that follows is swallowed, and `touch-action: none` keeps the page from scrolling instead. Pointer enter and leave (not touch) are `hoverstart` / `hoverend`; `focus` and `blur` map directly.
 - **Keyboard (0.3):** a `keydown` on a bound element (or inside it) becomes `target.key.<name>` when the file has a transition for it; the browser default is then prevented. Keys the file doesn't listen for pass through. `reducedMotion` in the options overrides the system `prefers-reduced-motion`, which the adapter follows by default. `player.values()` returns the values last applied, and `onFrame(values)` is called after every applied frame, for `aria-valuenow` and the like.
+- **Server rendering:** `initialStyles(program, { state, inputs })` returns each target's first frame as a style object, without a DOM, and `cssText(style)` turns one into an inline `style` attribute, for any server or template: `<div data-nudg="toast" style="${cssText(styles.toast)}">`. Play the page with the same `state` and send the same inputs, and nothing jumps. React's `style(name)` is the same computation.
 - **State in CSS:** every bound element carries `data-nudg-state` with the active states (`"checked/on press/up"`), so styles can depend on state without any code: `.spinner[data-nudg-state~="refreshing"] { animation: spin 0.8s linear infinite }`. This is how continuous decoration such as a loading spin is done today.
 - **Settle:** `onSettle(state)` is called each time every value has come to rest after something moved or the state changed, once per rest; pending timers don't delay it. The rules are in [the spec](spec.md#rest-and-lifecycle), and the headless player, React, React Native, SwiftUI and Compose report it the same way.
 - **Exits:** `{ exit: "hidden", onExit }` names the states that mean gone. `player.present()` turns false, and `onExit` is called once, when the machine has entered one of them from elsewhere and every value has settled: remove or hide the element then, so the exit motion is seen. Mounting in an exit state doesn't count as an exit.

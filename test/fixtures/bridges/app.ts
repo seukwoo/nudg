@@ -1,6 +1,7 @@
 // A page with real MUI and Radix components driven by nudg, bundled by test/bridges.test.ts.
 import { createElement as h, useState, useRef, useEffect, useLayoutEffect } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import Dialog from "@mui/material/Dialog";
 import * as RadixDialog from "@radix-ui/react-dialog";
 import * as Switch from "@radix-ui/react-switch";
@@ -52,3 +53,21 @@ function App() {
 }
 
 createRoot(document.getElementById("root")!).render(h(App));
+
+// Server rendering: the markup a server would send, painted before React runs, then hydrated.
+const ssrDoc = presets.toast();
+function SsrToast() {
+  const toast = useNudg(ssrDoc, { inputs: {} });
+  useEffect(() => void ((window as any).__ssr = toast), [toast.send]);
+  return h("div", { id: "ssr-toast", ref: toast.bind("toast"), style: { padding: 12, ...toast.style("toast") } }, "Saved");
+}
+const ssr = document.getElementById("ssr")!;
+ssr.innerHTML = renderToString(h(SsrToast));
+(window as any).__ssrBefore = getComputedStyle(ssr.firstElementChild!).opacity;
+const hydrationErrors: string[] = ((window as any).__hydrationErrors = []);
+const consoleError = console.error;
+console.error = (...args: unknown[]) => {
+  hydrationErrors.push(args.map(String).join(" "));
+  consoleError(...args);
+};
+hydrateRoot(ssr, h(SsrToast), { onRecoverableError: (e) => hydrationErrors.push(String(e)) });

@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AccessibilityInfo, Animated, PanResponder, type LayoutChangeEvent } from "react-native";
 import { PointerTracker, draggableTargets } from "../core/pointer.ts";
-import { createPlayer, toProgram, type HeadlessPlayer } from "../core/player.ts";
+import { createPlayer, initialValues, toProgram, type HeadlessPlayer } from "../core/player.ts";
 import { createRuntime, type Value } from "../core/runtime.ts";
 import type { NudgContract, Program, StateName } from "../core/types.ts";
 
@@ -16,6 +16,8 @@ export type { NudgContract, StateName } from "../core/types.ts";
 
 export interface UseNudgNativeOptions<C extends NudgContract = NudgContract> {
   state?: C["states"][];
+  /** App inputs known before mount, e.g. { "host.progress": 0.6 }: the first frame uses them. Read once; update with `input`. */
+  inputs?: Partial<Record<C["inputs"], number>>;
   files?: Record<string, unknown>;
   /** Default: the system's Reduce Motion setting. */
   reducedMotion?: boolean;
@@ -52,10 +54,13 @@ const TRANSFORM = ["x", "y", "rotation", "scale", "scaleX", "scaleY"] as const;
 export function useNudg<C extends NudgContract = NudgContract>(source: Program | object, options: UseNudgNativeOptions<C> = {}): NudgNative<C> {
   const key = "machine" in source ? source : JSON.stringify(source);
   const program = useMemo(() => toProgram(source, options.files), [key]);
+  // The latest value per app input, replayed into each new player; starts from `inputs`.
+  const inputs = useRef<Map<string, number>>(null as unknown as Map<string, number>);
+  if (!inputs.current) inputs.current = new Map(Object.entries(options.inputs ?? {}) as [string, number][]);
   // One Animated value per property; views read them, the player writes them.
   const animated = useMemo(() => {
     const out = new Map<string, Animated.Value | Animated.Color>();
-    const initial = createRuntime(program, { state: options.state }).sample(0);
+    const initial = initialValues(program, { state: options.state, inputs: Object.fromEntries(inputs.current) });
     for (const [k, prop] of program.properties) out.set(k, prop.kind === "color" ? new Animated.Color(initial[k] as string) : new Animated.Value(initial[k] as number));
     return out;
   }, [program]);
@@ -66,8 +71,6 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
   onExit.current = options.onExit;
   const onSettle = useRef(options.onSettle);
   onSettle.current = options.onSettle;
-  // The latest value per app input, replayed into each new player.
-  const inputs = useRef(new Map<string, number>());
   const reads = useMemo(() => new Set(createRuntime(program).requiredInputs()), [program]);
   const [reduced, setReduced] = useState<boolean | undefined>(options.reducedMotion);
 

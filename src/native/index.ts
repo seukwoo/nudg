@@ -38,6 +38,8 @@ export interface Bound {
 export interface NudgNative {
   bind(name: string): Bound;
   send(event: string): boolean;
+  /** Supplies a continuous app value, as in the React hook: input("host.volume", 0.7). */
+  input(name: string, value: number): boolean;
   state: string[];
   present: boolean;
 }
@@ -59,6 +61,9 @@ export function useNudg(source: Program | object, options: UseNudgNativeOptions 
   const player = useRef<HeadlessPlayer | null>(null);
   const onExit = useRef(options.onExit);
   onExit.current = options.onExit;
+  // The latest value per app input, replayed into each new player.
+  const inputs = useRef(new Map<string, number>());
+  const reads = useMemo(() => new Set(createRuntime(program).requiredInputs()), [program]);
   const [reduced, setReduced] = useState<boolean | undefined>(options.reducedMotion);
 
   useEffect(() => {
@@ -85,6 +90,7 @@ export function useNudg(source: Program | object, options: UseNudgNativeOptions 
       onFrame: (values) => write(animated, values),
     });
     player.current = p;
+    for (const [name, value] of inputs.current) p.input(name, value);
     return () => {
       p.destroy();
       player.current = null;
@@ -135,7 +141,13 @@ export function useNudg(source: Program | object, options: UseNudgNativeOptions 
     [styles],
   );
   const send = useCallback((event: string) => player.current?.send(event) ?? false, []);
-  return { bind, send, state, present };
+  const input = useCallback((name: string, value: number) => {
+    const p = player.current;
+    const used = p ? p.input(name, value) : reads.has(name) && Number.isFinite(value);
+    if (used) inputs.current.set(name, value);
+    return used;
+  }, [reads]);
+  return { bind, send, input, state, present };
 }
 
 function write(animated: Map<string, Animated.Value | Animated.Color>, values: Record<string, Value>) {

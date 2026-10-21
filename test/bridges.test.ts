@@ -64,3 +64,30 @@ test("MUI Dialog with nudgTransition: springs in, stays mounted through the exit
     close();
   }
 });
+
+test("useNudg input: applies a value given before mount, follows updates, and survives a program change", { skip }, async () => {
+  const { url, close } = await serveIfLocal("test/fixtures/bridges/index.html");
+  const browser = await launchBrowser(chrome!);
+  try {
+    await browser.send("Page.navigate", { url });
+    await waitFor(() => browser.evaluate("window.__app ? 'ready' : ''"), 15_000);
+    const x = () => browser.evaluate(`new DOMMatrix(getComputedStyle(document.getElementById("fill")).transform).m41`);
+    const settle = () => new Promise((r) => setTimeout(r, 100));
+
+    assert.equal(await browser.evaluate("window.__early"), true, "accepted before the player exists");
+    await settle();
+    assert.ok(Math.abs((await x()) - 25) < 0.5, `early value applied: ${await x()}`);
+
+    assert.equal(await browser.evaluate(`window.__app.meter.input("host.level", 0.5)`), true);
+    assert.equal(await browser.evaluate(`window.__app.meter.input("host.unknown", 1)`), false, "names the file doesn't read");
+    await settle();
+    assert.ok(Math.abs((await x()) - 50) < 0.5, `follows updates: ${await x()}`);
+
+    await browser.evaluate("window.__app.setSpan(200)");
+    await settle();
+    assert.ok(Math.abs((await x()) - 100) < 0.5, `kept across the program change: ${await x()}`);
+  } finally {
+    await browser.close();
+    close();
+  }
+});

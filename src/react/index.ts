@@ -39,6 +39,12 @@ export interface Nudg {
   state: string[];
   /** Sends an event now, e.g. send("host.check"). */
   send(event: string): boolean;
+  /**
+   * Supplies a continuous app value the file reads with `map` or `follow`, e.g.
+   * input("host.volume", 0.7). False for names the file doesn't read. The latest value
+   * carries over when the program changes, and one given before mount applies at mount.
+   */
+  input(name: string, value: number): boolean;
   /** False once the component has exited (see `exit`); true again if it is shown again. */
   present: boolean;
 }
@@ -62,6 +68,9 @@ export function useNudg(source: Program | object, options: UseNudgOptions = {}):
   const [present, setPresent] = useState(true);
   const onExit = useRef(options.onExit);
   onExit.current = options.onExit;
+  // The latest value per app input, replayed into each new player.
+  const inputs = useRef(new Map<string, number>());
+  const reads = useMemo(() => new Set(createRuntime(program).requiredInputs()), [program]);
 
   useIsomorphicLayoutEffect(() => {
     const p = play(program, null, {
@@ -79,6 +88,7 @@ export function useNudg(source: Program | object, options: UseNudgOptions = {}):
       },
     });
     player.current = p;
+    for (const [name, value] of inputs.current) p.input(name, value);
     for (const [name, entry] of attached.current) entry.unbind = p.bind(name, entry.element);
     setState(p.runtime.state());
     return () => {
@@ -104,7 +114,13 @@ export function useNudg(source: Program | object, options: UseNudgOptions = {}):
   }, []);
 
   const send = useCallback((event: string) => player.current?.send(event) ?? false, []);
-  return { bind, state, send, present };
+  const input = useCallback((name: string, value: number) => {
+    const p = player.current;
+    const used = p ? p.input(name, value) : reads.has(name) && Number.isFinite(value);
+    if (used) inputs.current.set(name, value);
+    return used;
+  }, [reads]);
+  return { bind, state, send, input, present };
 }
 
 function isProgram(source: Program | object): source is Program {

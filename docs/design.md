@@ -156,6 +156,8 @@ Status: first cut implemented as format 0.4 (`measure` in `values` and `set`, re
 **First cut, in order:** `measure` for `x`/`width` in `set` and `values` with retargeting; `segmented` and a new `tabs` example without hard-coded widths; `naturalHeight` and an `accordion` that opens to its content; then `nearest` over measured targets for a bottom sheet. Each with conformance cases in `derive.py` first.
 
 11. **Native runtimes read compiled programs.** Validation, error messages and hints live in one place, the reference implementation; runtimes on other platforms read the compiled form (`nudg compile`) and are checked by the same conformance suite. A file is validated where it is written (the editor, the AI's loop, CI), not on the device.
+12. **The headless player is the renderer boundary.** `createPlayer` receives events and continuous inputs and emits state and property values through callbacks. DOM, React Native, SwiftUI, Compose, Canvas or another renderer applies those values; nudg keeps the deterministic state and motion math. A renderer may use another scheduling or drawing library, but replacing nudg's motion solver with an external physics engine would make conformance and cross-platform playback impossible.
+13. **Accessibility semantics belong to the host.** A web adapter must not put ARIA into the platform-neutral interaction grammar, just as the core must not encode SwiftUI or Compose accessibility APIs. Recipes state keyboard, focus and semantic responsibilities; accessible components such as Radix or React Aria keep owning them; adapters may observe their state and motion tooling may audit timing, Escape and reduced motion. Promote semantic metadata into runtime files only if external recipe contracts prove insufficient.
 
 ## Proposal: continuous app inputs
 
@@ -189,7 +191,7 @@ These are unresolved design choices. Scheduling and completion status live in th
 
 - Transitions that cross machine levels (to a parent's sibling, into a nested state).
 - A final state in the grammar (`"final": true`, as in statecharts) to say "this state means the component is gone". Today the host names exit states in the adapter options (`exit: "hidden"`), because mounting and unmounting are the host's lifecycle; a file-level marker would let the tools (`observe`, the guide) know it too.
-- Layout: see [the proposal above](#proposal-layout-as-input-format-04). Still open: arithmetic on measurements (`times`, `plus`) and measuring across players.
+- Layout: formats 0.4 and 0.6 implement measurement and arithmetic. Still open: measured endpoints for `follow.range` and `map.from`, and measuring across players.
 - Pattern metadata currently lives in the versioned external recipe catalog. Revisit a file-level role such as `"role": "bottom-sheet"` only if generation or validation needs cannot be met without changing runtime documents.
 - Pattern aliases and locale: how to map common design words such as FAB, snackbar, toast, tabs, tab bar, bottom nav, GNB, LNB and side nav without making the core format depend on one design system's names.
 - Decay (fling, inertia) as a motion of its own, for scroll-like content without snap points. Snapping is covered by `nearest`.
@@ -199,7 +201,11 @@ These are unresolved design choices. Scheduling and completion status live in th
 - Continuous motion while a state is active (a spinner turning, a marquee): a rate-driven value, and how it hands off when the state is left (a rotation at 720° shouldn't unwind to 0). Today this is left to CSS through `data-nudg-state`.
 - `nearest` limited to neighbors of the current state (a carousel that moves one slide per swipe however hard the flick), instead of tuning `momentum` down.
 - Pinch, rotate and other multi-pointer gestures.
-- Continuous app inputs and scroll: see [the proposal above](#proposal-continuous-app-inputs).
+- Continuous app inputs and scroll position are implemented in format 0.5. Still open: portable direction and velocity derivation, including thresholds and how those become deterministic events.
+- Type-safe host contracts: what `nudg generate` should emit for target names, host-callable events, input names and state paths; how generated declarations follow imports without becoming stale; and whether the result wraps a document or augments the existing adapters.
+- SSR initial output: how a server asks a compiled program for initial styles without a clock or platform APIs, how the client hydrates the same values, and how unresolved layout measurements or app inputs use their documented base values without a flash.
+- Lifecycle subscriptions beyond `onState`, `onFrame` and exit-specific `onExit`: define one portable settled/transition-complete semantic for interrupted motion, parallel regions and timers before exposing it in every adapter.
+- DOM CSS-variable output: whether an optional adapter mode should write custom properties so host CSS composes transforms and visual properties, rather than writing final inline properties. This stays an adapter concern and needs real Tailwind/design-system cases before it displaces the direct, low-overhead default.
 - More combinators: `sequence`, `delay`, `stagger`. Format 0.8 deliberately keeps keyframes as inline transient state-entry effects rather than making them a general sequence primitive.
 - Tweaking a named motion at the point of use, for example `{ "use": "snappy", "duration": 0.5 }`.
 - Schemes: which names a scheme may supply or override, how the host passes one in, and how the validator still catches misspelled names. The built-in Apple-like and Material-like libraries.

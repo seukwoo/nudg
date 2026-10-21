@@ -105,10 +105,21 @@ test("programs/ holds every case compiled by the current compiler (run spec/conf
   }
 });
 
+test("measured endpoints are reported as required layout inputs", () => {
+  const c: Case = JSON.parse(readFileSync(new URL("measured-endpoints.json", dir), "utf8"));
+  const { program } = compileCase(c.doc);
+  const runtime = createRuntime(program!);
+  assert.deepEqual(runtime.measurements(), ["action.layout.width"]);
+  assert.deepEqual(runtime.unmeasured(), ["action.layout.width"]);
+  assert.equal(runtime.input("action.layout.width", 80, 0), true);
+  assert.deepEqual(runtime.unmeasured(), []);
+});
+
 test("compiled programs from before 0.6 default measurement arithmetic to identity", () => {
   const c: Case = JSON.parse(readFileSync(new URL("layout-tabs.json", dir), "utf8"));
   const { program } = compileCase(c.doc);
   const json = programToJson(program!) as any;
+  json.nudgProgram = 1;
   delete json.properties.find((p: any) => p.measure).measure.times;
   delete json.properties.find((p: any) => p.measure).measure.plus;
   const stateEntry = json.machine.states.flatMap((s: any) => s.measure).find((m: any) => m);

@@ -20,6 +20,7 @@ The order below follows real app needs. Release numbers and dates are assigned w
 | Continuous app and scroll inputs | Implemented in format 0.5; low-level, DOM and native APIs expose `input`, while the web React hook still needs parity | [Spec](spec.md#additions-in-05-draft), [usage](usage.md#react-native-adapter) |
 | Layout measurement and natural size | Implemented in format 0.4 | [Spec](spec.md#layout-inputs) |
 | Layout arithmetic and relative measured values | Released in package 0.9.0 as format 0.6 | [Spec](spec.md#additions-in-06) |
+| Measured follow/map endpoints | Implemented after 0.9.0 as format 0.9; unreleased; bottom sheet and swipe row no longer duplicate layout bounds | [Spec](spec.md#additions-in-09-draft) |
 | Pausable timers | Released in package 0.9.0 as format 0.7; TypeScript, Swift and Kotlin share conformance | [Spec](spec.md#additions-in-07-draft) |
 | Entry keyframes | Released in package 0.9.0 as format 0.8; TypeScript, Swift and Kotlin share conformance | [Spec](spec.md#additions-in-08) |
 | Decay | Open design work | [Open questions](design.md#open-questions) |
@@ -31,25 +32,25 @@ The original stage numbers remain useful when reading the spec and changelog. Se
 | Stage | Scope | Examples and needs | Status |
 |---|---|---|---|
 | 0 | Single element | Toggle, button, like; states, transitions, springs, DOM adapter | Implemented |
-| 1 | Component | Tabs, accordion, swipe row, carousel, bottom sheet; coordinated targets, gestures, React adapter | Measurement and arithmetic implemented; measured follow/map bounds remain open |
+| 1 | Component | Tabs, accordion, swipe row, carousel, bottom sheet; coordinated targets, gestures, React adapter | Measurement, arithmetic and measured follow/map bounds implemented; decay remains open for free scrolling |
 | 2 | Screens and flows | Onboarding, modals, screen transitions, list/grid coordination; data inputs and machine composition | Planned; nested states and a dialog example already exist |
 | 3 | Native | iOS and Android; React Native, SwiftUI and Compose adapters plus matching runtimes | Initial platform support implemented; 0.9.0 carries format 0.8 across all runtimes |
 | 4 | Standalone content | Physics, canvas, game-like scenes; host rendering and physics integration | Exploratory |
 
-## Now: Deepen Motion From Recipe Evidence
+## Completed: Deepen Motion From Recipe Evidence
 
-Status: the first versioned recipe catalog covers every shipped example. Broad catalog growth and Playsnack workflow validation are deferred while the repeated lower-level gaps are implemented.
+Status: the first repeated lower-level gaps from the versioned recipe catalog are implemented across all runtimes. Broad catalog growth remains deferred.
 
 - Done: format 0.6 layout arithmetic across TypeScript, Swift and Kotlin, with responsive bottom-sheet and swipe-row resting states.
 - Done: format 0.7 pausable timers for toast dismissal and video-control auto-hide.
 - Done: format 0.8 entry keyframes with interruption, relayout and reduced-motion rules shared across all three runtimes; validation feedback now uses them.
-- Next: let measured `follow.range` and `map.from` endpoints remove the remaining duplicated layout constants.
-- Keep examples as executable evidence for recipes, not as a component-count target; do not widen the catalog during this work.
-- Follow with derived scroll direction/velocity and decay only when the earlier primitives are complete.
+- Done: format 0.9 measured `follow.range` and `map.from` endpoints remove the remaining duplicated layout constants from bottom sheet and swipe row.
+- Keep examples as executable evidence for recipes, not as a component-count target; do not widen the catalog without new evidence.
+- Derived scroll direction/velocity and decay remain later motion work; they no longer block the current recipes.
 
-Done when: the current recipes no longer duplicate essential measured resting points or rely on undocumented timer and multi-beat motion workarounds.
+Completion met: the current recipes no longer duplicate essential measured resting points or rely on undocumented timer and multi-beat motion workarounds.
 
-## Next: Type-Safe Host Integration
+## Now: Type-Safe Host Integration
 
 Goal: close the adoption gaps exposed by the existing format without adding component-specific runtime syntax.
 
@@ -78,15 +79,15 @@ Done when: a real playsnack interaction is easier to tune with nudg than by edit
 
 ## Layout-Aware Foundation
 
-Status: format 0.4 measures positions and sizes; format 0.6 adds arithmetic for offsets and fractions. Still ahead: measured bounds for `follow` and measured points for `map`.
+Status: complete for the current component recipes. Format 0.4 measures positions and sizes, format 0.6 adds arithmetic, and format 0.9 reuses measurements in `follow.range` and `map.from`.
 
 Goal: support the component patterns whose motion depends on measured size or position.
 
 - Done: measured tab indicator position and width, accordion natural height, bottom-sheet snap states, and swipe-row resting width.
 - Done: portable fractions and offsets through format 0.6 `times` and `plus`, with cross-runtime conformance.
-- Next within this area: let `follow.range` and `map.from` reuse measured values instead of duplicating their numeric endpoints.
+- Done: measured endpoints let `follow.range` and `map.from` reuse the same layout values as resting states.
 
-Done when: `tab-bar`, `accordion`, `bottom-sheet`, and `swipe-row` no longer need hard-coded pixel guesses for their essential behavior.
+Completion met: `tab-bar`, `accordion`, `bottom-sheet`, and `swipe-row` no longer need hard-coded pixel guesses for their essential behavior.
 
 ## Queue Details
 
@@ -94,7 +95,7 @@ Goal: deepen the interaction and motion language where current recipes demonstra
 
 | Candidate | Evidence in current recipes | Decision gate |
 |---|---|---|
-| Layout arithmetic and relative snap points | Bottom sheet and swipe row resting states depended on constants | Implemented for format 0.6; measured follow/map endpoints remain separate work |
+| Layout arithmetic and relative snap points | Bottom sheet and swipe row resting states, drag bounds and derived opacity depended on constants | Implemented across formats 0.6 and 0.9; current recipe gaps are closed |
 | Pausable timers | Toast dismissal and video control auto-hide pause for focus, hover, scrubbing or app suspension | Implemented for format 0.7 with deterministic remaining-time semantics |
 | Keyframes | Reaction bursts and authored validation shakes need more than one kick | Implemented for format 0.8 as transient entry effects with deterministic interruption and reduced motion |
 | Sequence | Accordion requests already ask for the chevron and panel to move in order | Wait for a second independent recipe before adding syntax |

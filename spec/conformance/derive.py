@@ -437,6 +437,87 @@ def validation_v08_cases():
     })
 
 
+# --- v0.9: measured follow/map endpoints -----------------------------------
+
+MEASURED_ENDPOINTS = {
+    "nudg": "0.9",
+    "targets": ["row", "content", "action"],
+    "values": {
+        "content.x": 0,
+        "action.opacity": {
+            "map": "content.x",
+            "from": [0, {"measure": "action.width", "times": -1}],
+            "to": [0, 1],
+        },
+    },
+    "initial": "closed",
+    "states": {
+        "closed": {"when": {"content.dragstart": "dragging"}},
+        "dragging": {
+            "follow": {
+                "content.x": {
+                    "input": "content.drag.x",
+                    "range": [{"measure": "action.width", "times": -1}, 0],
+                    "overdrag": 0.25,
+                }
+            },
+            "when": {"content.dragend": "closed"},
+        },
+    },
+}
+
+
+def measured_endpoint_cases():
+    steps = [
+        {"t": 0, "expect": {"state": ["closed"], "values": {"content.x": 0, "action.opacity": 0}}},
+        {"t": 0.1, "send": "content.dragstart"},
+        {"t": 0.1, "input": "content.drag.x", "value": -120},
+        # Before layout arrives, the follow is unconstrained and the map holds its base.
+        {"t": 0.1, "expect": {"state": ["dragging"], "values": {"content.x": -120, "action.opacity": 0}}},
+        # The first report activates both measured endpoints immediately.
+        {"t": 0.2, "input": "action.layout.width", "value": 80},
+        {"t": 0.2, "expect": {"values": {"content.x": -90, "action.opacity": 1}}},
+        {"t": 0.3, "input": "content.drag.x", "value": -40},
+        {"t": 0.3, "expect": {"values": {"content.x": -40, "action.opacity": 0.5}}},
+        # Relayout changes the range and map domain without restarting the follow.
+        {"t": 0.4, "input": "action.layout.width", "value": 100},
+        {"t": 0.4, "expect": {"values": {"content.x": -40, "action.opacity": 0.4}}},
+        {"t": 0.5, "input": "content.drag.x", "value": -140},
+        {"t": 0.5, "expect": {"values": {"content.x": -110, "action.opacity": 1}}},
+    ]
+    write("measured-endpoints", {
+        "conformance": "0.9",
+        "name": "Measured endpoints: follow.range and map.from activate on first layout and track relayout",
+        "doc": MEASURED_ENDPOINTS,
+        "steps": steps,
+    })
+
+
+def validation_v09_cases():
+    def doc():
+        return json.loads(json.dumps(MEASURED_ENDPOINTS))
+
+    out = []
+    d = doc(); d["nudg"] = "0.8"
+    out.append(("needs-version", d, [
+        ("needs-version", "/values/action.opacity/from/1"),
+        ("needs-version", "/states/dragging/follow/content.x/range/0"),
+    ]))
+    d = doc(); d["values"]["action.opacity"]["from"][1] = "wide"
+    out.append(("invalid-map-endpoint", d, [("invalid-map", "/values/action.opacity/from/1")]))
+    d = doc(); d["states"]["dragging"]["follow"]["content.x"]["range"][0] = {"measure": "action.y"}
+    out.append(("follow-axis-mismatch", d, [("invalid-measure", "/states/dragging/follow/content.x/range/0/measure")]))
+    d = doc(); d["values"]["action.opacity"]["from"][1] = {"measure": "missing.width"}
+    out.append(("unknown-target", d, [("unknown-target", "/values/action.opacity/from/1/measure")]))
+    d = doc(); d["values"]["action.opacity"]["map"] = "host.progress"; d["values"]["action.opacity"]["from"][1] = {"measure": "action.x"}
+    out.append(("input-position", d, [("invalid-measure", "/values/action.opacity/from/1/measure")]))
+    write("validation-0.9", {
+        "conformance": "0.9",
+        "name": "Validator (0.9): measured follow and map endpoints",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 def machine_cases():
     doc = {
         "nudg": "0.1",
@@ -1480,4 +1561,6 @@ if __name__ == "__main__":
     validation_v07_cases()
     keyframe_cases()
     validation_v08_cases()
+    measured_endpoint_cases()
+    validation_v09_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

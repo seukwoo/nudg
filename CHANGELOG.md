@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Format 0.9: measured follow and map endpoints.** `follow.range` and `map.from` accept the existing `{ "measure", "times", "plus" }` object, so responsive drag bounds and derived feedback share the same layout values as resting states. Unmeasured follows stay unconstrained and maps hold their base until the first complete report; relayout updates endpoints without restarting the gesture. TypeScript, Swift and Kotlin share conformance; bottom sheet and swipe row remove their duplicated layout constants. Schema 0.9.
+- **Compiled program format 2.** Measured endpoints survive `nudg compile`; current TypeScript, Swift and Kotlin decoders continue to accept format 1 programs.
+
 ## 0.9.0
 
 Measured layout arithmetic, pausable state timers and authored entry keyframes deepen the motion language without expanding nudg into a component library. TypeScript, Swift and Kotlin share the same format 0.8 behavior.

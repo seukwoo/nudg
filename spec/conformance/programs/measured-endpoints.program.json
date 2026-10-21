@@ -1,0 +1,99 @@
+{
+ "nudgProgram": 2,
+ "version": "0.9",
+ "targets": [
+  "row",
+  "content",
+  "action"
+ ],
+ "properties": [
+  {
+   "key": "content.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "action.opacity",
+   "kind": "number",
+   "base": [
+    0
+   ],
+   "map": {
+    "source": "content.x",
+    "sourceKind": "property",
+    "from": [
+     0,
+     {
+      "target": "action",
+      "of": "width",
+      "times": -1,
+      "plus": 0
+     }
+    ],
+    "to": [
+     [
+      0
+     ],
+     [
+      1
+     ]
+    ]
+   }
+  }
+ ],
+ "animate": [],
+ "machine": {
+  "kind": "states",
+  "initial": "closed",
+  "states": [
+   {
+    "name": "closed",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [
+     {
+      "event": "content.dragstart",
+      "animate": [],
+      "to": "dragging"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "dragging",
+    "set": [],
+    "measure": [],
+    "follow": [
+     {
+      "key": "content.x",
+      "input": "content.drag.x",
+      "overdrag": 0.25,
+      "range": [
+       {
+        "target": "action",
+        "of": "width",
+        "times": -1,
+        "plus": 0
+       },
+       0
+      ]
+     }
+    ],
+    "enter": [],
+    "when": [
+     {
+      "event": "content.dragend",
+      "animate": [],
+      "to": "closed"
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

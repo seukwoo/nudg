@@ -372,3 +372,10 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Problem:** `nudg critique` reported zero transitions for the video call because its transition walker skipped every machine whose root used parallel regions. The example looked clean only because it had never been played by the critic.
 - **Resolution:** The critic now builds complete state configurations across regions, measures each regional transition once with the other regions present, and retains exact JSON pointers. A test proves two independent regions are both exercised. This also exposed and fixed an imperceptible music-player error-state change.
 - **Lesson:** A clean report is meaningful only when coverage is nonzero. Structural features supported by the runtime must either be exercised by judge tools or called out as unmeasured.
+
+## 2026-10-21: Measured endpoints close the layout loop
+
+### Resting points, drag bounds and derived feedback share one measurement
+- **Problem:** Format 0.6 let bottom-sheet and swipe-row resting states derive from layout, but their drag bounds and opacity map points still copied the same height or width as numbers. A responsive resting point could therefore disagree with the gesture that reached it.
+- **Resolution:** Format 0.9 accepts the existing measure object in `follow.range` and `map.from`. Before layout arrives a follow is unconstrained and a map holds its base; the first complete report activates both, and relayout updates them without restarting the gesture. TypeScript, Swift and Kotlin share the same conformance case, while compiled program format 2 carries measured endpoints and current runtimes still read format 1.
+- **Lesson:** Reuse the smallest existing operator where the semantics already match. Endpoint measurement closes a demonstrated recipe gap without adding expressions or teaching the core about sheets and swipe actions.

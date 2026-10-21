@@ -86,10 +86,8 @@ private fun solveX(x1: Double, x2: Double, u: Double): Double {
     return s
 }
 
-internal fun interpolate(map: PropertyMap, x: Double): List<Double> {
-    val from = map.from
-    val to = map.to
-    val order = if (from.last() > from.first()) from.indices.toList() else from.indices.reversed().toList()
+internal fun interpolate(from: List<Double>, to: List<List<Double>>, x: Double): List<Double> {
+    val order = from.indices.sortedBy { from[it] }
     val first = order.first()
     val last = order.last()
     if (x <= from[first]) return to[first]

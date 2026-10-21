@@ -75,9 +75,8 @@ private func solveX(_ x1: Double, _ x2: Double, _ u: Double) -> Double {
   return s
 }
 
-func interpolate(_ map: PropertyMap, _ x: Double) -> [Double] {
-  let from = map.from, to = map.to
-  let order: [Int] = from[from.count - 1] > from[0] ? Array(0..<from.count) : Array((0..<from.count).reversed())
+func interpolate(_ from: [Double], _ to: [[Double]], _ x: Double) -> [Double] {
+  let order = from.indices.sorted { from[$0] < from[$1] }
   let first = order[0], last = order[order.count - 1]
   if x <= from[first] { return to[first] }
   if x >= from[last] { return to[last] }

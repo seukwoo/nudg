@@ -17,7 +17,7 @@ sealed interface Value {
 private sealed interface Segment {
     data class MotionSeg(val t0: Double, val from: List<Double>, val v0: List<Double>, val to: List<Double>, val motion: Motion?) : Segment
     data class KeyframesSeg(val t0: Double, val from: List<Double>, val to: List<Double>, val frames: List<Keyframe>, val duration: Double, val ease: Ease, val owner: State) : Segment
-    data class FollowSeg(val t0: Double, val anchor: Double, val input0: Double, val follow: Follow, val owner: State) : Segment
+    data class FollowSeg(val key: String, val t0: Double, val anchor: Double, val input0: Double, val follow: Follow, val owner: State) : Segment
 }
 
 private class Pending(var due: Double, val order: Int, val machine: Machine.States, val state: State, val transition: Transition, val pause: List<TimerPause>) {
@@ -58,7 +58,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
             if (prop.map != null) continue
             val to = targets.getValue(key)
             val f = follows[key]
-            segments[key] = if (f != null) followSegment(f, to[0], 0.0) else Segment.MotionSeg(0.0, to, to.map { 0.0 }, to, null)
+            segments[key] = if (f != null) followSegment(key, f, to[0], 0.0) else Segment.MotionSeg(0.0, to, to.map { 0.0 }, to, null)
         }
     }
 
@@ -147,6 +147,25 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         return value * m.times + m.plus
     }
 
+    private fun endpoint(key: String, value: MeasuredEndpoint): Double? = when (value) {
+        is MeasuredEndpoint.Number -> value.value
+        is MeasuredEndpoint.Measured -> measured(key, value.measure)
+    }
+
+    private fun resolvedRange(key: String, range: Pair<MeasuredEndpoint, MeasuredEndpoint>?): Pair<Double, Double>? {
+        if (range == null) return null
+        val a = endpoint(key, range.first) ?: return null
+        val b = endpoint(key, range.second) ?: return null
+        if (a == b) return null
+        return minOf(a, b) to maxOf(a, b)
+    }
+
+    private fun resolvedMap(key: String, map: PropertyMap): List<Double>? {
+        val context = if (map.sourceKind == "property") map.source else key
+        val points = map.from.map { endpoint(context, it) ?: return null }
+        return if (points.toSet().size == points.size) points else null
+    }
+
     private fun clamp(key: String, value: Double): Double {
         val p = program.property(key)
         if (p.min != null && value < p.min) return p.min
@@ -174,7 +193,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         return out
     }
 
-    private fun followSegment(f: Pair<Follow, State>, anchor: Double, t: Double) = Segment.FollowSeg(t, anchor, inputAt(f.first.input, t), f.first, f.second)
+    private fun followSegment(key: String, f: Pair<Follow, State>, anchor: Double, t: Double) = Segment.FollowSeg(key, t, anchor, inputAt(f.first.input, t), f.first, f.second)
 
     // inputs and evaluation
 
@@ -200,7 +219,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
             val raw = seg.anchor + inputAt(seg.follow.input, t) - seg.input0
             var value = raw
             var factor = 1.0
-            seg.follow.range?.let { (lo, hi) ->
+            resolvedRange(seg.key, seg.follow.range)?.let { (lo, hi) ->
                 if (raw < lo) { value = lo - (lo - raw) * seg.follow.overdrag; factor = seg.follow.overdrag }
                 else if (raw > hi) { value = hi + (raw - hi) * seg.follow.overdrag; factor = seg.follow.overdrag }
             }
@@ -317,7 +336,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
             val f = follows[key]
             if (f != null) {
                 val keep = seg is Segment.FollowSeg && seg.owner === f.second && entered.none { it === f.second }
-                if (!keep) segments[key] = followSegment(f, evaluate(seg, t).first[0], t)
+                if (!keep) segments[key] = followSegment(key, f, evaluate(seg, t).first[0], t)
                 continue
             }
             val to = targets.getValue(key)
@@ -395,8 +414,9 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
     private fun valueOf(key: String, t: Double): List<Double> {
         val p = program.property(key)
         p.map?.let {
+            val from = resolvedMap(key, it) ?: return p.base
             val source = if (it.sourceKind == "input") inputAt(it.source, t) else evaluate(segments.getValue(it.source), t).first[0]
-            return interpolate(it, source)
+            return interpolate(from, it.to, source)
         }
         return evaluate(segments.getValue(key), t).first
     }

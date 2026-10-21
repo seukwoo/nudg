@@ -1,0 +1,304 @@
+{
+  "conformance": "0.9",
+  "name": "Validator (0.9): measured follow and map endpoints",
+  "documents": [
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "0.8",
+        "targets": [
+          "row",
+          "content",
+          "action"
+        ],
+        "values": {
+          "content.x": 0,
+          "action.opacity": {
+            "map": "content.x",
+            "from": [
+              0,
+              {
+                "measure": "action.width",
+                "times": -1
+              }
+            ],
+            "to": [
+              0,
+              1
+            ]
+          }
+        },
+        "initial": "closed",
+        "states": {
+          "closed": {
+            "when": {
+              "content.dragstart": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "content.x": {
+                "input": "content.drag.x",
+                "range": [
+                  {
+                    "measure": "action.width",
+                    "times": -1
+                  },
+                  0
+                ],
+                "overdrag": 0.25
+              }
+            },
+            "when": {
+              "content.dragend": "closed"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/values/action.opacity/from/1"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/dragging/follow/content.x/range/0"
+        }
+      ]
+    },
+    {
+      "name": "invalid-map-endpoint",
+      "doc": {
+        "nudg": "0.9",
+        "targets": [
+          "row",
+          "content",
+          "action"
+        ],
+        "values": {
+          "content.x": 0,
+          "action.opacity": {
+            "map": "content.x",
+            "from": [
+              0,
+              "wide"
+            ],
+            "to": [
+              0,
+              1
+            ]
+          }
+        },
+        "initial": "closed",
+        "states": {
+          "closed": {
+            "when": {
+              "content.dragstart": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "content.x": {
+                "input": "content.drag.x",
+                "range": [
+                  {
+                    "measure": "action.width",
+                    "times": -1
+                  },
+                  0
+                ],
+                "overdrag": 0.25
+              }
+            },
+            "when": {
+              "content.dragend": "closed"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-map",
+          "path": "/values/action.opacity/from/1"
+        }
+      ]
+    },
+    {
+      "name": "follow-axis-mismatch",
+      "doc": {
+        "nudg": "0.9",
+        "targets": [
+          "row",
+          "content",
+          "action"
+        ],
+        "values": {
+          "content.x": 0,
+          "action.opacity": {
+            "map": "content.x",
+            "from": [
+              0,
+              {
+                "measure": "action.width",
+                "times": -1
+              }
+            ],
+            "to": [
+              0,
+              1
+            ]
+          }
+        },
+        "initial": "closed",
+        "states": {
+          "closed": {
+            "when": {
+              "content.dragstart": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "content.x": {
+                "input": "content.drag.x",
+                "range": [
+                  {
+                    "measure": "action.y"
+                  },
+                  0
+                ],
+                "overdrag": 0.25
+              }
+            },
+            "when": {
+              "content.dragend": "closed"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-measure",
+          "path": "/states/dragging/follow/content.x/range/0/measure"
+        }
+      ]
+    },
+    {
+      "name": "unknown-target",
+      "doc": {
+        "nudg": "0.9",
+        "targets": [
+          "row",
+          "content",
+          "action"
+        ],
+        "values": {
+          "content.x": 0,
+          "action.opacity": {
+            "map": "content.x",
+            "from": [
+              0,
+              {
+                "measure": "missing.width"
+              }
+            ],
+            "to": [
+              0,
+              1
+            ]
+          }
+        },
+        "initial": "closed",
+        "states": {
+          "closed": {
+            "when": {
+              "content.dragstart": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "content.x": {
+                "input": "content.drag.x",
+                "range": [
+                  {
+                    "measure": "action.width",
+                    "times": -1
+                  },
+                  0
+                ],
+                "overdrag": 0.25
+              }
+            },
+            "when": {
+              "content.dragend": "closed"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-target",
+          "path": "/values/action.opacity/from/1/measure"
+        }
+      ]
+    },
+    {
+      "name": "input-position",
+      "doc": {
+        "nudg": "0.9",
+        "targets": [
+          "row",
+          "content",
+          "action"
+        ],
+        "values": {
+          "content.x": 0,
+          "action.opacity": {
+            "map": "host.progress",
+            "from": [
+              0,
+              {
+                "measure": "action.x"
+              }
+            ],
+            "to": [
+              0,
+              1
+            ]
+          }
+        },
+        "initial": "closed",
+        "states": {
+          "closed": {
+            "when": {
+              "content.dragstart": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "content.x": {
+                "input": "content.drag.x",
+                "range": [
+                  {
+                    "measure": "action.width",
+                    "times": -1
+                  },
+                  0
+                ],
+                "overdrag": 0.25
+              }
+            },
+            "when": {
+              "content.dragend": "closed"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-measure",
+          "path": "/values/action.opacity/from/1/measure"
+        }
+      ]
+    }
+  ]
+}

@@ -56,13 +56,16 @@ export interface KeyframesEffect {
 
 export type EntryEffect = SpringMotion | KeyframesEffect;
 
+/** A numeric point, optionally supplied by the host's layout report (v0.9). */
+export type MeasuredEndpoint = number | Measure;
+
 /** A property computed from another at every moment (v0.2). */
 export interface PropertyMap {
   source: string;
   /** A property in older formats; a host-supplied continuous input in v0.5. */
   sourceKind: "property" | "input";
-  /** Strictly monotonic points on the source. */
-  from: number[];
+  /** Source points; measured endpoints resolve from layout in v0.9. */
+  from: MeasuredEndpoint[];
   to: Channels[];
 }
 
@@ -92,7 +95,7 @@ export interface Property {
 /** A property tracking an input while a state is active (v0.2). */
 export interface Follow {
   input: string;
-  range?: [number, number];
+  range?: [MeasuredEndpoint, MeasuredEndpoint];
   overdrag: number;
 }
 

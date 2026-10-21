@@ -29,12 +29,15 @@ test("MUI Dialog with nudgTransition: springs in, stays mounted through the exit
     await waitFor(() => browser.evaluate("window.__app ? 'ready' : ''"), 15_000);
     const scaleOf = `(() => { const el = document.querySelector(".MuiDialog-container"); if (!el) return null; const m = getComputedStyle(el).transform; const a = m.match(/matrix\\(([^,]+)/); return a ? Number(a[1]) : 1; })()`;
 
-    await browser.evaluate("window.__app.setMui(true)");
+    const opened = await browser.evaluate("(window.__app.setMui(true), performance.now())");
     await new Promise((r) => setTimeout(r, 60));
     const early = await browser.evaluate(scaleOf);
     assert.ok(early !== null && early < 1, `opening starts small: ${early}`);
+    assert.equal(await browser.evaluate("window.__entered ?? null"), null, "onEntered waits for the entrance");
     await new Promise((r) => setTimeout(r, 800));
     assert.ok(Math.abs((await browser.evaluate(scaleOf)) - 1) < 0.005, "at rest open");
+    const entered = (await browser.evaluate("window.__entered")) - opened;
+    assert.ok(entered > 150 && entered < 800, `onEntered once the entrance settled: ${entered} ms`);
 
     await browser.evaluate("window.__app.setMui(false)");
     await new Promise((r) => setTimeout(r, 60));

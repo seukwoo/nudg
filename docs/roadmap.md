@@ -56,7 +56,7 @@ Goal: close the adoption gaps exposed by the existing format without adding comp
 
 - Done (unreleased): `nudg generate` validates the document and its imports and writes a types-only contract module of target names, handled events, continuous inputs and state paths; `--check` fails on missing or stale modules in CI. React, React Native, DOM and headless APIs take it as a type argument. Decisions in [Design](design.md#type-safe-host-contracts).
 - Done (unreleased): format 0.5 `input(name, value)` through the React and React Native hooks. The React Native hook turned out to lack it as well; both keep the latest values across program changes and apply values given before mount.
-- Define one portable settled/transition-complete notification for interrupted motion, parallel regions and timers. Keep `onExit` as the focused unmount API and avoid per-frame React renders.
+- Done (unreleased): one portable settle notification, `onSettle`, in the headless and DOM players, React, React Native, SwiftUI and Compose, with the rest rule specified and covered by conformance. SwiftUI and Compose also gained `exit` / `onExit`. Decisions in [Design](design.md#settle-when-motion-is-over).
 - Define server-rendered initial output for values resolvable without the DOM, plus hydration and base-value behavior for layout measurements and app inputs. This is the accepted path to preventing first-paint flashes.
 - Document the existing published schema, AI guide and installable skill as the official editing contract rather than creating a second prompt format.
 

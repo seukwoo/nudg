@@ -50,6 +50,33 @@ func main() throws {
   try snapshot("2-on", at: 2, expectX: 20)
   print(model.state == ["on"] ? "ok   state is on" : "FAIL state \(model.state)")
   if model.state != ["on"] { failures += 1 }
+
+  // Lifecycle, by the same rules as every adapter: one settle per rest, exit once settled.
+  var settles: [[String]] = []
+  var exits = 0
+  now = Date(timeIntervalSince1970: 0)
+  let life = NudgModel(program, reducedMotion: false, exit: ["off"], onSettle: { settles.append($0) }, onExit: { exits += 1 }, clock: { now })
+  func frames(until seconds: Double) {
+    while now.timeIntervalSince1970 < seconds {
+      now = now.addingTimeInterval(1.0 / 60)
+      _ = life.values(at: now)
+    }
+    RunLoop.main.run(until: Date().addingTimeInterval(0.05)) // what frames report is published after them
+  }
+  life.send("track.tap")
+  frames(until: 0.05)
+  life.send("track.tap") // interrupted: only the rest after it is reported
+  frames(until: 0.1)
+  life.send("track.tap")
+  frames(until: 2)
+  let settledOnce = settles == [["on"]] && exits == 0 && life.present
+  print(settledOnce ? "ok   one settle after an interrupted toggle" : "FAIL settles \(settles), exits \(exits)")
+  if !settledOnce { failures += 1 }
+  life.send("track.tap")
+  frames(until: 4)
+  let exited = settles == [["on"], ["off"]] && exits == 1 && !life.present
+  print(exited ? "ok   exit once the off state settled" : "FAIL settles \(settles), exits \(exits), present \(life.present)")
+  if !exited { failures += 1 }
   exit(failures == 0 ? 0 : 1)
 }
 

@@ -48,6 +48,8 @@ fun main(args: Array<String>) {
                         if (abs(a - expected as Double) > 1e-6) problems.add("$key at ${t}s: expected $expected, got $a")
                     }
                 }
+                (expect["resting"] as? Boolean)?.let { if (rt.resting(t) != it) problems.add("resting at ${t}s: expected $it") }
+                (expect["settled"] as? Boolean)?.let { if (rt.settled(t) != it) problems.add("settled at ${t}s: expected $it") }
             }
             if (problems.isEmpty()) { passed++; println("ok    $name") } else { failures.add(name); println("FAIL  $name\n      " + problems.take(5).joinToString("\n      ")) }
         } catch (e: Exception) {
@@ -67,6 +69,28 @@ fun main(args: Array<String>) {
         rt.sample(t + 2)
         if (rt.state() == listOf("on") && log == listOf("track.down", "track.dragstart", "track.up", "track.dragend")) { passed++; println("ok    pointer: a 30-unit drag turns the drag toggle on, with no tap") }
         else { failures.add("pointer"); println("FAIL  pointer: state ${rt.state()}, events $log") }
+    }
+    // Lifecycle, by the same rules as every adapter: one settle per rest, exit once settled.
+    run {
+        val rt = Runtime(Program.decode(File(dir, "programs/toggle-tap.program.json").readText()))
+        val life = dev.nudg.Lifecycle(rt, exit = listOf("off"))
+        val settles = ArrayList<List<String>>()
+        var exits = 0
+        life.onSettle = { settles.add(it) }
+        life.onExit = { exits++ }
+        var t = 0.0
+        fun frames(until: Double) { while (t < until) { t += 1.0 / 60; rt.sample(t); life.frame(t) } }
+        rt.send("track.tap", t); life.changed()
+        frames(0.05)
+        rt.send("track.tap", t); life.changed() // interrupted: only the rest after it is reported
+        frames(0.1)
+        rt.send("track.tap", t); life.changed()
+        frames(2.0)
+        val once = settles == listOf(listOf("on")) && exits == 0 && life.present
+        rt.send("track.tap", t); life.changed()
+        frames(4.0)
+        if (once && settles == listOf(listOf("on"), listOf("off")) && exits == 1 && !life.present) { passed++; println("ok    lifecycle: one settle per rest, exit once the exit state settled") }
+        else { failures.add("lifecycle"); println("FAIL  lifecycle: settles $settles, exits $exits, present ${life.present}") }
     }
 
     println("\n$passed passed, ${failures.size} failed")

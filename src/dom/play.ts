@@ -3,6 +3,7 @@
 // in the core.
 
 import { compile } from "../core/compile.ts";
+import { createLifecycle } from "../core/lifecycle.ts";
 import { createRuntime, type Runtime, type Value } from "../core/runtime.ts";
 import type { Machine, NudgContract, Program, StateName } from "../core/types.ts";
 
@@ -32,6 +33,14 @@ export interface PlayOptions<C extends NudgContract = NudgContract> {
   exit?: StateName<C> | StateName<C>[];
   /** Called once each time the component has fully exited (see `exit`). */
   onExit?: () => void;
+  /**
+   * Called with the active states each time every value has come to rest after something
+   * moved or the state changed: a dialog finished opening, a sheet snapped, a toast is
+   * fully shown. Once per rest; an interrupted motion reports only the rest after the
+   * interruption. Pending timers don't delay it (a toast's dismiss timer), and values that
+   * follow or are mapped from an input count as at rest, so a drag doesn't report.
+   */
+  onSettle?: (state: C["states"][]) => void;
   /**
    * Called for every event and input sample the adapter itself produces from the DOM
    * (not for `send` and `input` calls), with the player's time: to mirror one player's
@@ -120,7 +129,6 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   if (!(speed > 0)) throw new RangeError("`speed` must be greater than 0.");
   let manualTime = 0;
   let frame = 0;
-  let lastState = runtime.state().join("\n");
   const now = () => (manual ? manualTime : ((performance.now() - start) / 1000) * speed);
 
   // Which properties each target has, so we only write the styles the file owns.
@@ -151,25 +159,16 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     }
   }
 
-  // Presence: the host keeps the element until the exit motion has played.
-  const exits = new Set(typeof options.exit === "string" ? [options.exit] : (options.exit ?? []));
-  const inExit = () => runtime.state().some((path) => exits.has(path) || exits.has(path.split("/").pop()!));
-  let present = true;
-  // Only an exit entered from somewhere else counts; mounting in "hidden" hasn't exited anything.
-  let armed = exits.size > 0 && !inExit();
-  function syncPresence(t: number) {
-    if (exits.size === 0) return;
-    if (!inExit()) {
-      armed = true;
-      present = true;
-      return;
-    }
-    if (armed && present && runtime.settled(t)) {
-      present = false;
-      armed = false;
-      options.onExit?.();
-    }
-  }
+  // State changes, settle and presence: the host keeps the element until the exit motion has played.
+  const life = createLifecycle(runtime, {
+    exit: options.exit,
+    onState: (state) => {
+      for (const els of elements.values()) reflectState(els);
+      options.onState?.(state);
+    },
+    onSettle: options.onSettle,
+    onExit: options.onExit,
+  });
 
   let lastValues: Record<string, Value> = {};
   function apply(values: Record<string, Value>) {
@@ -182,9 +181,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     frame = 0;
     const t = now();
     apply(runtime.sample(t));
-    syncState(); // timers may have fired while time advanced
-    if (!runtime.settled(t)) frame = requestAnimationFrame(tick);
-    else syncPresence(t);
+    if (life.frame(t)) frame = requestAnimationFrame(tick);
   }
 
   // The active states, on every bound element, so CSS can style by state:
@@ -194,21 +191,10 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     for (const e of els) e.setAttribute("data-nudg-state", value);
   }
 
-  function syncState() {
-    const state = runtime.state();
-    if (state.join("\n") !== lastState) {
-      lastState = state.join("\n");
-      for (const els of elements.values()) reflectState(els);
-      options.onState?.(state);
-    }
-  }
-
   function changed() {
     if (manual) apply(runtime.sample(manualTime));
     else if (!frame) frame = requestAnimationFrame(tick);
-    syncState();
-    // An exit with nothing left to move is complete at once; otherwise the ticks finish it.
-    syncPresence(now());
+    life.changed();
   }
 
   let destroyed = false;
@@ -433,15 +419,14 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     bind,
     values: () => lastValues,
     present() {
-      return present;
+      return life.present();
     },
     now,
     render(t) {
       if (!manual) throw new Error("render(t) needs { clock: \"manual\" }.");
       manualTime = t;
       apply(runtime.sample(t));
-      syncState();
-      if (runtime.settled(t)) syncPresence(t);
+      life.frame(t);
     },
     destroy() {
       destroyed = true;

@@ -207,6 +207,17 @@ The decisions:
 - **Names come from the compiled program.** Imports are resolved by the compiler, so one interface covers a file and everything it imports. Events are the ones the file handles (`when` keys and timer pause reasons); inputs are the ones it reads with `map` or `follow`, without layout measurements, which the adapters report; states are every path, as `state` reports them and the `state` option accepts (`playback/paused`). `exit` also accepts a path's last name, as the adapters do.
 - **Staleness is checked by regenerating, not by hash.** `nudg generate --check` writes nothing and fails when a module is missing or differs from what would be generated. The design discussion first proposed embedding a hash of the source; comparing the output is stricter where it matters (a generator change is caught) and looser where it doesn't (reformatting the JSON without changing a name is not stale). CI runs `--check`; the module is committed beside its file.
 
+## Settle: when motion is over
+
+Status: implemented as `onSettle` in every adapter, with the rest rule in [the spec](spec.md#rest-and-lifecycle).
+
+Hosts asked "is it done?" in several ways: React's transition bridge called a library's `onEntered` on the next frame because nothing better existed, and native adapters had no exit at all. One notification now answers it everywhere. The decisions:
+
+- **Motion only, not timers.** A settle means every value is at rest, whatever timers are pending. A toast settles once shown while its dismiss timer runs, and again once hidden; video controls settle while their auto-hide timer counts. The existing `settled` (no unpaused timer either) keeps deciding presence and when a real-time host may stop its frames.
+- **One per rest, for the whole player.** Interrupted motion reports only the rest after the interruption; there is no "cancelled" callback, because the active states already say where it ended. Parallel regions don't report separately; `runtime.settled(t, property)` remains for one property.
+- **Followed and input-mapped values are at rest.** A drag that follows the finger and a meter mapped from a level never report; the release that springs to a state does.
+- **The threshold is part of the spec.** Rest used to be advisory, so runtimes could disagree on the frame motion ended. The spring-energy threshold is now specified and covered by a conformance case, and each language has the same small lifecycle helper that adapters drive.
+
 ## Open questions
 
 These are unresolved design choices. Scheduling and completion status live in the [roadmap](roadmap.md); examples of possible syntax below are proposals.
@@ -225,7 +236,6 @@ These are unresolved design choices. Scheduling and completion status live in th
 - Pinch, rotate and other multi-pointer gestures.
 - Continuous app inputs and scroll position are implemented in format 0.5. Still open: portable direction and velocity derivation, including thresholds and how those become deterministic events.
 - SSR initial output: how a server asks a compiled program for initial styles without a clock or platform APIs, how the client hydrates the same values, and how unresolved layout measurements or app inputs use their documented base values without a flash.
-- Lifecycle subscriptions beyond `onState`, `onFrame` and exit-specific `onExit`: define one portable settled/transition-complete semantic for interrupted motion, parallel regions and timers before exposing it in every adapter.
 - DOM CSS-variable output: whether an optional adapter mode should write custom properties so host CSS composes transforms and visual properties, rather than writing final inline properties. This stays an adapter concern and needs real Tailwind/design-system cases before it displaces the direct, low-overhead default.
 - More combinators: `sequence`, `delay`, `stagger`. Format 0.8 deliberately keeps keyframes as inline transient state-entry effects rather than making them a general sequence primitive.
 - Tweaking a named motion at the point of use, for example `{ "use": "snappy", "duration": 0.5 }`.

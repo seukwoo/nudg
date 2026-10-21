@@ -1536,6 +1536,79 @@ def validation_v07_cases():
     })
 
 
+# --- rest: when nothing moves (lifecycle) -----------------------------------
+
+REST_NUMBER = 1e-3
+
+
+def rest_time(prop, motion, start, limit=5.0, step=1e-3):
+    """When a spring comes to rest: its remaining amplitude, position and velocity
+    together (sqrt(x^2 + v^2 m/k)), drops below the rest threshold. Energy never grows."""
+    _, k, _, m = motion
+    t = start
+    while t < limit:
+        t += step
+        prop.advance(t)
+        if math.hypot(prop.pos[0] - prop.target[0], prop.vel[0] * math.sqrt(m / k)) < REST_NUMBER:
+            return t
+    raise ValueError("never rests")
+
+
+def rest_cases():
+    doc = {
+        "nudg": "0.7",
+        "targets": ["toast"],
+        "values": {"toast.y": 12, "toast.opacity": 0, "toast.scale": {"map": "host.level", "from": [0, 1], "to": [1, 1.2]}},
+        "animate": {"toast.y": spring_json(0.4, 0.2), "toast.opacity": {"tween": {"duration": 0.2, "ease": "linear"}}},
+        "initial": "hidden",
+        "when": {"host.show": "shown"},
+        "states": {
+            "hidden": {},
+            "shown": {
+                "set": {"toast.y": 0, "toast.opacity": 1},
+                "when": {"after:2s": {"to": "hidden", "pause": [{"on": "toast.hoverstart", "off": "toast.hoverend"}]}},
+            },
+        },
+    }
+    s = spring(0.4, 0.2)
+    y = Prop(12)
+    y.retarget(0, s, 0.1)
+    shown = rest_time(y, s, 0.1)
+    assert shown + 0.05 < 1.05, shown
+    # Hover pauses the timer from 1.1 to 1.3, so it fires at 0.1 + 2 + 0.2 = 2.3.
+    y = Prop(0)
+    y.retarget(12, s, 2.3)
+    hidden = rest_time(y, s, 2.3)
+    ms = lambda t: round(t, 3)
+    steps = [
+        {"t": 0, "expect": {"resting": True, "settled": True}},
+        {"t": 0.1, "send": "host.show"},
+        {"t": 0.2, "expect": {"state": ["shown"], "resting": False, "settled": False}},
+        # A tween rests exactly at its duration; the spring is still moving.
+        {"t": 0.31, "expect": {"values": {"toast.opacity": 1}, "resting": False}},
+        {"t": ms(shown - 0.05), "expect": {"resting": False}},
+        # At rest while the dismiss timer runs: resting, but not settled.
+        {"t": ms(shown + 0.05), "expect": {"resting": True, "settled": False}},
+        # A value mapped from an app input jumps with it; that is never motion.
+        {"t": 1.05, "input": "host.level", "value": 1},
+        {"t": 1.05, "expect": {"values": {"toast.scale": 1.2}, "resting": True}},
+        # A paused timer doesn't keep the runtime awake.
+        {"t": 1.1, "send": "toast.hoverstart"},
+        {"t": 1.2, "expect": {"resting": True, "settled": True}},
+        {"t": 1.3, "send": "toast.hoverend"},
+        {"t": 1.4, "expect": {"resting": True, "settled": False}},
+        {"t": 2.35, "expect": {"state": ["hidden"], "resting": False, "settled": False}},
+        {"t": ms(hidden - 0.05), "expect": {"resting": False}},
+        {"t": ms(hidden + 0.05), "expect": {"resting": True, "settled": True}},
+    ]
+    write("rest", {
+        "conformance": "0.7",
+        "name": "Rest: springs rest when their remaining amplitude is below 0.001, tweens at their duration; inputs never move; resting ignores timers, settled waits for unpaused ones",
+        "doc": doc,
+        "steps": steps,
+    })
+
+
 if __name__ == "__main__":
     toggle_cases()
     spring_form_cases()
@@ -1563,4 +1636,5 @@ if __name__ == "__main__":
     validation_v08_cases()
     measured_endpoint_cases()
     validation_v09_cases()
+    rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

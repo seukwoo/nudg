@@ -421,6 +421,27 @@ Measured endpoints in `follow.range` and `map.from`. A file that uses them decla
 
 The conformance cases `measured-endpoints.json` and `validation-0.9.json` define the behavior across TypeScript, Swift and Kotlin.
 
+## Rest and lifecycle
+
+Hosts need to know when motion is over: to move focus once a dialog has opened, to tell a component library its transition has entered, to remove an element once its exit has played. These rules make that moment the same in every runtime and adapter. They add no file syntax.
+
+**Rest.** A property is at rest at time `t` when:
+
+- it is mapped from a continuous input, or it follows an input in an active state (it moves only when the input does);
+- it is mapped from another property that is at rest;
+- its last change was a tween or keyframes whose duration has elapsed, or a jump with no motion;
+- or its last change was a spring whose remaining amplitude, `sqrt((x - target)^2 + v^2 * m / k)` per channel, is below 0.001 (numbers, in logical units) or 0.0001 (colors, per OKLab channel). This is the spring's energy, which never grows, so once a property rests it stays at rest until its target changes.
+
+The runtime is **resting** when every property is at rest, whatever timers are pending, and **settled** when it is resting and no unpaused timer is pending (see pausable timers in 0.7). Values are never snapped at rest; the thresholds only decide when motion is over.
+
+**Lifecycle notifications.** Adapters report, by the same rules:
+
+- **State:** the active states, after an event or a timer changes them.
+- **Settle:** the active states, once each time the runtime is resting after something moved or the state changed. An interrupted motion reports only the rest that follows the interruption. A state change that moves nothing settles at the next frame. An event nobody handles, and input samples that only move followed or mapped values, report nothing. Pending timers don't delay a settle: a toast settles once shown while its dismiss timer runs, and again once hidden.
+- **Exit:** once the machine has entered a host-named exit state from another state and the runtime is settled. Mounting in an exit state is not an exit.
+
+Settle is reported from the frame loop, never from inside the call that sent the event. The conformance case `rest.json` defines rest across TypeScript, Swift and Kotlin; each adapter's tests check the notifications.
+
 ## Compiled programs (for native runtimes)
 
 `nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 2`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Format 2 carries measured endpoints; current runtimes continue to read format 1 programs. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms.

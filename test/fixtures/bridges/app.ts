@@ -41,7 +41,7 @@ function App() {
   return h("div", null,
     h(Level, { input: meter.input }),
     h("div", { id: "fill", ref: meter.bind("fill"), style: { width: 10, height: 10, background: "#000" } }),
-    h(Dialog, { open: mui, onClose: () => setMui(false), slots: { transition: muiTransition } }, h("div", { id: "mui-body", style: { padding: 24 } }, "MUI dialog")),
+    h(Dialog, { open: mui, onClose: () => setMui(false), slots: { transition: muiTransition }, slotProps: { transition: { onEntered: () => ((window as any).__entered = performance.now()) } } }, h("div", { id: "mui-body", style: { padding: 24 } }, "MUI dialog")),
     h(RadixDialog.Root, { open: radix, onOpenChange: setRadix },
       h(RadixDialog.Portal, { forceMount: true },
         h(RadixDialog.Content, { forceMount: true, ref: content.bind("content"), id: "radix-content", "aria-describedby": undefined, style: { position: "fixed", top: 40, left: 40, padding: 24, background: "#fff", visibility: content.present ? undefined : "hidden" } },

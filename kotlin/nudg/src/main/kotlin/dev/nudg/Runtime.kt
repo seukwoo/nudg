@@ -488,20 +488,32 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         advanceTo(t)
         if (property == null && pending.any { it.pausedAt == null }) return false
         val keys = property?.let { listOf(it) } ?: program.properties.map { it.first }
-        return keys.all { key ->
-            if (program.property(key).map?.sourceKind == "input") return@all true
-            val source = program.property(key).map?.source ?: key
-            val seg = segments.getValue(source)
-            if (seg is Segment.KeyframesSeg) return@all t - seg.t0 >= seg.duration
-            if (seg !is Segment.MotionSeg || seg.motion == null) return@all true
-            when (val m = seg.motion) {
-                is Motion.Tween -> t - seg.t0 >= m.duration
-                is Motion.Spring -> {
-                    val (pos, vel) = evaluateMotion(seg, t)
-                    val eps = if (program.property(source).kind == PropertyKind.COLOR) REST_COLOR else REST_NUMBER
-                    val inertia = m.mass / m.stiffness
-                    pos.indices.all { hypot(pos[it] - seg.to[it], vel[it] * sqrt(inertia)) < eps }
-                }
+        return keys.all { atRest(it, t) }
+    }
+
+    /** True when every property has come to rest, whatever timers are pending: nothing is moving. */
+    fun resting(t: Double): Boolean {
+        advanceTo(t)
+        return program.properties.all { atRest(it.first, t) }
+    }
+
+    /** The latest time the runtime has been advanced to by an event, input or sample. */
+    fun time(): Double = now
+
+    /** Whether one property has come to rest at [t]; see the spec's rest rule. */
+    private fun atRest(key: String, t: Double): Boolean {
+        if (program.property(key).map?.sourceKind == "input") return true
+        val source = program.property(key).map?.source ?: key
+        val seg = segments.getValue(source)
+        if (seg is Segment.KeyframesSeg) return t - seg.t0 >= seg.duration
+        if (seg !is Segment.MotionSeg || seg.motion == null) return true
+        return when (val m = seg.motion) {
+            is Motion.Tween -> t - seg.t0 >= m.duration
+            is Motion.Spring -> {
+                val (pos, vel) = evaluateMotion(seg, t)
+                val eps = if (program.property(source).kind == PropertyKind.COLOR) REST_COLOR else REST_NUMBER
+                val inertia = m.mass / m.stiffness
+                pos.indices.all { hypot(pos[it] - seg.to[it], vel[it] * sqrt(inertia)) < eps }
             }
         }
     }

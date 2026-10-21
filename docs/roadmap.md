@@ -64,6 +64,17 @@ Goal: close the adoption gaps exposed by the existing format without adding comp
 
 Done when: a TypeScript host cannot misspell its generated target/event/input names, React can supply dynamic values without dropping to the DOM player, lifecycle completion means the same thing across adapters, and a server-rendered initial view hydrates without a visible jump.
 
+## Now: Recipe Coverage for Common App Patterns
+
+Goal: let an AI answer the common UI words of app development with a standard contract, and let the gaps decide the next motion primitive. The 22 recipes cover single components and media well; navigation, lists, loading, menus and form controls are missing.
+
+- Add recipes the current format already expresses, each with a validated starter and an example: text field (focus, floating label, error), checkbox, radio group, chip / filter selection, rating, badge count bump, page indicator, stepper, expanding search bar.
+- Register the patterns the format can't express yet as recipe contracts with `knownGaps` and no starter, so an AI gives a standard answer ("the host does this part") instead of improvising: dropdown / popover menu and FAB speed dial (sequence, stagger), list insert / remove / reorder (collection coordination), spinner, skeleton shimmer and typing indicator (continuous motion), hide-on-scroll navigation (scroll direction), stack push / pop, full-screen modal, shared-element and drawer transitions (screen composition), pinch-zoom image viewer (multi-pointer), free-scrolling carousel (decay).
+- Decide whether the recipe schema needs a field for gap-only contracts (a missing starter) and how `nudg recipe` presents them.
+- Count gaps across the catalog and promote the most repeated one into the queue below; the expectation, to be checked, is `sequence` / `stagger`.
+
+Done when: the catalog names every pattern above, each either with a validated starter or with explicit gaps, and the queue's next primitive is chosen from the gap counts.
+
 ## Deferred: Prove the Workflow in Playsnack
 
 Goal: find the cases where nudg is plainly better than ad hoc code or a one-line animation helper.

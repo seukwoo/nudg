@@ -70,7 +70,7 @@
       "inputs": ["content.drag.x"],
       "hostResponsibilities": ["Perform the action, remove the row when committed, and keep only the intended row open."],
       "motion": ["Follow a resisted drag, reveal the action through a map, and snap to closed or open."],
-      "gaps": [{ "capability": "measured follow bounds", "status": "missing", "need": "The resting point uses measured action width, but drag bounds and opacity map points still duplicate that width." }]
+      "gaps": []
     },
     {
       "id": "accordion",
@@ -154,7 +154,7 @@
       "inputs": ["sheet.drag.y"],
       "hostResponsibilities": ["Manage focus, modal semantics, safe areas, scroll handoff, and viewport measurements."],
       "motion": ["Follow a resisted vertical drag, map scrim opacity, and spring to the nearest snap point."],
-      "gaps": [{ "capability": "measured follow bounds", "status": "missing", "need": "Snap states use measured height, but drag bounds and scrim map points still duplicate the closed and full positions." }]
+      "gaps": []
     },
     {
       "id": "toast",

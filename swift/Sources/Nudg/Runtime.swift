@@ -16,7 +16,7 @@ public enum RuntimeError: Error { case timeWentBackwards(Double, Double), badSta
 private enum Segment {
   case motion(t0: Double, from: [Double], v0: [Double], to: [Double], motion: Motion?)
   case keyframes(t0: Double, from: [Double], to: [Double], frames: [Keyframe], duration: Double, ease: Ease, owner: State)
-  case follow(t0: Double, anchor: Double, input0: Double, follow: Follow, owner: State)
+  case follow(key: String, t0: Double, anchor: Double, input0: Double, follow: Follow, owner: State)
   var to: [Double]? {
     switch self {
     case let .motion(_, _, _, to, _), let .keyframes(_, _, to, _, _, _, _): return to
@@ -70,7 +70,7 @@ public final class Runtime {
     let follows = activeFollows(active)
     for (key, prop) in program.properties where prop.map == nil {
       let to = targets[key]!
-      if let f = follows[key] { segments[key] = followSegment(f, to[0], 0) }
+      if let f = follows[key] { segments[key] = followSegment(key, f, to[0], 0) }
       else { segments[key] = .motion(t0: 0, from: to, v0: to.map { _ in 0 }, to: to, motion: nil) }
     }
   }
@@ -163,6 +163,26 @@ public final class Runtime {
     return value * m.times + m.plus
   }
 
+  private func endpoint(_ key: String, _ value: MeasuredEndpoint) -> Double? {
+    switch value {
+    case let .number(number): return number
+    case let .measure(measure): return measured(key, measure)
+    }
+  }
+
+  private func resolvedRange(_ key: String, _ range: (MeasuredEndpoint, MeasuredEndpoint)?) -> (Double, Double)? {
+    guard let range, let a = endpoint(key, range.0), let b = endpoint(key, range.1), a != b else { return nil }
+    return (min(a, b), max(a, b))
+  }
+
+  private func resolvedMap(_ key: String, _ map: PropertyMap) -> [Double]? {
+    let context = map.sourceKind == "property" ? map.source : key
+    let points = map.from.map { endpoint(context, $0) }
+    if points.contains(where: { $0 == nil }) { return nil }
+    let values = points.map { $0! }
+    return Set(values).count == values.count ? values : nil
+  }
+
   private func clamp(_ key: String, _ value: Double) -> Double {
     let prop = program.property(key)!
     if let lo = prop.min, value < lo { return lo }
@@ -189,8 +209,8 @@ public final class Runtime {
     return out
   }
 
-  private func followSegment(_ f: (follow: Follow, owner: State), _ anchor: Double, _ t: Double) -> Segment {
-    .follow(t0: t, anchor: anchor, input0: inputAt(f.follow.input, t), follow: f.follow, owner: f.owner)
+  private func followSegment(_ key: String, _ f: (follow: Follow, owner: State), _ anchor: Double, _ t: Double) -> Segment {
+    .follow(key: key, t0: t, anchor: anchor, input0: inputAt(f.follow.input, t), follow: f.follow, owner: f.owner)
   }
 
   // MARK: inputs and evaluation
@@ -213,10 +233,10 @@ public final class Runtime {
 
   private func evaluate(_ segment: Segment, _ t: Double) -> ([Double], [Double]) {
     switch segment {
-    case let .follow(_, anchor, input0, follow, _):
+    case let .follow(key, _, anchor, input0, follow, _):
       let raw = anchor + inputAt(follow.input, t) - input0
       var value = raw, factor = 1.0
-      if let (lo, hi) = follow.range {
+      if let (lo, hi) = resolvedRange(key, follow.range) {
         if raw < lo { value = lo - (lo - raw) * follow.overdrag; factor = follow.overdrag }
         else if raw > hi { value = hi + (raw - hi) * follow.overdrag; factor = follow.overdrag }
       }
@@ -327,8 +347,8 @@ public final class Runtime {
       let segment = segments[key]!
       if let f = follows[key] {
         var restart = true
-        if case let .follow(_, _, _, _, owner) = segment, owner === f.owner, !entered.contains(where: { $0 === f.owner }) { restart = false }
-        if restart { segments[key] = followSegment(f, evaluate(segment, t).0[0], t) }
+        if case let .follow(_, _, _, _, _, owner) = segment, owner === f.owner, !entered.contains(where: { $0 === f.owner }) { restart = false }
+        if restart { segments[key] = followSegment(key, f, evaluate(segment, t).0[0], t) }
         continue
       }
       let to = targets[key]!
@@ -409,8 +429,9 @@ public final class Runtime {
   private func valueOf(_ key: String, _ t: Double) -> [Double] {
     let prop = program.property(key)!
     if let map = prop.map {
+      guard let from = resolvedMap(key, map) else { return prop.base }
       let source = map.sourceKind == "input" ? inputAt(map.source, t) : evaluate(segments[map.source]!, t).0[0]
-      return interpolate(map, source)
+      return interpolate(from, map.to, source)
     }
     return evaluate(segments[key]!, t).0
   }

@@ -1,0 +1,146 @@
+{
+  "conformance": "0.9",
+  "name": "Measured endpoints: follow.range and map.from activate on first layout and track relayout",
+  "doc": {
+    "nudg": "0.9",
+    "targets": [
+      "row",
+      "content",
+      "action"
+    ],
+    "values": {
+      "content.x": 0,
+      "action.opacity": {
+        "map": "content.x",
+        "from": [
+          0,
+          {
+            "measure": "action.width",
+            "times": -1
+          }
+        ],
+        "to": [
+          0,
+          1
+        ]
+      }
+    },
+    "initial": "closed",
+    "states": {
+      "closed": {
+        "when": {
+          "content.dragstart": "dragging"
+        }
+      },
+      "dragging": {
+        "follow": {
+          "content.x": {
+            "input": "content.drag.x",
+            "range": [
+              {
+                "measure": "action.width",
+                "times": -1
+              },
+              0
+            ],
+            "overdrag": 0.25
+          }
+        },
+        "when": {
+          "content.dragend": "closed"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "closed"
+        ],
+        "values": {
+          "content.x": 0,
+          "action.opacity": 0
+        }
+      }
+    },
+    {
+      "t": 0.1,
+      "send": "content.dragstart"
+    },
+    {
+      "t": 0.1,
+      "input": "content.drag.x",
+      "value": -120
+    },
+    {
+      "t": 0.1,
+      "expect": {
+        "state": [
+          "dragging"
+        ],
+        "values": {
+          "content.x": -120,
+          "action.opacity": 0
+        }
+      }
+    },
+    {
+      "t": 0.2,
+      "input": "action.layout.width",
+      "value": 80
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "values": {
+          "content.x": -90,
+          "action.opacity": 1
+        }
+      }
+    },
+    {
+      "t": 0.3,
+      "input": "content.drag.x",
+      "value": -40
+    },
+    {
+      "t": 0.3,
+      "expect": {
+        "values": {
+          "content.x": -40,
+          "action.opacity": 0.5
+        }
+      }
+    },
+    {
+      "t": 0.4,
+      "input": "action.layout.width",
+      "value": 100
+    },
+    {
+      "t": 0.4,
+      "expect": {
+        "values": {
+          "content.x": -40,
+          "action.opacity": 0.4
+        }
+      }
+    },
+    {
+      "t": 0.5,
+      "input": "content.drag.x",
+      "value": -140
+    },
+    {
+      "t": 0.5,
+      "expect": {
+        "values": {
+          "content.x": -110,
+          "action.opacity": 1
+        }
+      }
+    }
+  ]
+}

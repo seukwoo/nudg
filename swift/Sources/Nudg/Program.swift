@@ -1,4 +1,4 @@
-// A compiled nudg program, read from the JSON that `nudg compile` writes (format 1).
+// A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 and 2).
 // Everything is already validated and resolved; this only decodes it.
 
 import Foundation
@@ -32,10 +32,15 @@ public struct Measure {
   public let plus: Double
 }
 
+public enum MeasuredEndpoint {
+  case number(Double)
+  case measure(Measure)
+}
+
 public struct PropertyMap {
   public let source: String
   public let sourceKind: String
-  public let from: [Double]
+  public let from: [MeasuredEndpoint]
   public let to: [[Double]]
 }
 
@@ -50,7 +55,7 @@ public struct Property {
 
 public struct Follow {
   public let input: String
-  public let range: (Double, Double)?
+  public let range: (MeasuredEndpoint, MeasuredEndpoint)?
   public let overdrag: Double
 }
 
@@ -123,14 +128,14 @@ public struct Program {
 
   /** Reads `nudg compile` output. */
   public static func decode(_ data: Data) throws -> Program {
-    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], (j["nudgProgram"] as? Int) == 1 else {
-      throw DecodeError.notAProgram("Not a compiled nudg program (format 1). Compile it with `nudg compile`.")
+    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, format == 1 || format == 2 else {
+      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 or 2). Compile it with `nudg compile`.")
     }
     let properties: [(String, Property)] = (j["properties"] as! [[String: Any]]).map { p in
       (p["key"] as! String, Property(
         kind: PropertyKind(rawValue: p["kind"] as! String)!,
         base: doubles(p["base"]),
-        map: (p["map"] as? [String: Any]).map { m in PropertyMap(source: m["source"] as! String, sourceKind: m["sourceKind"] as? String ?? "property", from: doubles(m["from"]), to: (m["to"] as! [Any]).map(doubles)) },
+        map: (p["map"] as? [String: Any]).map { m in PropertyMap(source: m["source"] as! String, sourceKind: m["sourceKind"] as? String ?? "property", from: (m["from"] as! [Any]).map(readEndpoint), to: (m["to"] as! [Any]).map(doubles)) },
         measure: (p["measure"] as? [String: Any]).map(readMeasure),
         min: number(p["min"]),
         max: number(p["max"])))
@@ -145,6 +150,11 @@ private func number(_ v: Any?) -> Double? { (v as? NSNumber)?.doubleValue }
 private func doubles(_ v: Any?) -> [Double] { (v as? [Any] ?? []).map { ($0 as! NSNumber).doubleValue } }
 private func readMeasure(_ m: [String: Any]) -> Measure {
   Measure(target: m["target"] as! String, of: m["of"] as! String, times: number(m["times"]) ?? 1, plus: number(m["plus"]) ?? 0)
+}
+
+private func readEndpoint(_ value: Any) -> MeasuredEndpoint {
+  if let n = number(value) { return .number(n) }
+  return .measure(readMeasure(value as! [String: Any]))
 }
 
 private func readMotion(_ v: Any) -> Motion {
@@ -200,7 +210,7 @@ private func readState(_ s: [String: Any]) -> State {
     set: (s["set"] as! [[String: Any]]).map { ($0["key"] as! String, doubles($0["value"])) },
     measure: measures,
     follow: (s["follow"] as! [[String: Any]]).map { f in
-      let r = doubles(f["range"])
+      let r = (f["range"] as? [Any] ?? []).map(readEndpoint)
       return (f["key"] as! String, Follow(input: f["input"] as! String, range: r.count == 2 ? (r[0], r[1]) : nil, overdrag: number(f["overdrag"])!))
     },
     enter: (s["enter"] as! [[String: Any]]).map { ($0["key"] as! String, readEntryEffect($0["effect"] ?? $0["motion"]!)) },

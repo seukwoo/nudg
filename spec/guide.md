@@ -154,6 +154,27 @@ Use keyframes for a precisely authored transient response, such as a multi-beat 
 
 The current value is implicit at 0 and the state's target is implicit at 1. Re-entry restarts from the current position; interruption hands the current velocity to the next ordinary motion. Keep keyframes inline under `enter`; use a kick when a physical impulse is enough.
 
+## Measured follow and map endpoints (format 0.9)
+
+Reuse a measured layout value where a drag bound or map source point would otherwise duplicate a pixel constant:
+
+```json
+"action.opacity": {
+  "map": "content.x",
+  "from": [0, { "measure": "action.width", "times": -1 }],
+  "to": [0, 1]
+},
+"follow": {
+  "content.x": {
+    "input": "content.drag.x",
+    "range": [{ "measure": "action.width", "times": -1 }, 0],
+    "overdrag": 0.25
+  }
+}
+```
+
+Endpoints use the same `measure`, `times` and `plus` fields as state targets. Until all endpoint measurements arrive, a follow is unbounded and a map keeps its base; the first complete report applies immediately, and relayout updates the endpoints without restarting the drag.
+
 ## Platform motion
 
 Libraries in `examples/motion/` carry the platforms' published spring values: `apple.nudg.json` (SwiftUI `smooth`, `snappy`, `bouncy`), `material-expressive.nudg.json` and `material-standard.nudg.json` (Material 3 `spatial-*` and `effects-*` tokens). Every platform library also defines the common names `standard`, `quick`, `gentle`, `playful` and `fade` (for color and opacity).

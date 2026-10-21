@@ -4,9 +4,9 @@
 // of entries, because order matters (regions, states) and not every JSON reader keeps
 // object key order.
 
-import type { EntryEffect, Follow, Machine, Measure, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
+import type { EntryEffect, Follow, Machine, Measure, MeasuredEndpoint, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
 
-export const PROGRAM_FORMAT = 1;
+export const PROGRAM_FORMAT = 2;
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
@@ -23,7 +23,7 @@ export function programToJson(program: Program): Json {
 
 export function programFromJson(json: unknown): Program {
   const j = json as Record<string, any>;
-  if (j?.nudgProgram !== PROGRAM_FORMAT) throw new Error(`Not a compiled nudg program (format ${PROGRAM_FORMAT}).`);
+  if (j?.nudgProgram !== 1 && j?.nudgProgram !== PROGRAM_FORMAT) throw new Error(`Not a compiled nudg program (formats 1 or ${PROGRAM_FORMAT}).`);
   return {
     version: j.version,
     targets: j.targets,
@@ -35,7 +35,7 @@ export function programFromJson(json: unknown): Program {
 
 function property(p: Property): Record<string, Json> {
   const out: Record<string, Json> = { kind: p.kind, base: p.base };
-  if (p.map) out.map = { source: p.map.source, sourceKind: p.map.sourceKind, from: p.map.from, to: p.map.to };
+  if (p.map) out.map = { source: p.map.source, sourceKind: p.map.sourceKind, from: p.map.from.map(endpoint), to: p.map.to };
   if (p.measure) out.measure = measure(p.measure);
   if (p.min !== undefined) out.min = p.min;
   if (p.max !== undefined) out.max = p.max;
@@ -44,7 +44,7 @@ function property(p: Property): Record<string, Json> {
 
 function readProperty(p: any): Property {
   const out: Property = { kind: p.kind, base: p.base };
-  if (p.map) out.map = { ...p.map, sourceKind: p.map.sourceKind ?? "property" };
+  if (p.map) out.map = { ...p.map, sourceKind: p.map.sourceKind ?? "property", from: p.map.from.map(readEndpoint) };
   if (p.measure) out.measure = { ...p.measure, times: p.measure.times ?? 1, plus: p.measure.plus ?? 0 };
   if (p.min !== undefined) out.min = p.min;
   if (p.max !== undefined) out.max = p.max;
@@ -52,6 +52,8 @@ function readProperty(p: any): Property {
 }
 
 const measure = (m: Measure): Json => ({ target: m.target, of: m.of, times: m.times, plus: m.plus });
+const endpoint = (value: MeasuredEndpoint): Json => typeof value === "number" ? value : measure(value);
+const readEndpoint = (value: any): MeasuredEndpoint => typeof value === "number" ? value : { target: value.target, of: value.of, times: value.times ?? 1, plus: value.plus ?? 0 };
 
 function motion(m: Motion): Json {
   if (m.kind === "tween") return { kind: "tween", duration: m.duration, ease: m.ease === "linear" ? "linear" : [...m.ease] };
@@ -111,13 +113,13 @@ function readState(j: any): State {
 
 function follow(f: Follow): Record<string, Json> {
   const out: Record<string, Json> = { input: f.input, overdrag: f.overdrag };
-  if (f.range) out.range = [...f.range];
+  if (f.range) out.range = f.range.map(endpoint);
   return out;
 }
 
 function readFollow(j: any): Follow {
   const f: Follow = { input: j.input, overdrag: j.overdrag };
-  if (j.range) f.range = [j.range[0], j.range[1]];
+  if (j.range) f.range = [readEndpoint(j.range[0]), readEndpoint(j.range[1])];
   return f;
 }
 

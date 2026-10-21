@@ -1,10 +1,17 @@
 {
-  "nudg": "0.6",
+  "nudg": "0.9",
   "note": "A bottom sheet with three resting points derived from its measured height: closed, half and full. Drag it between them; on release it settles at the nearest one, judged by where the throw was heading.",
   "targets": ["sheet", "scrim", "opener"],
   "values": {
     "sheet.y": { "measure": "sheet.height" },
-    "scrim.opacity": { "map": "sheet.y", "from": [10, 150], "to": [0.45, 0] }
+    "scrim.opacity": {
+      "map": "sheet.y",
+      "from": [
+        { "measure": "sheet.height", "times": 0, "plus": 10 },
+        { "measure": "sheet.height", "plus": 10 }
+      ],
+      "to": [0.45, 0]
+    }
   },
   "animate": {
     "sheet.y": { "spring": { "duration": 0.4, "bounce": 0.1 } }
@@ -21,7 +28,16 @@
     "half": { "set": { "sheet.y": { "measure": "sheet.height", "times": 0.5, "plus": 5 } } },
     "full": { "set": { "sheet.y": { "measure": "sheet.height", "times": 0, "plus": 10 } } },
     "dragging": {
-      "follow": { "sheet.y": { "input": "sheet.drag.y", "range": [10, 150], "overdrag": 0.15 } },
+      "follow": {
+        "sheet.y": {
+          "input": "sheet.drag.y",
+          "range": [
+            { "measure": "sheet.height", "times": 0, "plus": 10 },
+            { "measure": "sheet.height", "plus": 10 }
+          ],
+          "overdrag": 0.15
+        }
+      },
       "when": { "sheet.dragend": { "nearest": ["closed", "half", "full"], "by": "sheet.y" } }
     }
   }

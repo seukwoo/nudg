@@ -3,8 +3,8 @@ import type { Channels } from "./types.ts";
 /** A mapped property's value for a source value: piecewise linear, held at the ends. */
 export function interpolate(map: { from: number[]; to: Channels[] }, x: number): Channels {
   const { from, to } = map;
-  // Walk the points in increasing order of `from`, whichever way they were written.
-  const order = from[from.length - 1] > from[0] ? from.map((_, i) => i) : from.map((_, i) => from.length - 1 - i);
+  // Measured points can reorder after relayout; keep each point paired with its output.
+  const order = from.map((_, i) => i).sort((a, b) => from[a] - from[b]);
   const first = order[0];
   const last = order[order.length - 1];
   if (x <= from[first]) return to[first].slice();

@@ -5,7 +5,7 @@ import { oklabToHex } from "./color.ts";
 import { easeAt, easeSlope } from "./ease.ts";
 import { interpolate } from "./map.ts";
 import { springAt } from "./spring.ts";
-import type { Channels, Follow, Machine, Measure, Motion, Program, State, TimerPause, Transition } from "./types.ts";
+import type { Channels, Follow, Machine, Measure, MeasuredEndpoint, Motion, Program, PropertyMap, State, TimerPause, Transition } from "./types.ts";
 
 export type Value = number | string;
 
@@ -51,7 +51,7 @@ export interface Runtime {
 type Segment =
   | { kind: "motion"; t0: number; from: Channels; v0: Channels; to: Channels; motion?: Motion }
   | { kind: "keyframes"; t0: number; from: Channels; to: Channels; frames: { at: number; value: Channels }[]; duration: number; ease: import("./types.ts").Ease; owner: State }
-  | { kind: "follow"; t0: number; anchor: number; input0: number; follow: Follow; owner: State };
+  | { kind: "follow"; key: string; t0: number; anchor: number; input0: number; follow: Follow; owner: State };
 
 type StatesMachine = Machine & { kind: "states" };
 
@@ -104,7 +104,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       if (prop.map) continue;
       const to = targets.get(key)!;
       const f = follows.get(key);
-      segments.set(key, f ? followSegment(f, to[0], 0) : { kind: "motion", t0: 0, from: to, v0: to.map(() => 0), to });
+      segments.set(key, f ? followSegment(key, f, to[0], 0) : { kind: "motion", t0: 0, from: to, v0: to.map(() => 0), to });
     }
   }
 
@@ -185,6 +185,25 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     return value * m.times + m.plus;
   }
 
+  const endpoint = (key: string, value: MeasuredEndpoint): number | undefined => typeof value === "number" ? value : measured(key, value);
+
+  function resolvedRange(key: string, range: Follow["range"]): [number, number] | undefined {
+    if (!range) return undefined;
+    const a = endpoint(key, range[0]);
+    const b = endpoint(key, range[1]);
+    if (a === undefined || b === undefined || a === b) return undefined;
+    return [Math.min(a, b), Math.max(a, b)];
+  }
+
+  function resolvedMap(key: string, map: PropertyMap): { from: number[]; to: Channels[] } | undefined {
+    const context = map.sourceKind === "property" ? map.source : key;
+    const from = map.from.map((point) => endpoint(context, point));
+    if (from.some((point) => point === undefined)) return undefined;
+    const numbers = from as number[];
+    if (new Set(numbers).size !== numbers.length) return undefined;
+    return { from: numbers, to: map.to };
+  }
+
   /** Base values (measured ones from the layout report), overridden by every active state's `set`, deeper states last. */
   function resolveTargets(act: Map<Machine, string>): Map<string, Channels> {
     const out = new Map<string, Channels>(bases);
@@ -216,8 +235,8 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     return out;
   }
 
-  function followSegment(f: { follow: Follow; owner: State }, anchor: number, t: number): Segment {
-    return { kind: "follow", t0: t, anchor, input0: inputAt(f.follow.input, t), follow: f.follow, owner: f.owner };
+  function followSegment(key: string, f: { follow: Follow; owner: State }, anchor: number, t: number): Segment {
+    return { kind: "follow", key, t0: t, anchor, input0: inputAt(f.follow.input, t), follow: f.follow, owner: f.owner };
   }
 
   function inputAt(name: string, t: number): number {
@@ -248,12 +267,13 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
 
   function evaluate(segment: Segment, t: number): [Channels, Channels] {
     if (segment.kind === "follow") {
-      const { anchor, input0, follow } = segment;
+      const { key, anchor, input0, follow } = segment;
       const raw = anchor + inputAt(follow.input, t) - input0;
       let value = raw;
       let factor = 1;
-      if (follow.range) {
-        const [lo, hi] = follow.range;
+      const range = resolvedRange(key, follow.range);
+      if (range) {
+        const [lo, hi] = range;
         if (raw < lo) [value, factor] = [lo - (lo - raw) * follow.overdrag, follow.overdrag];
         else if (raw > hi) [value, factor] = [hi + (raw - hi) * follow.overdrag, follow.overdrag];
       }
@@ -347,7 +367,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       if (f) {
         // Start following from wherever the value is now, so there's no jump.
         if (segment.kind !== "follow" || segment.owner !== f.owner || entered.includes(f.owner)) {
-          segments.set(key, followSegment(f, evaluate(segment, t)[0][0], t));
+          segments.set(key, followSegment(key, f, evaluate(segment, t)[0][0], t));
         }
         continue;
       }
@@ -433,8 +453,10 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
   const valueOf = (key: string, t: number): Channels => {
     const prop = program.properties.get(key)!;
     if (prop.map) {
+      const map = resolvedMap(key, prop.map);
+      if (!map) return prop.base;
       const source = prop.map.sourceKind === "input" ? inputAt(prop.map.source, t) : evaluate(segments.get(prop.map.source)!, t)[0][0];
-      return interpolate(prop.map, source);
+      return interpolate(map, source);
     }
     return evaluate(segments.get(key)!, t)[0];
   };
@@ -483,6 +505,11 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     measurements() {
       const out = new Set<string>();
       for (const [key, m] of measuredBases) for (const name of inputsOf(key, m)) out.add(name);
+      for (const [key, prop] of program.properties) {
+        if (!prop.map) continue;
+        const context = prop.map.sourceKind === "property" ? prop.map.source : key;
+        for (const point of prop.map.from) if (typeof point !== "number") for (const name of inputsOf(context, point)) out.add(name);
+      }
       const walk = (machine: Machine) => {
         if (machine.kind === "regions") {
           for (const region of machine.regions.values()) walk(region);
@@ -490,6 +517,9 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
         }
         for (const state of machine.states.values()) {
           for (const [key, m] of state.measure) for (const name of inputsOf(key, m)) out.add(name);
+          for (const [key, follow] of state.follow) {
+            for (const point of follow.range ?? []) if (typeof point !== "number") for (const name of inputsOf(key, point)) out.add(name);
+          }
           if (state.machine) walk(state.machine);
         }
       };

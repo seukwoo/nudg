@@ -5,6 +5,7 @@ import { hexToOklab, isHexColor } from "./color.ts";
 import { interpolate } from "./map.ts";
 import { fromDurationBounce, fromStiffnessRatio } from "./spring.ts";
 import type { Measure,
+  MeasuredEndpoint,
   Channels,
   Diagnostic,
   Ease,
@@ -124,7 +125,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.8.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.9.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -304,6 +305,17 @@ class ComponentCompiler {
     return { target, of: of as Measure["of"], times, plus };
   }
 
+  /** A numeric endpoint, or a v0.9 measurement resolved in the endpoint property's coordinates. */
+  private parseEndpoint(kind: PropertyKind, key: string, raw: Json, p: string, code: string, message: string): MeasuredEndpoint | undefined {
+    if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+    if (isObject(raw) && "measure" in raw) {
+      if (!this.needsVersion("0.9", p, "A measured endpoint")) return undefined;
+      return this.parseMeasure(kind, key, raw, p);
+    }
+    this.r.error(code, p, message, "Use a finite number or a measure object such as { \"measure\": \"action.width\", \"times\": -1 }.");
+    return undefined;
+  }
+
   compile(doc: JsonObject): Program | undefined {
     const r = this.r;
     this.parseTargets(doc.targets);
@@ -445,19 +457,29 @@ class ComponentCompiler {
     }
     const from = raw.from;
     const to = raw.to;
-    if (!Array.isArray(from) || from.length < 2 || from.some((n) => typeof n !== "number" || !Number.isFinite(n))) {
-      r.error("invalid-map", ptr(p, "from"), "\"from\" must list at least two numbers on the source.", "For example: \"from\": [0, 20].");
+    if (!Array.isArray(from) || from.length < 2) {
+      r.error("invalid-map", ptr(p, "from"), "\"from\" must list at least two points on the source.", "For example: \"from\": [0, 20].");
       return;
     }
-    const nums = from as number[];
-    const rising = nums.every((n, i) => i === 0 || n > nums[i - 1]);
-    const falling = nums.every((n, i) => i === 0 || n < nums[i - 1]);
-    if (!rising && !falling) {
-      r.error("invalid-map", ptr(p, "from"), "\"from\" must be strictly increasing or strictly decreasing.", "Remove repeated points and keep them in order.");
-      return;
+    const endpointKind = sourceProp?.kind ?? kind;
+    const endpointKey = sourceProp ? (source as string) : key;
+    const points: MeasuredEndpoint[] = [];
+    from.forEach((value, i) => {
+      const point = this.parseEndpoint(endpointKind, endpointKey, value, ptr(ptr(p, "from"), i), "invalid-map", "A map endpoint must be a finite number or measure object.");
+      if (point !== undefined) points.push(point);
+    });
+    if (points.length !== from.length) return;
+    const nums = points.every((point) => typeof point === "number") ? (points as number[]) : undefined;
+    if (nums) {
+      const rising = nums.every((n, i) => i === 0 || n > nums[i - 1]);
+      const falling = nums.every((n, i) => i === 0 || n < nums[i - 1]);
+      if (!rising && !falling) {
+        r.error("invalid-map", ptr(p, "from"), "\"from\" must be strictly increasing or strictly decreasing.", "Remove repeated points and keep them in order.");
+        return;
+      }
     }
-    if (!Array.isArray(to) || to.length !== nums.length) {
-      r.error("invalid-map", ptr(p, "to"), `"to" must list ${nums.length} values, one for each point in "from".`);
+    if (!Array.isArray(to) || to.length !== points.length) {
+      r.error("invalid-map", ptr(p, "to"), `"to" must list ${points.length} values, one for each point in "from".`);
       return;
     }
     const channels: Channels[] = [];
@@ -466,9 +488,21 @@ class ComponentCompiler {
       if (c) channels.push(c);
     });
     if (channels.length !== to.length) return;
-    const map: PropertyMap = { source: source as string, sourceKind, from: nums, to: channels };
+    const map: PropertyMap = { source: source as string, sourceKind, from: points, to: channels };
     prop.map = map;
-    prop.base = interpolate(map, sourceProp?.base[0] ?? 0);
+    const sourceBase = sourceProp?.base[0] ?? 0;
+    if (nums) {
+      prop.base = interpolate({ from: nums, to: channels }, sourceBase);
+    } else {
+      let nearest = -1;
+      let distance = Infinity;
+      points.forEach((point, i) => {
+        if (typeof point !== "number") return;
+        const d = Math.abs(point - sourceBase);
+        if (d < distance) [nearest, distance] = [i, d];
+      });
+      prop.base = channels[nearest < 0 ? 0 : nearest];
+    }
   }
 
   /** Resolves a path used outside "values"; it must have a base value, and not be mapped. */
@@ -953,12 +987,26 @@ class ComponentCompiler {
       if (prop.min !== undefined && prop.max !== undefined) follow.range = [prop.min, prop.max];
       if ("range" in spec) {
         const range = spec.range;
-        if (!Array.isArray(range) || range.length !== 2 || range.some((n) => typeof n !== "number" || !Number.isFinite(n)) || range[0] === range[1]) {
-          r.error("invalid-value", ptr(kp, "range"), "\"range\" must be two different numbers.", "For example: \"range\": [0, 20].");
+        if (!Array.isArray(range) || range.length !== 2) {
+          r.error("invalid-value", ptr(kp, "range"), "\"range\" must be two different numeric or measured endpoints.", "For example: \"range\": [0, { \"measure\": \"track.width\" }].");
           continue;
         }
-        const [a, b] = range as number[];
-        follow.range = [Math.min(a, b), Math.max(a, b)];
+        const endpoints: MeasuredEndpoint[] = [];
+        range.forEach((value, i) => {
+          const endpoint = this.parseEndpoint(prop.kind, key, value, ptr(ptr(kp, "range"), i), "invalid-value", "A follow range endpoint must be a finite number or measure object.");
+          if (endpoint !== undefined) endpoints.push(endpoint);
+        });
+        if (endpoints.length !== 2) continue;
+        const [a, b] = endpoints;
+        if (typeof a === "number" && typeof b === "number") {
+          if (a === b) {
+            r.error("invalid-value", ptr(kp, "range"), "\"range\" must be two different endpoints.", "For example: \"range\": [0, 20].");
+            continue;
+          }
+          follow.range = [Math.min(a, b), Math.max(a, b)];
+        } else {
+          follow.range = [a, b];
+        }
       }
       if ("overdrag" in spec) {
         const o = spec.overdrag;

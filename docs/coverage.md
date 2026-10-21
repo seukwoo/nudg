@@ -35,7 +35,7 @@ Legend: **yes** supported, with an example; **yes, no example** supported but no
 | Snap to the nearest state, with momentum | yes | toggle-drag, carousel, segmented |
 | Derived values (`map`), including colors | yes | toggle-drag, swipe-row |
 | Stepping and keeping a value (`step`, `commit`) | yes | slider |
-| Measured targets (`measure`) | yes | tabs, accordion |
+| Measured targets and follow/map endpoints (`measure`) | yes | tabs, accordion, bottom-sheet, swipe-row |
 | Reduced motion | yes, runtime-wide | every example |
 | Continuous motion while a state is active (a spinner, a marquee) | partly: CSS through `data-nudg-state` | pull-to-refresh |
 | Sequence, delay, stagger (menu items one after another) | no: [open question](design.md#open-questions) | |

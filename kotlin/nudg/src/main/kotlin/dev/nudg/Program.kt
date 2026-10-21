@@ -1,6 +1,6 @@
 package dev.nudg
 
-/** A compiled nudg program, read from the JSON that `nudg compile` writes (format 1). */
+/** A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 and 2). */
 
 enum class PropertyKind { LENGTH, NUMBER, COLOR }
 
@@ -21,9 +21,13 @@ sealed interface EntryEffect {
 }
 
 data class Measure(val target: String, val of: String, val times: Double, val plus: Double)
-data class PropertyMap(val source: String, val sourceKind: String, val from: List<Double>, val to: List<List<Double>>)
+sealed interface MeasuredEndpoint {
+    data class Number(val value: Double) : MeasuredEndpoint
+    data class Measured(val measure: Measure) : MeasuredEndpoint
+}
+data class PropertyMap(val source: String, val sourceKind: String, val from: List<MeasuredEndpoint>, val to: List<List<Double>>)
 data class Property(val kind: PropertyKind, val base: List<Double>, val map: PropertyMap?, val measure: Measure?, val min: Double?, val max: Double?)
-data class Follow(val input: String, val range: Pair<Double, Double>?, val overdrag: Double)
+data class Follow(val input: String, val range: Pair<MeasuredEndpoint, MeasuredEndpoint>?, val overdrag: Double)
 data class Nearest(val states: List<String>, val by: String, val momentum: Double)
 
 class Transition(val to: String?, val nearest: Nearest?, val animate: List<Pair<String, Motion>>, val step: List<Pair<String, Double>>?, val commit: List<String>?)
@@ -59,13 +63,13 @@ class Program(val version: String, val targets: List<String>, val properties: Li
         fun decode(text: String): Program {
             @Suppress("UNCHECKED_CAST")
             val j = Json.parse(text) as Map<String, Any?>
-            require((j["nudgProgram"] as? Double) == 1.0) { "Not a compiled nudg program (format 1). Compile it with `nudg compile`." }
+            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0)) { "Not a compiled nudg program (formats 1 or 2). Compile it with `nudg compile`." }
             val properties = list(j["properties"]).map { p ->
                 obj(p).let { m ->
                     (m["key"] as String) to Property(
                         PropertyKind.valueOf((m["kind"] as String).uppercase()),
                         doubles(m["base"]),
-                        (m["map"] as? Map<*, *>)?.let { mp -> PropertyMap(mp["source"] as String, mp["sourceKind"] as? String ?: "property", doubles(mp["from"]), list(mp["to"]).map(::doubles)) },
+                        (m["map"] as? Map<*, *>)?.let { mp -> PropertyMap(mp["source"] as String, mp["sourceKind"] as? String ?: "property", list(mp["from"]).map(::endpoint), list(mp["to"]).map(::doubles)) },
                         (m["measure"] as? Map<*, *>)?.let(::measure),
                         m["min"] as? Double,
                         m["max"] as? Double,
@@ -80,6 +84,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
         private fun list(v: Any?) = (v as? List<*>) ?: emptyList<Any?>()
         private fun doubles(v: Any?) = list(v).map { it as Double }
         private fun measure(m: Map<*, *>) = Measure(m["target"] as String, m["of"] as String, m["times"] as? Double ?: 1.0, m["plus"] as? Double ?: 0.0)
+        private fun endpoint(value: Any?) = if (value is Double) MeasuredEndpoint.Number(value) else MeasuredEndpoint.Measured(measure(obj(value)))
 
         private fun motion(v: Any?): Motion {
             val m = obj(v)
@@ -131,7 +136,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
                 list(s["measure"]).associate { e -> obj(e).let { (it["key"] as String) to measure(it) } },
                 list(s["follow"]).map { e ->
                     obj(e).let { f ->
-                        val r = doubles(f["range"])
+                        val r = list(f["range"]).map(::endpoint)
                         (f["key"] as String) to Follow(f["input"] as String, if (r.size == 2) r[0] to r[1] else null, f["overdrag"] as Double)
                     }
                 },

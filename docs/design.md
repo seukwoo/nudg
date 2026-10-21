@@ -126,7 +126,7 @@ These are expensive to change later, so they are fixed early:
 
 ## Proposal: layout as input (format 0.4)
 
-Status: first cut implemented as format 0.4 (`measure` in `values` and `set`, retargeting, the DOM adapter's measuring); arithmetic and sheets are still ahead. Settles the open question "Layout: measured positions and sizes". The cases that force it: a tab or segmented indicator that must sit under a label whose width depends on its text and the font, an accordion that collapses from its natural height, a bottom sheet whose snap points depend on the screen, a swipe row whose actions are as wide as their labels. Today every example hard-codes these numbers (`segmented` assumes 72 px segments).
+Status: implemented in stages: format 0.4 added `measure` in `values` and `set`, retargeting and DOM measurement; format 0.6 added arithmetic; format 0.9 reuses the same measure objects in `follow.range` and `map.from`. Settles the open question "Layout: measured positions and sizes" for current component recipes. The cases that force it are a tab or segmented indicator whose size depends on its label, an accordion that opens to natural height, a bottom sheet whose snap points depend on the screen, and a swipe row whose action width defines its drag and reveal.
 
 **The core never measures.** Measuring is the host's job, like the pointer: the adapter reports each bound target's layout as inputs, the same kind of value as `drag.x`, and the core reads them. This keeps decisions 3 (deterministic clock), 6 (core and renderers separate) and 9 (no expressions) intact, and the conformance suite can state layouts as given numbers.
 
@@ -143,6 +143,7 @@ Status: first cut implemented as format 0.4 (`measure` in `values` and `set`, re
 - **Position (`x`, `y`) aligns.** `{ "measure": "seg2.x" }` on `indicator.x` is the translation that puts the indicator's box where seg2's box is: `seg2.layout.x - indicator.layout.x`. That is what a tab indicator, a highlight, or a shared-element move needs, and it never depends on which coordinate space the host chose.
 - **Size (`width`, `height`, `naturalWidth`, `naturalHeight`) is the size.** `{ "measure": "content.naturalHeight" }` on `content.height` opens an accordion to exactly its content.
 - **Arithmetic stays deliberately small.** Format 0.6 adds `{ "measure": "sheet.height", "times": 0.5, "plus": -16 }`: multiply the measured size or aligned position, then add a logical-unit offset. It is not an expression language.
+- **Endpoints reuse the same object.** Format 0.9 allows measure objects in `follow.range` and `map.from`, so the bounds and derived feedback use the same measured resting point. Before layout arrives a follow is unbounded and a map holds its base; relayout updates both without restarting the follow.
 - **Relayout retargets.** When a measured input changes while the value is resting on it, the value moves to the new target with the property's motion, as if a state set it. A window resize slides the indicator; it doesn't jump.
 - **Before the first report** a measured value is its property's base value, and the runtime reports which measurements it is still waiting for, the same way it reports unbound targets.
 - **`%`-like values** use `{ "measure": "parent.width", "times": 0.5 }`; there is no separate unit system.
@@ -191,7 +192,7 @@ These are unresolved design choices. Scheduling and completion status live in th
 
 - Transitions that cross machine levels (to a parent's sibling, into a nested state).
 - A final state in the grammar (`"final": true`, as in statecharts) to say "this state means the component is gone". Today the host names exit states in the adapter options (`exit: "hidden"`), because mounting and unmounting are the host's lifecycle; a file-level marker would let the tools (`observe`, the guide) know it too.
-- Layout: formats 0.4 and 0.6 implement measurement and arithmetic. Still open: measured endpoints for `follow.range` and `map.from`, and measuring across players.
+- Layout: formats 0.4, 0.6 and 0.9 implement measurement, arithmetic and measured follow/map endpoints. Measuring across players remains open.
 - Pattern metadata currently lives in the versioned external recipe catalog. Revisit a file-level role such as `"role": "bottom-sheet"` only if generation or validation needs cannot be met without changing runtime documents.
 - Pattern aliases and locale: how to map common design words such as FAB, snackbar, toast, tabs, tab bar, bottom nav, GNB, LNB and side nav without making the core format depend on one design system's names.
 - Decay (fling, inertia) as a motion of its own, for scroll-like content without snap points. Snapping is covered by `nearest`.

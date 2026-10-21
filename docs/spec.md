@@ -395,7 +395,33 @@ Transient keyframes on state entry. A file that uses them declares `"nudg": "0.8
 
 The conformance cases `keyframes-enter.json`, `keyframes-reduced.json` and `validation-0.8.json` define the behavior across TypeScript, Swift and Kotlin.
 
+## Additions in 0.9 (draft)
+
+Measured endpoints in `follow.range` and `map.from`. A file that uses them declares `"nudg": "0.9"`; a 0.9 runtime also reads older files.
+
+```json
+"action.opacity": {
+  "map": "content.x",
+  "from": [0, { "measure": "action.width", "times": -1 }],
+  "to": [0, 1]
+},
+"follow": {
+  "content.x": {
+    "input": "content.drag.x",
+    "range": [{ "measure": "action.width", "times": -1 }, 0]
+  }
+}
+```
+
+- Each endpoint is a finite number or the existing `{ "measure", "times", "plus" }` object. Measurement and arithmetic keep their 0.4/0.6 semantics.
+- A measured follow bound resolves in the followed property's coordinates. A measured map point resolves in its source property's coordinates; maps from host or scroll inputs may measure sizes, but not aligned `x`/`y` positions because an input has no source view.
+- Before every endpoint is measured, `follow` applies no range and a mapped property holds its compiled base. The first complete layout report activates the endpoints immediately. Later relayout updates them without restarting a follow.
+- Resolved map points stay paired with their `to` values and are ordered by their measured numbers. Equal points leave the map at its base until layout makes them distinct. Numeric-only maps keep the existing strictly-monotonic validation.
+- `runtime.measurements()` and `unmeasured()` include endpoint measurements, so adapters report them like measured state targets.
+
+The conformance cases `measured-endpoints.json` and `validation-0.9.json` define the behavior across TypeScript, Swift and Kotlin.
+
 ## Compiled programs (for native runtimes)
 
-`nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 1`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms.
+`nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 2`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Format 2 carries measured endpoints; current runtimes continue to read format 1 programs. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms.
 

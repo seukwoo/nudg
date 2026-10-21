@@ -231,7 +231,7 @@ The [roadmap](docs/roadmap.md) tracks development priorities and stage status, f
 - [Design](docs/design.md): principles, scope, decisions, and open questions.
 - [Roadmap](docs/roadmap.md): the development plan, current status and completion criteria.
 - [Coverage](docs/coverage.md): what the format can express, by trigger, response and structure, and where it runs.
-- [Guide for AI agents](spec/guide.md): the format on one page.
+- [Guide for AI agents](spec/guide.md): the format on one page; the [editing contract](docs/usage.md#the-editing-contract-for-ai-tools) lists everything an AI tool can rely on.
 - [Development log](docs/devlog.md): problems met while building nudg, and how they were resolved.
 
 ## With the components you already use

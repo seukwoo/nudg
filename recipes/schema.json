@@ -6,7 +6,7 @@
   "required": ["version", "recipes"],
   "properties": {
     "$schema": { "type": "string" },
-    "version": { "type": "integer", "minimum": 1 },
+    "version": { "type": "integer", "minimum": 2 },
     "recipes": {
       "type": "array",
       "items": { "$ref": "#/$defs/recipe" }
@@ -26,7 +26,11 @@
         "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
         "aliases": { "$ref": "#/$defs/stringList" },
         "summary": { "type": "string", "minLength": 1 },
-        "starter": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "starter": {
+          "type": ["string", "null"],
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "The validated example to start from, or null when the format can't express the pattern's essential motion yet; its gaps then say what is missing and the host does that part."
+        },
         "examples": { "$ref": "#/$defs/stringList" },
         "parts": {
           "type": "object",
@@ -48,7 +52,10 @@
             "type": "object",
             "required": ["capability", "status", "need"],
             "properties": {
-              "capability": { "type": "string", "minLength": 1 },
+              "capability": {
+                "enum": ["sequence", "stagger", "collection coordination", "continuous motion", "scroll direction", "screen composition", "multi-pointer", "decay"],
+                "description": "The lower-level capability the pattern needs. A fixed list, so gaps can be counted across the catalog."
+              },
               "status": { "enum": ["missing", "workaround"] },
               "need": { "type": "string", "minLength": 1 }
             },
@@ -56,7 +63,14 @@
           }
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "if": { "properties": { "starter": { "const": null } } },
+      "then": {
+        "properties": {
+          "examples": { "maxItems": 0 },
+          "gaps": { "contains": { "properties": { "status": { "const": "missing" } } } }
+        }
+      }
     }
   }
 }

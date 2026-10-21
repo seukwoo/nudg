@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Recipes for what nudg can't do yet.** Menu, speed dial, animated list, spinner, skeleton, typing indicator, hide-on-scroll, stack navigation, full-screen modal, shared element, drawer, image viewer and free-scrolling carousel are in the catalog with `"starter": null` and the gaps the host fills. Gap capabilities are a fixed list, and `nudg recipe --gaps` counts them. Catalog version 2: `starter` may be null.
+
 ## 0.11.0
 
 Completes the host-integration stage: server-rendered pages start on the right frame, and everything an AI tool can rely on is documented as one editing contract. Releases are now published from GitHub.

@@ -229,6 +229,17 @@ The DOM adapter writes styles in a layout effect, which prevents a flash in clie
 - **Inputs the server knows are an option.** `inputs: { "host.progress": 0.6 }` sets the first frame and is applied at mount; later values go through `input`. React Native takes the same option for its first frame.
 - **Measured values can't be known on the server.** They render at their base and move to the real layout on the first report. Authors give measured values a base close to the expected layout; a later option could let the server pass expected sizes.
 
+## Recipes without a starter
+
+Status: implemented in recipe catalog version 2.
+
+Common UI words such as menu, spinner, drawer or shared-element transition need a standard answer even where the format can't express their essential motion. Without one, an AI improvises: it fakes a stagger with timers, or a spinner with a state that never settles. The decisions:
+
+- **A null starter, not a separate list.** `"starter": null` keeps one record shape, so lookup, aliases and the contract fields work the same way; the schema then requires no examples and at least one missing gap. A separate "known gaps" catalog was rejected because the same word would have two places to look.
+- **Gap capabilities are a fixed list.** `sequence`, `stagger`, `collection coordination`, `continuous motion`, `scroll direction`, `screen composition`, `multi-pointer` and `decay`. Free text made the same need countable only by reading; the list grows when a recipe needs something new.
+- **Variants that need a missing capability get their own recipe.** Hide-on-scroll and the free-scrolling carousel moved out of `app-bar` and `carousel`, whose starters do the expressible variant, so each gap is counted once, against the pattern that needs it.
+- **The count chooses the next primitive.** `nudg recipe --gaps` lists each capability with the recipes that need it. Ties are broken by how many more recipes the primitive would turn into starters, not by the count alone.
+
 ## Open questions
 
 These are unresolved design choices. Scheduling and completion status live in the [roadmap](roadmap.md); examples of possible syntax below are proposals.

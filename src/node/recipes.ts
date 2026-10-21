@@ -12,7 +12,8 @@ export interface Recipe {
   id: string;
   aliases: string[];
   summary: string;
-  starter: string;
+  /** null when the format can't express the pattern yet; `gaps` then say what the host does. */
+  starter: string | null;
   examples: string[];
   parts: { required: string[]; optional: string[] };
   states: string[];
@@ -43,8 +44,38 @@ export function findRecipe(name: string): Recipe | undefined {
   return recipeCatalog().recipes.find((recipe) => recipe.id === wanted || recipe.aliases.some((alias) => normalized(alias) === wanted));
 }
 
-export function recipeSource(recipe: Recipe): string {
-  return readFileSync(join(ROOT, "examples", `${recipe.starter}.nudg.json`), "utf8");
+/** The starter file, or undefined for a gap-only recipe. */
+export function recipeSource(recipe: Recipe): string | undefined {
+  return recipe.starter ? readFileSync(join(ROOT, "examples", `${recipe.starter}.nudg.json`), "utf8") : undefined;
+}
+
+export const noStarter = (recipe: Recipe) =>
+  `${recipe.id} has no starter: the format can't express its essential motion yet (${recipe.gaps.filter((gap) => gap.status === "missing").map((gap) => gap.capability).join(", ")}). Build what the contract allows and leave the gaps to the host.`;
+
+export interface GapCount {
+  capability: RecipeGap["capability"];
+  missing: string[];
+  workaround: string[];
+}
+
+/** Gaps across the catalog, most needed first: the evidence for the next motion primitive. */
+export function recipeGaps(): GapCount[] {
+  const counts = new Map<string, GapCount>();
+  for (const recipe of recipeCatalog().recipes) {
+    for (const gap of recipe.gaps) {
+      const count = counts.get(gap.capability) ?? { capability: gap.capability, missing: [], workaround: [] };
+      count[gap.status].push(recipe.id);
+      counts.set(gap.capability, count);
+    }
+  }
+  const size = (count: GapCount) => count.missing.length + count.workaround.length;
+  return [...counts.values()].sort((a, b) => size(b) - size(a) || b.missing.length - a.missing.length || a.capability.localeCompare(b.capability));
+}
+
+export function formatGaps(gaps: GapCount[]): string {
+  return gaps
+    .map(({ capability, missing, workaround }) => `${capability.padEnd(24)} ${String(missing.length + workaround.length).padStart(2)}  ${[...missing, ...workaround.map((id) => `${id} (workaround)`)].join(", ")}`)
+    .join("\n");
 }
 
 export function formatRecipe(recipe: Recipe): string {
@@ -61,8 +92,8 @@ export function formatRecipe(recipe: Recipe): string {
     line("Inputs", recipe.inputs),
     line("Host", recipe.hostResponsibilities),
     line("Motion", recipe.motion),
-    `Starter: examples/${recipe.starter}.nudg.json`,
-    `Examples: ${recipe.examples.join(", ")}`,
+    recipe.starter ? `Starter: examples/${recipe.starter}.nudg.json` : "Starter: none; the format can't express this pattern yet, so the host does what the gaps describe",
+    line("Examples", recipe.examples),
     "Motion gaps:",
     gaps,
   ].join("\n");

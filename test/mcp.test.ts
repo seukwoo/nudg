@@ -77,6 +77,10 @@ test("recipe resolves human UI terms and can return a starter", async () => {
   const result = await call("nudg_recipe", { name: "video chat", source: true });
   assert.equal(result.structuredContent.recipe.id, "video-call");
   assert.match(result.structuredContent.source, /"host\.camera-off"/);
+  const gapOnly = await call("nudg_recipe", { name: "loading spinner", source: true });
+  assert.equal(gapOnly.structuredContent.recipe.starter, null);
+  assert.equal(gapOnly.structuredContent.source, undefined);
+  assert.match(gapOnly.content[0].text, /no starter/);
   const missing = await call("nudg_recipe", { name: "mystery control" });
   assert.equal(missing.isError, true);
 });

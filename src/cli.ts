@@ -25,7 +25,7 @@ import { serveMcp } from "./node/mcp.ts";
 import { frameTimes, renderFrames } from "./node/render.ts";
 import { ACTIONS, checkAction, observe, type HostAction } from "./node/observe.ts";
 import { actionTarget, actionsToEvents, judgeHost } from "./core/observe.ts";
-import { findRecipe, formatRecipe, recipeCatalog, recipeSource } from "./node/recipes.ts";
+import { findRecipe, formatGaps, formatRecipe, noStarter, recipeCatalog, recipeGaps, recipeSource } from "./node/recipes.ts";
 
 /** The package version, for what --share reports. */
 const VERSION_PKG: string = (() => {
@@ -70,9 +70,10 @@ simulate and plot options
   preset <name> [--options '{"scale":0.9}']
                             Print a preset (press, hover, toggle, toast) as a nudg file,
                             to save and edit: nudg preset press > press.nudg.json
-  recipe [name] [--json|--source]
+  recipe [name] [--json|--source|--gaps]
                             List semantic interaction contracts, or resolve a human UI term
                             such as toggle, video chat or sheet. --source prints its starter file.
+                            --gaps counts the capabilities the catalog is missing, most needed first.
   compare <a> <b>           Two versions under the same events: says first whether a person
                             would notice the difference, then shows it. --html gives real A/B
                             filmstrips in rows; without it, both curves on one graph.
@@ -154,7 +155,7 @@ function parseArgs(argv: string[]): Args {
       continue;
     }
     const [name, inline] = arg.slice(2).split(/=(.*)/s, 2);
-    const boolean = ["json", "help", "reduced-motion", "open", "clear", "path", "print", "user", "share", "strict", "source", "check"].includes(name);
+    const boolean = ["json", "help", "reduced-motion", "open", "clear", "path", "print", "user", "share", "strict", "source", "check", "gaps"].includes(name);
     const value = boolean ? "" : (inline ?? argv[++i]);
     if (value === undefined || (!boolean && (value === "" || value.startsWith("--")))) fail(`Option --${name} needs a value.`);
     flags.set(name, [...(flags.get(name) ?? []), value]);
@@ -637,19 +638,29 @@ if (command === "compare") process.exit(await runCompare(args, json));
 if (command === "recipe") {
   if (args.positional.length > 1) fail("recipe takes at most one name.");
   const name = args.positional[0];
+  if (args.flags.has("gaps")) {
+    if (name) fail("recipe --gaps takes no name.");
+    const gaps = recipeGaps();
+    process.stdout.write(json ? JSON.stringify({ gaps }, null, 2) + "\n" : formatGaps(gaps) + "\n");
+    process.exit(0);
+  }
   if (!name) {
     if (args.flags.has("source")) fail("recipe --source needs a recipe name.");
     const recipes = recipeCatalog().recipes;
     process.stdout.write(
       json
         ? JSON.stringify({ recipes }, null, 2) + "\n"
-        : recipes.map((recipe) => `${recipe.id.padEnd(21)} ${recipe.summary}`).join("\n") + "\n",
+        : recipes.map((recipe) => `${recipe.id.padEnd(21)} ${recipe.starter ? "" : "(no starter) "}${recipe.summary}`).join("\n") + "\n",
     );
     process.exit(0);
   }
   const recipe = findRecipe(name);
   if (!recipe) fail(`Unknown recipe "${name}". Run nudg recipe to list names and aliases.`);
-  if (args.flags.has("source")) process.stdout.write(recipeSource(recipe));
+  if (args.flags.has("source")) {
+    const source = recipeSource(recipe);
+    if (!source) fail(noStarter(recipe));
+    process.stdout.write(source);
+  }
   else process.stdout.write(json ? JSON.stringify(recipe, null, 2) + "\n" : formatRecipe(recipe) + "\n");
   process.exit(0);
 }

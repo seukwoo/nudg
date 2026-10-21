@@ -5,6 +5,9 @@ dist/
 .env*
 test/fixtures/bridges/app.bundle.js
 
+# IDE copies of the Kotlin sources
+kotlin/*/bin/
+
 swift/.build/
 swift/.swiftpm/
 

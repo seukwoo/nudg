@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.10.0
+
+The first host-integration release: the host's names are type-checked, React can feed app values directly, and every platform says the same thing when motion is over. Measured layout now reaches drag bounds and derived feedback. TypeScript, Swift and Kotlin share format 0.9 and the new rest rule.
 
 - **Format 0.9: measured follow and map endpoints.** `follow.range` and `map.from` accept the existing `{ "measure", "times", "plus" }` object, so responsive drag bounds and derived feedback share the same layout values as resting states. Unmeasured follows stay unconstrained and maps hold their base until the first complete report; relayout updates endpoints without restarting the gesture. TypeScript, Swift and Kotlin share conformance; bottom sheet and swipe row remove their duplicated layout constants. Schema 0.9.
 - **`onSettle`: one "motion is over" notification everywhere.** Every adapter (headless and DOM players, React, React Native, SwiftUI, Compose) calls `onSettle(states)` once each time every value has come to rest after something moved or the state changed. Pending timers don't delay it; an interrupted motion reports only the rest after the interruption; followed and input-mapped values never report. `nudgTransition` now calls the library's `onEntered` when the entrance has actually settled, not on the next frame. SwiftUI's `NudgModel` and Compose's `rememberNudg` gain `exit`, `onExit` and `present`.

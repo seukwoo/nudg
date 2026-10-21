@@ -155,3 +155,18 @@ export interface Program {
   animate: Map<string, Motion>;
   machine: Machine;
 }
+
+/**
+ * The names a host may use with a file. `nudg generate` writes one per file; the adapters
+ * take it as a type argument (`useNudg<ToggleContract>(toggle)`) and default to plain strings.
+ */
+export interface NudgContract {
+  targets: string;
+  events: string;
+  inputs: string;
+  states: string;
+}
+
+/** A state path or its last name, as `exit` accepts: "open/hidden" or "hidden". */
+export type StateName<C extends NudgContract> = C["states"] | LastName<C["states"]>;
+type LastName<P extends string> = P extends `${string}/${infer R}` ? LastName<R> : P;

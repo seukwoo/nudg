@@ -10,6 +10,7 @@ import { compile, type CompileResult } from "../core/compile.ts";
 import { compare, compareFrameTimes } from "../core/compare.ts";
 import { createRuntime } from "../core/runtime.ts";
 import { actionTarget, actionsToEvents, judgeHost } from "../core/observe.ts";
+import { contract, contractModule } from "../core/contract.ts";
 import { critique } from "../core/critique.ts";
 import { plot } from "../core/plot.ts";
 import { dragGesture, simulate, type SimulateOptions, type TimedEvent } from "../core/simulate.ts";
@@ -189,6 +190,13 @@ const TOOLS = [
     annotations: { readOnlyHint: true },
   },
   {
+    name: "nudg_generate",
+    title: "TypeScript contract for the host",
+    description: "The TypeScript module `nudg generate` writes beside a file (x.nudg.json -> x.nudg.ts): a types-only interface with the file's targets, handled events, continuous inputs and state paths, imports resolved. Hosts pass it to the adapters, e.g. useNudg<ToggleContract>(toggle), so misspelled names fail to compile. After changing a file's names, write the returned text to that path, or run `nudg generate <file>`.",
+    inputSchema: { type: "object", properties: { ...source } },
+    annotations: { readOnlyHint: true },
+  },
+  {
     name: "nudg_share",
     title: "Share usage with the nudg project",
     description: "Prepares a counts-only summary of this machine's nudg log (rounds per change, verdicts, tool calls, versions; no file names, paths, URLs or code) and a link to a prefilled GitHub issue the person can read and submit. Sends nothing by itself. Call it only when the person agreed to share, typically after nudg_compare said a change took several rounds; pass their words as `note`.",
@@ -359,6 +367,11 @@ async function runTool(name: string, args: Json): Promise<ToolResult> {
         const { program, label } = loadProgram(args);
         const { findings, transitions } = critique(program);
         return { content: [text(formatCritique(label, findings, transitions.length))], structuredContent: { findings, transitions: transitions.length } as unknown as Json };
+      }
+      case "nudg_generate": {
+        const { program, label } = loadProgram(args);
+        const names = contract(program);
+        return { content: [text(contractModule(names, label))], structuredContent: names as unknown as Json };
       }
       case "nudg_share": {
         const summary = summarize(readLog());

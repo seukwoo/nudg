@@ -4,16 +4,17 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { compile } from "../core/compile.ts";
 import { createRuntime } from "../core/runtime.ts";
-import type { Program } from "../core/types.ts";
+import type { NudgContract, Program, StateName } from "../core/types.ts";
 import { play, type Player } from "../dom/play.ts";
 
 export { presets, press, hover, toggle, toast, appear } from "../core/presets.ts";
 export { nudgTransition } from "./transition.ts";
 export type { NudgTransitionOptions, TransitionProps } from "./transition.ts";
+export type { NudgContract, StateName } from "../core/types.ts";
 
-export interface UseNudgOptions {
+export interface UseNudgOptions<C extends NudgContract = NudgContract> {
   /** Leaf state paths to start in instead of `initial`, e.g. ["on"] for a toggle that mounts checked. */
-  state?: string[];
+  state?: C["states"][];
   /**
    * Files the document imports, when passing a JSON object: `{ "./motion/brand.nudg.json": brand }`,
    * keyed as the import is written (a leading "./" is optional).
@@ -26,25 +27,25 @@ export interface UseNudgOptions {
    * machine has entered one and every value has come to rest, and `onExit` is called:
    * render null then, or remove the item from its list, and the exit motion gets to play.
    */
-  exit?: string | string[];
+  exit?: StateName<C> | StateName<C>[];
   onExit?: () => void;
   /** Follow the state a component library shows on the bound elements (data-state, aria-*); see PlayOptions.watch. */
   watch?: boolean;
 }
 
-export interface Nudg {
+export interface Nudg<C extends NudgContract = NudgContract> {
   /** A ref callback for a target: `<span ref={bind("knob")} />`. Stable per name. */
-  bind(name: string): (element: Element | null) => void;
+  bind(name: C["targets"]): (element: Element | null) => void;
   /** The active states, e.g. ["on"]. Updates when an event changes them. */
-  state: string[];
+  state: C["states"][];
   /** Sends an event now, e.g. send("host.check"). */
-  send(event: string): boolean;
+  send(event: C["events"]): boolean;
   /**
    * Supplies a continuous app value the file reads with `map` or `follow`, e.g.
    * input("host.volume", 0.7). False for names the file doesn't read. The latest value
    * carries over when the program changes, and one given before mount applies at mount.
    */
-  input(name: string, value: number): boolean;
+  input(name: C["inputs"], value: number): boolean;
   /** False once the component has exited (see `exit`); true again if it is shown again. */
   present: boolean;
 }
@@ -54,8 +55,9 @@ const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : us
 /**
  * Plays a nudg file in a component. Pass a compiled Program, or the file's JSON object
  * (for example from `import toggle from "./toggle.nudg.json"`), which is compiled once.
+ * With the contract `nudg generate` writes, names are checked: `useNudg<ToggleContract>(toggle)`.
  */
-export function useNudg(source: Program | object, options: UseNudgOptions = {}): Nudg {
+export function useNudg<C extends NudgContract = NudgContract>(source: Program | object, options: UseNudgOptions<C> = {}): Nudg<C> {
   // An inline document (a preset call) is a new object every render; compile by content, not identity.
   const key = isProgram(source) ? source : JSON.stringify(source);
   const program = useMemo(() => toProgram(source, options.files), [key]);

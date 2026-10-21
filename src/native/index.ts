@@ -9,16 +9,17 @@ import { AccessibilityInfo, Animated, PanResponder, type LayoutChangeEvent } fro
 import { PointerTracker, draggableTargets } from "../core/pointer.ts";
 import { createPlayer, toProgram, type HeadlessPlayer } from "../core/player.ts";
 import { createRuntime, type Value } from "../core/runtime.ts";
-import type { Program } from "../core/types.ts";
+import type { NudgContract, Program, StateName } from "../core/types.ts";
 
 export { presets, press, hover, toggle, toast, appear } from "../core/presets.ts";
+export type { NudgContract, StateName } from "../core/types.ts";
 
-export interface UseNudgNativeOptions {
-  state?: string[];
+export interface UseNudgNativeOptions<C extends NudgContract = NudgContract> {
+  state?: C["states"][];
   files?: Record<string, unknown>;
   /** Default: the system's Reduce Motion setting. */
   reducedMotion?: boolean;
-  exit?: string | string[];
+  exit?: StateName<C> | StateName<C>[];
   onExit?: () => void;
 }
 
@@ -35,18 +36,18 @@ export interface Bound {
   gesture: Record<string, unknown>;
 }
 
-export interface NudgNative {
-  bind(name: string): Bound;
-  send(event: string): boolean;
+export interface NudgNative<C extends NudgContract = NudgContract> {
+  bind(name: C["targets"]): Bound;
+  send(event: C["events"]): boolean;
   /** Supplies a continuous app value, as in the React hook: input("host.volume", 0.7). */
-  input(name: string, value: number): boolean;
-  state: string[];
+  input(name: C["inputs"], value: number): boolean;
+  state: C["states"][];
   present: boolean;
 }
 
 const TRANSFORM = ["x", "y", "rotation", "scale", "scaleX", "scaleY"] as const;
 
-export function useNudg(source: Program | object, options: UseNudgNativeOptions = {}): NudgNative {
+export function useNudg<C extends NudgContract = NudgContract>(source: Program | object, options: UseNudgNativeOptions<C> = {}): NudgNative<C> {
   const key = "machine" in source ? source : JSON.stringify(source);
   const program = useMemo(() => toProgram(source, options.files), [key]);
   // One Animated value per property; views read them, the player writes them.

@@ -186,6 +186,27 @@ Status: implemented as format 0.7. An `after:` transition owns its timeout and m
 
 Status: implemented as format 0.8. Keyframes live only under a state's `enter`: the sampled current value is the implicit start and the resolved state target is the implicit end. This makes re-entry continuous, gives interruption a well-defined outgoing velocity, lets relayout change the destination, and keeps the state responsible for every resting value. Reduced motion skips the authored sequence. General delay, sequence and stagger semantics remain separate because current recipes do not require them.
 
+## Type-safe host contracts
+
+Status: implemented as `nudg generate` and the `nudg_generate` MCP tool.
+
+A host names things in a file: targets to bind, events to send, inputs to supply, states to start in or exit through. A misspelling compiles and fails quietly at run time (`send` returns false). `nudg generate x.nudg.json` writes `x.nudg.ts` beside it, a types-only module with one interface:
+
+```ts
+export interface ToggleDragContract {
+  targets: "knob" | "track";
+  events: "host.check" | "host.uncheck" | "track.tap" | "track.dragstart" | "track.dragend";
+  inputs: "track.drag.x";
+  states: "off" | "on" | "dragging";
+}
+```
+
+The decisions:
+
+- **Types only, passed to the existing adapters.** `useNudg<ToggleDragContract>(toggle)`, `play<C>`, `playDoc<C>` and `createPlayer<C>` take the contract as a type argument and default to plain strings, so untyped use is unchanged. The module has no run-time code and no import of the JSON, so it works with any bundler and costs nothing in the bundle. Wrapping the document (a generated module that imports and re-exports the JSON) was rejected because JSON import syntax still differs between bundlers.
+- **Names come from the compiled program.** Imports are resolved by the compiler, so one interface covers a file and everything it imports. Events are the ones the file handles (`when` keys and timer pause reasons); inputs are the ones it reads with `map` or `follow`, without layout measurements, which the adapters report; states are every path, as `state` reports them and the `state` option accepts (`playback/paused`). `exit` also accepts a path's last name, as the adapters do.
+- **Staleness is checked by regenerating, not by hash.** `nudg generate --check` writes nothing and fails when a module is missing or differs from what would be generated. The design discussion first proposed embedding a hash of the source; comparing the output is stricter where it matters (a generator change is caught) and looser where it doesn't (reformatting the JSON without changing a name is not stale). CI runs `--check`; the module is committed beside its file.
+
 ## Open questions
 
 These are unresolved design choices. Scheduling and completion status live in the [roadmap](roadmap.md); examples of possible syntax below are proposals.
@@ -203,7 +224,6 @@ These are unresolved design choices. Scheduling and completion status live in th
 - `nearest` limited to neighbors of the current state (a carousel that moves one slide per swipe however hard the flick), instead of tuning `momentum` down.
 - Pinch, rotate and other multi-pointer gestures.
 - Continuous app inputs and scroll position are implemented in format 0.5. Still open: portable direction and velocity derivation, including thresholds and how those become deterministic events.
-- Type-safe host contracts: what `nudg generate` should emit for target names, host-callable events, input names and state paths; how generated declarations follow imports without becoming stale; and whether the result wraps a document or augments the existing adapters.
 - SSR initial output: how a server asks a compiled program for initial styles without a clock or platform APIs, how the client hydrates the same values, and how unresolved layout measurements or app inputs use their documented base values without a flash.
 - Lifecycle subscriptions beyond `onState`, `onFrame` and exit-specific `onExit`: define one portable settled/transition-complete semantic for interrupted motion, parallel regions and timers before exposing it in every adapter.
 - DOM CSS-variable output: whether an optional adapter mode should write custom properties so host CSS composes transforms and visual properties, rather than writing final inline properties. This stays an adapter concern and needs real Tailwind/design-system cases before it displaces the direct, low-overhead default.

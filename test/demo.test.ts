@@ -223,9 +223,12 @@ test("video call shares real camera controls without collapsing them into captur
     ["hidden", "visible", "hidden", "visible"],
   );
   await waitFor(() => browser.evaluate(`(() => { const root = document.getElementById("detail-stage").shadowRoot; return getComputedStyle(root.querySelector(".join")).opacity === "0" && getComputedStyle(root.querySelector(".actions")).opacity === "1" ? true : undefined; })()`), 5_000);
-  assert.equal(
-    await browser.evaluate(`(() => { const button = document.getElementById("detail-stage").shadowRoot.querySelector(".camera"); return button.scrollWidth <= button.clientWidth && button.scrollHeight <= button.clientHeight; })()`),
-    true,
+  assert.deepEqual(
+    await browser.evaluate(`(() => { const buttons = [...document.getElementById("detail-stage").shadowRoot.querySelectorAll(".actions button")]; return {
+      fontSizes: [...new Set(buttons.map((button) => getComputedStyle(button).fontSize))],
+      labelsFit: buttons.every((button) => button.scrollWidth <= button.clientWidth && button.scrollHeight <= button.clientHeight),
+    }; })()`),
+    { fontSizes: ["10px"], labelsFit: true },
   );
 
   await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.camera').click()");
@@ -239,6 +242,10 @@ test("video call shares real camera controls without collapsing them into captur
   await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.mute').click()");
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent.includes('mic-off') ? true : undefined"), 5_000);
   assert.equal(await browser.evaluate("window.__cameraStreams[0].audio.enabled"), false);
+  assert.equal(
+    await browser.evaluate(`(() => { const buttons = [...document.getElementById("detail-stage").shadowRoot.querySelectorAll(".actions button")]; return buttons.some((button) => button.textContent === "Unmute") && buttons.every((button) => button.scrollWidth <= button.clientWidth && button.scrollHeight <= button.clientHeight); })()`),
+    true,
+  );
 
   await browser.evaluate("document.getElementById('detail-stage').shadowRoot.querySelector('.camera').click(); document.getElementById('detail-stage').shadowRoot.querySelector('.flip').click()");
   await waitFor(() => browser.evaluate("window.__cameraRequests.length === 2 && document.getElementById('detail-state').textContent.includes('camera-on') ? true : undefined"), 5_000);

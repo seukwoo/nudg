@@ -15,6 +15,9 @@ The order below follows real app needs. Release numbers and dates are assigned w
 | `compare` and `observe` | Released | [Changelog](../CHANGELOG.md) |
 | Exit/presence handling and live A/B in the playground | Released in package 0.5.0; the old next-step note is complete | [Changelog](../CHANGELOG.md#050) |
 | Semantic UI recipes | Versioned contracts cover every shipped example; CLI and MCP resolve names and aliases to contracts and starters | [Recipe catalog](../recipes/index.json), [agent guide](../spec/guide.md#semantic-ui-words) |
+| AI editing contract | Versioned JSON Schemas, a published agent guide, MCP tools and an installable agent skill ship with the package | [Package exports](../package.json), [agent guide](../spec/guide.md), [usage](usage.md#skill) |
+| Headless renderer bridge | `createPlayer` accepts events and inputs and emits state/values; DOM and native adapters are consumers of the same core | [Design](design.md#any-platform), [usage](usage.md#headless-renderer-bridge) |
+| Continuous app and scroll inputs | Implemented in format 0.5; low-level, DOM and native APIs expose `input`, while the web React hook still needs parity | [Spec](spec.md#additions-in-05-draft), [usage](usage.md#react-native-adapter) |
 | Layout measurement and natural size | Implemented in format 0.4 | [Spec](spec.md#layout-inputs) |
 | Layout arithmetic and relative measured values | Released in package 0.9.0 as format 0.6 | [Spec](spec.md#additions-in-06) |
 | Pausable timers | Released in package 0.9.0 as format 0.7; TypeScript, Swift and Kotlin share conformance | [Spec](spec.md#additions-in-07-draft) |
@@ -45,6 +48,18 @@ Status: the first versioned recipe catalog covers every shipped example. Broad c
 - Follow with derived scroll direction/velocity and decay only when the earlier primitives are complete.
 
 Done when: the current recipes no longer duplicate essential measured resting points or rely on undocumented timer and multi-beat motion workarounds.
+
+## Next: Type-Safe Host Integration
+
+Goal: close the adoption gaps exposed by the existing format without adding component-specific runtime syntax.
+
+- Add a `nudg generate` workflow that validates the document and its imports, then emits TypeScript contracts for target names, host-callable events, continuous inputs and state paths. Settle the generated module shape and stale-file story before implementation.
+- Expose format 0.5 `input(name, value)` through the web React hook; the headless player, DOM player and React Native hook already have it.
+- Define one portable settled/transition-complete notification for interrupted motion, parallel regions and timers. Keep `onExit` as the focused unmount API and avoid per-frame React renders.
+- Define server-rendered initial output for values resolvable without the DOM, plus hydration and base-value behavior for layout measurements and app inputs. This is the accepted path to preventing first-paint flashes.
+- Document the existing published schema, AI guide and installable skill as the official editing contract rather than creating a second prompt format.
+
+Done when: a TypeScript host cannot misspell its generated target/event/input names, React can supply dynamic values without dropping to the DOM player, lifecycle completion means the same thing across adapters, and a server-rendered initial view hydrates without a visible jump.
 
 ## Deferred: Prove the Workflow in Playsnack
 
@@ -111,6 +126,7 @@ Other existing candidates remain in [Design's open questions](design.md#open-que
 Goal: make the TypeScript implementation and format stable enough for other people to build on.
 
 - Freeze the 1.0 format surface: versioning, validation errors, conformance cases, and schema.
+- Complete the accepted type generation, React input parity, lifecycle and SSR work above; these are host API concerns, not reasons to enlarge the JSON grammar.
 - Mark the stable API for `@nudg/core`, `@nudg/core/dom`, `@nudg/core/react`, and `@nudg/core/node`.
 - Lock the judge workflow: `validate`, `simulate`, `compare`, `render`, `observe`, MCP, and the live demo.
 - Document upgrade paths for older `.nudg.json` files.
@@ -134,5 +150,8 @@ Goal: make the same interaction intent portable beyond web.
 - Start from mobile-quality patterns, but keep the core platform-neutral.
 - Use playsnack to find reusable requirements. nudg has no dependency on playsnack or bite; their relationship remains exploratory.
 - Prefer recipes and examples before adding new format fields.
+- Keep platform accessibility semantics in the host and recipe contract; do not put web-only ARIA into the portable motion grammar.
+- External renderers consume the headless player's values; the deterministic motion solver remains part of nudg so every runtime can pass the same conformance suite.
+- Treat CSS-variable output as an optional DOM-adapter experiment only after real integration evidence; direct style writes remain the low-overhead default.
 - Every new feature needs at least one real interaction, one conformance or regression test, and one way for the AI/person judge loop to inspect it.
 - The person judges motion by seeing it. Graphs and numbers support the workflow; they are not the product.

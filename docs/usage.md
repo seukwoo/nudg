@@ -303,7 +303,31 @@ function Toggle() {
 - Not yet: keys (rare on phones), and the native driver; values are written from JavaScript each frame, which is fine for UI motion and is the next thing to move to Reanimated for heavy screens.
 - Checked on an Android emulator through Expo Go: the toggle springs and recolors, and a held button scales to 0.96.
 
-For other hosts (a canvas, a game loop), `createPlayer(program, { host: { now, frame }, onFrame })` from `@nudg/core` is the same loop without any platform: you give it a clock and a frame scheduler, it gives you values.
+## Headless renderer bridge
+
+For Canvas, a game loop or another view system, `createPlayer` is the renderer boundary. The host supplies a clock and frame scheduler; nudg owns deterministic state and motion and emits portable values. The renderer only applies them:
+
+```ts
+import { createPlayer, toProgram } from "@nudg/core";
+import interaction from "./interaction.nudg.json";
+
+const player = createPlayer(toProgram(interaction), {
+  host: {
+    now: () => performance.now() / 1000,
+    frame: (run) => {
+      const id = requestAnimationFrame(run);
+      return () => cancelAnimationFrame(id);
+    },
+  },
+  onFrame: (values) => renderer.apply(values),
+  onState: (states) => renderer.setInteractionState(states),
+});
+
+player.send("host.show");
+player.input("host.progress", 0.6);
+```
+
+This is an adapter/observer API, not a second rendering engine: DOM, Canvas or an external library may consume the values, but replacing nudg's motion math would lose conformance with other runtimes.
 
 ## Swift and SwiftUI
 

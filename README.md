@@ -15,7 +15,7 @@
   </picture>
 </a>
 
-**[Try all 16 examples in the live demo →](https://seukwoo.github.io/nudg/demo/)**
+**[Try all 26 examples in the live demo →](https://seukwoo.github.io/nudg/demo/)**
 
 </div>
 
@@ -203,7 +203,7 @@ The nudg core never draws anything. Events go in, property values come out, and 
 
 - **Deterministic.** The same events at the same times always give the same values, so motion can be tested like any other code.
 - **Portable.** Any platform that can set a property and send an event can run nudg. The spec and a language-neutral [conformance suite](spec/conformance/) define the behavior, not one implementation.
-- **Just JSON.** No new syntax, no studio, readable diffs. A [JSON Schema](spec/nudg-0.1.schema.json) gives editors completion.
+- **Just JSON.** No new syntax, no studio, readable diffs. The published [JSON Schema](spec/nudg-0.8.schema.json) gives editors completion, and the package exports its latest version as `@nudg/core/schema.json`.
 
 ## Why
 

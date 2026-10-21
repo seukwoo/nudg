@@ -1,6 +1,6 @@
 // swift-tools-version:5.9
 // nudg for Swift and SwiftUI, installable by this repository's URL:
-//   .package(url: "https://github.com/seukwoo/nudg", from: "0.10.0")
+//   .package(url: "https://github.com/seukwoo/nudg", from: "0.11.0")
 // The runtime reads programs compiled with `npx @nudg/core compile file.nudg.json`.
 // Sources live in swift/; the conformance runner and render check are in swift/Package.swift.
 import PackageDescription

@@ -4,7 +4,7 @@ nudg is early. The format can still change before 1.0, but the development direc
 
 This is the single development plan for priorities, stage status and completion criteria. It consolidates the stages previously listed in the README and design doc, and the next steps previously kept in `CLAUDE.md`. Design rationale and unresolved technical choices stay in [Design](design.md#open-questions); implemented behavior is defined by [the spec](spec.md), and release history stays in the [changelog](../CHANGELOG.md). The [devlog](devlog.md) records findings at the time, not the current queue.
 
-The order below follows real app needs. Release numbers and dates are assigned when scope is established; the earlier 0.6-0.9 headings were provisional. Package and format versions are separate: package 0.10.0 ships format 0.9.
+The order below follows real app needs. Release numbers and dates are assigned when scope is established; the earlier 0.6-0.9 headings were provisional. Package and format versions are separate: package 0.11.0 ships format 0.9.
 
 ## Current Baseline
 
@@ -50,14 +50,16 @@ Status: the first repeated lower-level gaps from the versioned recipe catalog ar
 
 Completion met: the current recipes no longer duplicate essential measured resting points or rely on undocumented timer and multi-beat motion workarounds.
 
-## Now: Type-Safe Host Integration
+## Completed: Type-Safe Host Integration
+
+Status: complete in 0.11.0 (`input` parity, `nudg generate`, `onSettle`, server-rendered first frame, the editing contract).
 
 Goal: close the adoption gaps exposed by the existing format without adding component-specific runtime syntax.
 
 - Done in 0.10.0: `nudg generate` validates the document and its imports and writes a types-only contract module of target names, handled events, continuous inputs and state paths; `--check` fails on missing or stale modules in CI. React, React Native, DOM and headless APIs take it as a type argument. Decisions in [Design](design.md#type-safe-host-contracts).
 - Done in 0.10.0: format 0.5 `input(name, value)` through the React and React Native hooks. The React Native hook turned out to lack it as well; both keep the latest values across program changes and apply values given before mount.
 - Done in 0.10.0: one portable settle notification, `onSettle`, in the headless and DOM players, React, React Native, SwiftUI and Compose, with the rest rule specified and covered by conformance. SwiftUI and Compose also gained `exit` / `onExit`. Decisions in [Design](design.md#settle-when-motion-is-over).
-- Done (unreleased): server-rendered first frame. React `style(name)`, `initialStyles` / `cssText` for any server, and an `inputs` option; measured values render at their base. Hydration is checked in Chrome. Decisions in [Design](design.md#server-rendering-the-first-frame).
+- Done in 0.11.0: server-rendered first frame. React `style(name)`, `initialStyles` / `cssText` for any server, and an `inputs` option; measured values render at their base. Hydration is checked in Chrome. Decisions in [Design](design.md#server-rendering-the-first-frame).
 - Done: the published schema, validator codes, agent guide, recipes, skill and generated host names are documented as one [editing contract](usage.md#the-editing-contract-for-ai-tools), rather than a second prompt format.
 
 Done when: a TypeScript host cannot misspell its generated target/event/input names, React can supply dynamic values without dropping to the DOM player, lifecycle completion means the same thing across adapters, and a server-rendered initial view hydrates without a visible jump.

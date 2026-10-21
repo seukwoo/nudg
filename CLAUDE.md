@@ -16,7 +16,7 @@ Read [docs/roadmap.md](docs/roadmap.md) for the current baseline, next work and 
 
 The judge workflow is grounded in docs/devlog.md ("the second review"): the person should be able to see and judge a change quickly. nudg stays independent of the user's other projects; findings from using it elsewhere go to the devlog and inform the roadmap.
 
-The npm package is `@nudg/core` (the bare name `nudg` is blocked by npm's similar-name filter; the CLI command is still `nudg`). `npm publish` is done by the user, who owns the npm account.
+The npm package is `@nudg/core` (the bare name `nudg` is blocked by npm's similar-name filter; the CLI command is still `nudg`). Releases are published by `.github/workflows/release.yml` when a GitHub release is published (npm trusted publishing, no token); the user owns the npm account and its trusted-publisher setting. Cutting a release means: a release-prep PR (version, changelog, docs), merge, tag `vX.Y.Z`, then `gh release create`.
 
 ## Working rules for the code
 

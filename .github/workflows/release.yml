@@ -1,0 +1,43 @@
+name: Release
+
+# Publishes @nudg/core to npm when a GitHub release is published, through npm's trusted
+# publishing: GitHub proves which workflow is asking, so no npm token is stored anywhere,
+# and the package gets a provenance statement. One-time setup on npmjs.com: @nudg/core ->
+# Settings -> Trusted Publisher -> GitHub Actions, repository seukwoo/nudg, workflow
+# release.yml. To publish a release that already exists, run this workflow by hand with its tag.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish, e.g. v0.10.0
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  npm:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      # Trusted publishing needs npm 11.5.1 or later.
+      - run: npm install -g npm@11
+      - name: The tag matches package.json
+        run: test "v$(node -p "require('./package.json').version")" = "$TAG"
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm publish --access public

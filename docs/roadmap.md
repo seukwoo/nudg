@@ -54,7 +54,7 @@ Completion met: the current recipes no longer duplicate essential measured resti
 
 Goal: close the adoption gaps exposed by the existing format without adding component-specific runtime syntax.
 
-- Add a `nudg generate` workflow that validates the document and its imports, then emits TypeScript contracts for target names, host-callable events, continuous inputs and state paths. Settle the generated module shape and stale-file story before implementation.
+- Done (unreleased): `nudg generate` validates the document and its imports and writes a types-only contract module of target names, handled events, continuous inputs and state paths; `--check` fails on missing or stale modules in CI. React, React Native, DOM and headless APIs take it as a type argument. Decisions in [Design](design.md#type-safe-host-contracts).
 - Done (unreleased): format 0.5 `input(name, value)` through the React and React Native hooks. The React Native hook turned out to lack it as well; both keep the latest values across program changes and apply values given before mount.
 - Define one portable settled/transition-complete notification for interrupted motion, parallel regions and timers. Keep `onExit` as the focused unmount API and avoid per-frame React renders.
 - Define server-rendered initial output for values resolvable without the DOM, plus hydration and base-value behavior for layout measurements and app inputs. This is the accepted path to preventing first-paint flashes.

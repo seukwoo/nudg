@@ -4,11 +4,11 @@
 
 import { compile } from "../core/compile.ts";
 import { createRuntime, type Runtime, type Value } from "../core/runtime.ts";
-import type { Machine, Program } from "../core/types.ts";
+import type { Machine, NudgContract, Program, StateName } from "../core/types.ts";
 
-export interface PlayOptions {
+export interface PlayOptions<C extends NudgContract = NudgContract> {
   /** Elements to bind by target name, in addition to [data-nudg] attributes. */
-  bind?: Record<string, Element | Element[]>;
+  bind?: Partial<Record<C["targets"], Element | Element[]>>;
   /**
    * "realtime" (default) follows the wall clock. "manual" only moves when you call
    * render(t), and events are stamped with the last rendered time: use it for
@@ -16,9 +16,9 @@ export interface PlayOptions {
    */
   clock?: "realtime" | "manual";
   /** Leaf state paths to start in instead of `initial`, e.g. ["on"]. */
-  state?: string[];
+  state?: C["states"][];
   /** Called with the active states after any event changes them. */
-  onState?: (state: string[]) => void;
+  onState?: (state: C["states"][]) => void;
   /** Reduced motion (v0.3). Default: the system's prefers-reduced-motion setting. */
   reducedMotion?: boolean;
   /** Called with the values after every frame they're applied, e.g. to keep aria-valuenow in step. */
@@ -29,7 +29,7 @@ export interface PlayOptions {
    * `onExit` is called: that is when to remove the element, not before, or the exit
    * motion never shows. Leaving the state again makes it present again.
    */
-  exit?: string | string[];
+  exit?: StateName<C> | StateName<C>[];
   /** Called once each time the component has fully exited (see `exit`). */
   onExit?: () => void;
   /**
@@ -52,20 +52,20 @@ export interface PlayOptions {
   watch?: boolean;
 }
 
-export interface Player {
+export interface Player<C extends NudgContract = NudgContract> {
   readonly runtime: Runtime;
   /** Targets the file uses that have no element. */
   readonly unbound: string[];
   /** [data-nudg] names under the root that the file doesn't declare. */
   readonly unknown: string[];
   /** Sends an event now, as if it came from input (e.g. "host.check"). False once destroyed. */
-  send(event: string): boolean;
+  send(event: C["events"]): boolean;
   /** The values last applied to the elements. */
   values(): Record<string, Value>;
   /** Records an input sample now (e.g. "host.volume", 0.7). */
-  input(name: string, value: number): boolean;
+  input(name: C["inputs"], value: number): boolean;
   /** Binds one more element to a target. Returns a function that unbinds it. */
-  bind(name: string, element: Element): () => void;
+  bind(name: C["targets"], element: Element): () => void;
   /** The player's current time in seconds: scaled real time, or the last rendered time on a manual clock. */
   now(): number;
   /** Manual clock: applies the values at time `t` (seconds). */
@@ -82,7 +82,7 @@ const TRANSFORM_PROPS = new Set(["x", "y", "rotation", "scale", "scaleX", "scale
  * `playDoc(presets.press(), button)`. When `root` is an element with no [data-nudg]
  * inside, it is bound to the document's first target. Throws if the document has errors.
  */
-export function playDoc(doc: object, root: ParentNode | null = document, options: PlayOptions & { files?: Record<string, unknown> } = {}): Player {
+export function playDoc<C extends NudgContract = NudgContract>(doc: object, root: ParentNode | null = document, options: PlayOptions<C> & { files?: Record<string, unknown> } = {}): Player<C> {
   const files = new Map(Object.entries(options.files ?? {}).map(([k, v]) => [k.replace(/^(\.\/)+/, ""), v]));
   const { program, diagnostics } = compile({ path: "main.nudg.json", text: JSON.stringify(doc) }, (path) =>
     files.has(path) ? JSON.stringify(files.get(path)) : undefined,
@@ -98,7 +98,7 @@ export function playDoc(doc: object, root: ParentNode | null = document, options
 /** Logical units the pointer must travel before a press becomes a drag. */
 const DRAG_SLOP = 4;
 
-export function play(program: Program, root: ParentNode | null = document, options: PlayOptions = {}): Player {
+export function play<C extends NudgContract = NudgContract>(program: Program, root: ParentNode | null = document, options: PlayOptions<C> = {}): Player<C> {
   const elements = new Map<string, Set<Element>>();
   const cleanups = new Map<Element, () => void>();
   const found = new Set<string>();

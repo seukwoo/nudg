@@ -8,6 +8,8 @@ export type { HeadlessOptions, HeadlessPlayer, PlayerHost } from "./core/player.
 export { programFromJson, programToJson, PROGRAM_FORMAT } from "./core/program-json.ts";
 export type { Runtime, Value } from "./core/runtime.ts";
 export { compare, compareFrameTimes, THRESHOLDS } from "./core/compare.ts";
+export { contract, contractModule, contractName } from "./core/contract.ts";
+export type { Contract } from "./core/contract.ts";
 export { critique, measureTransitions } from "./core/critique.ts";
 export type { CritiqueFinding, CritiqueSeverity, MeasuredTransition } from "./core/critique.ts";
 export type { Comparison, Perceptibility, PropertyDifference } from "./core/compare.ts";

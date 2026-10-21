@@ -5,6 +5,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { basename, extname, join } from "node:path";
 import { compare, compareFrameTimes } from "./core/compare.ts";
+import { contract, contractModule } from "./core/contract.ts";
 import { critique } from "./core/critique.ts";
 import { programToJson } from "./core/program-json.ts";
 import { createRuntime } from "./core/runtime.ts";
@@ -83,6 +84,10 @@ simulate and plot options
   compile <file> [--out x]  The file compiled for a native runtime (Swift, Kotlin): validated,
                             imports and named motions resolved, as plain JSON. Ship it with
                             the app; the runtime there reads it without a validator.
+  generate <file...>        TypeScript names for the host: writes x.nudg.ts beside x.nudg.json with
+                            its targets, events, inputs and state paths (imports included), for
+                            useNudg<XContract>(x). --check writes nothing and exits 1 if a module
+                            is missing or stale (for CI). --out <file.ts> with one file.
   critique <file...>        Whether the motion is good, not only valid: each transition checked
                             against the platforms' motion guidelines and accessibility rules
                             (slow transitions, late press feedback, invisible changes, bouncy
@@ -149,7 +154,7 @@ function parseArgs(argv: string[]): Args {
       continue;
     }
     const [name, inline] = arg.slice(2).split(/=(.*)/s, 2);
-    const boolean = ["json", "help", "reduced-motion", "open", "clear", "path", "print", "user", "share", "strict", "source"].includes(name);
+    const boolean = ["json", "help", "reduced-motion", "open", "clear", "path", "print", "user", "share", "strict", "source", "check"].includes(name);
     const value = boolean ? "" : (inline ?? argv[++i]);
     if (value === undefined || (!boolean && (value === "" || value.startsWith("--")))) fail(`Option --${name} needs a value.`);
     flags.set(name, [...(flags.get(name) ?? []), value]);
@@ -543,6 +548,42 @@ async function runRender(args: Args, json: boolean): Promise<number> {
   return 0;
 }
 
+function runGenerate(args: Args, json: boolean): number {
+  if (args.positional.length === 0) fail("generate needs at least one file.");
+  const out = args.flags.get("out")?.at(-1);
+  if (out && args.positional.length > 1) fail("--out takes one file; without it each module goes beside its file.");
+  const check = args.flags.has("check");
+  const results: { file: string; out: string; status: "written" | "unchanged" | "stale" | "missing" | "errors"; diagnostics?: Diagnostic[] }[] = [];
+  for (const file of args.positional) {
+    if (!out && !file.endsWith(".json")) fail(`${file}: expected a .json file, or pass --out.`);
+    const target = out ?? file.replace(/\.json$/, ".ts");
+    const { program, diagnostics } = load(file);
+    if (!program) {
+      results.push({ file, out: target, status: "errors", diagnostics });
+      continue;
+    }
+    const text = contractModule(contract(program), file);
+    const current = existsSync(target) ? readFileSync(target, "utf8") : undefined;
+    if (current === text) results.push({ file, out: target, status: "unchanged" });
+    else if (check) results.push({ file, out: target, status: current === undefined ? "missing" : "stale" });
+    else {
+      writeFileSync(target, text);
+      results.push({ file, out: target, status: "written" });
+    }
+  }
+  const failed = results.some((r) => r.status === "errors" || r.status === "stale" || r.status === "missing");
+  if (json) process.stdout.write(JSON.stringify({ ok: !failed, results }, null, 2) + "\n");
+  else
+    for (const r of results) {
+      if (r.status === "errors") {
+        process.stdout.write(`${r.file}: can't generate, the file has errors\n`);
+        for (const d of r.diagnostics!) process.stdout.write(formatDiagnostic(d) + "\n");
+      } else if (r.status === "stale" || r.status === "missing") process.stdout.write(`${r.out}: ${r.status}, run \`nudg generate ${r.file}\`\n`);
+      else process.stdout.write(`${r.out}: ${r.status}\n`);
+    }
+  return failed ? 1 : 0;
+}
+
 const args = parseArgs(process.argv.slice(2));
 const json = args.flags.has("json");
 const command = args.positional.shift();
@@ -572,6 +613,7 @@ if (command === "compile") {
   } else process.stdout.write(text);
   process.exit(0);
 }
+if (command === "generate") process.exit(runGenerate(args, json));
 if (command === "critique") {
   if (args.positional.length === 0) fail("critique needs at least one file.");
   let warnings = 0;

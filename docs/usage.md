@@ -125,6 +125,25 @@ The toast passes because its 3 s timer pauses for hover, focus and app suspensio
 
 Findings are warnings or suggestions, never errors; `--strict` exits 1 on warnings, for CI. Over MCP it is `nudg_critique`, and the server tells the agent to run it after every change.
 
+### generate
+
+```sh
+nudg generate toggle.nudg.json            # writes toggle.nudg.ts beside it
+nudg generate src/**/*.nudg.json --check  # CI: exit 1 if a module is missing or stale
+```
+
+Writes a types-only TypeScript module with the file's targets, handled events, continuous inputs and state paths (imports included), as one interface named after the file:
+
+```ts
+import toggle from "./toggle.nudg.json";
+import type { ToggleContract } from "./toggle.nudg.ts";
+
+const { bind, send, input } = useNudg<ToggleContract>(toggle);
+send("host.chek"); // type error: not an event the file handles
+```
+
+The React, React Native, DOM (`play`, `playDoc`) and headless (`createPlayer`) APIs take the contract as a type argument; without one, any string is accepted as before. `--check` writes nothing; it fails when a module is missing or differs from what would be generated, so run it in CI and commit the module. Reformatting the JSON doesn't make a module stale; changing a name does. `--out <file.ts>` names the output for a single file. The MCP tool `nudg_generate` returns the same text.
+
 ### observe
 
 The file says what should happen. `observe` says what the real page showed:
@@ -208,6 +227,7 @@ Installs a Claude Code skill that teaches the agent the loop: validate, compare 
 | `nudg_compare` | Two versions under the same events: a perceptibility verdict first (imperceptible / subtle / clear, per property), then real A/B filmstrips (with `html`; both versions as files) or one graph with both curves. With `html` it also writes the side-by-side page (its path is in the result; `page` chooses it) and tells the person to open it. Proposes an exaggerated version when nothing would be noticed. |
 | `nudg_render` | Real frames of the component as a filmstrip image, from the host page (needs Chrome). |
 | `nudg_critique` | Whether the motion is good: every transition checked against the platforms' motion guidelines and accessibility rules, each finding with a pointer, a fix and its source. |
+| `nudg_generate` | The TypeScript contract module for a file's targets, events, inputs and states, as `nudg generate` writes it. |
 | `nudg_share` | Prepares a counts-only usage summary and a prefilled GitHub issue link, with the person's note, for them to submit. Sends nothing by itself. |
 | `nudg_observe` | Host truth: opens the running page, performs actions, measures the element every frame, and judges what the page showed against the file (played / differs / never shown / nothing moved). |
 
@@ -238,7 +258,7 @@ function Toggle({ checked }: { checked: boolean }) {
 }
 ```
 
-`bind(name)` returns a stable ref callback. Values go straight to the elements' styles, so the component doesn't re-render while things move; `state` updates only when the state changes. The hook takes a JSON object (compiled once, with `files` for its imports) or a compiled program. React 18 or later is an optional peer dependency.
+With the contract from [`nudg generate`](#generate), `useNudg<ToggleContract>(toggle)` checks target, event, input and state names at compile time. `bind(name)` returns a stable ref callback. Values go straight to the elements' styles, so the component doesn't re-render while things move; `state` updates only when the state changes. The hook takes a JSON object (compiled once, with `files` for its imports) or a compiled program. React 18 or later is an optional peer dependency.
 
 **App values.** `input(name, value)` supplies a continuous value the file reads with `map` or `follow` (format 0.5), such as a microphone level or playback progress. It writes styles without re-rendering, and returns false for names the file doesn't read. The latest value carries over when the program changes, and a value given before the hook's player starts (a child's layout effect, for example) applies when it does:
 

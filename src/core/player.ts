@@ -5,7 +5,7 @@
 
 import { compile } from "./compile.ts";
 import { createRuntime, type Runtime, type Value } from "./runtime.ts";
-import type { Program } from "./types.ts";
+import type { NudgContract, Program, StateName } from "./types.ts";
 
 export interface PlayerHost {
   /** Seconds, increasing; any origin. */
@@ -14,25 +14,25 @@ export interface PlayerHost {
   frame(fn: () => void): () => void;
 }
 
-export interface HeadlessOptions {
+export interface HeadlessOptions<C extends NudgContract = NudgContract> {
   host: PlayerHost;
-  state?: string[];
+  state?: C["states"][];
   reducedMotion?: boolean;
   /** Time scale: 0.25 plays everything at quarter speed. Default 1. */
   speed?: number;
   /** Called with the values whenever they change: apply them to the views. */
   onFrame?: (values: Record<string, Value>) => void;
   /** Called with the active states after an event or timer changes them. */
-  onState?: (state: string[]) => void;
+  onState?: (state: C["states"][]) => void;
   /** States that mean the component is gone; see the DOM adapter's `exit`. */
-  exit?: string | string[];
+  exit?: StateName<C> | StateName<C>[];
   onExit?: () => void;
 }
 
-export interface HeadlessPlayer {
+export interface HeadlessPlayer<C extends NudgContract = NudgContract> {
   readonly runtime: Runtime;
-  send(event: string): boolean;
-  input(name: string, value: number): boolean;
+  send(event: C["events"]): boolean;
+  input(name: C["inputs"], value: number): boolean;
   values(): Record<string, Value>;
   present(): boolean;
   /** The player's time in seconds. */
@@ -40,7 +40,7 @@ export interface HeadlessPlayer {
   destroy(): void;
 }
 
-export function createPlayer(program: Program, options: HeadlessOptions): HeadlessPlayer {
+export function createPlayer<C extends NudgContract = NudgContract>(program: Program, options: HeadlessOptions<C>): HeadlessPlayer<C> {
   const { host } = options;
   const speed = options.speed ?? 1;
   if (!(speed > 0)) throw new RangeError("`speed` must be greater than 0.");

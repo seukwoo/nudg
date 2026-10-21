@@ -19,7 +19,7 @@
     .controls { position: absolute; z-index: 3; inset: auto 10px 10px; height: 34px; }
     .join, .actions { position: absolute; inset: 0; }
     .join { width: 100%; border: 0; border-radius: 6px; color: #173d35; background: #effbf6; font: inherit; font-weight: 800; cursor: pointer; }
-    .actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+    .actions { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, .8fr) minmax(0, 1fr); gap: 6px; }
     .actions button { min-width: 0; padding: 2px; border: 1px solid rgba(255,255,255,.22); border-radius: 6px; color: #17221f; background: #f5f7f4; font: inherit; font-size: 10px; font-weight: 750; line-height: 1.05; white-space: nowrap; cursor: pointer; }
     .actions button:disabled { cursor: not-allowed; opacity: .55; }
     .actions .leave { border-color: #efc2c5; color: #8f252d; background: #fff0f1; }

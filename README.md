@@ -21,6 +21,15 @@
 
 nudg describes a UI interaction in a small JSON file next to your component: its states, the events that move between them, and the motion in between. Your AI coding tool edits the file, nudg checks the edit, and a tiny runtime plays it in your app.
 
+## Think of it as sheet music
+
+| | |
+|---|---|
+| **The `.nudg.json` file** is the score | which parts move, in which states, and how they get there |
+| **The runtimes** are the rules of performance | TypeScript, Swift and Kotlin play the same score the same way, and a shared conformance suite proves it |
+| **Your AI** is the arranger | "bouncier" changes one marking, not the whole piece |
+| **You** are the director | you watch before and after, side by side, and pick the better take |
+
 ## Say "bouncier", see before and after, judge
 
 ```diff
@@ -190,7 +199,7 @@ The examples site's playground has the same judge view live: **Compare with orig
 The nudg core never draws anything. Events go in, property values come out, and a thin adapter applies them to your views:
 
 ```
- your app (web today; iOS, Android, and more to come)
+ your app (web, React Native, SwiftUI, Compose, ...)
    │  events: tap, drag, hover, focus, app events
    ▼
  ┌──────────────── nudg core ────────────────┐

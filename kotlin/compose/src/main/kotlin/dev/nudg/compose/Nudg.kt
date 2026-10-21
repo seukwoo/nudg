@@ -30,6 +30,7 @@ import dev.nudg.PointerTracker
 import dev.nudg.Program
 import dev.nudg.draggableTargets
 import dev.nudg.handledEvents
+import dev.nudg.Lifecycle
 import dev.nudg.nudgKeyName
 import dev.nudg.Runtime
 import dev.nudg.Value
@@ -45,8 +46,11 @@ import kotlin.math.roundToInt
  *   }
  */
 @Stable
-class NudgState internal constructor(program: Program, state: List<String>, reducedMotion: Boolean) {
+class NudgState internal constructor(program: Program, state: List<String>, reducedMotion: Boolean, exit: List<String> = emptyList()) {
     val runtime = Runtime(program, state, reducedMotion)
+    private val lifecycle = Lifecycle(runtime, exit)
+    internal var onSettle: ((List<String>) -> Unit)? = null
+    internal var onExit: (() -> Unit)? = null
     private var startNanos = -1L
     private var lastTime = 0.0
 
@@ -57,6 +61,19 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     /** Active states; changes when an event or timer changes them. */
     var state: List<String> by mutableStateOf(runtime.state())
         private set
+
+    /** False once the component has exited (see `exit` in [rememberNudg]); true again if it is shown again. */
+    var present: Boolean by mutableStateOf(true)
+        private set
+
+    init {
+        lifecycle.onState = { this.state = it }
+        lifecycle.onSettle = { onSettle?.invoke(it) }
+        lifecycle.onExit = {
+            present = false
+            onExit?.invoke()
+        }
+    }
 
     private var moving by mutableStateOf(false)
 
@@ -69,23 +86,28 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     internal fun frame(nanos: Long) {
         val t = time(nanos)
         values = runtime.sample(t)
-        val s = runtime.state()
-        if (s != state) state = s
-        moving = !runtime.settled(t)
+        moving = lifecycle.frame(t) // a timer may have fired; settle and exit are reported from here
+        if (lifecycle.present) present = true
     }
 
     /** Sends an event now, e.g. "track.tap" or "host.show". */
     fun send(event: String): Boolean {
         val handled = runtime.send(event, lastTime)
-        moving = true
+        changed()
         return handled
     }
 
     /** A layout report or an input sample, now. */
     fun input(name: String, value: Double): Boolean {
         val used = runtime.input(name, value, lastTime)
-        moving = true
+        changed()
         return used
+    }
+
+    private fun changed() {
+        lifecycle.changed()
+        if (lifecycle.present) present = true
+        moving = true
     }
 
     internal val isMoving get() = moving
@@ -93,9 +115,24 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     internal fun number(name: String, property: String, default: Double) = (values["$name.$property"] as? Value.Number)?.value ?: default
 }
 
+/**
+ * Plays [program]. [exit] names the states that mean the component is gone ("hidden"):
+ * [NudgState.present] turns false and [onExit] is called once the exit motion has settled.
+ * [onSettle] is called with the active states each time every value has come to rest after
+ * something moved or the state changed, as in every other adapter.
+ */
 @Composable
-fun rememberNudg(program: Program, state: List<String> = emptyList(), reducedMotion: Boolean = false): NudgState {
-    val nudg = remember(program) { NudgState(program, state, reducedMotion) }
+fun rememberNudg(
+    program: Program,
+    state: List<String> = emptyList(),
+    reducedMotion: Boolean = false,
+    exit: List<String> = emptyList(),
+    onSettle: ((List<String>) -> Unit)? = null,
+    onExit: (() -> Unit)? = null,
+): NudgState {
+    val nudg = remember(program) { NudgState(program, state, reducedMotion, exit) }
+    nudg.onSettle = onSettle
+    nudg.onExit = onExit
     LaunchedEffect(nudg) {
         // Frames run while something moves; a send or input wakes the loop again.
         while (true) withFrameNanos { nudg.frame(it) }

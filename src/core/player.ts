@@ -4,6 +4,7 @@
 // onFrame, events and inputs come in through send and input.
 
 import { compile } from "./compile.ts";
+import { createLifecycle } from "./lifecycle.ts";
 import { createRuntime, type Runtime, type Value } from "./runtime.ts";
 import type { NudgContract, Program, StateName } from "./types.ts";
 
@@ -27,6 +28,8 @@ export interface HeadlessOptions<C extends NudgContract = NudgContract> {
   /** States that mean the component is gone; see the DOM adapter's `exit`. */
   exit?: StateName<C> | StateName<C>[];
   onExit?: () => void;
+  /** Every value has come to rest after something moved or the state changed; see the DOM adapter's `onSettle`. */
+  onSettle?: (state: C["states"][]) => void;
 }
 
 export interface HeadlessPlayer<C extends NudgContract = NudgContract> {
@@ -49,47 +52,19 @@ export function createPlayer<C extends NudgContract = NudgContract>(program: Pro
   const runtime = createRuntime(program, { state: options.state, reducedMotion: options.reducedMotion });
   let cancel: (() => void) | undefined;
   let destroyed = false;
-  let lastState = runtime.state().join("\n");
   let lastValues: Record<string, Value> = runtime.sample(0);
-
-  const exits = new Set(typeof options.exit === "string" ? [options.exit] : (options.exit ?? []));
-  const inExit = () => runtime.state().some((path) => exits.has(path) || exits.has(path.split("/").pop()!));
-  let present = true;
-  let armed = exits.size > 0 && !inExit();
-  const syncPresence = (t: number) => {
-    if (exits.size === 0) return;
-    if (!inExit()) {
-      armed = true;
-      present = true;
-      return;
-    }
-    if (armed && present && runtime.settled(t)) {
-      present = false;
-      armed = false;
-      options.onExit?.();
-    }
-  };
-  const syncState = () => {
-    const state = runtime.state();
-    if (state.join("\n") !== lastState) {
-      lastState = state.join("\n");
-      options.onState?.(state);
-    }
-  };
+  const life = createLifecycle(runtime, { exit: options.exit, onState: options.onState, onSettle: options.onSettle, onExit: options.onExit });
   const tick = () => {
     cancel = undefined;
     if (destroyed) return;
     const t = now();
     lastValues = runtime.sample(t);
     options.onFrame?.(lastValues);
-    syncState();
-    if (!runtime.settled(t)) cancel = host.frame(tick);
-    else syncPresence(t);
+    if (life.frame(t)) cancel = host.frame(tick);
   };
   const changed = () => {
-    syncState();
     if (!cancel) cancel = host.frame(tick);
-    syncPresence(now());
+    life.changed();
   };
   options.onFrame?.(lastValues);
 
@@ -108,7 +83,7 @@ export function createPlayer<C extends NudgContract = NudgContract>(program: Pro
       return used;
     },
     values: () => lastValues,
-    present: () => present,
+    present: () => life.present(),
     now,
     destroy() {
       destroyed = true;

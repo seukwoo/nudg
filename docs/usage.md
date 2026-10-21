@@ -282,6 +282,8 @@ function Toast({ onGone }: { onGone: () => void }) {
 }
 ```
 
+**Settle.** `onSettle(state)` is called each time every value has come to rest after something moved or the state changed: the dialog has finished opening, the sheet has snapped, the toast is fully shown (its dismiss timer doesn't delay it). It is called once per rest, so a motion interrupted by another reports only the second rest, and a drag that only follows the finger reports nothing. Use it to move focus or start work once motion is over; the hook doesn't re-render for it. `nudgTransition` uses it to call the library's `onEntered`.
+
 `present` turns false once the machine has entered an `exit` state and every value has come to rest; `onExit` fires then, once. For a list of toasts, the parent removes the item in `onExit`, not when it decides to dismiss: dismissing is an event (`send("host.hide")`, or the file's own timer), removal is the consequence. Showing the component again (an event that leaves the exit state) makes `present` true again.
 
 ## With component libraries
@@ -330,7 +332,7 @@ function Toggle() {
 ```
 
 - `bind(name)` gives a target its animated `style` (x, y, rotation and scale as a transform; opacity, width, height; color as background), `press` handlers for a `Pressable` (`down`, `up`, `tap`), and `onLayout`, which reports its box for `measure` (0.4).
-- `send("host.show")`, `input("host.volume", 0.7)`, `state`, `present` and the `exit` / `onExit` options work as in React. Reduce Motion follows the system setting unless `reducedMotion` is passed.
+- `send("host.show")`, `input("host.volume", 0.7)`, `state`, `present` and the `exit` / `onExit` / `onSettle` options work as in React. Reduce Motion follows the system setting unless `reducedMotion` is passed.
 - `bind(name).gesture` (spread on any `View`) handles press and drag: `down`, `up`, `tap`, and for targets the file drags, `dragstart`, `drag.x` / `drag.y` and `dragend`, with the same 4-unit slop as the web. Checked on the Android emulator with the drag toggle.
 - Not yet: keys (rare on phones), and the native driver; values are written from JavaScript each frame, which is fine for UI motion and is the next thing to move to Reanimated for heavy screens.
 - Checked on an Android emulator through Expo Go: the toggle springs and recolors, and a held button scales to 0.96.
@@ -393,7 +395,7 @@ struct Toggle: View {
 ```
 
 - `.nudg(model, "knob")` applies a target's values (offset, rotation, scale, opacity, size, background color) every frame through `TimelineView`. `.nudgPress(model, "track")` handles press and drag by the same rules as the web (`down`, `up`, `tap`; `dragstart`, `drag.x` / `drag.y`, `dragend` for targets the file drags). `.nudgKeys(model, "thumb")` sends `target.key.<name>` while focused, for the keys the file listens for. `.nudgLayout(model, "tab2")` reports the view's frame for `measure`.
-- `model.send("host.show")`, `model.state`, and Reduce Motion from the system on iOS.
+- `model.send("host.show")`, `model.state`, and Reduce Motion from the system on iOS. `NudgModel(program, exit: ["hidden"], onSettle: { states in ... }, onExit: { ... })` and `model.present` follow the same lifecycle rules as every adapter; the CI check covers a settle after an interrupted toggle and an exit.
 - The runtime passes the whole conformance suite from `spec/conformance/programs/` (`swift run NudgConformance ../spec/conformance`), and CI also renders a toggle with SwiftUI's `ImageRenderer` and checks the knob is where the runtime says.
 - Not yet: an iOS simulator check (needs Xcode; the pointer rules are checked in the conformance runner instead), Swift Package distribution outside this repository.
 
@@ -417,7 +419,7 @@ Box(Modifier.size(52.dp, 32.dp).nudg(toggle, "track").nudgPress(toggle, "track")
 ```
 
 - `Modifier.nudg(state, "knob")` reads values inside a graphics layer (offset in dp, rotation, scale, opacity), a layout block (width, height) and a draw block (color), so a frame redraws or relayouts what moves and never recomposes. `nudgPress` handles press and drag by the same rules as every adapter (`down`, `up` or `cancel`, `tap`; `dragstart`, `drag.x` / `drag.y` in dp, `dragend` for targets the file drags); `nudgKeys` sends `target.key.<name>` while focused; `nudgLayout` (before `nudg` in the chain) reports the untransformed box for `measure`.
-- `state.send("host.show")`, `state.state`, and a `reducedMotion` flag.
+- `state.send("host.show")`, `state.state`, and a `reducedMotion` flag. `rememberNudg(program, exit = listOf("hidden"), onExit = { ... }, onSettle = { states -> ... })` and `state.present` follow the same lifecycle rules as every adapter.
 - The runtime passes the whole conformance suite (`./gradlew :conformance:run`, also in CI). The `demo` app (`./gradlew :demo:installDebug`, with `sdk.dir` in `kotlin/local.properties`) plays the web examples' toggle and press; checked on an Android emulator.
 - The drag toggle was checked on the emulator: drags past the 4 dp slop turn it on and off, a shorter nudge taps. Not yet: Maven distribution.
 
@@ -434,6 +436,7 @@ const player = play(program, document.querySelector(".settings"));
 - **Input:** `pointerdown` is `down`, `click` is `tap` (so keyboard activation of a button also taps), and a release is `up` over the element or `cancel` outside it. For targets the file drags, travel past 4 px is `dragstart`, pointer moves become `drag.x` / `drag.y` samples, the release adds `dragend`, the click that follows is swallowed, and `touch-action: none` keeps the page from scrolling instead. Pointer enter and leave (not touch) are `hoverstart` / `hoverend`; `focus` and `blur` map directly.
 - **Keyboard (0.3):** a `keydown` on a bound element (or inside it) becomes `target.key.<name>` when the file has a transition for it; the browser default is then prevented. Keys the file doesn't listen for pass through. `reducedMotion` in the options overrides the system `prefers-reduced-motion`, which the adapter follows by default. `player.values()` returns the values last applied, and `onFrame(values)` is called after every applied frame, for `aria-valuenow` and the like.
 - **State in CSS:** every bound element carries `data-nudg-state` with the active states (`"checked/on press/up"`), so styles can depend on state without any code: `.spinner[data-nudg-state~="refreshing"] { animation: spin 0.8s linear infinite }`. This is how continuous decoration such as a loading spin is done today.
+- **Settle:** `onSettle(state)` is called each time every value has come to rest after something moved or the state changed, once per rest; pending timers don't delay it. The rules are in [the spec](spec.md#rest-and-lifecycle), and the headless player, React, React Native, SwiftUI and Compose report it the same way.
 - **Exits:** `{ exit: "hidden", onExit }` names the states that mean gone. `player.present()` turns false, and `onExit` is called once, when the machine has entered one of them from elsewhere and every value has settled: remove or hide the element then, so the exit motion is seen. Mounting in an exit state doesn't count as an exit.
 - **App events and state:** `player.send("host.check")` sends an app event. In format 0.5, `player.input("host.volume", 0.7)` supplies a continuous finite number that a file can read with `map` or `follow`; inputs begin at zero and undeclared names return `false`. `{ state: ["on"] }` starts somewhere other than `initial`, and `onState` reports state changes. `player.bind(name, element)` binds an element later and returns a function that unbinds it.
 - **Scroll (0.5):** when a file reads `list.scroll.x` or `list.scroll.y`, the adapter reports that bound element's scroll offset at bind time and on every scroll. The component needs no scroll handler of its own.

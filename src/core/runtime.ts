@@ -45,6 +45,10 @@ export interface Runtime {
   state(): string[];
   /** True when every property (or the given one) has come to rest at time `t` and no timer is pending. */
   settled(t: number, property?: string): boolean;
+  /** True when every property has come to rest at time `t`, whatever timers are pending: nothing is moving. */
+  resting(t: number): boolean;
+  /** The latest time the runtime has been advanced to by an event, input or sample. */
+  time(): number;
 }
 
 /** A property's behavior since its last change, evaluated in closed form. */
@@ -576,27 +580,38 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       advanceTo(t);
       if (property === undefined && pending.some((timer) => timer.pausedAt === undefined)) return false;
       const keys = property === undefined ? [...program.properties.keys()] : [property];
-      return keys.every((key) => {
-        const prop = program.properties.get(key);
-        if (!prop) throw new Error(`Unknown property "${key}".`);
-        if (prop.map?.sourceKind === "input") return true;
-        const source = prop.map ? prop.map.source : key;
-        const segment = segments.get(source)!;
-        // A followed value moves only when its input does; nothing is animating it.
-        if (segment.kind === "follow") return true;
-        if (segment.kind === "keyframes") return t - segment.t0 >= segment.duration;
-        if (!segment.motion) return true;
-        const motion = segment.motion;
-        if (motion.kind === "tween") return t - segment.t0 >= motion.duration;
-        // Remaining amplitude from the spring's energy. Energy never increases, so once
-        // a property is at rest it stays at rest until its target changes.
-        const [pos, vel] = evaluateMotion(segment, t);
-        const eps = program.properties.get(source)!.kind === "color" ? REST.color : REST.number;
-        const inertia = motion.mass / motion.stiffness;
-        return pos.every((p, i) => Math.hypot(p - segment.to[i], vel[i] * Math.sqrt(inertia)) < eps);
-      });
+      return keys.every((key) => atRest(key, t));
+    },
+
+    time: () => now,
+
+    resting(t) {
+      advanceTo(t);
+      for (const key of program.properties.keys()) if (!atRest(key, t)) return false;
+      return true;
     },
   };
+
+  /** Whether one property has come to rest at `t`; see the spec's rest rule. */
+  function atRest(key: string, t: number): boolean {
+    const prop = program.properties.get(key);
+    if (!prop) throw new Error(`Unknown property "${key}".`);
+    if (prop.map?.sourceKind === "input") return true;
+    const source = prop.map ? prop.map.source : key;
+    const segment = segments.get(source)!;
+    // A followed value moves only when its input does; nothing is animating it.
+    if (segment.kind === "follow") return true;
+    if (segment.kind === "keyframes") return t - segment.t0 >= segment.duration;
+    if (!segment.motion) return true;
+    const motion = segment.motion;
+    if (motion.kind === "tween") return t - segment.t0 >= motion.duration;
+    // Remaining amplitude from the spring's energy. Energy never increases, so once
+    // a property is at rest it stays at rest until its target changes.
+    const [pos, vel] = evaluateMotion(segment, t);
+    const eps = program.properties.get(source)!.kind === "color" ? REST.color : REST.number;
+    const inertia = motion.mass / motion.stiffness;
+    return pos.every((p, i) => Math.hypot(p - segment.to[i], vel[i] * Math.sqrt(inertia)) < eps);
+  }
 }
 
 function evaluateMotion(segment: Segment & { kind: "motion" }, t: number): [Channels, Channels] {

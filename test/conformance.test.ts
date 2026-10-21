@@ -16,7 +16,7 @@ interface Step {
   input?: string;
   value?: number;
   handled?: boolean;
-  expect?: { state?: string[]; values?: Record<string, Value> };
+  expect?: { state?: string[]; values?: Record<string, Value>; resting?: boolean; settled?: boolean };
 }
 
 interface Case {
@@ -82,6 +82,8 @@ for (const file of readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
       if (step.expect?.values && values) {
         for (const [key, expected] of Object.entries(step.expect.values)) assertValue(key, values[key], expected, step.t);
       }
+      if (step.expect?.resting !== undefined) assert.equal(rt.resting(step.t), step.expect.resting, `resting at ${step.t}s`);
+      if (step.expect?.settled !== undefined) assert.equal(rt.settled(step.t), step.expect.settled, `settled at ${step.t}s`);
     }
   };
 

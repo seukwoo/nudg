@@ -55,7 +55,7 @@ test("the site starts and shows every cataloged example", { skip }, async () => 
   assert.equal(await browser.evaluate("document.getElementById('boot-error').hidden"), true);
   assert.equal(await browser.evaluate("document.querySelectorAll('#categories a').length"), catalog.categories.length + 1);
   assert.equal(await browser.evaluate("document.querySelectorAll('.runtime-platforms [role=listitem]').length"), 4);
-  assert.match(await browser.evaluate("document.querySelector('.runtime-check').textContent"), /31 \/ 31.*TypeScript.*Swift.*Kotlin/s);
+  assert.match(await browser.evaluate("document.querySelector('.runtime-check').textContent"), /32 \/ 32.*TypeScript.*Swift.*Kotlin/s);
 });
 
 test("no example overflows its card stage, at wide and narrow widths", { skip }, async () => {

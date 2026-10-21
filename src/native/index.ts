@@ -21,6 +21,8 @@ export interface UseNudgNativeOptions<C extends NudgContract = NudgContract> {
   reducedMotion?: boolean;
   exit?: StateName<C> | StateName<C>[];
   onExit?: () => void;
+  /** Called with the active states each time every value has come to rest; as in the React hook. */
+  onSettle?: (state: C["states"][]) => void;
 }
 
 /** What `bind(name)` gives a view: its animated style, layout reporting, and press handlers. */
@@ -62,6 +64,8 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
   const player = useRef<HeadlessPlayer | null>(null);
   const onExit = useRef(options.onExit);
   onExit.current = options.onExit;
+  const onSettle = useRef(options.onSettle);
+  onSettle.current = options.onSettle;
   // The latest value per app input, replayed into each new player.
   const inputs = useRef(new Map<string, number>());
   const reads = useMemo(() => new Set(createRuntime(program).requiredInputs()), [program]);
@@ -89,6 +93,7 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
         if (p.present()) setPresent(true);
       },
       onFrame: (values) => write(animated, values),
+      onSettle: (s) => onSettle.current?.(s),
     });
     player.current = p;
     for (const [name, value] of inputs.current) p.input(name, value);

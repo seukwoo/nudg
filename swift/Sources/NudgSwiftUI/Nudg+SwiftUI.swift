@@ -16,11 +16,22 @@ public final class NudgModel: ObservableObject {
   public let runtime: Runtime
   /** Active states; updates when an event or timer changes them. */
   @Published public private(set) var state: [String]
+  /** False once the component has exited (see `exit`); render nothing then. True again if it is shown again. */
+  @Published public private(set) var present = true
   private let start: Date
   private let clock: () -> Date
   private var lastTime = 0.0
+  private let lifecycle: Lifecycle
+  // Views read values while SwiftUI updates them; what they report is published afterwards.
+  private var inFrame = false
 
-  public init(_ program: Program, state: [String] = [], reducedMotion: Bool? = nil, clock: @escaping () -> Date = Date.init) {
+  /**
+   * `exit` names the states that mean the component is gone ("hidden"): `present` turns false
+   * and `onExit` is called once the exit motion has settled. `onSettle` is called with the
+   * active states each time every value has come to rest after something moved or the
+   * state changed, as in every other adapter.
+   */
+  public init(_ program: Program, state: [String] = [], reducedMotion: Bool? = nil, exit: [String] = [], onSettle: (([String]) -> Void)? = nil, onExit: (() -> Void)? = nil, clock: @escaping () -> Date = Date.init) {
     #if os(iOS)
     let reduce = reducedMotion ?? UIAccessibility.isReduceMotionEnabled
     #else
@@ -30,6 +41,24 @@ public final class NudgModel: ObservableObject {
     self.clock = clock
     self.start = clock()
     self.state = runtime.state()
+    self.lifecycle = Lifecycle(runtime, exit: exit)
+    lifecycle.onState = { [unowned self] s in publish { self.state = s } }
+    lifecycle.onSettle = onSettle.map { callback in { [unowned self] s in publish { callback(s) } } }
+    lifecycle.onExit = { [unowned self] in
+      publish {
+        self.present = false
+        onExit?()
+      }
+    }
+  }
+
+  private func publish(_ change: @escaping () -> Void) {
+    if inFrame { DispatchQueue.main.async(execute: change) } else { change() }
+  }
+
+  private func changed() {
+    lifecycle.changed()
+    if lifecycle.present && !present { present = true }
   }
 
   /** The player's time in seconds. Never goes backwards, whatever the views ask. */
@@ -42,8 +71,7 @@ public final class NudgModel: ObservableObject {
   @discardableResult
   public func send(_ event: String) -> Bool {
     let handled = (try? runtime.send(event, at: time(at: clock()))) ?? false
-    let s = runtime.state()
-    if s != state { state = s }
+    changed()
     objectWillChange.send()
     return handled
   }
@@ -52,6 +80,7 @@ public final class NudgModel: ObservableObject {
   @discardableResult
   public func input(_ name: String, _ value: Double) -> Bool {
     let used = (try? runtime.input(name, value, at: time(at: clock()))) ?? false
+    changed()
     objectWillChange.send()
     return used
   }
@@ -59,8 +88,10 @@ public final class NudgModel: ObservableObject {
   public func values(at date: Date) -> [String: Value] {
     let t = time(at: date)
     let v = (try? runtime.sample(t)) ?? [:]
-    let s = runtime.state()
-    if s != state { DispatchQueue.main.async { self.state = s } } // a timer fired
+    inFrame = true
+    lifecycle.frame(t) // a timer may have fired; settle and exit are reported from here
+    if lifecycle.present && !present { publish { self.present = true } }
+    inFrame = false
     return v
   }
 

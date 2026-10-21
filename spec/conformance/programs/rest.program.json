@@ -1,0 +1,124 @@
+{
+ "nudgProgram": 2,
+ "version": "0.7",
+ "targets": [
+  "toast"
+ ],
+ "properties": [
+  {
+   "key": "toast.y",
+   "kind": "length",
+   "base": [
+    12
+   ]
+  },
+  {
+   "key": "toast.opacity",
+   "kind": "number",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "toast.scale",
+   "kind": "number",
+   "base": [
+    1
+   ],
+   "map": {
+    "source": "host.level",
+    "sourceKind": "input",
+    "from": [
+     0,
+     1
+    ],
+    "to": [
+     [
+      1
+     ],
+     [
+      1.2
+     ]
+    ]
+   }
+  }
+ ],
+ "animate": [
+  {
+   "key": "toast.y",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 246.74011002723395,
+    "damping": 25.132741228718345,
+    "mass": 1
+   }
+  },
+  {
+   "key": "toast.opacity",
+   "motion": {
+    "kind": "tween",
+    "duration": 0.2,
+    "ease": "linear"
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "hidden",
+  "states": [
+   {
+    "name": "hidden",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [],
+    "timers": []
+   },
+   {
+    "name": "shown",
+    "set": [
+     {
+      "key": "toast.y",
+      "value": [
+       0
+      ]
+     },
+     {
+      "key": "toast.opacity",
+      "value": [
+       1
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "when": [],
+    "timers": [
+     {
+      "key": "after:2s",
+      "delay": 2,
+      "pause": [
+       {
+        "on": "toast.hoverstart",
+        "off": "toast.hoverend"
+       }
+      ],
+      "transition": {
+       "animate": [],
+       "to": "hidden"
+      }
+     }
+    ]
+   }
+  ],
+  "when": [
+   {
+    "event": "host.show",
+    "animate": [],
+    "to": "shown"
+   }
+  ]
+ }
+}

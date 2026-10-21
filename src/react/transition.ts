@@ -56,7 +56,15 @@ export function nudgTransition(source: Program | object = appear(), options: Nud
     const node = useRef<Element | null>(null);
     const exited = useRef(onExited);
     exited.current = onExited;
-    const nudg = useNudg(source, { files: options.files, reducedMotion: options.reducedMotion, exit: hidden, onExit: () => exited.current?.(node.current) });
+    // Owed after a show, paid when the entrance has come to rest.
+    const entering = useRef<{ appearing: boolean; done?: typeof onEntered } | null>(null);
+    const onSettle = () => {
+      const pending = entering.current;
+      if (!pending) return;
+      entering.current = null;
+      pending.done?.(node.current, pending.appearing);
+    };
+    const nudg = useNudg(source, { files: options.files, reducedMotion: options.reducedMotion, exit: hidden, onExit: () => exited.current?.(node.current), onSettle });
     const first = useRef(true);
 
     useLayoutEffect(() => {
@@ -66,12 +74,14 @@ export function nudgTransition(source: Program | object = appear(), options: Nud
       first.current = false;
       if (inProp) {
         onEnter?.(el, appearing);
-        nudg.send(show);
+        entering.current = { appearing, done: onEntered };
+        const handled = nudg.send(show);
         onEntering?.(el, appearing);
-        // react-transition-group calls onEntered when done; libraries use it for callbacks only.
-        const id = requestAnimationFrame(() => onEntered?.(el, appearing));
-        return () => cancelAnimationFrame(id);
+        // A show the file doesn't handle has nothing to wait for.
+        if (!handled) onSettle();
+        return undefined;
       }
+      entering.current = null;
       if (!wasFirst) {
         onExit?.(el);
         nudg.send(hide);

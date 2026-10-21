@@ -1,0 +1,167 @@
+{
+  "conformance": "0.7",
+  "name": "Rest: springs rest when their remaining amplitude is below 0.001, tweens at their duration; inputs never move; resting ignores timers, settled waits for unpaused ones",
+  "doc": {
+    "nudg": "0.7",
+    "targets": [
+      "toast"
+    ],
+    "values": {
+      "toast.y": 12,
+      "toast.opacity": 0,
+      "toast.scale": {
+        "map": "host.level",
+        "from": [
+          0,
+          1
+        ],
+        "to": [
+          1,
+          1.2
+        ]
+      }
+    },
+    "animate": {
+      "toast.y": {
+        "spring": {
+          "duration": 0.4,
+          "bounce": 0.2
+        }
+      },
+      "toast.opacity": {
+        "tween": {
+          "duration": 0.2,
+          "ease": "linear"
+        }
+      }
+    },
+    "initial": "hidden",
+    "when": {
+      "host.show": "shown"
+    },
+    "states": {
+      "hidden": {},
+      "shown": {
+        "set": {
+          "toast.y": 0,
+          "toast.opacity": 1
+        },
+        "when": {
+          "after:2s": {
+            "to": "hidden",
+            "pause": [
+              {
+                "on": "toast.hoverstart",
+                "off": "toast.hoverend"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "resting": true,
+        "settled": true
+      }
+    },
+    {
+      "t": 0.1,
+      "send": "host.show"
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "state": [
+          "shown"
+        ],
+        "resting": false,
+        "settled": false
+      }
+    },
+    {
+      "t": 0.31,
+      "expect": {
+        "values": {
+          "toast.opacity": 1
+        },
+        "resting": false
+      }
+    },
+    {
+      "t": 0.862,
+      "expect": {
+        "resting": false
+      }
+    },
+    {
+      "t": 0.962,
+      "expect": {
+        "resting": true,
+        "settled": false
+      }
+    },
+    {
+      "t": 1.05,
+      "input": "host.level",
+      "value": 1
+    },
+    {
+      "t": 1.05,
+      "expect": {
+        "values": {
+          "toast.scale": 1.2
+        },
+        "resting": true
+      }
+    },
+    {
+      "t": 1.1,
+      "send": "toast.hoverstart"
+    },
+    {
+      "t": 1.2,
+      "expect": {
+        "resting": true,
+        "settled": true
+      }
+    },
+    {
+      "t": 1.3,
+      "send": "toast.hoverend"
+    },
+    {
+      "t": 1.4,
+      "expect": {
+        "resting": true,
+        "settled": false
+      }
+    },
+    {
+      "t": 2.35,
+      "expect": {
+        "state": [
+          "hidden"
+        ],
+        "resting": false,
+        "settled": false
+      }
+    },
+    {
+      "t": 3.062,
+      "expect": {
+        "resting": false
+      }
+    },
+    {
+      "t": 3.162,
+      "expect": {
+        "resting": true,
+        "settled": true
+      }
+    }
+  ]
+}

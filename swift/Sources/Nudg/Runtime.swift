@@ -505,20 +505,32 @@ public final class Runtime {
     try advanceTo(t)
     if property == nil && pending.contains(where: { $0.pausedAt == nil }) { return false }
     let keys = property.map { [$0] } ?? program.properties.map { $0.0 }
-    return keys.allSatisfy { key in
-      let prop = program.property(key)!
-      if prop.map?.sourceKind == "input" { return true }
-      let source = prop.map?.source ?? key
-      if case let .keyframes(t0, _, _, _, duration, _, _) = segments[source]! { return t - t0 >= duration }
-      guard case let .motion(t0, from, v0, to, motion) = segments[source]!, let motion else { return true }
-      switch motion {
-      case let .tween(duration, _): return t - t0 >= duration
-      case let .spring(k, _, m, _):
-        let (pos, vel) = evaluateMotion(t0: t0, from: from, v0: v0, to: to, motion: motion, t: t)
-        let eps = program.property(source)!.kind == .color ? REST_COLOR : REST_NUMBER
-        let inertia = m / k
-        return pos.indices.allSatisfy { hypot(pos[$0] - to[$0], vel[$0] * inertia.squareRoot()) < eps }
-      }
+    return keys.allSatisfy { atRest($0, t) }
+  }
+
+  /** True when every property has come to rest, whatever timers are pending: nothing is moving. */
+  public func resting(_ t: Double) throws -> Bool {
+    try advanceTo(t)
+    return program.properties.allSatisfy { atRest($0.0, t) }
+  }
+
+  /** The latest time the runtime has been advanced to by an event, input or sample. */
+  public func time() -> Double { now }
+
+  /** Whether one property has come to rest at `t`; see the spec's rest rule. */
+  private func atRest(_ key: String, _ t: Double) -> Bool {
+    let prop = program.property(key)!
+    if prop.map?.sourceKind == "input" { return true }
+    let source = prop.map?.source ?? key
+    if case let .keyframes(t0, _, _, _, duration, _, _) = segments[source]! { return t - t0 >= duration }
+    guard case let .motion(t0, from, v0, to, motion) = segments[source]!, let motion else { return true }
+    switch motion {
+    case let .tween(duration, _): return t - t0 >= duration
+    case let .spring(k, _, m, _):
+      let (pos, vel) = evaluateMotion(t0: t0, from: from, v0: v0, to: to, motion: motion, t: t)
+      let eps = program.property(source)!.kind == .color ? REST_COLOR : REST_NUMBER
+      let inertia = m / k
+      return pos.indices.allSatisfy { hypot(pos[$0] - to[$0], vel[$0] * inertia.squareRoot()) < eps }
     }
   }
 }

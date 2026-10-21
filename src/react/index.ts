@@ -29,6 +29,12 @@ export interface UseNudgOptions<C extends NudgContract = NudgContract> {
    */
   exit?: StateName<C> | StateName<C>[];
   onExit?: () => void;
+  /**
+   * Called with the active states each time every value has come to rest after something
+   * moved or the state changed (a dialog finished opening): see PlayOptions.onSettle.
+   * Doesn't re-render; set state in it if the component needs to.
+   */
+  onSettle?: (state: C["states"][]) => void;
   /** Follow the state a component library shows on the bound elements (data-state, aria-*); see PlayOptions.watch. */
   watch?: boolean;
 }
@@ -70,6 +76,8 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
   const [present, setPresent] = useState(true);
   const onExit = useRef(options.onExit);
   onExit.current = options.onExit;
+  const onSettle = useRef(options.onSettle);
+  onSettle.current = options.onSettle;
   // The latest value per app input, replayed into each new player.
   const inputs = useRef(new Map<string, number>());
   const reads = useMemo(() => new Set(createRuntime(program).requiredInputs()), [program]);
@@ -84,6 +92,7 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
       },
       exit: options.exit,
       watch: options.watch,
+      onSettle: (s) => onSettle.current?.(s),
       onExit: () => {
         setPresent(false);
         onExit.current?.();

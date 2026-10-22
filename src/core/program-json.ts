@@ -6,7 +6,7 @@
 
 import type { EntryEffect, Follow, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
 
-export const PROGRAM_FORMAT = 3;
+export const PROGRAM_FORMAT = 4;
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
@@ -23,7 +23,7 @@ export function programToJson(program: Program): Json {
 
 export function programFromJson(json: unknown): Program {
   const j = json as Record<string, any>;
-  if (![1, 2, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
+  if (![1, 2, 3, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
   return {
     version: j.version,
     targets: j.targets,
@@ -35,7 +35,7 @@ export function programFromJson(json: unknown): Program {
 
 function property(p: Property): Record<string, Json> {
   const out: Record<string, Json> = { kind: p.kind, base: p.base };
-  if (p.map) out.map = { source: p.map.source, sourceKind: p.map.sourceKind, from: p.map.from.map(endpoint), to: p.map.to };
+  if (p.map) out.map = { source: p.map.source, sourceKind: p.map.sourceKind, from: p.map.from.map(endpoint), to: p.map.to.map((value) => (Array.isArray(value) ? value : measure(value))) };
   if (p.measure) out.measure = measure(p.measure);
   if (p.min !== undefined) out.min = p.min;
   if (p.max !== undefined) out.max = p.max;
@@ -44,7 +44,7 @@ function property(p: Property): Record<string, Json> {
 
 function readProperty(p: any): Property {
   const out: Property = { kind: p.kind, base: p.base };
-  if (p.map) out.map = { ...p.map, sourceKind: p.map.sourceKind ?? "property", from: p.map.from.map(readEndpoint) };
+  if (p.map) out.map = { ...p.map, sourceKind: p.map.sourceKind ?? "property", from: p.map.from.map(readEndpoint), to: p.map.to.map((value: any) => (Array.isArray(value) ? value : readEndpoint(value))) };
   if (p.measure) out.measure = { ...p.measure, times: p.measure.times ?? 1, plus: p.measure.plus ?? 0 };
   if (p.min !== undefined) out.min = p.min;
   if (p.max !== undefined) out.max = p.max;

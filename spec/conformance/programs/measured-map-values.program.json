@@ -1,0 +1,143 @@
+{
+ "nudgProgram": 4,
+ "version": "0.11",
+ "targets": [
+  "screen",
+  "previous"
+ ],
+ "properties": [
+  {
+   "key": "screen.x",
+   "kind": "length",
+   "base": [
+    0
+   ],
+   "measure": {
+    "target": "screen",
+    "of": "width",
+    "times": 1,
+    "plus": 0
+   }
+  },
+  {
+   "key": "previous.x",
+   "kind": "length",
+   "base": [
+    0
+   ],
+   "map": {
+    "source": "screen.x",
+    "sourceKind": "property",
+    "from": [
+     0,
+     {
+      "target": "screen",
+      "of": "width",
+      "times": 1,
+      "plus": 0
+     }
+    ],
+    "to": [
+     {
+      "target": "screen",
+      "of": "width",
+      "times": -0.3,
+      "plus": 0
+     },
+     [
+      0
+     ]
+    ]
+   }
+  }
+ ],
+ "animate": [
+  {
+   "key": "screen.x",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 322.27279677026473,
+    "damping": 35.90391604102621,
+    "mass": 1
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "pushed",
+  "states": [
+   {
+    "name": "pushed",
+    "set": [
+     {
+      "key": "screen.x",
+      "value": [
+       0
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "screen.dragstart",
+      "animate": [],
+      "to": "dragging"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "popped",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "loop": [],
+    "when": [],
+    "timers": []
+   },
+   {
+    "name": "dragging",
+    "set": [],
+    "measure": [],
+    "follow": [
+     {
+      "key": "screen.x",
+      "input": "screen.drag.x",
+      "overdrag": 0,
+      "range": [
+       0,
+       {
+        "target": "screen",
+        "of": "width",
+        "times": 1,
+        "plus": 0
+       }
+      ]
+     }
+    ],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "screen.dragend",
+      "animate": [],
+      "nearest": {
+       "states": [
+        "pushed",
+        "popped"
+       ],
+       "by": "screen.x",
+       "momentum": 0.5
+      }
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

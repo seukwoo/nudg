@@ -219,7 +219,18 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     if (from.some((point) => point === undefined)) return undefined;
     const numbers = from as number[];
     if (new Set(numbers).size !== numbers.length) return undefined;
-    return { from: numbers, to: map.to };
+    // Measured values resolve in the mapped property's own coordinates (v0.11).
+    const to: Channels[] = [];
+    for (const value of map.to) {
+      if (Array.isArray(value)) {
+        to.push(value);
+        continue;
+      }
+      const v = measured(key, value);
+      if (v === undefined) return undefined;
+      to.push([v]);
+    }
+    return { from: numbers, to };
   }
 
   /** Base values (measured ones from the layout report), overridden by every active state's `set`, deeper states last. */
@@ -578,6 +589,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
         if (!prop.map) continue;
         const context = prop.map.sourceKind === "property" ? prop.map.source : key;
         for (const point of prop.map.from) if (typeof point !== "number") for (const name of inputsOf(context, point)) out.add(name);
+        for (const value of prop.map.to) if (!Array.isArray(value)) for (const name of inputsOf(key, value)) out.add(name);
       }
       const walk = (machine: Machine) => {
         if (machine.kind === "regions") {

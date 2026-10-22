@@ -7,7 +7,7 @@ import { test } from "node:test";
 import { Ajv2020 } from "ajv/dist/2020.js";
 
 const read = (url: URL) => JSON.parse(readFileSync(url, "utf8"));
-const schema = read(new URL("../spec/nudg-0.10.schema.json", import.meta.url));
+const schema = read(new URL("../spec/nudg-0.11.schema.json", import.meta.url));
 const schema04 = read(new URL("../spec/nudg-0.4.schema.json", import.meta.url));
 const schema02 = read(new URL("../spec/nudg-0.2.schema.json", import.meta.url));
 const schema01 = read(new URL("../spec/nudg-0.1.schema.json", import.meta.url));
@@ -102,6 +102,6 @@ test("schema rejects structural mistakes", () => {
   noted.note = "ok";
   noted.values.note = "base values";
   noted.states.off["x-vendor"] = { anything: true };
-  noted.$schema = "https://unpkg.com/@nudg/core/spec/nudg-0.10.schema.json";
+  noted.$schema = "https://unpkg.com/@nudg/core/spec/nudg-0.11.schema.json";
   assert.ok(valid(noted), `notes and x- extensions: ${JSON.stringify(validate.errors, null, 2)}`);
 });

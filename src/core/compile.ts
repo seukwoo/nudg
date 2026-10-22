@@ -127,7 +127,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.10.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.11.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -484,26 +484,37 @@ class ComponentCompiler {
       r.error("invalid-map", ptr(p, "to"), `"to" must list ${points.length} values, one for each point in "from".`);
       return;
     }
-    const channels: Channels[] = [];
+    const values: (Channels | Measure)[] = [];
     to.forEach((v, i) => {
-      const c = this.parseValue(kind, key, v, ptr(ptr(p, "to"), i));
-      if (c) channels.push(c);
+      const vp = ptr(ptr(p, "to"), i);
+      if (isObject(v) && "measure" in v) {
+        if (!this.needsVersion("0.11", vp, "A measured map value")) return;
+        const m = this.parseMeasure(kind, key, v, vp);
+        if (m) values.push(m);
+        return;
+      }
+      const c = this.parseValue(kind, key, v, vp);
+      if (c) values.push(c);
     });
-    if (channels.length !== to.length) return;
-    const map: PropertyMap = { source: source as string, sourceKind, from: points, to: channels };
+    if (values.length !== to.length) return;
+    const map: PropertyMap = { source: source as string, sourceKind, from: points, to: values };
     prop.map = map;
     const sourceBase = sourceProp?.base[0] ?? 0;
-    if (nums) {
+    const channels = values.every(Array.isArray) ? (values as Channels[]) : undefined;
+    if (nums && channels) {
       prop.base = interpolate({ from: nums, to: channels }, sourceBase);
     } else {
+      // Until layout arrives: the value at the numeric point nearest the source's base,
+      // among points whose value is a number too; else the first numeric value; else 0.
       let nearest = -1;
       let distance = Infinity;
       points.forEach((point, i) => {
-        if (typeof point !== "number") return;
+        if (typeof point !== "number" || !Array.isArray(values[i])) return;
         const d = Math.abs(point - sourceBase);
         if (d < distance) [nearest, distance] = [i, d];
       });
-      prop.base = channels[nearest < 0 ? 0 : nearest];
+      const fallback = values.find(Array.isArray) as Channels | undefined;
+      prop.base = nearest >= 0 ? (values[nearest] as Channels) : (fallback ?? [0]);
     }
   }
 

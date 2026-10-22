@@ -1754,6 +1754,78 @@ def validation_v10_cases():
     })
 
 
+# --- v0.11: measured map values --------------------------------------------
+
+STACK = {
+    "nudg": "0.11",
+    "targets": ["screen", "previous"],
+    "values": {
+        "screen.x": {"measure": "screen.width"},
+        "previous.x": {
+            "map": "screen.x",
+            "from": [0, {"measure": "screen.width"}],
+            "to": [{"measure": "screen.width", "times": -0.3}, 0],
+        },
+    },
+    "animate": {"screen.x": spring_json(0.35, 0)},
+    "initial": "pushed",
+    "states": {
+        "pushed": {"set": {"screen.x": 0}, "when": {"screen.dragstart": "dragging"}},
+        "popped": {},
+        "dragging": {
+            "follow": {"screen.x": {"input": "screen.drag.x", "range": [0, {"measure": "screen.width"}]}},
+            "when": {"screen.dragend": {"nearest": ["pushed", "popped"], "by": "screen.x"}},
+        },
+    },
+}
+
+
+def measured_map_value_cases():
+    x = Prop(150)
+    x.handoff(150, 0, 200, spring(0.35, 0), 0.4)
+    parallax = lambda sx: round(-60 + 60 * sx / 200, 9)
+    steps = [
+        # Before layout the map holds its compiled base: the first numeric value, 0.
+        {"t": 0, "expect": {"state": ["pushed"], "values": {"screen.x": 0, "previous.x": 0}}},
+        {"t": 0.1, "input": "screen.layout.width", "value": 300},
+        {"t": 0.1, "expect": {"values": {"screen.x": 0, "previous.x": -90}}},
+        {"t": 0.2, "send": "screen.dragstart"},
+        {"t": 0.25, "input": "screen.drag.x", "value": 150},
+        {"t": 0.25, "expect": {"state": ["dragging"], "values": {"screen.x": 150, "previous.x": -45}}},
+        # Relayout moves the measured value without restarting the drag.
+        {"t": 0.3, "input": "screen.layout.width", "value": 200},
+        {"t": 0.3, "expect": {"values": {"screen.x": 150, "previous.x": -15}}},
+        {"t": 0.4, "send": "screen.dragend"},
+    ]
+    for t in (0.5, 0.7, 1.5):
+        sx = x.value(t)
+        steps.append({"t": t, "expect": {"state": ["popped"], "values": {"screen.x": sx, "previous.x": parallax(sx)}}})
+    write("measured-map-values", {
+        "conformance": "0.11",
+        "name": "Measured map values: to resolves in the mapped property's coordinates, holds the compiled base until layout, and tracks relayout",
+        "doc": STACK,
+        "steps": steps,
+    })
+
+
+def validation_v11_cases():
+    def doc():
+        return json.loads(json.dumps(STACK))
+
+    out = []
+    d = doc(); d["nudg"] = "0.10"
+    out.append(("needs-version", d, [("needs-version", "/values/previous.x/to/0")]))
+    d = doc(); d["values"]["previous.x"]["to"][0] = {"measure": "missing.width"}
+    out.append(("unknown-target", d, [("unknown-target", "/values/previous.x/to/0/measure")]))
+    d = doc(); d["values"]["previous.color"] = {"map": "screen.x", "from": [0, 100], "to": [{"measure": "screen.width"}, "#000000"]}
+    out.append(("color", d, [("invalid-measure", "/values/previous.color/to/0")]))
+    write("validation-0.11", {
+        "conformance": "0.11",
+        "name": "Validator (0.11): measured map values",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 def rest_time(prop, motion, start, limit=5.0, step=1e-3):
     """When a spring comes to rest: its remaining amplitude, position and velocity
     together (sqrt(x^2 + v^2 m/k)), drops below the rest threshold. Energy never grows."""
@@ -1851,5 +1923,7 @@ if __name__ == "__main__":
     validation_v09_cases()
     loop_cases()
     validation_v10_cases()
+    measured_map_value_cases()
+    validation_v11_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

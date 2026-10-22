@@ -712,6 +712,81 @@
         "Make the dots bounce higher.",
         "Space the dots further apart in time."
       ]
+    },
+    {
+      "id": "stack-navigation",
+      "recipe": "stack-navigation",
+      "title": "Stack navigation",
+      "category": "navigation",
+      "tags": [
+        "measure",
+        "map",
+        "drag",
+        "nearest",
+        "follow"
+      ],
+      "html": "stack-navigation.html",
+      "summary": "The detail screen pushes in from the right while the list slides a third of a width left and dims; Back or a swipe to the right pops it. Every distance comes from the measured width.",
+      "prompts": [
+        "Make the list move less behind the pushed screen.",
+        "Make the back swipe easier to commit with a quick flick."
+      ]
+    },
+    {
+      "id": "full-screen-modal",
+      "recipe": "full-screen-modal",
+      "title": "Full-screen modal",
+      "category": "overlays",
+      "tags": [
+        "measure",
+        "map",
+        "drag",
+        "nearest",
+        "keyboard"
+      ],
+      "html": "full-screen-modal.html",
+      "summary": "Slides up over the screen that presented it, which shrinks back and dims; Close, Escape or a drag down dismisses it.",
+      "prompts": [
+        "Shrink the screen behind less.",
+        "Make it harder to dismiss by dragging."
+      ]
+    },
+    {
+      "id": "shared-element",
+      "recipe": "shared-element",
+      "title": "Shared element",
+      "category": "navigation",
+      "tags": [
+        "measure",
+        "width",
+        "height"
+      ],
+      "html": "shared-element.html",
+      "summary": "A card travels from its measured place in the grid to the hero's measured box on the detail screen while the list fades out and the details fade in.",
+      "prompts": [
+        "Let the card overshoot a little when it lands.",
+        "Fade the details in after the card arrives, not with it."
+      ]
+    },
+    {
+      "id": "drawer",
+      "recipe": "drawer",
+      "title": "Drawer",
+      "category": "navigation",
+      "tags": [
+        "measure",
+        "map",
+        "drag",
+        "nearest",
+        "follow",
+        "keyboard"
+      ],
+      "html": "drawer.html",
+      "summary": "Slides in from the left edge and pushes the content a quarter of its width along; the menu button or an edge swipe opens it, the scrim, Escape or a swipe back closes it.",
+      "prompts": [
+        "Push the content further along with the drawer.",
+        "Darken the scrim less."
+      ]
     }
   ]
 }

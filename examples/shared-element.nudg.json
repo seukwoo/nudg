@@ -1,0 +1,36 @@
+{
+  "nudg": "0.11",
+  "note": "A thumbnail that opens into a detail view. The card travels from the thumbnail's measured box on the list to the hero's measured box on the detail screen, while the list fades out and the details fade in; Back returns it. thumb and hero are layout slots; the card is what moves.",
+  "targets": ["card", "thumb", "hero", "list", "details", "back"],
+  "values": {
+    "card.x": { "measure": "thumb.x" },
+    "card.y": { "measure": "thumb.y" },
+    "card.width": { "measure": "thumb.width" },
+    "card.height": { "measure": "thumb.height" },
+    "list.opacity": 1,
+    "details.opacity": 0
+  },
+  "animate": {
+    "card.x": { "spring": { "duration": 0.45, "bounce": 0 } },
+    "card.y": { "spring": { "duration": 0.45, "bounce": 0 } },
+    "card.width": { "spring": { "duration": 0.45, "bounce": 0 } },
+    "card.height": { "spring": { "duration": 0.45, "bounce": 0 } },
+    "list.opacity": { "tween": { "duration": 0.2, "ease": "out" } },
+    "details.opacity": { "tween": { "duration": 0.25, "ease": "out" } }
+  },
+  "initial": "collapsed",
+  "states": {
+    "collapsed": { "when": { "card.tap": "expanded", "host.open": "expanded" } },
+    "expanded": {
+      "set": {
+        "card.x": { "measure": "hero.x" },
+        "card.y": { "measure": "hero.y" },
+        "card.width": { "measure": "hero.width" },
+        "card.height": { "measure": "hero.height" },
+        "list.opacity": 0,
+        "details.opacity": 1
+      },
+      "when": { "back.tap": "collapsed", "host.back": "collapsed" }
+    }
+  }
+}

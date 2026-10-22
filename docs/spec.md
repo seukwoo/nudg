@@ -443,6 +443,25 @@ Loops: periodic motion while a state is active, for spinners, shimmers and typin
 
 The conformance cases `loop-spinner.json`, `loop-keyframes.json`, `loop-measured.json`, `loop-reduced.json` and `validation-0.10.json` define the behavior across TypeScript, Swift and Kotlin.
 
+## Additions in 0.11 (draft)
+
+Measured values in a map's `to`. A file that uses them declares `"nudg": "0.11"`; a 0.11 runtime also reads older files.
+
+```json
+"previous.x": {
+  "map": "screen.x",
+  "from": [0, { "measure": "screen.width" }],
+  "to": [{ "measure": "screen.width", "times": -0.3 }, 0]
+}
+```
+
+- A numeric map value may be a measure object (`{ "measure", "times", "plus" }`), resolved in the mapped property's own coordinates, as a measured state target of that property would be. Colors stay literal.
+- Until every measurement in `from` and `to` is reported, the property holds its compiled base: the value at the numeric source point nearest the source's base among points whose value is a number, else the first numeric value, else 0. The first complete report applies at once; relayout updates the map without restarting anything.
+- `runtime.measurements()` includes the map's value measurements.
+- Errors: a measured value on a color is `invalid-measure`; unknown targets and measurements use the 0.4 codes.
+
+The conformance cases `measured-map-values.json` and `validation-0.11.json` define the behavior across TypeScript, Swift and Kotlin. Compiled programs that carry measured map values are format 4.
+
 ## Rest and lifecycle
 
 Hosts need to know when motion is over: to move focus once a dialog has opened, to tell a component library its transition has entered, to remove an element once its exit has played. These rules make that moment the same in every runtime and adapter. They add no file syntax.
@@ -469,5 +488,5 @@ Settle is reported from the frame loop, never from inside the call that sent the
 
 ## Compiled programs (for native runtimes)
 
-`nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 3`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Format 2 carries measured endpoints and format 3 loops (`"loop"` in each state); current runtimes continue to read formats 1 and 2. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms.
+`nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 4`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Format 2 carries measured endpoints, format 3 loops (`"loop"` in each state) and format 4 measured map values; current runtimes read every earlier format. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms.
 

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Shared element</title>
+  <style>
+    .shared { position: relative; width: 240px; height: 180px; overflow: hidden; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #e4e4df; font: 14px ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; }
+    .shared .list, .shared .details { position: absolute; inset: 0; }
+    .shared .list { display: grid; grid-template-columns: repeat(3, 64px); gap: 10px; align-content: start; padding: 14px; }
+    .shared .tile { height: 64px; border-radius: 10px; background: #eceae4; }
+    /* Layout slots: where the card rests on each screen. The card itself is what moves. */
+    .shared .thumb { visibility: hidden; }
+    .shared .hero { position: absolute; top: 0; left: 0; right: 0; height: 100px; visibility: hidden; }
+    .shared .details { pointer-events: none; }
+    .shared [data-nudg-state~="expanded"].details { pointer-events: auto; }
+    .shared .details p { position: absolute; top: 108px; margin: 0 14px; color: #6b6b66; font-size: 13px; }
+    .shared .back { position: absolute; top: 8px; left: 8px; z-index: 2; padding: 4px 10px; border: 0; border-radius: 12px; background: rgb(255 255 255 / 0.85); font: inherit; font-size: 13px; cursor: pointer; }
+    .shared .card { position: absolute; top: 0; left: 0; z-index: 1; padding: 0; border: 0; border-radius: 10px; background: linear-gradient(135deg, #2563eb, #7c3aed); cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="shared">
+    <div class="list" data-nudg="list">
+      <div class="tile"></div>
+      <div class="tile thumb" data-nudg="thumb"></div>
+      <div class="tile"></div>
+    </div>
+    <div class="details" data-nudg="details">
+      <div class="hero" data-nudg="hero"></div>
+      <button class="back" data-nudg="back">‹ Back</button>
+      <p>Northern lights, Tromsø. The card opened from its place in the grid.</p>
+    </div>
+    <button class="card" aria-label="Open Northern lights" data-nudg="card"></button>
+  </div>
+  <!-- Host markup for shared-element.nudg.json. The app keeps both screens mounted during the transition and moves focus to the destination. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./shared-element.nudg.json");
+    play(program, document.body);
+  </script>
+</body>
+</html>

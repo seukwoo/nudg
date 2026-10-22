@@ -35,6 +35,13 @@ private final class Pending {
   }
 }
 
+/** A loop running since its state was entered at `t0`. */
+private struct ActiveLoop {
+  let loop: Loop
+  let owner: State
+  let t0: Double
+}
+
 private let REST_NUMBER = 1e-3, REST_COLOR = 1e-4
 private let VELOCITY_WINDOW = 0.1
 private let REDUCED: Motion = .tween(duration: 0.15, ease: .linear)
@@ -44,6 +51,8 @@ public final class Runtime {
   public let program: Program
   private var active: [ObjectIdentifier: String] = [:]
   private var segments: [String: Segment] = [:]
+  /** Loops of the active states, by property (v0.10). Empty under reduced motion. */
+  private var loops: [String: ActiveLoop] = [:]
   private var inputs: [String: [(Double, Double)]] = [:]
   private var bases: [String: [Double]] = [:]
   private var pending: [Pending] = []
@@ -73,6 +82,7 @@ public final class Runtime {
       if let f = follows[key] { segments[key] = followSegment(key, f, to[0], 0) }
       else { segments[key] = .motion(t0: 0, from: to, v0: to.map { _ in 0 }, to: to, motion: nil) }
     }
+    if !reduced { walkActive(active) { state in for (key, loop) in state.loop { loops[key] = ActiveLoop(loop: loop, owner: state, t0: 0) } } }
   }
 
   // MARK: machine
@@ -248,6 +258,33 @@ public final class Runtime {
     }
   }
 
+  /** A loop's offset and its rate at `t`; 0 before its delay, and while a measured point is unknown. */
+  private func loopOffset(_ key: String, _ running: ActiveLoop, _ t: Double) -> (Double, Double) {
+    let loop = running.loop
+    let local = t - running.t0 - loop.delay
+    if local < 0 { return (0, 0) }
+    var points: [(at: Double, value: Double)] = [(0, 0)]
+    for frame in loop.frames + [(at: 1, value: loop.to)] {
+      guard let value = endpoint(key, frame.value) else { return (0, 0) }
+      points.append((frame.at, value))
+    }
+    let u = (local - loop.duration * (local / loop.duration).rounded(.down)) / loop.duration
+    for i in 1..<points.count where u <= points[i].at {
+      let a = points[i - 1], b = points[i]
+      let p = (u - a.at) / (b.at - a.at)
+      return (a.value + (b.value - a.value) * easeAt(loop.ease, p), (b.value - a.value) * easeSlope(loop.ease, p) / ((b.at - a.at) * loop.duration))
+    }
+    return (points[points.count - 1].value, 0)
+  }
+
+  /** What a property shows: its motion, plus the offset of a running loop. */
+  private func displayed(_ key: String, _ t: Double) -> ([Double], [Double]) {
+    let (pos, vel) = evaluate(segments[key]!, t)
+    guard let running = loops[key] else { return (pos, vel) }
+    let (offset, rate) = loopOffset(key, running, t)
+    return ([pos[0] + offset], [vel[0] + rate])
+  }
+
   private func evaluateKeyframes(t0: Double, from: [Double], to: [Double], frames: [Keyframe], duration: Double, ease: Ease, t: Double) -> ([Double], [Double]) {
     let u = (t - t0) / duration
     if u >= 1 { return (to, to.map { _ in 0 }) }
@@ -285,7 +322,7 @@ public final class Runtime {
   // MARK: transitions
 
   private func nearest(_ machine: Machine, _ choice: (states: [String], by: String, momentum: Double), _ t: Double) -> String {
-    let (pos, vel) = evaluate(segments[choice.by]!, t)
+    let (pos, vel) = displayed(choice.by, t)
     let projected = pos[0] + vel[0] * choice.momentum
     var best = choice.states[0], bestDistance = Double.infinity
     for name in choice.states {
@@ -326,7 +363,7 @@ public final class Runtime {
     var committed = Set<String>()
     for transition in fired {
       for key in transition.commit ?? [] {
-        bases[key] = [clamp(key, evaluate(segments[key]!, t).0[0])]
+        bases[key] = [clamp(key, displayed(key, t).0[0])]
         measuredBases[key] = nil
         committed.insert(key)
       }
@@ -341,28 +378,48 @@ public final class Runtime {
     let targets = resolveTargets(active)
     let follows = activeFollows(active)
     var activeStates = Set<ObjectIdentifier>()
-    walkActive(active) { activeStates.insert(ObjectIdentifier($0)) }
+    var activeList: [State] = []
+    walkActive(active) { activeStates.insert(ObjectIdentifier($0)); activeList.append($0) }
+    let isEntered = { (state: State) in entered.contains(where: { $0 === state }) }
+
+    // A loop that ends hands off like a released drag: the motion continues from the
+    // displayed value with the loop's velocity, its offset first reduced by `wrap`.
+    var handoff: [String: ([Double], [Double])] = [:]
+    for (key, running) in loops.sorted(by: { $0.key < $1.key }) {
+      if activeStates.contains(ObjectIdentifier(running.owner)) && !isEntered(running.owner) { continue }
+      let (pos, vel) = evaluate(segments[key]!, t)
+      var (offset, rate) = loopOffset(key, running, t)
+      // Into (-wrap/2, wrap/2]: the same rule in every runtime, whatever its rounding.
+      if let wrap = running.loop.wrap { offset -= wrap * (offset / wrap - 0.5).rounded(.up) }
+      handoff[key] = ([pos[0] + offset], [vel[0] + rate])
+      loops[key] = nil
+    }
+    if !reduced {
+      for state in activeList where isEntered(state) {
+        for (key, loop) in state.loop { loops[key] = ActiveLoop(loop: loop, owner: state, t0: t) }
+      }
+    }
 
     for (key, prop) in program.properties where prop.map == nil {
       let segment = segments[key]!
       if let f = follows[key] {
         var restart = true
-        if case let .follow(_, _, _, _, _, owner) = segment, owner === f.owner, !entered.contains(where: { $0 === f.owner }) { restart = false }
-        if restart { segments[key] = followSegment(key, f, evaluate(segment, t).0[0], t) }
+        if case let .follow(_, _, _, _, _, owner) = segment, owner === f.owner, !isEntered(f.owner), handoff[key] == nil { restart = false }
+        if restart { segments[key] = followSegment(key, f, (handoff[key] ?? evaluate(segment, t)).0[0], t) }
         continue
       }
       let to = targets[key]!
       if case let .keyframes(t0, from, _, frames, duration, ease, owner) = segment,
-         activeStates.contains(ObjectIdentifier(owner)), !entered.contains(where: { $0 === owner }) {
+         activeStates.contains(ObjectIdentifier(owner)), !isEntered(owner), handoff[key] == nil {
         segments[key] = .keyframes(t0: t0, from: from, to: to, frames: frames, duration: duration, ease: ease, owner: owner)
         continue
       }
-      if case let .motion(_, _, _, current, _) = segment, current == to { continue }
+      if case let .motion(_, _, _, current, _) = segment, current == to, handoff[key] == nil { continue }
       if snap {
         segments[key] = .motion(t0: t, from: to, v0: to.map { _ in 0 }, to: to, motion: nil)
         continue
       }
-      var (pos, vel) = evaluate(segment, t)
+      var (pos, vel) = handoff[key] ?? evaluate(segment, t)
       if committed.contains(key) { vel = vel.map { _ in 0 } }
       let motion = overrides[key] ?? program.animate[key]
       segments[key] = .motion(t0: t, from: pos, v0: vel, to: to, motion: motion.map { reduced ? REDUCED : $0 })
@@ -430,10 +487,10 @@ public final class Runtime {
     let prop = program.property(key)!
     if let map = prop.map {
       guard let from = resolvedMap(key, map) else { return prop.base }
-      let source = map.sourceKind == "input" ? inputAt(map.source, t) : evaluate(segments[map.source]!, t).0[0]
+      let source = map.sourceKind == "input" ? inputAt(map.source, t) : displayed(map.source, t).0[0]
       return interpolate(from, map.to, source)
     }
-    return evaluate(segments[key]!, t).0
+    return displayed(key, t).0
   }
 
   // MARK: public API
@@ -516,6 +573,9 @@ public final class Runtime {
 
   /** The latest time the runtime has been advanced to by an event, input or sample. */
   public func time() -> Double { now }
+
+  /** True while an active state loops a property (v0.10): values change every frame though nothing is settling. */
+  public func looping() -> Bool { !loops.isEmpty }
 
   /** Whether one property has come to rest at `t`; see the spec's rest rule. */
   private func atRest(_ key: String, _ t: Double) -> Bool {

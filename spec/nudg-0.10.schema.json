@@ -1,0 +1,1145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://unpkg.com/@nudg/core/spec/nudg-0.10.schema.json",
+  "title": "nudg 0.10",
+  "description": "A nudg file: states, the events that move between them, and the motion in between. The schema covers structure; the validator (nudg validate) also checks references such as target names, state names, base values and motion names.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Schema URL for editors. Runtimes ignore it."
+    },
+    "nudg": {
+      "enum": [
+        "0.1",
+        "0.2",
+        "0.3",
+        "0.4",
+        "0.5",
+        "0.6",
+        "0.7",
+        "0.8",
+        "0.9",
+        "0.10"
+      ],
+      "description": "Format version, as a string. 0.10 adds loops: periodic offsets while a state is active."
+    },
+    "note": {
+      "$ref": "#/$defs/note"
+    },
+    "import": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Files whose named motions this file uses. Paths are relative to this file."
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/name"
+          },
+          {
+            "not": {
+              "const": "host"
+            }
+          }
+        ]
+      },
+      "uniqueItems": true,
+      "description": "Names of the views this file animates. The host binds each name to one of its views."
+    },
+    "values": {
+      "type": "object",
+      "propertyNames": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/propertyPath"
+          },
+          {
+            "const": "note"
+          },
+          {
+            "pattern": "^x-"
+          }
+        ]
+      },
+      "properties": {
+        "note": {
+          "$ref": "#/$defs/note"
+        }
+      },
+      "patternProperties": {
+        "^x-": true
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/value"
+          },
+          {
+            "$ref": "#/$defs/mapValue"
+          },
+          {
+            "$ref": "#/$defs/boundedValue"
+          },
+          {
+            "$ref": "#/$defs/measure"
+          }
+        ]
+      },
+      "description": "Base value of every property, used when no active state sets it."
+    },
+    "motions": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/name"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/motionObject"
+      },
+      "description": "Named motions. Use a name anywhere a motion is expected."
+    },
+    "animate": {
+      "$ref": "#/$defs/animate"
+    },
+    "initial": {
+      "$ref": "#/$defs/name"
+    },
+    "states": {
+      "$ref": "#/$defs/states"
+    },
+    "regions": {
+      "$ref": "#/$defs/regions"
+    },
+    "when": {
+      "$ref": "#/$defs/when",
+      "description": "Transitions from any state of the top-level machine (0.2)."
+    }
+  },
+  "required": [
+    "nudg"
+  ],
+  "patternProperties": {
+    "^x-": true
+  },
+  "additionalProperties": false,
+  "dependentRequired": {
+    "states": [
+      "initial",
+      "targets"
+    ],
+    "regions": [
+      "targets"
+    ],
+    "when": [
+      "states"
+    ]
+  },
+  "not": {
+    "required": [
+      "states",
+      "regions"
+    ]
+  },
+  "$defs": {
+    "note": {
+      "type": "string",
+      "description": "A comment. Runtimes ignore it; tools keep it."
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$"
+    },
+    "propertyPath": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_-]*\\.(x|y|width|height|scale|scaleX|scaleY|rotation|opacity|color)$",
+      "description": "target.property, e.g. knob.x"
+    },
+    "eventPath": {
+      "type": "string",
+      "pattern": "^([A-Za-z_][A-Za-z0-9_-]*\\.(down|up|cancel|tap|dragstart|dragend|hoverstart|hoverend|focus|blur)|[A-Za-z_][A-Za-z0-9_-]*\\.key\\.[^\\s.]+|host\\.[A-Za-z_][A-Za-z0-9_-]*)$",
+      "description": "target.event (e.g. track.tap), target.key.<name> (0.3), or host.<name> for events the app sends"
+    },
+    "value": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string",
+          "pattern": "^-?(\\d+\\.?\\d*|\\.\\d+)(px|pt|dp)$",
+          "description": "A length in logical units."
+        },
+        {
+          "type": "string",
+          "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$",
+          "description": "A hex color."
+        }
+      ]
+    },
+    "time": {
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": 0,
+          "description": "Seconds."
+        },
+        {
+          "type": "string",
+          "pattern": "^(\\d+\\.?\\d*|\\.\\d+)(ms|s)$"
+        }
+      ]
+    },
+    "positiveTime": {
+      "anyOf": [
+        {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Seconds."
+        },
+        {
+          "type": "string",
+          "pattern": "^(\\d+\\.?\\d*|\\.\\d+)(ms|s)$"
+        }
+      ]
+    },
+    "positive": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "animate": {
+      "type": "object",
+      "propertyNames": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/propertyPath"
+          },
+          {
+            "const": "note"
+          },
+          {
+            "pattern": "^x-"
+          }
+        ]
+      },
+      "properties": {
+        "note": {
+          "$ref": "#/$defs/note"
+        }
+      },
+      "patternProperties": {
+        "^x-": true
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/motion"
+      },
+      "description": "How each property travels to its target."
+    },
+    "motion": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/name",
+          "description": "A named motion."
+        },
+        {
+          "$ref": "#/$defs/motionObject"
+        }
+      ]
+    },
+    "entryEffect": {
+      "anyOf": [
+        { "$ref": "#/$defs/motion" },
+        { "$ref": "#/$defs/keyframesEffect" }
+      ]
+    },
+    "loopSpec": {
+      "type": "object",
+      "description": "One cycle of an offset, repeated while the state is active: 0 at the start, through keyframes, to \"to\" at the end (0.10).",
+      "properties": {
+        "to": {
+          "anyOf": [
+            { "type": "number" },
+            { "$ref": "#/$defs/measure" }
+          ],
+          "description": "The offset at the end of a cycle: 360 for a turn, a measured width for a sweep. Defaults to 0."
+        },
+        "keyframes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "at": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1 },
+              "value": {
+                "anyOf": [
+                  { "type": "number" },
+                  { "$ref": "#/$defs/measure" }
+                ]
+              }
+            },
+            "required": ["at", "value"],
+            "additionalProperties": false
+          }
+        },
+        "duration": { "$ref": "#/$defs/positiveTime" },
+        "ease": {
+          "anyOf": [
+            { "type": "string" },
+            { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4 }
+          ]
+        },
+        "delay": { "$ref": "#/$defs/time" },
+        "wrap": { "type": "number", "exclusiveMinimum": 0, "description": "A period, e.g. 360: leaving reduces the offset to its equivalent nearest 0." }
+      },
+      "required": ["duration"],
+      "anyOf": [{ "required": ["to"] }, { "required": ["keyframes"] }],
+      "additionalProperties": false
+    },
+    "keyframesEffect": {
+      "type": "object",
+      "properties": {
+        "keyframes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "at": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1 },
+              "value": { "$ref": "#/$defs/value" }
+            },
+            "required": ["at", "value"],
+            "additionalProperties": false
+          }
+        },
+        "duration": { "$ref": "#/$defs/positiveTime" },
+        "ease": {
+          "anyOf": [
+            { "type": "string" },
+            { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4 }
+          ]
+        }
+      },
+      "required": ["keyframes", "duration"],
+      "additionalProperties": false
+    },
+    "motionObject": {
+      "type": "object",
+      "properties": {
+        "note": {
+          "$ref": "#/$defs/note"
+        },
+        "spring": {
+          "$ref": "#/$defs/spring"
+        },
+        "tween": {
+          "$ref": "#/$defs/tween"
+        },
+        "kick": {
+          "type": "number",
+          "description": "Velocity added on state entry, in units per second. Requires spring."
+        }
+      },
+      "patternProperties": {
+        "^x-": true
+      },
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "spring"
+          ]
+        },
+        {
+          "required": [
+            "tween"
+          ]
+        }
+      ],
+      "dependentRequired": {
+        "kick": [
+          "spring"
+        ]
+      }
+    },
+    "spring": {
+      "type": "object",
+      "description": "One physical spring, in exactly one parameter form.",
+      "oneOf": [
+        {
+          "title": "duration + bounce (default form)",
+          "properties": {
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "duration": {
+              "$ref": "#/$defs/positiveTime",
+              "description": "Perceptual duration."
+            },
+            "bounce": {
+              "type": "number",
+              "exclusiveMaximum": 1,
+              "description": "0 = no overshoot, toward 1 = more bounce, negative = overdamped."
+            }
+          },
+          "required": [
+            "duration"
+          ],
+          "patternProperties": {
+            "^x-": true
+          },
+          "additionalProperties": false
+        },
+        {
+          "title": "response + dampingFraction",
+          "properties": {
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "response": {
+              "$ref": "#/$defs/positiveTime"
+            },
+            "dampingFraction": {
+              "$ref": "#/$defs/positive"
+            }
+          },
+          "required": [
+            "response"
+          ],
+          "patternProperties": {
+            "^x-": true
+          },
+          "additionalProperties": false
+        },
+        {
+          "title": "stiffness + dampingRatio (mass 1)",
+          "properties": {
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "stiffness": {
+              "$ref": "#/$defs/positive"
+            },
+            "dampingRatio": {
+              "$ref": "#/$defs/positive"
+            }
+          },
+          "required": [
+            "stiffness",
+            "dampingRatio"
+          ],
+          "patternProperties": {
+            "^x-": true
+          },
+          "additionalProperties": false
+        },
+        {
+          "title": "stiffness + damping + mass",
+          "properties": {
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "stiffness": {
+              "$ref": "#/$defs/positive"
+            },
+            "damping": {
+              "$ref": "#/$defs/positive"
+            },
+            "mass": {
+              "$ref": "#/$defs/positive"
+            }
+          },
+          "required": [
+            "stiffness",
+            "damping"
+          ],
+          "patternProperties": {
+            "^x-": true
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "tween": {
+      "type": "object",
+      "properties": {
+        "note": {
+          "$ref": "#/$defs/note"
+        },
+        "duration": {
+          "$ref": "#/$defs/time"
+        },
+        "ease": {
+          "anyOf": [
+            {
+              "enum": [
+                "linear",
+                "in",
+                "out",
+                "in-out",
+                "in-sine",
+                "out-sine",
+                "in-out-sine",
+                "in-quad",
+                "out-quad",
+                "in-out-quad",
+                "in-cubic",
+                "out-cubic",
+                "in-out-cubic",
+                "in-quart",
+                "out-quart",
+                "in-out-quart",
+                "in-quint",
+                "out-quint",
+                "in-out-quint",
+                "in-expo",
+                "out-expo",
+                "in-out-expo",
+                "in-circ",
+                "out-circ",
+                "in-out-circ",
+                "in-back",
+                "out-back",
+                "in-out-back"
+              ]
+            },
+            {
+              "type": "array",
+              "description": "Cubic B\u00e9zier [x1, y1, x2, y2]; x values in [0, 1].",
+              "prefixItems": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        }
+      },
+      "required": [
+        "duration"
+      ],
+      "patternProperties": {
+        "^x-": true
+      },
+      "additionalProperties": false
+    },
+    "states": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/name"
+          },
+          {
+            "pattern": "^x-"
+          }
+        ]
+      },
+      "properties": {
+        "note": {
+          "$ref": "#/$defs/note"
+        }
+      },
+      "patternProperties": {
+        "^x-": true
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/state"
+      }
+    },
+    "regions": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/name"
+          },
+          {
+            "pattern": "^x-"
+          }
+        ]
+      },
+      "properties": {
+        "note": {
+          "$ref": "#/$defs/note"
+        }
+      },
+      "patternProperties": {
+        "^x-": true
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/machine"
+      }
+    },
+    "machine": {
+      "type": "object",
+      "properties": {
+        "note": {
+          "$ref": "#/$defs/note"
+        },
+        "initial": {
+          "$ref": "#/$defs/name"
+        },
+        "states": {
+          "$ref": "#/$defs/states"
+        },
+        "regions": {
+          "$ref": "#/$defs/regions"
+        },
+        "when": {
+          "$ref": "#/$defs/when"
+        }
+      },
+      "patternProperties": {
+        "^x-": true
+      },
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "initial",
+            "states"
+          ]
+        },
+        {
+          "required": [
+            "regions"
+          ],
+          "not": {
+            "required": [
+              "initial"
+            ]
+          }
+        }
+      ]
+    },
+    "state": {
+      "type": "object",
+      "properties": {
+        "note": {
+          "$ref": "#/$defs/note"
+        },
+        "set": {
+          "type": "object",
+          "propertyNames": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/propertyPath"
+              },
+              {
+                "const": "note"
+              },
+              {
+                "pattern": "^x-"
+              }
+            ]
+          },
+          "properties": {
+            "note": {
+              "$ref": "#/$defs/note"
+            }
+          },
+          "patternProperties": {
+            "^x-": true
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/value"
+              },
+              {
+                "$ref": "#/$defs/measure"
+              }
+            ]
+          },
+          "description": "Values while this state is active."
+        },
+        "follow": {
+          "type": "object",
+          "description": "Properties that track an input while this state is active (0.2).",
+          "propertyNames": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/propertyPath"
+              },
+              {
+                "const": "note"
+              },
+              {
+                "pattern": "^x-"
+              }
+            ]
+          },
+          "properties": {
+            "note": {
+              "$ref": "#/$defs/note"
+            }
+          },
+          "patternProperties": {
+            "^x-": true
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/followSpec"
+          }
+        },
+        "enter": {
+          "type": "object",
+          "propertyNames": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/propertyPath"
+              },
+              {
+                "const": "note"
+              },
+              {
+                "pattern": "^x-"
+              }
+            ]
+          },
+          "properties": {
+            "note": {
+              "$ref": "#/$defs/note"
+            }
+          },
+          "patternProperties": {
+            "^x-": true
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/entryEffect"
+          },
+          "description": "Transient kicks or keyframes played when this state is entered through a transition."
+        },
+        "loop": {
+          "type": "object",
+          "propertyNames": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/propertyPath"
+              },
+              {
+                "const": "note"
+              },
+              {
+                "pattern": "^x-"
+              }
+            ]
+          },
+          "properties": {
+            "note": {
+              "$ref": "#/$defs/note"
+            }
+          },
+          "patternProperties": {
+            "^x-": true
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/loopSpec"
+          },
+          "description": "Periodic offsets added to numeric properties while this state is active (0.10)."
+        },
+        "when": {
+          "$ref": "#/$defs/stateWhen"
+        },
+        "initial": {
+          "$ref": "#/$defs/name"
+        },
+        "states": {
+          "$ref": "#/$defs/states"
+        },
+        "regions": {
+          "$ref": "#/$defs/regions"
+        }
+      },
+      "patternProperties": {
+        "^x-": true
+      },
+      "additionalProperties": false,
+      "dependentRequired": {
+        "states": [
+          "initial"
+        ]
+      },
+      "not": {
+        "required": [
+          "states",
+          "regions"
+        ]
+      }
+    },
+    "transition": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/name",
+          "description": "The target state."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "to": {
+              "$ref": "#/$defs/name"
+            },
+            "animate": {
+              "$ref": "#/$defs/animate"
+            },
+            "step": {
+              "$ref": "#/$defs/stepMap"
+            },
+            "commit": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/propertyPath"
+              },
+              "minItems": 1
+            },
+            "pause": {
+              "$ref": "#/$defs/timerPause"
+            }
+          },
+          "anyOf": [
+            {
+              "required": [
+                "to"
+              ]
+            },
+            {
+              "required": [
+                "step"
+              ]
+            },
+            {
+              "required": [
+                "commit"
+              ]
+            }
+          ],
+          "patternProperties": {
+            "^x-": true
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Go to whichever listed state is nearest to where `by` was heading (0.2).",
+          "properties": {
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "nearest": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/name"
+              },
+              "minItems": 1
+            },
+            "by": {
+              "$ref": "#/$defs/propertyPath"
+            },
+            "momentum": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Seconds of projection at the release velocity. Default 0.5."
+            },
+            "animate": {
+              "$ref": "#/$defs/animate"
+            },
+            "step": {
+              "$ref": "#/$defs/stepMap"
+            },
+            "commit": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/propertyPath"
+              },
+              "minItems": 1
+            },
+            "pause": {
+              "$ref": "#/$defs/timerPause"
+            }
+          },
+          "required": [
+            "nearest",
+            "by"
+          ],
+          "patternProperties": {
+            "^x-": true
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "inputPath": {
+      "type": "string",
+      "pattern": "^(host\\.[A-Za-z_][A-Za-z0-9_-]*|[A-Za-z_][A-Za-z0-9_-]*\\.(drag|scroll)\\.(x|y))$",
+      "description": "host.name, target.drag.x/y, or target.scroll.x/y"
+    },
+    "mapValue": {
+      "type": "object",
+      "description": "A value computed from another property (0.2), or from a continuous input (0.5), with optional measured source points (0.9).",
+      "properties": {
+        "note": {
+          "$ref": "#/$defs/note"
+        },
+        "map": {
+          "anyOf": [
+            { "$ref": "#/$defs/propertyPath" },
+            { "$ref": "#/$defs/inputPath" }
+          ],
+          "description": "The source: a numeric property with its own base value, or a continuous input."
+        },
+        "from": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              { "type": "number" },
+              { "$ref": "#/$defs/measure" }
+            ]
+          },
+          "minItems": 2,
+          "description": "Points on the source. Numeric-only points are strictly monotonic; measured points resolve from layout in 0.9."
+        },
+        "to": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/value"
+          },
+          "minItems": 2,
+          "description": "The value at each point."
+        }
+      },
+      "required": [
+        "map",
+        "from",
+        "to"
+      ],
+      "patternProperties": {
+        "^x-": true
+      },
+      "additionalProperties": false
+    },
+    "followSpec": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/inputPath"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "input": {
+              "$ref": "#/$defs/inputPath"
+            },
+            "range": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  { "type": "number" },
+                  { "$ref": "#/$defs/measure" }
+                ]
+              },
+              "minItems": 2,
+              "maxItems": 2,
+              "description": "Numeric or measured bounds. Measured endpoints resolve from layout in 0.9."
+            },
+            "overdrag": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "How far the value moves past the range, per unit of input. 0 is a hard stop."
+            }
+          },
+          "required": [
+            "input"
+          ],
+          "patternProperties": {
+            "^x-": true
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "when": {
+      "type": "object",
+      "propertyNames": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/eventPath"
+          },
+          {
+            "const": "note"
+          },
+          {
+            "pattern": "^x-"
+          }
+        ]
+      },
+      "properties": {
+        "note": {
+          "$ref": "#/$defs/note"
+        }
+      },
+      "patternProperties": {
+        "^x-": true
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/transition"
+      },
+      "description": "Transitions: event \u2192 state."
+    },
+    "boundedValue": {
+      "type": "object",
+      "description": "A base value with optional bounds (0.3).",
+      "properties": {
+        "note": {
+          "$ref": "#/$defs/note"
+        },
+        "base": {
+          "$ref": "#/$defs/value"
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "base"
+      ],
+      "patternProperties": {
+        "^x-": true
+      },
+      "additionalProperties": false
+    },
+    "timerKey": {
+      "type": "string",
+      "pattern": "^after:(\\d+\\.?\\d*|\\.\\d+)(ms|s)?$",
+      "description": "after:<time>, e.g. after:3s or after:300ms (0.3). Only in a state's own when."
+    },
+    "timerPause": {
+      "type": "array",
+      "description": "Independent event pairs that pause an after timer while one or more reasons are active (0.7).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "on": { "$ref": "#/$defs/eventPath" },
+          "off": { "$ref": "#/$defs/eventPath" }
+        },
+        "required": ["on", "off"],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "stateWhen": {
+      "type": "object",
+      "propertyNames": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/eventPath"
+          },
+          {
+            "$ref": "#/$defs/timerKey"
+          },
+          {
+            "const": "note"
+          },
+          {
+            "pattern": "^x-"
+          }
+        ]
+      },
+      "properties": {
+        "note": {
+          "$ref": "#/$defs/note"
+        }
+      },
+      "patternProperties": {
+        "^x-": true
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/transition"
+      },
+      "description": "Transitions: event \u2192 sibling state, or after:<time> \u2192 sibling state."
+    },
+    "stepMap": {
+      "type": "object",
+      "description": "Amounts added to properties' base values (0.3).",
+      "propertyNames": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/propertyPath"
+          },
+          {
+            "const": "note"
+          },
+          {
+            "pattern": "^x-"
+          }
+        ]
+      },
+      "properties": {
+        "note": {
+          "$ref": "#/$defs/note"
+        }
+      },
+      "patternProperties": {
+        "^x-": true
+      },
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "measure": {
+      "type": "object",
+      "description": "A value the host's layout report supplies (0.4). Positions align and sizes read directly; 0.6 optionally multiplies the result and adds an offset.",
+      "properties": {
+        "note": {
+          "$ref": "#/$defs/note"
+        },
+        "measure": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]*\\.(x|y|width|height|naturalWidth|naturalHeight)$"
+        },
+        "times": {
+          "type": "number",
+          "description": "Multiplier applied to the measured size or aligned position (0.6). Defaults to 1."
+        },
+        "plus": {
+          "type": "number",
+          "description": "Logical-unit offset added after multiplication (0.6). Defaults to 0."
+        }
+      },
+      "required": [
+        "measure"
+      ],
+      "patternProperties": {
+        "^x-": true
+      },
+      "additionalProperties": false
+    }
+  }
+}

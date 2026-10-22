@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Spinner</title>
+  <style>
+    .spinner-demo { display: flex; align-items: center; gap: 14px; font: 14px ui-sans-serif, system-ui, sans-serif; }
+    .spinner-demo .load { min-width: 112px; padding: 9px 14px; border: 0; border-radius: 8px; background: #1c1c1a; color: #fff; font: inherit; cursor: pointer; }
+    .spinner-demo .spinner { width: 28px; height: 28px; box-sizing: border-box; border: 3px solid #e4e4df; border-top-color: #2563eb; border-radius: 50%; }
+  </style>
+</head>
+<body>
+  <div class="spinner-demo" aria-busy="false">
+    <button class="load">Load</button>
+    <div class="spinner" role="progressbar" aria-label="Loading" data-nudg="spinner"></div>
+  </div>
+  <!-- Host markup for spinner.nudg.json. The app sends host.start and host.done around its work and keeps aria-busy and the label in step. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./spinner.nudg.json");
+    const player = play(program, document.body);
+    const demo = document.querySelector(".spinner-demo");
+    const button = document.querySelector(".load");
+    button.addEventListener("click", () => {
+      if (demo.getAttribute("aria-busy") === "true") return;
+      demo.setAttribute("aria-busy", "true");
+      button.textContent = "Loading…";
+      player.send("host.start");
+      setTimeout(() => {
+        demo.setAttribute("aria-busy", "false");
+        button.textContent = "Load";
+        player.send("host.done");
+      }, 2000);
+    });
+  </script>
+</body>
+</html>

@@ -1,6 +1,8 @@
 package dev.nudg
 
 import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.sqrt
 
@@ -25,6 +27,9 @@ private class Pending(var due: Double, val order: Int, val machine: Machine.Stat
     var pausedAt: Double? = null
 }
 
+/** A loop running since its state was entered at [t0]. */
+private class ActiveLoop(val loop: Loop, val owner: State, val t0: Double)
+
 private const val REST_NUMBER = 1e-3
 private const val REST_COLOR = 1e-4
 private const val VELOCITY_WINDOW = 0.1
@@ -34,6 +39,8 @@ private val LAYOUT_NAMES = setOf("x", "y", "width", "height", "naturalWidth", "n
 class Runtime(val program: Program, state: List<String> = emptyList(), private val reducedMotion: Boolean = false) {
     private val active = HashMap<Machine.States, String>()
     private val segments = HashMap<String, Segment>()
+    /** Loops of the active states, by property (v0.10). Empty under reduced motion. */
+    private val loops = LinkedHashMap<String, ActiveLoop>()
     private val inputs = HashMap<String, MutableList<Pair<Double, Double>>>()
     private val bases = HashMap<String, List<Double>>()
     private val pending = ArrayList<Pending>()
@@ -60,6 +67,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
             val f = follows[key]
             segments[key] = if (f != null) followSegment(key, f, to[0], 0.0) else Segment.MotionSeg(0.0, to, to.map { 0.0 }, to, null)
         }
+        if (!reducedMotion) walkActive(active) { s -> for ((key, loop) in s.loop) loops[key] = ActiveLoop(loop, s, 0.0) }
     }
 
     // machine
@@ -229,6 +237,33 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         is Segment.KeyframesSeg -> evaluateKeyframes(seg, t)
     }
 
+    /** A loop's offset and its rate at [t]; 0 before its delay, and while a measured point is unknown. */
+    private fun loopOffset(key: String, running: ActiveLoop, t: Double): Pair<Double, Double> {
+        val loop = running.loop
+        val local = t - running.t0 - loop.delay
+        if (local < 0) return 0.0 to 0.0
+        val points = ArrayList<Pair<Double, Double>>()
+        points.add(0.0 to 0.0)
+        for ((at, value) in loop.frames + (1.0 to loop.to)) points.add(at to (endpoint(key, value) ?: return 0.0 to 0.0))
+        val u = (local - loop.duration * floor(local / loop.duration)) / loop.duration
+        for (i in 1 until points.size) {
+            val (a0, v0) = points[i - 1]
+            val (a1, v1) = points[i]
+            if (u > a1) continue
+            val p = (u - a0) / (a1 - a0)
+            return v0 + (v1 - v0) * easeAt(loop.ease, p) to (v1 - v0) * easeSlope(loop.ease, p) / ((a1 - a0) * loop.duration)
+        }
+        return points.last().second to 0.0
+    }
+
+    /** What a property shows: its motion, plus the offset of a running loop. */
+    private fun displayed(key: String, t: Double): Pair<List<Double>, List<Double>> {
+        val (pos, vel) = evaluate(segments.getValue(key), t)
+        val running = loops[key] ?: return pos to vel
+        val (offset, rate) = loopOffset(key, running, t)
+        return listOf(pos[0] + offset) to listOf(vel[0] + rate)
+    }
+
     private fun evaluateKeyframes(seg: Segment.KeyframesSeg, t: Double): Pair<List<Double>, List<Double>> {
         val u = (t - seg.t0) / seg.duration
         if (u >= 1) return seg.to to seg.to.map { 0.0 }
@@ -272,7 +307,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
     // transitions
 
     private fun nearest(machine: Machine.States, choice: Nearest, t: Double): String {
-        val (pos, vel) = evaluate(segments.getValue(choice.by), t)
+        val (pos, vel) = displayed(choice.by, t)
         val projected = pos[0] + vel[0] * choice.momentum
         var best = choice.states[0]
         var bestDistance = Double.POSITIVE_INFINITY
@@ -314,7 +349,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         val committed = HashSet<String>()
         for (tr in fired) {
             for (key in tr.commit ?: emptyList()) {
-                bases[key] = listOf(clamp(key, evaluate(segments.getValue(key), t).first[0]))
+                bases[key] = listOf(clamp(key, displayed(key, t).first[0]))
                 measuredBases.remove(key)
                 committed.add(key)
             }
@@ -328,25 +363,43 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         for (tr in fired) for ((key, m) in tr.animate) overrides[key] = m
         val targets = resolveTargets(active)
         val follows = activeFollows(active)
-        val activeStates = HashSet<State>()
+        val activeStates = LinkedHashSet<State>()
         walkActive(active) { activeStates.add(it) }
+        val isEntered = { s: State -> entered.any { it === s } }
+
+        // A loop that ends hands off like a released drag: the motion continues from the
+        // displayed value with the loop's velocity, its offset first reduced by `wrap`.
+        val handoff = HashMap<String, Pair<List<Double>, List<Double>>>()
+        for ((key, running) in loops.entries.toList()) {
+            if (running.owner in activeStates && !isEntered(running.owner)) continue
+            val (pos, vel) = evaluate(segments.getValue(key), t)
+            var (offset, rate) = loopOffset(key, running, t)
+            // Into (-wrap/2, wrap/2]: the same rule in every runtime, whatever its rounding.
+            running.loop.wrap?.let { wrap -> offset -= wrap * ceil(offset / wrap - 0.5) }
+            handoff[key] = listOf(pos[0] + offset) to listOf(vel[0] + rate)
+            loops.remove(key)
+        }
+        if (!reducedMotion) {
+            for (s in activeStates) if (isEntered(s)) for ((key, loop) in s.loop) loops[key] = ActiveLoop(loop, s, t)
+        }
+
         for ((key, prop) in program.properties) {
             if (prop.map != null) continue
             val seg = segments.getValue(key)
             val f = follows[key]
             if (f != null) {
-                val keep = seg is Segment.FollowSeg && seg.owner === f.second && entered.none { it === f.second }
-                if (!keep) segments[key] = followSegment(key, f, evaluate(seg, t).first[0], t)
+                val keep = seg is Segment.FollowSeg && seg.owner === f.second && !isEntered(f.second) && key !in handoff
+                if (!keep) segments[key] = followSegment(key, f, (handoff[key] ?: evaluate(seg, t)).first[0], t)
                 continue
             }
             val to = targets.getValue(key)
-            if (seg is Segment.KeyframesSeg && seg.owner in activeStates && entered.none { it === seg.owner }) {
+            if (seg is Segment.KeyframesSeg && seg.owner in activeStates && !isEntered(seg.owner) && key !in handoff) {
                 segments[key] = seg.copy(to = to)
                 continue
             }
-            if (seg is Segment.MotionSeg && seg.to == to) continue
+            if (seg is Segment.MotionSeg && seg.to == to && key !in handoff) continue
             if (snap) { segments[key] = Segment.MotionSeg(t, to, to.map { 0.0 }, to, null); continue }
-            val (pos, v) = evaluate(seg, t)
+            val (pos, v) = handoff[key] ?: evaluate(seg, t)
             val vel = if (key in committed) v.map { 0.0 } else v
             val motion = overrides[key] ?: program.animate[key]
             segments[key] = Segment.MotionSeg(t, pos, vel, to, motion?.let { if (reducedMotion) REDUCED else it })
@@ -415,10 +468,10 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         val p = program.property(key)
         p.map?.let {
             val from = resolvedMap(key, it) ?: return p.base
-            val source = if (it.sourceKind == "input") inputAt(it.source, t) else evaluate(segments.getValue(it.source), t).first[0]
+            val source = if (it.sourceKind == "input") inputAt(it.source, t) else displayed(it.source, t).first[0]
             return interpolate(from, it.to, source)
         }
-        return evaluate(segments.getValue(key), t).first
+        return displayed(key, t).first
     }
 
     // public API
@@ -499,6 +552,9 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
 
     /** The latest time the runtime has been advanced to by an event, input or sample. */
     fun time(): Double = now
+
+    /** True while an active state loops a property (v0.10): values change every frame though nothing is settling. */
+    fun looping(): Boolean = loops.isNotEmpty()
 
     /** Whether one property has come to rest at [t]; see the spec's rest rule. */
     private fun atRest(key: String, t: Double): Boolean {

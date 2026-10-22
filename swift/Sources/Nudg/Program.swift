@@ -1,4 +1,4 @@
-// A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 and 2).
+// A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 3).
 // Everything is already validated and resolved; this only decodes it.
 
 import Foundation
@@ -35,6 +35,16 @@ public struct Measure {
 public enum MeasuredEndpoint {
   case number(Double)
   case measure(Measure)
+}
+
+/** A periodic offset added to a property while its state is active (v0.10). */
+public struct Loop {
+  public let to: MeasuredEndpoint
+  public let frames: [(at: Double, value: MeasuredEndpoint)]
+  public let duration: Double
+  public let ease: Ease
+  public let delay: Double
+  public let wrap: Double?
 }
 
 public struct PropertyMap {
@@ -89,11 +99,12 @@ public final class State {
   public let measure: [String: Measure]
   public let follow: [(String, Follow)]
   public let enter: [(String, EntryEffect)]
+  public let loop: [(String, Loop)]
   public let when: [(String, Transition)]
   public let timers: [Timer]
   public let machine: Machine?
-  init(name: String, set: [(String, [Double])], measure: [String: Measure], follow: [(String, Follow)], enter: [(String, EntryEffect)], when: [(String, Transition)], timers: [Timer], machine: Machine?) {
-    self.name = name; self.set = set; self.measure = measure; self.follow = follow; self.enter = enter; self.when = when; self.timers = timers; self.machine = machine
+  init(name: String, set: [(String, [Double])], measure: [String: Measure], follow: [(String, Follow)], enter: [(String, EntryEffect)], loop: [(String, Loop)], when: [(String, Transition)], timers: [Timer], machine: Machine?) {
+    self.name = name; self.set = set; self.measure = measure; self.follow = follow; self.enter = enter; self.loop = loop; self.when = when; self.timers = timers; self.machine = machine
   }
   func transition(for event: String) -> Transition? { when.first { $0.0 == event }?.1 }
 }
@@ -128,8 +139,8 @@ public struct Program {
 
   /** Reads `nudg compile` output. */
   public static func decode(_ data: Data) throws -> Program {
-    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, format == 1 || format == 2 else {
-      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 or 2). Compile it with `nudg compile`.")
+    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...3).contains(format) else {
+      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 3). Compile it with `nudg compile`.")
     }
     let properties: [(String, Property)] = (j["properties"] as! [[String: Any]]).map { p in
       (p["key"] as! String, Property(
@@ -214,6 +225,15 @@ private func readState(_ s: [String: Any]) -> State {
       return (f["key"] as! String, Follow(input: f["input"] as! String, range: r.count == 2 ? (r[0], r[1]) : nil, overdrag: number(f["overdrag"])!))
     },
     enter: (s["enter"] as! [[String: Any]]).map { ($0["key"] as! String, readEntryEffect($0["effect"] ?? $0["motion"]!)) },
+    loop: (s["loop"] as? [[String: Any]] ?? []).map { l in
+      (l["key"] as! String, Loop(
+        to: readEndpoint(l["to"]!),
+        frames: (l["frames"] as! [[String: Any]]).map { (at: number($0["at"])!, value: readEndpoint($0["value"]!)) },
+        duration: number(l["duration"])!,
+        ease: readEase(l["ease"]),
+        delay: number(l["delay"]) ?? 0,
+        wrap: number(l["wrap"])))
+    },
     when: (s["when"] as! [[String: Any]]).map { ($0["event"] as! String, readTransition($0)) },
     timers: (s["timers"] as! [[String: Any]]).map { timer in
       Timer(

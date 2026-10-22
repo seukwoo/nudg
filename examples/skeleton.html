@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Skeleton</title>
+  <style>
+    .skeleton-card { position: relative; width: 240px; height: 72px; padding: 12px; box-sizing: border-box; overflow: hidden; border: 1px solid #e4e4df; border-radius: 12px; background: #fff; font: 14px ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; }
+    .skeleton-card .placeholder, .skeleton-card .content { position: absolute; inset: 12px; display: flex; gap: 12px; align-items: center; }
+    .skeleton-card .avatar { flex: none; width: 48px; height: 48px; border-radius: 50%; background: #eceae4; }
+    .skeleton-card .lines { flex: 1; display: grid; gap: 8px; }
+    .skeleton-card .line { height: 12px; border-radius: 6px; background: #eceae4; }
+    .skeleton-card .line.short { width: 60%; }
+    /* Starts just left of the card; the loop sweeps it across the measured width. */
+    .skeleton-card .highlight { position: absolute; top: 0; bottom: 0; left: -120px; width: 120px; background: linear-gradient(90deg, rgb(255 255 255 / 0), rgb(255 255 255 / 0.75), rgb(255 255 255 / 0)); pointer-events: none; }
+    .skeleton-card .content img { width: 48px; height: 48px; border-radius: 50%; background: #2563eb; }
+    .skeleton-card .content strong { display: block; }
+    .skeleton-card .content span { color: #6b6b66; font-size: 13px; }
+    .skeleton-demo { display: grid; gap: 10px; justify-items: start; }
+    .skeleton-demo .reload { padding: 6px 12px; border: 0; border-radius: 8px; background: #1c1c1a; color: #fff; font: 13px ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="skeleton-demo">
+    <div class="skeleton-card" aria-busy="true" data-nudg="card">
+      <div class="placeholder" aria-hidden="true" data-nudg="placeholder">
+        <div class="avatar"></div>
+        <div class="lines"><div class="line"></div><div class="line short"></div></div>
+        <div class="highlight" data-nudg="highlight"></div>
+      </div>
+      <div class="content" data-nudg="content">
+        <img alt="">
+        <div><strong>Ada Lovelace</strong><span>Notes on the engine</span></div>
+      </div>
+    </div>
+    <button class="reload">Reload</button>
+  </div>
+  <!-- Host markup for skeleton.nudg.json. The app sends host.loaded when the content arrives, and host.loading to show the skeleton again. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./skeleton.nudg.json");
+    const player = play(program, document.body);
+    const card = document.querySelector(".skeleton-card");
+    const load = () => {
+      card.setAttribute("aria-busy", "true");
+      player.send("host.loading");
+      setTimeout(() => {
+        card.setAttribute("aria-busy", "false");
+        player.send("host.loaded");
+      }, 2500);
+    };
+    document.querySelector(".reload").addEventListener("click", load);
+    load();
+  </script>
+</body>
+</html>

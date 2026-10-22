@@ -170,7 +170,7 @@ test("cli validate and simulate speak JSON", () => {
   const recipe = JSON.parse(run("recipe", "video chat", "--json"));
   assert.equal(recipe.id, "video-call");
   assert.match(run("recipe", "toggle", "--source"), /"track\.dragend"/);
-  assert.throws(() => execFileSync(process.execPath, [`${root}src/cli.ts`, "recipe", "spinner", "--source"], { encoding: "utf8", stdio: "pipe" }), /no starter.*continuous motion/s);
+  assert.throws(() => execFileSync(process.execPath, [`${root}src/cli.ts`, "recipe", "drawer", "--source"], { encoding: "utf8", stdio: "pipe" }), /no starter.*screen composition/s);
   const { gaps } = JSON.parse(run("recipe", "--gaps", "--json"));
   assert.ok(gaps.some((gap: { capability: string; missing: string[] }) => gap.capability === "stagger" && gap.missing.includes("menu")));
 });

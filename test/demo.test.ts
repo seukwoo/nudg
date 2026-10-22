@@ -566,12 +566,11 @@ test("keys, timers and commit on the site: slider arrows, tooltip delay, dialog 
   assert.equal(await browser.evaluate("document.getElementById('detail-state').textContent"), "closed");
 });
 
-test("bound elements carry the active state, so CSS can animate by state", { skip }, async () => {
+test("bound elements carry the active state, and a loop turns the refreshing spinner", { skip }, async () => {
   await go("#example/pull-to-refresh");
   await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent || undefined"), 5_000);
   const spinner = "document.getElementById('detail-stage').shadowRoot.querySelector('[data-nudg=spinner]')";
   assert.equal(await browser.evaluate(`${spinner}.dataset.nudgState`), "idle");
-  assert.equal(await browser.evaluate(`getComputedStyle(${spinner}).animationName`), "none");
   const [x, y] = await center("detail-stage", "[data-nudg=list]");
   await mouse("mousePressed", x, y);
   for (let i = 1; i <= 8; i++) {
@@ -581,8 +580,11 @@ test("bound elements carry the active state, so CSS can animate by state", { ski
   await mouse("mouseReleased", x, y + 72);
   await sleep(300);
   assert.equal(await browser.evaluate(`${spinner}.dataset.nudgState`), "refreshing");
-  assert.equal(await browser.evaluate(`getComputedStyle(${spinner}).animationName`), "ptr-spin");
-  await sleep(1800);
+  const turn = () => browser.evaluate(`${spinner}.style.transform`);
+  const before = await turn();
+  await sleep(100);
+  assert.notEqual(await turn(), before, "the loop keeps turning the spinner every frame");
+  await sleep(1700);
   assert.equal(await browser.evaluate(`${spinner}.dataset.nudgState`), "idle", "the demo's app hook sends host.done");
 });
 

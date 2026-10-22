@@ -14,7 +14,7 @@ export interface LifecycleHooks {
    * Every value has come to rest after something moved or the state changed. Called once
    * per rest, with the active states: an interrupted motion reports only the rest that
    * follows the interruption. Pending timers don't delay it, and values that follow an
-   * input or are mapped from one count as at rest.
+   * input or are mapped from one count as at rest, as does a running loop's offset.
    */
   onSettle?: (state: string[]) => void;
   /** The machine has entered an exit state from elsewhere and is settled. */
@@ -24,7 +24,7 @@ export interface LifecycleHooks {
 export interface Lifecycle {
   /** After an event, input sample or layout report, at the runtime's current time. */
   changed(): void;
-  /** After the values at `t` were applied. True while the host should keep sending frames. */
+  /** After the values at `t` were applied. True while the host should keep sending frames, including while a loop runs. */
   frame(t: number): boolean;
   /** False once the component has exited, until it leaves the exit state again. */
   present(): boolean;
@@ -80,7 +80,7 @@ export function createLifecycle(runtime: Runtime, hooks: LifecycleHooks): Lifecy
       }
       const settled = runtime.settled(t);
       if (settled) syncPresence(t);
-      return !settled || owed;
+      return !settled || owed || runtime.looping();
     },
     present: () => present,
   };

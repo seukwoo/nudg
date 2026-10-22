@@ -51,6 +51,7 @@ for file in files {
       }
       if let expected = expect["resting"] as? Bool, try rt.resting(t) != expected { problems.append("resting at \(t)s: expected \(expected)") }
       if let expected = expect["settled"] as? Bool, try rt.settled(t) != expected { problems.append("settled at \(t)s: expected \(expected)") }
+      if let expected = expect["looping"] as? Bool, rt.looping() != expected { problems.append("looping at \(t)s: expected \(expected)") }
     }
     if problems.isEmpty { passed += 1; print("ok    \(name)") }
     else { failures.append(name); print("FAIL  \(name)\n      " + problems.prefix(5).joined(separator: "\n      ")) }

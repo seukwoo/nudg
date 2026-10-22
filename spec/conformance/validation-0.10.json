@@ -1,0 +1,640 @@
+{
+  "conformance": "0.10",
+  "name": "Validator (0.10): loops",
+  "documents": [
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "0.9",
+        "targets": [
+          "spinner"
+        ],
+        "values": {
+          "spinner.rotation": 0,
+          "spinner.opacity": 0
+        },
+        "animate": {
+          "spinner.rotation": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          },
+          "spinner.opacity": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "linear"
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.start": "busy"
+            }
+          },
+          "busy": {
+            "set": {
+              "spinner.opacity": 1
+            },
+            "loop": {
+              "spinner.rotation": {
+                "to": 360,
+                "duration": 1,
+                "wrap": 360
+              }
+            },
+            "when": {
+              "host.done": "idle"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/states/busy/loop"
+        }
+      ]
+    },
+    {
+      "name": "no-motion",
+      "doc": {
+        "nudg": "0.10",
+        "targets": [
+          "spinner"
+        ],
+        "values": {
+          "spinner.rotation": 0,
+          "spinner.opacity": 0
+        },
+        "animate": {
+          "spinner.rotation": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          },
+          "spinner.opacity": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "linear"
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.start": "busy"
+            }
+          },
+          "busy": {
+            "set": {
+              "spinner.opacity": 1
+            },
+            "loop": {
+              "spinner.rotation": {
+                "duration": 1,
+                "wrap": 360
+              }
+            },
+            "when": {
+              "host.done": "idle"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-loop",
+          "path": "/states/busy/loop/spinner.rotation"
+        }
+      ]
+    },
+    {
+      "name": "missing-duration",
+      "doc": {
+        "nudg": "0.10",
+        "targets": [
+          "spinner"
+        ],
+        "values": {
+          "spinner.rotation": 0,
+          "spinner.opacity": 0
+        },
+        "animate": {
+          "spinner.rotation": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          },
+          "spinner.opacity": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "linear"
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.start": "busy"
+            }
+          },
+          "busy": {
+            "set": {
+              "spinner.opacity": 1
+            },
+            "loop": {
+              "spinner.rotation": {
+                "to": 360,
+                "wrap": 360
+              }
+            },
+            "when": {
+              "host.done": "idle"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "missing-duration",
+          "path": "/states/busy/loop/spinner.rotation"
+        }
+      ]
+    },
+    {
+      "name": "duration",
+      "doc": {
+        "nudg": "0.10",
+        "targets": [
+          "spinner"
+        ],
+        "values": {
+          "spinner.rotation": 0,
+          "spinner.opacity": 0
+        },
+        "animate": {
+          "spinner.rotation": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          },
+          "spinner.opacity": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "linear"
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.start": "busy"
+            }
+          },
+          "busy": {
+            "set": {
+              "spinner.opacity": 1
+            },
+            "loop": {
+              "spinner.rotation": {
+                "to": 360,
+                "duration": 0,
+                "wrap": 360
+              }
+            },
+            "when": {
+              "host.done": "idle"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/states/busy/loop/spinner.rotation/duration"
+        }
+      ]
+    },
+    {
+      "name": "delay",
+      "doc": {
+        "nudg": "0.10",
+        "targets": [
+          "spinner"
+        ],
+        "values": {
+          "spinner.rotation": 0,
+          "spinner.opacity": 0
+        },
+        "animate": {
+          "spinner.rotation": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          },
+          "spinner.opacity": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "linear"
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.start": "busy"
+            }
+          },
+          "busy": {
+            "set": {
+              "spinner.opacity": 1
+            },
+            "loop": {
+              "spinner.rotation": {
+                "to": 360,
+                "duration": 1,
+                "wrap": 360,
+                "delay": -1
+              }
+            },
+            "when": {
+              "host.done": "idle"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/states/busy/loop/spinner.rotation/delay"
+        }
+      ]
+    },
+    {
+      "name": "wrap",
+      "doc": {
+        "nudg": "0.10",
+        "targets": [
+          "spinner"
+        ],
+        "values": {
+          "spinner.rotation": 0,
+          "spinner.opacity": 0
+        },
+        "animate": {
+          "spinner.rotation": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          },
+          "spinner.opacity": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "linear"
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.start": "busy"
+            }
+          },
+          "busy": {
+            "set": {
+              "spinner.opacity": 1
+            },
+            "loop": {
+              "spinner.rotation": {
+                "to": 360,
+                "duration": 1,
+                "wrap": 0
+              }
+            },
+            "when": {
+              "host.done": "idle"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/states/busy/loop/spinner.rotation/wrap"
+        }
+      ]
+    },
+    {
+      "name": "keyframe-time",
+      "doc": {
+        "nudg": "0.10",
+        "targets": [
+          "spinner"
+        ],
+        "values": {
+          "spinner.rotation": 0,
+          "spinner.opacity": 0
+        },
+        "animate": {
+          "spinner.rotation": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          },
+          "spinner.opacity": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "linear"
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.start": "busy"
+            }
+          },
+          "busy": {
+            "set": {
+              "spinner.opacity": 1
+            },
+            "loop": {
+              "spinner.rotation": {
+                "to": 360,
+                "duration": 1,
+                "wrap": 360,
+                "keyframes": [
+                  {
+                    "at": 1,
+                    "value": 10
+                  }
+                ]
+              }
+            },
+            "when": {
+              "host.done": "idle"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-keyframe-time",
+          "path": "/states/busy/loop/spinner.rotation/keyframes/0/at"
+        }
+      ]
+    },
+    {
+      "name": "color",
+      "doc": {
+        "nudg": "0.10",
+        "targets": [
+          "spinner"
+        ],
+        "values": {
+          "spinner.rotation": 0,
+          "spinner.opacity": 0,
+          "spinner.color": "#000000"
+        },
+        "animate": {
+          "spinner.rotation": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          },
+          "spinner.opacity": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "linear"
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.start": "busy"
+            }
+          },
+          "busy": {
+            "set": {
+              "spinner.opacity": 1
+            },
+            "loop": {
+              "spinner.rotation": {
+                "to": 360,
+                "duration": 1,
+                "wrap": 360
+              },
+              "spinner.color": {
+                "to": 1,
+                "duration": 1
+              }
+            },
+            "when": {
+              "host.done": "idle"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "loop-not-numeric",
+          "path": "/states/busy/loop/spinner.color"
+        }
+      ]
+    },
+    {
+      "name": "follow-conflict",
+      "doc": {
+        "nudg": "0.10",
+        "targets": [
+          "spinner"
+        ],
+        "values": {
+          "spinner.rotation": 0,
+          "spinner.opacity": 0
+        },
+        "animate": {
+          "spinner.rotation": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          },
+          "spinner.opacity": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "linear"
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.start": "busy"
+            }
+          },
+          "busy": {
+            "set": {
+              "spinner.opacity": 1
+            },
+            "loop": {
+              "spinner.rotation": {
+                "to": 360,
+                "duration": 1,
+                "wrap": 360
+              }
+            },
+            "when": {
+              "host.done": "idle"
+            },
+            "follow": {
+              "spinner.rotation": "host.angle"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "loop-conflict",
+          "path": "/states/busy/loop/spinner.rotation"
+        }
+      ]
+    },
+    {
+      "name": "mapped",
+      "doc": {
+        "nudg": "0.10",
+        "targets": [
+          "spinner"
+        ],
+        "values": {
+          "spinner.rotation": 0,
+          "spinner.opacity": 0,
+          "spinner.scale": {
+            "map": "spinner.rotation",
+            "from": [
+              0,
+              360
+            ],
+            "to": [
+              1,
+              2
+            ]
+          }
+        },
+        "animate": {
+          "spinner.rotation": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            }
+          },
+          "spinner.opacity": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "linear"
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.start": "busy"
+            }
+          },
+          "busy": {
+            "set": {
+              "spinner.opacity": 1
+            },
+            "loop": {
+              "spinner.rotation": {
+                "to": 360,
+                "duration": 1,
+                "wrap": 360
+              },
+              "spinner.scale": {
+                "to": 1,
+                "duration": 1
+              }
+            },
+            "when": {
+              "host.done": "idle"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "mapped-property",
+          "path": "/states/busy/loop/spinner.scale"
+        }
+      ]
+    },
+    {
+      "name": "region-conflict",
+      "doc": {
+        "nudg": "0.10",
+        "targets": [
+          "dot"
+        ],
+        "values": {
+          "dot.y": 0
+        },
+        "regions": {
+          "a": {
+            "initial": "on",
+            "states": {
+              "on": {
+                "loop": {
+                  "dot.y": {
+                    "to": 4,
+                    "duration": 1
+                  }
+                }
+              }
+            }
+          },
+          "b": {
+            "initial": "on",
+            "states": {
+              "on": {
+                "loop": {
+                  "dot.y": {
+                    "to": -4,
+                    "duration": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "region-conflict",
+          "path": "/regions/b"
+        }
+      ]
+    }
+  ]
+}

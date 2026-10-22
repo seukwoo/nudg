@@ -1,5 +1,5 @@
 {
- "nudgProgram": 2,
+ "nudgProgram": 3,
  "version": "0.1",
  "targets": [
   "a",
@@ -102,6 +102,7 @@
     "measure": [],
     "follow": [],
     "enter": [],
+    "loop": [],
     "when": [
      {
       "event": "a.tap",
@@ -148,6 +149,7 @@
     "measure": [],
     "follow": [],
     "enter": [],
+    "loop": [],
     "when": [],
     "timers": []
    }

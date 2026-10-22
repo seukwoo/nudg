@@ -421,6 +421,28 @@ Measured endpoints in `follow.range` and `map.from`. A file that uses them decla
 
 The conformance cases `measured-endpoints.json` and `validation-0.9.json` define the behavior across TypeScript, Swift and Kotlin.
 
+## Additions in 0.10 (draft)
+
+Loops: periodic motion while a state is active, for spinners, shimmers and typing dots. A file that uses them declares `"nudg": "0.10"`; a 0.10 runtime also reads older files.
+
+```json
+"refreshing": {
+  "set": { "list.y": 56 },
+  "loop": { "spinner.rotation": { "to": 360, "duration": 0.8, "wrap": 360 } }
+}
+```
+
+- **A loop is an offset added to a numeric property** while the state that lists it is active. The property keeps its ordinary value (base, `set`, motion, kicks, keyframes); what it shows is that value plus the offset. Maps read the shown value.
+- **One cycle** runs from offset 0 at normalized time 0, through optional `keyframes` (`{ "at", "value" }`, `at` strictly increasing between 0 and 1), to `to` at 1 (default 0), and repeats every `duration` seconds. `ease` applies to each leg, as for entry keyframes; the default is `linear`. A cycle that ends away from 0 (a turn, a sweep) starts again at 0.
+- **Timing.** The cycle starts when the state is entered, after `delay` seconds (default 0) during which the offset is 0. Re-entering the state, including a transition to itself, restarts it. A loop in a starting state runs from time 0.
+- **Measured values.** `to` and keyframe values may be measure objects (0.9 endpoints), resolved in the property's coordinates. Until every one is measured, the offset is 0; relayout takes effect at once, without restarting the cycle.
+- **Leaving.** When the state is left (or re-entered), the property continues from what it shows, with its own velocity plus the loop's, toward its new target with the destination's motion, as when a follow ends. If the loop has `wrap` (a period, e.g. 360), the offset is first reduced to its equivalent in `(-wrap/2, wrap/2]`: `offset - wrap * ceil(offset / wrap - 0.5)`. The shown value jumps by whole periods, which a rotation doesn't show.
+- **Reduced motion** runs no loops: the offset stays 0.
+- **Validation.** `to` or `keyframes` and `duration` are required; `delay` is a time of 0 or more; `wrap` is greater than 0. Colors can't loop (`loop-not-numeric`), a property followed in the same state can't loop there (`loop-conflict`), a mapped property can't loop (`mapped-property`), and two parallel regions can't loop the same property (`region-conflict`).
+- **`looping()`** on the runtime is true while any loop runs. Adapters keep drawing frames while it is true, even when nothing settles.
+
+The conformance cases `loop-spinner.json`, `loop-keyframes.json`, `loop-measured.json`, `loop-reduced.json` and `validation-0.10.json` define the behavior across TypeScript, Swift and Kotlin.
+
 ## Rest and lifecycle
 
 Hosts need to know when motion is over: to move focus once a dialog has opened, to tell a component library its transition has entered, to remove an element once its exit has played. These rules make that moment the same in every runtime and adapter. They add no file syntax.
@@ -428,6 +450,7 @@ Hosts need to know when motion is over: to move focus once a dialog has opened, 
 **Rest.** A property is at rest at time `t` when:
 
 - it is mapped from a continuous input, or it follows an input in an active state (it moves only when the input does);
+- a running loop's offset never counts: a looping property is at rest when its own motion is (0.10);
 - it is mapped from another property that is at rest;
 - its last change was a tween or keyframes whose duration has elapsed, or a jump with no motion;
 - or its last change was a spring whose remaining amplitude, `sqrt((x - target)^2 + v^2 * m / k)` per channel, is below 0.001 (numbers, in logical units) or 0.0001 (colors, per OKLab channel). This is the spring's energy, which never grows, so once a property rests it stays at rest until its target changes.
@@ -442,9 +465,9 @@ The runtime is **resting** when every property is at rest, whatever timers are p
 
 **First frame.** Before anything happens, a player shows the starting states (the host's, or `initial`), with app inputs as the host gives them (0 otherwise) and measured values at their base until the first layout report. Entry effects of the starting states don't play. Every adapter starts from this frame, and a server can compute it without a clock or platform APIs, so a server-rendered page hydrates without a jump.
 
-Settle is reported from the frame loop, never from inside the call that sent the event. The conformance case `rest.json` defines rest across TypeScript, Swift and Kotlin; each adapter's tests check the notifications.
+Settle is reported from the frame loop, never from inside the call that sent the event. While a loop runs, the frame loop continues after the settle. The conformance case `rest.json` defines rest across TypeScript, Swift and Kotlin; each adapter's tests check the notifications.
 
 ## Compiled programs (for native runtimes)
 
-`nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 2`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Format 2 carries measured endpoints; current runtimes continue to read format 1 programs. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms.
+`nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 3`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Format 2 carries measured endpoints and format 3 loops (`"loop"` in each state); current runtimes continue to read formats 1 and 2. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms.
 

@@ -52,11 +52,12 @@ A motion is an object with exactly one of `spring` or `tween`, or the name of a 
 - `tween` — `duration` and `ease`: `linear`, `in`, `out`, `in-out` (default), `in-`/`out-`/`in-out-` + `sine`, `quad`, `cubic`, `quart`, `quint`, `expo`, `circ`, `back` (e.g. `out-cubic`), or `[x1, y1, x2, y2]`.
 - `kick` — velocity (units/second) added on state entry without changing the target; always with a `spring`. Only in a state's `enter`, only on numbers. `{ "kick": 6, "spring": { "duration": 0.4, "bounce": 0.5 } }` on `scale` pops; `{ "kick": -400, "spring": { "duration": 0.25, "bounce": 0.7 } }` on `x` shakes.
 - `keyframes` (format 0.8) — intermediate values played on state entry. The current value at 0 and state target at 1 are implicit; list `{ "at", "value" }` points strictly between them with a positive `duration` and optional `ease`.
+- `loop` (format 0.10) — a periodic offset on a number while a state is active; see [Loops](#loops-format-010).
 
 ## Structure
 
 - Machine: `initial` + `states`, or `regions` (named machines that run in parallel). States can nest a machine.
-- State: `set`, `enter` (kicks or keyframes on entry through a transition; not on first load), `when` (event → sibling state, or `{ "to": "...", "animate": { ... } }` to override motion for that transition).
+- State: `set`, `enter` (kicks or keyframes on entry through a transition; not on first load), `loop` (periodic offsets while active), `when` (event → sibling state, or `{ "to": "...", "animate": { ... } }` to override motion for that transition).
 - Two parallel regions may not set the same property.
 - Named motions: `"motions": { "snappy": { "spring": { "duration": 0.3, "bounce": 0.15 } } }`, then use `"snappy"` anywhere a motion goes. `"import": ["./motion/brand.nudg.json"]` brings in another file's named motions (paths relative to the file). A name defined twice is an error.
 
@@ -175,6 +176,24 @@ Reuse a measured layout value where a drag bound or map source point would other
 
 Endpoints use the same `measure`, `times` and `plus` fields as state targets. Until all endpoint measurements arrive, a follow is unbounded and a map keeps its base; the first complete report applies immediately, and relayout updates the endpoints without restarting the drag.
 
+## Loops (format 0.10)
+
+For motion that lasts as long as a state does: a spinner, a shimmer, typing dots, a pulse.
+
+```json
+"spinning": {
+  "set": { "spinner.opacity": 1 },
+  "loop": { "spinner.rotation": { "to": 360, "duration": 0.9, "wrap": 360 } }
+}
+```
+
+- The loop is an **offset added** to the property's ordinary value, from 0 at entry. Keep the property's base and `set` as usual; the loop rides on top.
+- `to` is the offset at the end of a cycle: 360 for a turn, a measured width for a sweep (`{ "measure": "card.width", "plus": 120 }`). For a pulse or a bounce that comes back, use `keyframes` inside the cycle and leave `to` out (0).
+- `delay` starts a loop later and keeps the gap: three typing dots are the same loop with delays 0, 0.15 and 0.3.
+- `wrap: 360` on rotations, so stopping turns forward by the shortest way instead of unwinding.
+- Reduced motion stops loops; give a spinner a label or `aria-busy` so it still says it's busy.
+- Don't fake a loop with timers bouncing between two states, or with host CSS on `data-nudg-state`.
+
 ## Platform motion
 
 Libraries in `examples/motion/` carry the platforms' published spring values: `apple.nudg.json` (SwiftUI `smooth`, `snappy`, `bouncy`), `material-expressive.nudg.json` and `material-standard.nudg.json` (Material 3 `spatial-*` and `effects-*` tokens). Every platform library also defines the common names `standard`, `quick`, `gentle`, `playful` and `fade` (for color and opacity).
@@ -187,7 +206,7 @@ Libraries in `examples/motion/` carry the platforms' published spring values: `a
 
 When a person describes UI in natural language, call `nudg_recipe` (or `nudg recipe <term>`) before writing the file. It resolves aliases to a versioned mobile-first contract with expected parts, states, events, inputs, host responsibilities, motion, known gaps and a validated starter. Then express any requested variation with ordinary nudg fields.
 
-Some recipes have no starter (`"starter": null`): menus, speed dials, animated lists, spinners, skeletons, typing indicators, hide-on-scroll bars, stack navigation, full-screen modals, shared-element transitions, drawers, image viewers and free-scrolling carousels. Their contract is still the standard answer: use its parts, states and events, write the nudg file for what the format can express (a menu's open and close, a drawer's drag), and tell the person which part the host does and why, from `gaps`. Don't imitate a missing capability with timers or extra states; that is the workaround the gap records.
+Some recipes have no starter (`"starter": null`): menus, speed dials, animated lists, hide-on-scroll bars, stack navigation, full-screen modals, shared-element transitions, drawers, image viewers and free-scrolling carousels. Their contract is still the standard answer: use its parts, states and events, write the nudg file for what the format can express (a menu's open and close, a drawer's drag), and tell the person which part the host does and why, from `gaps`. Don't imitate a missing capability with timers or extra states; that is the workaround the gap records.
 
 | User says | Prefer |
 |---|---|
@@ -200,6 +219,7 @@ Some recipes have no starter (`"starter": null`): menus, speed dials, animated l
 | carousel, pager | drag on content, snap to neighbor, page indicator, optional momentum limit |
 | text field, input | `field.focus` / `field.blur`; label floats while focused or filled (`host.filled` / `host.empty`); active line on focus; error from `host.invalid` |
 | checkbox, radio, chip | fill and mark on select; radio dots move between options with arrow keys; chips widen to make room for a check |
+| spinner, loader, skeleton, typing dots | a `loop` in the busy state: rotation with `wrap: 360`; a measured sweep; keyframes with growing `delay`; the host sends start and done |
 | rating, stepper, badge | rating fills up to the tapped star and pops it; stepper nudges the number and shakes at a limit; badge scales in and pops per `host.increment` |
 | switch, toggle | tap and drag; knob follows input; color maps from knob position; keyboard activation |
 | slider, range slider | drag, arrow keys with `step`, `commit` on release, value bounds |
@@ -233,6 +253,7 @@ Pattern words live in external recipe metadata, not core syntax. Every shipped e
 | slower, softer, more relaxed | raise `duration`; optionally lower `bounce` |
 | pop, punchier feedback | add or raise a `kick` on `scale` in the state's `enter` |
 | shake on error | format 0.8 `enter` keyframes on `x`; use a kick only for a less-authored physical wobble |
+| keep it spinning / pulsing while loading | a `loop` in that state (format 0.10); `duration` is one cycle, slower = longer |
 | change it everywhere | edit the shared motion library, not each file |
 | make it draggable | add a `dragging` state with `follow`, entered on `dragstart`, left on `dragend` with `nearest` |
 | harder to pull past the end | lower `overdrag` (0 stops dead) |

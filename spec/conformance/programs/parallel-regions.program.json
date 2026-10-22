@@ -1,5 +1,5 @@
 {
- "nudgProgram": 2,
+ "nudgProgram": 3,
  "version": "0.1",
  "targets": [
   "knob",
@@ -47,6 +47,7 @@
        "measure": [],
        "follow": [],
        "enter": [],
+       "loop": [],
        "when": [
         {
          "event": "track.tap",
@@ -69,6 +70,7 @@
        "measure": [],
        "follow": [],
        "enter": [],
+       "loop": [],
        "when": [
         {
          "event": "track.tap",
@@ -104,6 +106,7 @@
        "measure": [],
        "follow": [],
        "enter": [],
+       "loop": [],
        "when": [
         {
          "event": "track.down",
@@ -126,6 +129,7 @@
        "measure": [],
        "follow": [],
        "enter": [],
+       "loop": [],
        "when": [
         {
          "event": "track.up",

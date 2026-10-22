@@ -56,6 +56,24 @@ export interface KeyframesEffect {
 
 export type EntryEffect = SpringMotion | KeyframesEffect;
 
+/**
+ * A periodic offset added to a property while its state is active (v0.10). One cycle
+ * starts at 0, passes through `frames` and ends at `to`, then repeats.
+ */
+export interface Loop {
+  /** The offset at the end of a cycle: 360 for a turning spinner, 0 for a pulse. */
+  to: MeasuredEndpoint;
+  /** Points strictly inside the cycle, in normalized time. */
+  frames: { at: number; value: MeasuredEndpoint }[];
+  /** Seconds per cycle. */
+  duration: number;
+  ease: Ease;
+  /** Seconds after entry before the first cycle; the offset holds at 0 until then. */
+  delay: number;
+  /** When the loop ends, the offset is reduced by this period to its equivalent nearest 0. */
+  wrap?: number;
+}
+
 /** A numeric point, optionally supplied by the host's layout report (v0.9). */
 export type MeasuredEndpoint = number | Measure;
 
@@ -132,6 +150,8 @@ export interface State {
   measure: Map<string, Measure>;
   follow: Map<string, Follow>;
   enter: Map<string, EntryEffect>;
+  /** Periodic offsets while the state is active (v0.10). */
+  loop: Map<string, Loop>;
   when: Map<string, Transition>;
   timers: Timer[];
   machine?: Machine;

@@ -1,0 +1,70 @@
+{
+ "nudgProgram": 3,
+ "version": "0.10",
+ "targets": [
+  "track",
+  "highlight"
+ ],
+ "properties": [
+  {
+   "key": "highlight.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [],
+ "machine": {
+  "kind": "states",
+  "initial": "loading",
+  "states": [
+   {
+    "name": "loading",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "loop": [
+     {
+      "key": "highlight.x",
+      "to": {
+       "target": "track",
+       "of": "width",
+       "times": 1,
+       "plus": 0
+      },
+      "frames": [],
+      "duration": 1,
+      "ease": [
+       0.42,
+       0,
+       0.58,
+       1
+      ],
+      "delay": 0
+     }
+    ],
+    "when": [
+     {
+      "event": "host.loaded",
+      "animate": [],
+      "to": "loaded"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "loaded",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "loop": [],
+    "when": [],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

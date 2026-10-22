@@ -1,14 +1,16 @@
 {
-  "nudg": "0.2",
-  "note": "Pull a list down to refresh. The list follows the finger with growing resistance, the spinner fades and grows in with the pull, and a release past the halfway point holds the list open until the app reports it's done.",
+  "nudg": "0.10",
+  "note": "Pull a list down to refresh. The list follows the finger with growing resistance, the spinner fades and grows in with the pull, and a release past the halfway point holds the list open, the spinner turning, until the app reports it's done.",
   "targets": ["list", "spinner"],
   "values": {
     "list.y": 0,
+    "spinner.rotation": 0,
     "spinner.opacity": { "map": "list.y", "from": [0, 56], "to": [0, 1] },
     "spinner.scale": { "map": "list.y", "from": [0, 56], "to": [0.5, 1] }
   },
   "animate": {
-    "list.y": { "spring": { "duration": 0.4, "bounce": 0.15 } }
+    "list.y": { "spring": { "duration": 0.4, "bounce": 0.15 } },
+    "spinner.rotation": { "spring": { "duration": 0.3, "bounce": 0 } }
   },
   "initial": "idle",
   "when": { "list.dragstart": "pulling", "host.done": "idle" },
@@ -18,6 +20,9 @@
       "follow": { "list.y": { "input": "list.drag.y", "range": [0, 80], "overdrag": 0.35 } },
       "when": { "list.dragend": { "nearest": ["idle", "refreshing"], "by": "list.y", "momentum": 0.2 } }
     },
-    "refreshing": { "set": { "list.y": 56 } }
+    "refreshing": {
+      "set": { "list.y": 56 },
+      "loop": { "spinner.rotation": { "to": 360, "duration": 0.8, "wrap": 360 } }
+    }
   }
 }

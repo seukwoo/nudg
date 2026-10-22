@@ -1,0 +1,70 @@
+{
+  "conformance": "0.10",
+  "name": "Loop: reduced motion holds the offset at 0 and nothing loops",
+  "doc": {
+    "nudg": "0.10",
+    "targets": [
+      "spinner"
+    ],
+    "values": {
+      "spinner.rotation": 0,
+      "spinner.opacity": 0
+    },
+    "animate": {
+      "spinner.rotation": {
+        "spring": {
+          "duration": 0.3,
+          "bounce": 0
+        }
+      },
+      "spinner.opacity": {
+        "tween": {
+          "duration": 0.2,
+          "ease": "linear"
+        }
+      }
+    },
+    "initial": "idle",
+    "states": {
+      "idle": {
+        "when": {
+          "host.start": "busy"
+        }
+      },
+      "busy": {
+        "set": {
+          "spinner.opacity": 1
+        },
+        "loop": {
+          "spinner.rotation": {
+            "to": 360,
+            "duration": 1,
+            "wrap": 360
+          }
+        },
+        "when": {
+          "host.done": "idle"
+        }
+      }
+    }
+  },
+  "reducedMotion": true,
+  "steps": [
+    {
+      "t": 0.1,
+      "send": "host.start"
+    },
+    {
+      "t": 0.5,
+      "expect": {
+        "state": [
+          "busy"
+        ],
+        "values": {
+          "spinner.rotation": 0
+        },
+        "looping": false
+      }
+    }
+  ]
+}

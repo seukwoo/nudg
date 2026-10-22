@@ -1,0 +1,141 @@
+{
+  "conformance": "0.10",
+  "name": "Loop: a sawtooth offset from 0 on entry; at rest while looping; leaving wraps the offset and hands its velocity to the spring",
+  "doc": {
+    "nudg": "0.10",
+    "targets": [
+      "spinner"
+    ],
+    "values": {
+      "spinner.rotation": 0,
+      "spinner.opacity": 0
+    },
+    "animate": {
+      "spinner.rotation": {
+        "spring": {
+          "duration": 0.3,
+          "bounce": 0
+        }
+      },
+      "spinner.opacity": {
+        "tween": {
+          "duration": 0.2,
+          "ease": "linear"
+        }
+      }
+    },
+    "initial": "idle",
+    "states": {
+      "idle": {
+        "when": {
+          "host.start": "busy"
+        }
+      },
+      "busy": {
+        "set": {
+          "spinner.opacity": 1
+        },
+        "loop": {
+          "spinner.rotation": {
+            "to": 360,
+            "duration": 1,
+            "wrap": 360
+          }
+        },
+        "when": {
+          "host.done": "idle"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "spinner.rotation": 0
+        },
+        "looping": false,
+        "resting": true
+      }
+    },
+    {
+      "t": 0.1,
+      "send": "host.start"
+    },
+    {
+      "t": 0.1,
+      "expect": {
+        "state": [
+          "busy"
+        ],
+        "values": {
+          "spinner.rotation": 0
+        },
+        "looping": true
+      }
+    },
+    {
+      "t": 0.35,
+      "expect": {
+        "values": {
+          "spinner.rotation": 90
+        },
+        "resting": true,
+        "looping": true
+      }
+    },
+    {
+      "t": 1.25,
+      "expect": {
+        "values": {
+          "spinner.rotation": 54.0
+        }
+      }
+    },
+    {
+      "t": 1.65,
+      "send": "host.done"
+    },
+    {
+      "t": 1.7,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "spinner.rotation": -110.064594998
+        },
+        "looping": false,
+        "resting": false
+      }
+    },
+    {
+      "t": 1.8,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "spinner.rotation": -26.660308733
+        },
+        "looping": false
+      }
+    },
+    {
+      "t": 2.2,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "spinner.rotation": -0.018187079
+        },
+        "looping": false
+      }
+    }
+  ]
+}

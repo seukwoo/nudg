@@ -1,0 +1,23 @@
+{
+  "nudg": "0.10",
+  "note": "A skeleton card. While loading, a highlight sweeps across the placeholders' measured width on a loop; when the app has the content, the placeholders fade out and the content fades in.",
+  "targets": ["card", "highlight", "placeholder", "content"],
+  "values": { "highlight.x": 0, "placeholder.opacity": 1, "content.opacity": 0 },
+  "animate": {
+    "placeholder.opacity": { "tween": { "duration": 0.2, "ease": "out" } },
+    "content.opacity": { "tween": { "duration": 0.25, "ease": "out" } }
+  },
+  "initial": "loading",
+  "states": {
+    "loading": {
+      "loop": {
+        "highlight.x": { "to": { "measure": "card.width", "plus": 120 }, "duration": 1.4, "ease": "in-out" }
+      },
+      "when": { "host.loaded": "loaded" }
+    },
+    "loaded": {
+      "set": { "placeholder.opacity": 0, "content.opacity": 1 },
+      "when": { "host.loading": "loading" }
+    }
+  }
+}

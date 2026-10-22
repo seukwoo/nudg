@@ -111,8 +111,8 @@
       "events": ["list.dragstart", "list.dragend", "host.done"],
       "inputs": ["list.drag.y"],
       "hostResponsibilities": ["Start refresh on commit and send host.done when loading finishes."],
-      "motion": ["Apply increasing drag resistance, reveal the spinner from pull distance, and hold while refreshing."],
-      "gaps": [{ "capability": "continuous motion", "status": "workaround", "need": "The refreshing spinner currently relies on host CSS for indefinite rotation." }]
+      "motion": ["Apply increasing drag resistance, reveal the spinner from pull distance, hold while refreshing with the spinner on a loop, and stop it by the shortest turn."],
+      "gaps": []
     },
     {
       "id": "segmented-control",
@@ -482,43 +482,43 @@
       "id": "spinner",
       "aliases": ["loading spinner", "activity indicator", "progress spinner", "loader"],
       "summary": "An indeterminate indicator that turns for as long as work is in progress.",
-      "starter": null,
-      "examples": [],
+      "starter": "spinner",
+      "examples": ["spinner"],
       "parts": { "required": ["spinner"], "optional": ["label", "track"] },
-      "states": ["hidden", "spinning"],
+      "states": ["idle", "spinning"],
       "events": ["host.start", "host.done"],
       "inputs": [],
-      "hostResponsibilities": ["Start and stop it with the work, delay it for quick operations, and expose busy state."],
-      "motion": ["Fade in, rotate at a constant rate while the work runs, and fade out without unwinding."],
-      "gaps": [{ "capability": "continuous motion", "status": "missing", "need": "Rotation runs at a rate while a state is active and has to stop without unwinding to 0." }]
+      "hostResponsibilities": ["Start and stop it with the work, delay it for quick operations, and expose busy state with a label, which is all reduced motion leaves."],
+      "motion": ["Fade in, rotate on a loop while the work runs, and stop by the shortest turn (wrap 360) as it fades out."],
+      "gaps": []
     },
     {
       "id": "skeleton",
       "aliases": ["skeleton loader", "shimmer", "loading placeholder"],
       "summary": "Placeholder shapes that pulse or shimmer until the real content replaces them.",
-      "starter": null,
-      "examples": [],
-      "parts": { "required": ["placeholder"], "optional": ["highlight", "content"] },
+      "starter": "skeleton",
+      "examples": ["skeleton"],
+      "parts": { "required": ["card", "placeholder"], "optional": ["highlight", "content"] },
       "states": ["loading", "loaded"],
-      "events": ["host.loaded"],
+      "events": ["host.loaded", "host.loading"],
       "inputs": [],
       "hostResponsibilities": ["Match placeholder shapes to the content layout and swap in the content when it arrives."],
-      "motion": ["Sweep a highlight across the placeholders on a loop, then cross-fade to the content."],
-      "gaps": [{ "capability": "continuous motion", "status": "missing", "need": "The highlight loops for as long as loading lasts." }]
+      "motion": ["Sweep a highlight across the placeholders' measured width on a loop, or pulse their opacity, then cross-fade to the content."],
+      "gaps": []
     },
     {
       "id": "typing-indicator",
       "aliases": ["typing dots", "typing bubble", "is typing"],
       "summary": "Three dots in a bubble that bounce in turn while someone is composing a message.",
-      "starter": null,
-      "examples": [],
+      "starter": "typing-indicator",
+      "examples": ["typing-indicator"],
       "parts": { "required": ["bubble", "dot"], "optional": ["avatar"] },
       "states": ["hidden", "typing"],
       "events": ["host.typing", "host.idle"],
       "inputs": [],
       "hostResponsibilities": ["Report typing activity from the conversation and hide it when the message arrives."],
-      "motion": ["Scale the bubble in, bounce each dot on a loop, offset from its neighbor, and scale out."],
-      "gaps": [{ "capability": "continuous motion", "status": "missing", "need": "The dots move on a loop while the typing state lasts." }, { "capability": "stagger", "status": "missing", "need": "Each dot's loop is offset in phase from the previous one." }]
+      "motion": ["Scale the bubble in, bounce each dot on the same loop with a growing delay, and scale out."],
+      "gaps": []
     },
     {
       "id": "hide-on-scroll",

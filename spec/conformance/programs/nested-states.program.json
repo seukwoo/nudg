@@ -1,5 +1,5 @@
 {
- "nudgProgram": 2,
+ "nudgProgram": 3,
  "version": "0.1",
  "targets": [
   "panel"
@@ -31,6 +31,7 @@
     "measure": [],
     "follow": [],
     "enter": [],
+    "loop": [],
     "when": [
      {
       "event": "panel.tap",
@@ -70,6 +71,7 @@
       }
      }
     ],
+    "loop": [],
     "when": [
      {
       "event": "panel.tap",
@@ -88,6 +90,7 @@
        "measure": [],
        "follow": [],
        "enter": [],
+       "loop": [],
        "when": [
         {
          "event": "panel.down",
@@ -110,6 +113,7 @@
        "measure": [],
        "follow": [],
        "enter": [],
+       "loop": [],
        "when": [
         {
          "event": "panel.up",

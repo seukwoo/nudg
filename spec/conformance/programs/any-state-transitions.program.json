@@ -1,5 +1,5 @@
 {
- "nudgProgram": 2,
+ "nudgProgram": 3,
  "version": "0.2",
  "targets": [
   "tab1",
@@ -63,6 +63,7 @@
     "measure": [],
     "follow": [],
     "enter": [],
+    "loop": [],
     "when": [],
     "timers": []
    },
@@ -79,6 +80,7 @@
     "measure": [],
     "follow": [],
     "enter": [],
+    "loop": [],
     "when": [],
     "timers": []
    },
@@ -95,6 +97,7 @@
     "measure": [],
     "follow": [],
     "enter": [],
+    "loop": [],
     "when": [
      {
       "event": "tab3.tap",

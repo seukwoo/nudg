@@ -1541,6 +1541,219 @@ def validation_v07_cases():
 REST_NUMBER = 1e-3
 
 
+# --- v0.10: loops while a state is active -----------------------------------
+
+
+def loop_offset(points, duration, delay, t0, t, ease=None):
+    """A loop's offset: 0 at the start of each cycle, through the points, to the last at 1."""
+    local = t - t0 - delay
+    if local < 0:
+        return 0.0, 0.0
+    u = (local - duration * math.floor(local / duration)) / duration
+    pts = [(0.0, 0.0)] + [(float(a), float(v)) for a, v in points]
+    for (a0, v0), (a1, v1) in zip(pts, pts[1:]):
+        if u <= a1:
+            p = (u - a0) / (a1 - a0)
+            h = 1e-7
+            slope = (ease_at(ease, min(1, p + h)) - ease_at(ease, max(0, p - h))) / (min(1, p + h) - max(0, p - h))
+            return v0 + (v1 - v0) * ease_at(ease, p), (v1 - v0) * slope / ((a1 - a0) * duration)
+    return pts[-1][1], 0.0
+
+
+def wrapped(offset, period):
+    """The equivalent offset in (-period/2, period/2]."""
+    return offset - period * math.ceil(offset / period - 0.5)
+
+
+SPINNER = {
+    "nudg": "0.10",
+    "targets": ["spinner"],
+    "values": {"spinner.rotation": 0, "spinner.opacity": 0},
+    "animate": {"spinner.rotation": spring_json(0.3, 0), "spinner.opacity": {"tween": {"duration": 0.2, "ease": "linear"}}},
+    "initial": "idle",
+    "states": {
+        "idle": {"when": {"host.start": "busy"}},
+        "busy": {
+            "set": {"spinner.opacity": 1},
+            "loop": {"spinner.rotation": {"to": 360, "duration": 1, "wrap": 360}},
+            "when": {"host.done": "idle"},
+        },
+    },
+}
+
+TYPING = {
+    "nudg": "0.10",
+    "targets": ["dot", "halo"],
+    "values": {
+        "dot.y": 0,
+        "halo.opacity": {"map": "dot.y", "from": [0, -6], "to": [0, 1]},
+    },
+    "animate": {"dot.y": spring_json(0.25, 0)},
+    "initial": "idle",
+    "states": {
+        "idle": {"when": {"host.typing": "typing"}},
+        "typing": {
+            "loop": {"dot.y": {"keyframes": [{"at": 0.25, "value": -6}, {"at": 0.5, "value": 0}], "duration": 1.2, "delay": 0.2}},
+            "when": {"host.typing": "typing", "host.sent": "sent"},
+        },
+        "sent": {"set": {"dot.y": -10}},
+    },
+}
+
+SHIMMER = {
+    "nudg": "0.10",
+    "targets": ["track", "highlight"],
+    "values": {"highlight.x": 0},
+    "initial": "loading",
+    "states": {
+        "loading": {
+            "loop": {"highlight.x": {"to": {"measure": "track.width"}, "duration": 1, "ease": "in-out"}},
+            "when": {"host.loaded": "loaded"},
+        },
+        "loaded": {},
+    },
+}
+
+
+def loop_cases():
+    turn = [(1.0, 360)]
+    steps = [
+        {"t": 0, "expect": {"state": ["idle"], "values": {"spinner.rotation": 0}, "looping": False, "resting": True}},
+        {"t": 0.1, "send": "host.start"},
+        # The offset starts at 0 on entry and turns at a constant rate; the property's own
+        # motion is at rest, so the runtime rests once the opacity tween is done.
+        {"t": 0.1, "expect": {"state": ["busy"], "values": {"spinner.rotation": 0}, "looping": True}},
+        {"t": 0.35, "expect": {"values": {"spinner.rotation": 90}, "resting": True, "looping": True}},
+        {"t": 1.25, "expect": {"values": {"spinner.rotation": round(loop_offset(turn, 1, 0, 0.1, 1.25)[0], 9)}}},
+    ]
+    leave = 1.65
+    offset, rate = loop_offset(turn, 1, 0, 0.1, leave)
+    steps.append({"t": leave, "send": "host.done"})
+    # Leaving: 198 degrees wraps to -162 and keeps turning forward into the spring.
+    r = Prop(0)
+    r.handoff(wrapped(offset, 360), rate, 0, spring(0.3, 0), leave)
+    for t in (1.7, 1.8, 2.2):
+        steps.append({"t": t, "expect": {"state": ["idle"], "values": {"spinner.rotation": r.value(t)}, "looping": False}})
+    steps[-3]["expect"]["resting"] = False
+    write("loop-spinner", {
+        "conformance": "0.10",
+        "name": "Loop: a sawtooth offset from 0 on entry; at rest while looping; leaving wraps the offset and hands its velocity to the spring",
+        "doc": SPINNER,
+        "steps": steps,
+    })
+
+    write("loop-reduced", {
+        "conformance": "0.10",
+        "name": "Loop: reduced motion holds the offset at 0 and nothing loops",
+        "doc": SPINNER,
+        "reducedMotion": True,
+        "steps": [
+            {"t": 0.1, "send": "host.start"},
+            {"t": 0.5, "expect": {"state": ["busy"], "values": {"spinner.rotation": 0}, "looping": False}},
+        ],
+    })
+
+    pulse = [(0.25, -6), (0.5, 0), (1.0, 0)]
+    enter = 0.1
+
+    def typing_at(t, t0=enter):
+        return round(loop_offset(pulse, 1.2, 0.2, t0, t)[0], 9)
+
+    steps = [
+        {"t": enter, "send": "host.typing"},
+        # Before the delay the offset holds at 0; then the cycle runs from its start.
+        {"t": 0.2, "expect": {"state": ["typing"], "values": {"dot.y": 0, "halo.opacity": 0}, "looping": True}},
+        {"t": 0.35, "expect": {"values": {"dot.y": typing_at(0.35)}}},
+        {"t": 0.6, "expect": {"values": {"dot.y": -6, "halo.opacity": 1}}},
+        {"t": 0.75, "expect": {"values": {"dot.y": -3, "halo.opacity": 0.5}}},
+        {"t": 1.65, "expect": {"values": {"dot.y": typing_at(1.65)}}},
+    ]
+    # Re-entering folds the running offset into the motion and starts the loop again from 0.
+    again = 1.7
+    offset, rate = loop_offset(pulse, 1.2, 0.2, enter, again)
+    steps.append({"t": again, "send": "host.typing"})
+    y = Prop(0)
+    y.handoff(offset, rate, 0, spring(0.25, 0), again)
+    for t in (1.75, 1.85, 2.0):
+        steps.append({"t": t, "expect": {"values": {"dot.y": round(y.value(t) + loop_offset(pulse, 1.2, 0.2, again, t)[0], 9)}}})
+    # Leaving for a state that sets a new target: the displayed value and velocity carry over.
+    sent = 2.1
+    y.advance(sent)
+    offset, rate = loop_offset(pulse, 1.2, 0.2, again, sent)
+    steps.append({"t": sent, "send": "host.sent"})
+    z = Prop(0)
+    z.handoff(y.pos[0] + offset, y.vel[0] + rate, -10, spring(0.25, 0), sent)
+    for t in (2.15, 2.3, 2.6):
+        steps.append({"t": t, "expect": {"state": ["sent"], "values": {"dot.y": z.value(t)}, "looping": False}})
+    write("loop-keyframes", {
+        "conformance": "0.10",
+        "name": "Loop: keyframes with a delay, a map reading the looping value, re-entry restarts from 0, leaving hands off to a new target",
+        "doc": TYPING,
+        "steps": steps,
+    })
+
+    sweep = lambda width, t: round(loop_offset([(1.0, width)], 1, 0, 0, t, EASES["in-out"])[0], 9)
+    write("loop-measured", {
+        "conformance": "0.10",
+        "name": "Loop: a starting state loops from time 0; a measured end holds the offset at 0 until layout, then follows relayout",
+        "doc": SHIMMER,
+        "steps": [
+            {"t": 0, "expect": {"state": ["loading"], "values": {"highlight.x": 0}, "looping": True, "resting": True}},
+            {"t": 0.1, "expect": {"values": {"highlight.x": 0}}},
+            {"t": 0.2, "input": "track.layout.width", "value": 200},
+            {"t": 0.3, "expect": {"values": {"highlight.x": sweep(200, 0.3)}}},
+            {"t": 0.5, "input": "track.layout.width", "value": 100},
+            {"t": 0.55, "expect": {"values": {"highlight.x": sweep(100, 0.55)}}},
+            {"t": 1.3, "expect": {"values": {"highlight.x": sweep(100, 1.3)}}},
+            {"t": 1.4, "send": "host.loaded"},
+            {"t": 1.4, "expect": {"state": ["loaded"], "looping": False}},
+        ],
+    })
+
+
+def validation_v10_cases():
+    def doc():
+        return json.loads(json.dumps(SPINNER))
+
+    loop = "/states/busy/loop/spinner.rotation"
+    out = []
+    d = doc(); d["nudg"] = "0.9"
+    out.append(("needs-version", d, [("needs-version", "/states/busy/loop")]))
+    d = doc(); del d["states"]["busy"]["loop"]["spinner.rotation"]["to"]
+    out.append(("no-motion", d, [("invalid-loop", loop)]))
+    d = doc(); del d["states"]["busy"]["loop"]["spinner.rotation"]["duration"]
+    out.append(("missing-duration", d, [("missing-duration", loop)]))
+    d = doc(); d["states"]["busy"]["loop"]["spinner.rotation"]["duration"] = 0
+    out.append(("duration", d, [("invalid-value", loop + "/duration")]))
+    d = doc(); d["states"]["busy"]["loop"]["spinner.rotation"]["delay"] = -1
+    out.append(("delay", d, [("invalid-value", loop + "/delay")]))
+    d = doc(); d["states"]["busy"]["loop"]["spinner.rotation"]["wrap"] = 0
+    out.append(("wrap", d, [("invalid-value", loop + "/wrap")]))
+    d = doc(); d["states"]["busy"]["loop"]["spinner.rotation"]["keyframes"] = [{"at": 1, "value": 10}]
+    out.append(("keyframe-time", d, [("invalid-keyframe-time", loop + "/keyframes/0/at")]))
+    d = doc(); d["values"]["spinner.color"] = "#000000"; d["states"]["busy"]["loop"]["spinner.color"] = {"to": 1, "duration": 1}
+    out.append(("color", d, [("loop-not-numeric", "/states/busy/loop/spinner.color")]))
+    d = doc(); d["states"]["busy"]["follow"] = {"spinner.rotation": "host.angle"}
+    out.append(("follow-conflict", d, [("loop-conflict", loop)]))
+    d = doc(); d["values"]["spinner.scale"] = {"map": "spinner.rotation", "from": [0, 360], "to": [1, 2]}; d["states"]["busy"]["loop"]["spinner.scale"] = {"to": 1, "duration": 1}
+    out.append(("mapped", d, [("mapped-property", "/states/busy/loop/spinner.scale")]))
+    d = {
+        "nudg": "0.10",
+        "targets": ["dot"],
+        "values": {"dot.y": 0},
+        "regions": {
+            "a": {"initial": "on", "states": {"on": {"loop": {"dot.y": {"to": 4, "duration": 1}}}}},
+            "b": {"initial": "on", "states": {"on": {"loop": {"dot.y": {"to": -4, "duration": 1}}}}},
+        },
+    }
+    out.append(("region-conflict", d, [("region-conflict", "/regions/b")]))
+    write("validation-0.10", {
+        "conformance": "0.10",
+        "name": "Validator (0.10): loops",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 def rest_time(prop, motion, start, limit=5.0, step=1e-3):
     """When a spring comes to rest: its remaining amplitude, position and velocity
     together (sqrt(x^2 + v^2 m/k)), drops below the rest threshold. Energy never grows."""
@@ -1636,5 +1849,7 @@ if __name__ == "__main__":
     validation_v08_cases()
     measured_endpoint_cases()
     validation_v09_cases()
+    loop_cases()
+    validation_v10_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

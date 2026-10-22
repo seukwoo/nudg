@@ -1,6 +1,6 @@
 package dev.nudg
 
-/** A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 4). */
+/** A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 5). */
 
 enum class PropertyKind { LENGTH, NUMBER, COLOR }
 
@@ -10,8 +10,10 @@ sealed interface Ease {
 }
 
 sealed interface Motion {
-    data class Spring(val stiffness: Double, val damping: Double, val mass: Double, val kick: Double?) : Motion
-    data class Tween(val duration: Double, val ease: Ease) : Motion
+    /** Seconds before the motion starts (v0.12). */
+    val delay: Double
+    data class Spring(val stiffness: Double, val damping: Double, val mass: Double, val kick: Double?, override val delay: Double = 0.0) : Motion
+    data class Tween(val duration: Double, val ease: Ease, override val delay: Double = 0.0) : Motion
 }
 
 data class Keyframe(val at: Double, val value: List<Double>)
@@ -71,7 +73,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
         fun decode(text: String): Program {
             @Suppress("UNCHECKED_CAST")
             val j = Json.parse(text) as Map<String, Any?>
-            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0)) { "Not a compiled nudg program (formats 1 to 4). Compile it with `nudg compile`." }
+            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0)) { "Not a compiled nudg program (formats 1 to 5). Compile it with `nudg compile`." }
             val properties = list(j["properties"]).map { p ->
                 obj(p).let { m ->
                     (m["key"] as String) to Property(
@@ -99,9 +101,9 @@ class Program(val version: String, val targets: List<String>, val properties: Li
             if (m["kind"] == "tween") {
                 val e = m["ease"]
                 val ease = if (e is List<*>) doubles(e).let { Ease.Bezier(it[0], it[1], it[2], it[3]) } else Ease.Linear
-                return Motion.Tween(m["duration"] as Double, ease)
+                return Motion.Tween(m["duration"] as Double, ease, m["delay"] as? Double ?: 0.0)
             }
-            return Motion.Spring(m["stiffness"] as Double, m["damping"] as Double, m["mass"] as Double, m["kick"] as? Double)
+            return Motion.Spring(m["stiffness"] as Double, m["damping"] as Double, m["mass"] as Double, m["kick"] as? Double, m["delay"] as? Double ?: 0.0)
         }
 
         private fun ease(v: Any?): Ease = if (v is List<*>) doubles(v).let { Ease.Bezier(it[0], it[1], it[2], it[3]) } else Ease.Linear

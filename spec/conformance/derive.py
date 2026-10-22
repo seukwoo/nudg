@@ -1826,6 +1826,107 @@ def validation_v11_cases():
     })
 
 
+# --- v0.12: motion delay ----------------------------------------------------
+
+DISCLOSURE = {
+    "nudg": "0.12",
+    "targets": ["header", "chevron", "panel"],
+    "values": {"chevron.rotation": 0, "panel.height": 0},
+    "animate": {
+        "chevron.rotation": {"tween": {"duration": 0.2, "ease": "linear"}},
+        "panel.height": {**spring_json(0.3, 0), "delay": 0.1},
+    },
+    "initial": "closed",
+    "states": {
+        "closed": {"when": {"header.tap": "open"}},
+        "open": {
+            "set": {"chevron.rotation": 180, "panel.height": 100},
+            "when": {
+                "header.tap": {
+                    "to": "closed",
+                    "animate": {"chevron.rotation": {"tween": {"duration": 0.2, "ease": "linear"}, "delay": 0.15}},
+                }
+            },
+        },
+    },
+}
+
+
+def delay_cases():
+    panel = Prop(0)
+    panel.retarget(100, spring(0.3, 0), 0.2)
+    steps = [
+        {"t": 0.1, "send": "header.tap"},
+        # The chevron starts at once; the panel waits 0.1 s, holding what it was doing.
+        {"t": 0.15, "expect": {"state": ["open"], "values": {"chevron.rotation": 45, "panel.height": 0}}},
+        {"t": 0.2, "expect": {"values": {"chevron.rotation": 90, "panel.height": 0}}},
+        {"t": 0.3, "expect": {"values": {"chevron.rotation": 180, "panel.height": panel.value(0.3)}}},
+        # Closing: the transition delays the chevron instead; the panel keeps its own delay.
+        {"t": 0.5, "send": "header.tap"},
+        {"t": 0.52, "expect": {"state": ["closed"], "values": {"chevron.rotation": 180, "panel.height": panel.value(0.52)}}},
+        # Reopening inside both delays drops the pending motions: the chevron is already
+        # where it should be, and the panel waits again, still on its way to 100.
+        {"t": 0.55, "send": "header.tap"},
+    ]
+    steps.append({"t": 0.6, "expect": {"state": ["open"], "values": {"chevron.rotation": 180, "panel.height": panel.value(0.6)}}})
+    panel.retarget(100, spring(0.3, 0), 0.65)
+    for t in (0.7, 1.2):
+        steps.append({"t": t, "expect": {"state": ["open"], "values": {"chevron.rotation": 180, "panel.height": panel.value(t)}}})
+    write("delay-sequence", {
+        "conformance": "0.12",
+        "name": "Delay: a motion starts after its delay, the property holding what it was doing; a transition's animate can delay it; a retarget during a delay drops the pending motion",
+        "doc": DISCLOSURE,
+        "steps": steps,
+    })
+
+    write("delay-rest", {
+        "conformance": "0.12",
+        "name": "Delay: a pending motion keeps the runtime awake; reduced motion starts at once",
+        "doc": DISCLOSURE,
+        "steps": [
+            {"t": 0.1, "send": "header.tap"},
+            {"t": 0.35, "expect": {"values": {"chevron.rotation": 180}}},
+            {"t": 0.5, "send": "header.tap"},
+            # The chevron and panel are both waiting: nothing moves, yet nothing has rested.
+            {"t": 0.6, "expect": {"state": ["closed"], "resting": False, "settled": False}},
+            {"t": 3, "expect": {"values": {"chevron.rotation": 0, "panel.height": 0}, "resting": True}},
+        ],
+    })
+    write("delay-reduced", {
+        "conformance": "0.12",
+        "name": "Delay: reduced motion ignores delays",
+        "doc": DISCLOSURE,
+        "reducedMotion": True,
+        "steps": [
+            {"t": 0.1, "send": "header.tap"},
+            {"t": 0.175, "expect": {"values": {"chevron.rotation": 90, "panel.height": 50}}},
+        ],
+    })
+
+
+def validation_v12_cases():
+    def doc():
+        return json.loads(json.dumps(DISCLOSURE))
+
+    out = []
+    d = doc(); d["nudg"] = "0.11"
+    out.append(("needs-version", d, [
+        ("needs-version", "/animate/panel.height/delay"),
+        ("needs-version", "/states/open/when/header.tap/animate/chevron.rotation/delay"),
+    ]))
+    d = doc(); d["animate"]["panel.height"]["delay"] = -0.1
+    out.append(("negative", d, [("invalid-value", "/animate/panel.height/delay")]))
+    d = doc(); d["motions"] = {"late": {**spring_json(0.3, 0), "delay": 0.1}}
+    out.append(("named", d, [("delay-outside-animate", "/motions/late/delay")]))
+    d = doc(); d["states"]["open"]["enter"] = {"chevron.rotation": {"kick": 100, **spring_json(0.3, 0.5), "delay": 0.1}}
+    out.append(("enter", d, [("delay-outside-animate", "/states/open/enter/chevron.rotation/delay")]))
+    write("validation-0.12", {
+        "conformance": "0.12",
+        "name": "Validator (0.12): motion delay",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 def rest_time(prop, motion, start, limit=5.0, step=1e-3):
     """When a spring comes to rest: its remaining amplitude, position and velocity
     together (sqrt(x^2 + v^2 m/k)), drops below the rest threshold. Energy never grows."""
@@ -1925,5 +2026,7 @@ if __name__ == "__main__":
     validation_v10_cases()
     measured_map_value_cases()
     validation_v11_cases()
+    delay_cases()
+    validation_v12_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

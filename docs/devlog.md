@@ -397,3 +397,8 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Cause:** The gaps were assigned from what the patterns sounded like, not from trying to write them.
 - **Resolution:** Written as files, each was one player whose targets are roles (`screen` / `previous`, `modal` / `presenting`, a card between two measured boxes), with mounting left to the host through `onExit`. The only thing missing was a measured value in a map's `to`, for parallax and push distances; format 0.11 adds it with the 0.9 endpoint rules. Four recipes got starters and the gap disappeared.
 - **Lesson:** A gap is a claim to test before it is a plan. Writing the file is cheaper than designing a primitive, and it found the smaller one.
+
+### Sequence became a delay
+- **Problem:** Accordion, menu and speed dial needed order: content after the panel, items one after another, actions out and back in reverse. The roadmap expected a `sequence` / `stagger` combinator, a list of steps beside the states.
+- **Resolution:** A timeline answers it with less: a start delay per property's motion. A transition's `animate` already overrides motion per property, so a stagger is growing delays there and the reverse order is the closing transition's own. Interruption kept the existing rule plus one line: a pending motion that hasn't started is dropped. Format 0.12; the three recipes got starters.
+- **Lesson:** Look for the smallest timing knob that the existing structure can carry before adding structure. Steps that wait on each other's completion may still need a combinator; nothing in the catalog does yet.

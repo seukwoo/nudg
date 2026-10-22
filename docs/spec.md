@@ -462,6 +462,29 @@ Measured values in a map's `to`. A file that uses them declares `"nudg": "0.11"`
 
 The conformance cases `measured-map-values.json` and `validation-0.11.json` define the behavior across TypeScript, Swift and Kotlin. Compiled programs that carry measured map values are format 4.
 
+## Additions in 0.12 (draft)
+
+A motion's `delay`, for sequence and stagger. A file that uses it declares `"nudg": "0.12"`; a 0.12 runtime also reads older files.
+
+```json
+"anchor.tap": {
+  "to": "open",
+  "animate": {
+    "item1.opacity": { "tween": { "duration": 0.15 }, "delay": 0.05 },
+    "item2.opacity": { "tween": { "duration": 0.15 }, "delay": 0.08 }
+  }
+}
+```
+
+- A motion object in `animate` (top level or a transition's) may have `delay`, a time of 0 or more. When a property's target changes and its motion has a delay, the new motion starts `delay` seconds later, from the property's position and velocity at that moment.
+- **During the delay the property keeps doing what it was doing**: a spring or tween in flight continues toward its old target, a value at rest stays. A value that a commit placed, or that a loop handed off, holds still.
+- **A retarget during the delay** drops the pending motion: the new one (with its own delay, if any) starts from what the property was doing before the dropped one. A retarget to the same target leaves the pending motion alone.
+- **Rest.** A property with a pending motion is not at rest, so the runtime doesn't settle while a delay runs.
+- **Reduced motion** ignores delays: the short linear tween starts at once.
+- **Validation.** `delay` belongs to one transition's choreography: in a named motion under `motions`, or on an entry kick, it is `delay-outside-animate`. A negative or malformed delay is `invalid-value`.
+
+The conformance cases `delay-sequence.json`, `delay-rest.json`, `delay-reduced.json` and `validation-0.12.json` define the behavior across TypeScript, Swift and Kotlin. Compiled programs carry `delay` in motion objects, as format 5.
+
 ## Rest and lifecycle
 
 Hosts need to know when motion is over: to move focus once a dialog has opened, to tell a component library its transition has entered, to remove an element once its exit has played. These rules make that moment the same in every runtime and adapter. They add no file syntax.
@@ -488,5 +511,5 @@ Settle is reported from the frame loop, never from inside the call that sent the
 
 ## Compiled programs (for native runtimes)
 
-`nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 4`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Format 2 carries measured endpoints, format 3 loops (`"loop"` in each state) and format 4 measured map values; current runtimes read every earlier format. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms.
+`nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 5`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Format 2 carries measured endpoints, format 3 loops (`"loop"` in each state), format 4 measured map values and format 5 motion delays; current runtimes read every earlier format. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms.
 

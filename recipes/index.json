@@ -83,8 +83,8 @@
       "events": ["header.tap"],
       "inputs": ["panel.naturalHeight"],
       "hostResponsibilities": ["Expose accessible expanded state and keep hidden content out of focus order."],
-      "motion": ["Animate panel height to a measured value while fading content and rotating the chevron."],
-      "gaps": [{ "capability": "sequence", "status": "missing", "need": "Requests such as turning the chevron before opening the panel need explicit ordering." }]
+      "motion": ["Animate panel height to a measured value and turn the chevron; fade the content in after a short delay on opening, and out at once on closing."],
+      "gaps": []
     },
     {
       "id": "carousel",
@@ -440,29 +440,29 @@
       "id": "menu",
       "aliases": ["dropdown", "dropdown menu", "popover menu", "context menu", "overflow menu"],
       "summary": "A list of commands that opens from an anchor and closes on choice, outside tap or Escape.",
-      "starter": null,
-      "examples": [],
+      "starter": "menu",
+      "examples": ["menu"],
       "parts": { "required": ["anchor", "menu", "item"], "optional": ["scrim", "divider", "icon"] },
       "states": ["closed", "open"],
       "events": ["anchor.tap", "item.tap", "scrim.tap", "menu.key.escape", "host.close"],
       "inputs": [],
       "hostResponsibilities": ["Position the menu against the anchor and viewport, expose menu semantics, move focus into the items and back to the anchor, and run the chosen command."],
-      "motion": ["Grow the menu from the anchor's edge, then bring the items in one after another; close faster than it opened."],
-      "gaps": [{ "capability": "sequence", "status": "missing", "need": "The items enter after the menu surface starts to open." }, { "capability": "stagger", "status": "missing", "need": "Each item's entry is offset from the previous one." }]
+      "motion": ["Grow the menu from the anchor's edge, then bring the items in with delays that grow by about 30 ms each; close faster than it opened, all at once."],
+      "gaps": []
     },
     {
       "id": "speed-dial",
       "aliases": ["fab speed dial", "fab menu", "expanding fab"],
       "summary": "A floating action button that fans out related actions and turns its icon while open.",
-      "starter": null,
-      "examples": [],
+      "starter": "speed-dial",
+      "examples": ["speed-dial"],
       "parts": { "required": ["fab", "icon", "action"], "optional": ["action label", "scrim"] },
       "states": ["closed", "open"],
       "events": ["fab.tap", "action.tap", "scrim.tap", "host.close"],
       "inputs": [],
       "hostResponsibilities": ["Run the chosen action, keep focus order with the visual order, and close on outside tap or Escape."],
-      "motion": ["Rotate or morph the icon, then reveal the actions outward from the button in order, and reverse the order on close."],
-      "gaps": [{ "capability": "stagger", "status": "missing", "need": "Each action's entry and exit is offset from its neighbor, reversed on close." }, { "capability": "sequence", "status": "missing", "need": "Action labels appear after their buttons arrive." }]
+      "motion": ["Rotate the icon at once, then reveal the actions outward from the button with growing delays, and reverse the delays on close."],
+      "gaps": []
     },
     {
       "id": "list",

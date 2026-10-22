@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Menu</title>
+  <style>
+    .menu-demo { position: relative; width: 220px; height: 180px; font: 14px ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; }
+    .menu-demo .anchor { position: relative; z-index: 3; padding: 8px 12px; border: 1px solid #e4e4df; border-radius: 8px; background: #fff; font: inherit; cursor: pointer; }
+    .menu-demo .scrim { position: absolute; inset: -12px; z-index: 1; }
+    .menu-demo [data-nudg-state~="closed"].scrim, .menu-demo [data-nudg-state~="closed"].menu { pointer-events: none; }
+    /* Grows down from the anchor: scaled from its top edge. */
+    .menu-demo .menu { position: absolute; top: 42px; left: 0; z-index: 2; width: 180px; padding: 6px 0; border-radius: 10px; background: #fff; box-shadow: 0 6px 24px rgb(0 0 0 / 0.14); transform-origin: top left; }
+    .menu-demo .menu button { display: block; width: 100%; padding: 8px 14px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+    .menu-demo .menu button:hover { background: #f3f4f6; }
+  </style>
+</head>
+<body>
+  <div class="menu-demo">
+    <button class="anchor" aria-haspopup="menu" aria-expanded="false" data-nudg="anchor">Sort by ▾</button>
+    <div class="scrim" data-nudg="scrim"></div>
+    <div class="menu" role="menu" data-nudg="menu">
+      <button role="menuitem" data-nudg="item1">Newest</button>
+      <button role="menuitem" data-nudg="item2">Oldest</button>
+      <button role="menuitem" data-nudg="item3">Most popular</button>
+      <button role="menuitem" data-nudg="item4">Price</button>
+    </div>
+  </div>
+  <!-- Host markup for menu.nudg.json. The host keeps aria-expanded in step, moves focus into the menu and back to the anchor, and runs the chosen command. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./menu.nudg.json");
+    const anchor = document.querySelector(".anchor");
+    play(program, document.body, {
+      onState: ([state]) => {
+        anchor.setAttribute("aria-expanded", String(state === "open"));
+        if (state === "open") document.querySelector("[data-nudg=item1]").focus({ preventScroll: true });
+        else if (document.activeElement?.closest(".menu")) anchor.focus({ preventScroll: true });
+      },
+    });
+  </script>
+</body>
+</html>

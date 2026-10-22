@@ -76,7 +76,7 @@ const TRANSITION_KEYS = ["to", "nearest", "by", "momentum", "animate", "step", "
 const VALUE_KEYS = ["base", "min", "max"];
 const FOLLOW_KEYS = ["input", "range", "overdrag"];
 const MAP_KEYS = ["map", "from", "to"];
-const MOTION_KEYS = ["spring", "tween", "kick"];
+const MOTION_KEYS = ["spring", "tween", "kick", "delay"];
 const KEYFRAMES_KEYS = ["keyframes", "duration", "ease"];
 const LOOP_KEYS = ["to", "keyframes", "duration", "ease", "delay", "wrap"];
 const TWEEN_KEYS = ["duration", "ease"];
@@ -127,7 +127,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.11.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.12.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -167,7 +167,11 @@ function compileFile(
         local.set(name, def);
       }
       for (const [name, def] of local) {
-        const motion = parseMotionObject(def, ptr("/motions", name), r);
+        let motion = parseMotionObject(def, ptr("/motions", name), r);
+        if (motion?.delay !== undefined) {
+          r.error("delay-outside-animate", ptr(ptr("/motions", name), "delay"), "A delay belongs to one transition's choreography, not to a named motion.", `Remove it here, and write it where the motion is used: "animate": { "panel.height": { "spring": { ... }, "delay": 0.08 } }.`);
+          motion = undefined;
+        }
         addToLibrary(library, name, { motion, origin: self }, ptr("/motions", name), r);
       }
     }
@@ -623,6 +627,7 @@ class ComponentCompiler {
         this.r.error("kick-outside-enter", kp, "A kick can't be used in \"animate\".", "Kicks play when a state is entered. Move this motion to that state's \"enter\".");
         continue;
       }
+      if (motion.delay !== undefined && !this.needsVersion("0.12", ptr(kp, "delay"), "A motion delay")) continue;
       out.set(key, motion);
     }
     return out;
@@ -645,6 +650,10 @@ class ComponentCompiler {
       }
       const motion = this.motion(value, kp);
       if (!prop || !motion) continue;
+      if (motion.delay !== undefined) {
+        this.r.error("delay-outside-animate", ptr(kp, "delay"), "An entry kick starts on entry; it can't wait.", "Remove the delay. To start a motion later, put a delayed motion in \"animate\" for the transition.");
+        continue;
+      }
       if (motion.kind !== "spring" || motion.kick === undefined) {
         this.r.error("enter-without-kick", kp, "Motions in \"enter\" must have a kick.", "Add \"kick\" (velocity in units per second) next to the spring, or move this motion to \"animate\".");
         continue;
@@ -1360,6 +1369,15 @@ function parseMotionObject(raw: Json, p: string, r: Reporter): Motion | undefine
     r.error("motion-conflict", p, "A motion has either \"spring\" or \"tween\", not both.");
     return undefined;
   }
+  let delay: number | undefined;
+  if ("delay" in raw) {
+    delay = parseTime(raw.delay);
+    if (delay === undefined) {
+      r.error("invalid-value", ptr(p, "delay"), '"delay" must be a time of 0 or more.', 'Use seconds (0.08) or a string like "80ms".');
+      return undefined;
+    }
+  }
+  const withDelay = <M extends Motion>(m: M): M => (delay ? { ...m, delay } : m);
   let kick: number | undefined;
   if ("kick" in raw) {
     if (typeof raw.kick !== "number" || !Number.isFinite(raw.kick)) {
@@ -1375,9 +1393,12 @@ function parseMotionObject(raw: Json, p: string, r: Reporter): Motion | undefine
   if ("spring" in raw) {
     const spring = parseSpring(raw.spring, ptr(p, "spring"), r);
     if (!spring) return undefined;
-    return kick === undefined ? spring : { ...spring, kick };
+    return withDelay(kick === undefined ? spring : { ...spring, kick });
   }
-  if ("tween" in raw) return parseTween(raw.tween, ptr(p, "tween"), r);
+  if ("tween" in raw) {
+    const tween = parseTween(raw.tween, ptr(p, "tween"), r);
+    return tween && withDelay(tween);
+  }
   r.error("missing-motion-kind", p, "The motion has neither \"spring\" nor \"tween\".", `For example: ${EXAMPLE_SPRING}`);
   return undefined;
 }

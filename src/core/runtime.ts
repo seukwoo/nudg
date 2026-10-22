@@ -57,7 +57,9 @@ export interface Runtime {
 type Segment =
   | { kind: "motion"; t0: number; from: Channels; v0: Channels; to: Channels; motion?: Motion }
   | { kind: "keyframes"; t0: number; from: Channels; to: Channels; frames: { at: number; value: Channels }[]; duration: number; ease: import("./types.ts").Ease; owner: State }
-  | { kind: "follow"; key: string; t0: number; anchor: number; input0: number; follow: Follow; owner: State };
+  | { kind: "follow"; key: string; t0: number; anchor: number; input0: number; follow: Follow; owner: State }
+  /** A motion that starts at `t0` (v0.12); until then the property does what `prev` does. */
+  | { kind: "delayed"; t0: number; prev: Segment; to: Channels; motion: Motion; started?: Segment & { kind: "motion" } };
 
 type StatesMachine = Machine & { kind: "states" };
 
@@ -309,7 +311,17 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       return [[value], [velocityAt(follow.input, t) * factor]];
     }
     if (segment.kind === "keyframes") return evaluateKeyframes(segment, t);
+    if (segment.kind === "delayed") return t < segment.t0 ? evaluate(segment.prev, t) : evaluateMotion(started(segment), t);
     return evaluateMotion(segment, t);
+  }
+
+  /** The motion a delayed segment becomes: from wherever `prev` is when the delay ends. */
+  function started(segment: Segment & { kind: "delayed" }): Segment & { kind: "motion" } {
+    if (!segment.started) {
+      const [from, v0] = evaluate(segment.prev, segment.t0);
+      segment.started = { kind: "motion", t0: segment.t0, from, v0, to: segment.to, motion: segment.motion };
+    }
+    return segment.started;
   }
 
   /** A loop's offset and its rate at `t`; 0 before its delay, and while a measured point is unknown. */
@@ -457,7 +469,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
         continue;
       }
       // Leaving a follow always hands off, carrying the input's velocity into the motion.
-      if (segment.kind === "motion" && sameChannels(segment.to, to) && !handoff.has(key)) continue;
+      if ((segment.kind === "motion" || segment.kind === "delayed") && sameChannels(segment.to, to) && !handoff.has(key)) continue;
       if (snap) {
         segments.set(key, { kind: "motion", t0: t, from: to, v0: to.map(() => 0), to });
         continue;
@@ -466,6 +478,14 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       // A committed value is placed, not thrown: it keeps no velocity from the finger.
       if (committed.has(key)) vel.fill(0);
       const motion = overrides.get(key) ?? program.animate.get(key);
+      if (motion?.delay && !reduced) {
+        // Until the delay ends the property keeps doing what it was doing: a pending
+        // motion that hasn't started is dropped, and a value placed here holds still.
+        const placed = handoff.has(key) || committed.has(key);
+        const prev: Segment = placed ? { kind: "motion", t0: t, from: pos, v0: vel.map(() => 0), to: pos } : segment.kind === "delayed" && t < segment.t0 ? segment.prev : segment;
+        segments.set(key, { kind: "delayed", t0: t + motion.delay, prev, to, motion });
+        continue;
+      }
       segments.set(key, { kind: "motion", t0: t, from: pos, v0: vel, to, motion: motion && reduced ? REDUCED : motion });
     }
 
@@ -677,7 +697,10 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     if (!prop) throw new Error(`Unknown property "${key}".`);
     if (prop.map?.sourceKind === "input") return true;
     const source = prop.map ? prop.map.source : key;
-    const segment = segments.get(source)!;
+    const current = segments.get(source)!;
+    // A pending motion is a change still to come.
+    if (current.kind === "delayed" && t < current.t0) return false;
+    const segment = current.kind === "delayed" ? started(current) : current;
     // A followed value moves only when its input does; nothing is animating it.
     if (segment.kind === "follow") return true;
     if (segment.kind === "keyframes") return t - segment.t0 >= segment.duration;

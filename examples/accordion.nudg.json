@@ -1,6 +1,6 @@
 {
-  "nudg": "0.4",
-  "note": "An accordion section that opens to exactly its content's height, measured by the host, so a longer answer needs no edit. The panel's height springs without overshoot, its content fades, and the chevron turns.",
+  "nudg": "0.12",
+  "note": "An accordion section that opens to exactly its content's height, measured by the host, so a longer answer needs no edit. The panel's height springs without overshoot and the chevron turns; opening, the content fades in once there is room for it, and closing, it fades out at once.",
   "targets": [
     "header",
     "panel",
@@ -35,7 +35,19 @@
   "states": {
     "closed": {
       "when": {
-        "header.tap": "open"
+        "header.tap": {
+          "to": "open",
+          "animate": {
+            "panel.opacity": {
+              "tween": {
+                "duration": 0.2,
+                "ease": "out"
+              },
+              "delay": 0.1
+            }
+          },
+          "note": "The content waits for the panel to make room."
+        }
       }
     },
     "open": {

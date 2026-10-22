@@ -207,7 +207,7 @@ Status: implemented as format 0.10 in TypeScript, Swift and Kotlin, with the [sp
 - **Reduced motion** holds the offset at 0: no looping, the state's other values still apply. A spinner then needs a visible status (text, `aria-busy`), which the recipe already lists as a host responsibility.
 - **Errors.** A property can't loop and follow in the same state, a mapped property can't loop, two parallel regions can't loop the same property, and colors can't loop (offsets are numeric). A map may read a looping property, which is how a shimmer's highlight can fade at its ends.
 
-**Starters it enables:** spinner, skeleton, typing indicator (with `delay`), and pull-to-refresh without the CSS workaround. The gaps for sequence and stagger outside loops (menu, speed dial, accordion) remain.
+**Starters it enables:** spinner, skeleton, typing indicator (with `delay`), and pull-to-refresh without the CSS workaround. Sequence and stagger outside loops (menu, speed dial, accordion) came in 0.12 as a motion delay.
 
 **Not in this cut:** loops that run a fixed number of times (an attention shake that repeats twice is entry keyframes, or a timer back to the state), loops on colors, and rate-driven values from app input (a progress-driven rotation is a `map`).
 
@@ -221,6 +221,15 @@ Status: implemented. The recipe catalog had stack navigation, full-screen modal,
 - **The one missing piece was a measured map value.** A stack's previous screen moves a third of a width while the new one moves a whole width, and a push drawer moves the content a share of its own width: both are maps from a measured position to a measured distance. Format 0.9 allowed measured `from` points; 0.11 allows measured `to` values, with the same rules.
 
 Composing several machines remains open for flows that need it (onboarding, multi-step forms); no current recipe does.
+
+## Sequence and stagger are a delay per property (format 0.12)
+
+Status: implemented. Accordion, menu and speed dial needed things to move in order: the content after the panel makes room, menu items one after another, actions out from the button and back in reverse. A general `sequence` combinator (a list of steps) was the expected answer. A timeline is simpler: each property's motion gets its own start delay, and order is just different delays.
+
+- **The delay lives on the motion in `animate`.** A transition's `animate` already overrides motion per property, so a stagger is a transition with growing delays, and the reverse order is the closing transition's own delays. No new structure, no step list to keep in sync with the states.
+- **States still say where.** A delay only says when a property starts going there; interruption stays the existing rule (retarget from the current value and velocity), with one addition: a pending motion that hasn't started is dropped.
+- **Not in named motions or entry kicks.** A delay is choreography of one transition; a reusable motion with a built-in wait would surprise every other use.
+- **Loops already had their own `delay`** (0.10); this is the same word for the same idea on ordinary motion.
 
 ## Type-safe host contracts
 
@@ -294,6 +303,6 @@ These are unresolved design choices. Scheduling and completion status live in th
 - Pinch, rotate and other multi-pointer gestures.
 - Continuous app inputs and scroll position are implemented in format 0.5. Still open: portable direction and velocity derivation, including thresholds and how those become deterministic events.
 - DOM CSS-variable output: whether an optional adapter mode should write custom properties so host CSS composes transforms and visual properties, rather than writing final inline properties. This stays an adapter concern and needs real Tailwind/design-system cases before it displaces the direct, low-overhead default.
-- More combinators: `sequence`, `delay`, `stagger`. Format 0.8 deliberately keeps keyframes as inline transient state-entry effects rather than making them a general sequence primitive.
+- A `sequence` combinator beyond per-property delays (0.12), if a pattern needs steps that wait on each other's completion rather than on time.
 - Tweaking a named motion at the point of use, for example `{ "use": "snappy", "duration": 0.5 }`.
 - Schemes: which names a scheme may supply or override, how the host passes one in, and how the validator still catches misspelled names. The built-in Apple-like and Material-like libraries.

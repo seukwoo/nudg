@@ -29,6 +29,8 @@ export interface SpringMotion {
   mass: number;
   /** Velocity added on start, in units per second. Only on numeric properties. */
   kick?: number;
+  /** Seconds before the motion starts, in "animate" only (v0.12). */
+  delay?: number;
 }
 
 export interface TweenMotion {
@@ -36,6 +38,8 @@ export interface TweenMotion {
   /** Seconds. */
   duration: number;
   ease: Ease;
+  /** Seconds before the motion starts, in "animate" only (v0.12). */
+  delay?: number;
 }
 
 export type Motion = SpringMotion | TweenMotion;

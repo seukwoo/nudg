@@ -20,6 +20,8 @@ private sealed interface Segment {
     data class MotionSeg(val t0: Double, val from: List<Double>, val v0: List<Double>, val to: List<Double>, val motion: Motion?) : Segment
     data class KeyframesSeg(val t0: Double, val from: List<Double>, val to: List<Double>, val frames: List<Keyframe>, val duration: Double, val ease: Ease, val owner: State) : Segment
     data class FollowSeg(val key: String, val t0: Double, val anchor: Double, val input0: Double, val follow: Follow, val owner: State) : Segment
+    /** A motion that starts at [t0] (v0.12); until then the property does what [prev] does. */
+    data class DelayedSeg(val t0: Double, val prev: Segment, val to: List<Double>, val motion: Motion) : Segment
 }
 
 private class Pending(var due: Double, val order: Int, val machine: Machine.States, val state: State, val transition: Transition, val pause: List<TimerPause>) {
@@ -243,6 +245,13 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         }
         is Segment.MotionSeg -> evaluateMotion(seg, t)
         is Segment.KeyframesSeg -> evaluateKeyframes(seg, t)
+        is Segment.DelayedSeg -> if (t < seg.t0) evaluate(seg.prev, t) else evaluateMotion(started(seg), t)
+    }
+
+    /** The motion a delayed segment becomes: from wherever [Segment.DelayedSeg.prev] is when the delay ends. */
+    private fun started(seg: Segment.DelayedSeg): Segment.MotionSeg {
+        val (from, v0) = evaluate(seg.prev, seg.t0)
+        return Segment.MotionSeg(seg.t0, from, v0, seg.to, seg.motion)
     }
 
     /** A loop's offset and its rate at [t]; 0 before its delay, and while a measured point is unknown. */
@@ -405,11 +414,22 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
                 segments[key] = seg.copy(to = to)
                 continue
             }
-            if (seg is Segment.MotionSeg && seg.to == to && key !in handoff) continue
+            if ((seg is Segment.MotionSeg && seg.to == to || seg is Segment.DelayedSeg && seg.to == to) && key !in handoff) continue
             if (snap) { segments[key] = Segment.MotionSeg(t, to, to.map { 0.0 }, to, null); continue }
             val (pos, v) = handoff[key] ?: evaluate(seg, t)
             val vel = if (key in committed) v.map { 0.0 } else v
             val motion = overrides[key] ?: program.animate[key]
+            if (motion != null && motion.delay > 0 && !reducedMotion) {
+                // Until the delay ends the property keeps doing what it was doing: a pending
+                // motion that hasn't started is dropped, and a value placed here holds still.
+                val prev = when {
+                    key in handoff || key in committed -> Segment.MotionSeg(t, pos, vel.map { 0.0 }, pos, null)
+                    seg is Segment.DelayedSeg && t < seg.t0 -> seg.prev
+                    else -> seg
+                }
+                segments[key] = Segment.DelayedSeg(t + motion.delay, prev, to, motion)
+                continue
+            }
             segments[key] = Segment.MotionSeg(t, pos, vel, to, motion?.let { if (reducedMotion) REDUCED else it })
         }
         if (reducedMotion) return
@@ -419,6 +439,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
                 val to = when (seg) {
                     is Segment.MotionSeg -> seg.to
                     is Segment.KeyframesSeg -> seg.to
+                    is Segment.DelayedSeg -> seg.to
                     is Segment.FollowSeg -> continue
                 }
                 val (pos, v) = evaluate(seg, t)
@@ -568,7 +589,10 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
     private fun atRest(key: String, t: Double): Boolean {
         if (program.property(key).map?.sourceKind == "input") return true
         val source = program.property(key).map?.source ?: key
-        val seg = segments.getValue(source)
+        val current = segments.getValue(source)
+        // A pending motion is a change still to come.
+        if (current is Segment.DelayedSeg && t < current.t0) return false
+        val seg = if (current is Segment.DelayedSeg) started(current) else current
         if (seg is Segment.KeyframesSeg) return t - seg.t0 >= seg.duration
         if (seg !is Segment.MotionSeg || seg.motion == null) return true
         return when (val m = seg.motion) {

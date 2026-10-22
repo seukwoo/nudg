@@ -61,7 +61,7 @@ test("every example belongs to one queryable semantic recipe", async () => {
   const { findRecipe } = await import("../src/node/recipes.ts");
   assert.equal(findRecipe("video chat")?.id, "video-call");
   assert.equal(findRecipe("TOGGLE_SWITCH")?.id, "switch");
-  assert.equal(findRecipe("dropdown")?.starter, null);
+  assert.equal(findRecipe("pinch zoom")?.starter, null);
 });
 
 test("a file without a machine is a library", () => {
@@ -170,9 +170,9 @@ test("cli validate and simulate speak JSON", () => {
   const recipe = JSON.parse(run("recipe", "video chat", "--json"));
   assert.equal(recipe.id, "video-call");
   assert.match(run("recipe", "toggle", "--source"), /"track\.dragend"/);
-  assert.throws(() => execFileSync(process.execPath, [`${root}src/cli.ts`, "recipe", "dropdown", "--source"], { encoding: "utf8", stdio: "pipe" }), /no starter.*sequence/s);
+  assert.throws(() => execFileSync(process.execPath, [`${root}src/cli.ts`, "recipe", "pinch zoom", "--source"], { encoding: "utf8", stdio: "pipe" }), /no starter.*multi-pointer/s);
   const { gaps } = JSON.parse(run("recipe", "--gaps", "--json"));
-  assert.ok(gaps.some((gap: { capability: string; missing: string[] }) => gap.capability === "stagger" && gap.missing.includes("menu")));
+  assert.ok(gaps.some((gap: { capability: string; missing: string[] }) => gap.capability === "decay" && gap.missing.includes("image-viewer")));
 });
 
 test("plot draws a labeled graph with overshoot and settle marks", async () => {

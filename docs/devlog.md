@@ -391,3 +391,9 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Problem:** Leaving a loop with `wrap` reduces the offset to its nearest equivalent of 0. "Nearest" written as `round(offset / wrap)` rounds halves differently in JavaScript (`Math.round(-0.5)` is -0), Python (to even), Swift (away from zero) and Kotlin's `Math.round` (up), so a spinner stopped at exactly half a turn would have unwound in different directions per runtime.
 - **Resolution:** The spec states the range, `(-wrap/2, wrap/2]`, and the formula `offset - wrap * ceil(offset / wrap - 0.5)`, which every language computes the same way. All runtimes use it.
 - **Lesson:** "Nearest" is not a portable definition. Anything a conformance suite compares must be specified as arithmetic, down to ties.
+
+### The biggest gap was a labeling mistake
+- **Problem:** Stack navigation, full-screen modal, shared element and drawer were registered as gap-only under "screen composition", which tied for the most counted gap and was planned as stage 2 work: composing players across screens.
+- **Cause:** The gaps were assigned from what the patterns sounded like, not from trying to write them.
+- **Resolution:** Written as files, each was one player whose targets are roles (`screen` / `previous`, `modal` / `presenting`, a card between two measured boxes), with mounting left to the host through `onExit`. The only thing missing was a measured value in a map's `to`, for parallax and push distances; format 0.11 adds it with the 0.9 endpoint rules. Four recipes got starters and the gap disappeared.
+- **Lesson:** A gap is a claim to test before it is a plan. Writing the file is cheaper than designing a primitive, and it found the smaller one.

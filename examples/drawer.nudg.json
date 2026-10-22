@@ -1,0 +1,37 @@
+{
+  "nudg": "0.11",
+  "note": "A navigation drawer that slides in from the left edge and pushes the content a quarter of its width along. The menu button or a swipe from the edge opens it; the scrim, Escape or a swipe back closes it. Every distance comes from the drawer's measured width.",
+  "targets": ["drawer", "scrim", "content", "menu", "edge"],
+  "values": {
+    "drawer.x": { "measure": "drawer.width", "times": -1 },
+    "scrim.opacity": {
+      "map": "drawer.x",
+      "from": [{ "measure": "drawer.width", "times": -1 }, 0],
+      "to": [0, 0.4]
+    },
+    "content.x": {
+      "map": "drawer.x",
+      "from": [{ "measure": "drawer.width", "times": -1 }, 0],
+      "to": [0, { "measure": "drawer.width", "times": 0.25 }]
+    }
+  },
+  "animate": {
+    "drawer.x": { "spring": { "duration": 0.4, "bounce": 0 } }
+  },
+  "initial": "closed",
+  "states": {
+    "closed": { "when": { "menu.tap": "open", "host.open": "open", "edge.dragstart": "opening" } },
+    "open": {
+      "set": { "drawer.x": 0 },
+      "when": { "scrim.tap": "closed", "drawer.key.escape": "closed", "host.close": "closed", "drawer.dragstart": "closing" }
+    },
+    "opening": {
+      "follow": { "drawer.x": { "input": "edge.drag.x", "range": [{ "measure": "drawer.width", "times": -1 }, 0] } },
+      "when": { "edge.dragend": { "nearest": ["closed", "open"], "by": "drawer.x", "momentum": 0.3 } }
+    },
+    "closing": {
+      "follow": { "drawer.x": { "input": "drawer.drag.x", "range": [{ "measure": "drawer.width", "times": -1 }, 0] } },
+      "when": { "drawer.dragend": { "nearest": ["closed", "open"], "by": "drawer.x", "momentum": 0.3 } }
+    }
+  }
+}

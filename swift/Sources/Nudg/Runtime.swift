@@ -185,12 +185,23 @@ public final class Runtime {
     return (min(a, b), max(a, b))
   }
 
-  private func resolvedMap(_ key: String, _ map: PropertyMap) -> [Double]? {
+  private func resolvedMap(_ key: String, _ map: PropertyMap) -> (from: [Double], to: [[Double]])? {
     let context = map.sourceKind == "property" ? map.source : key
     let points = map.from.map { endpoint(context, $0) }
     if points.contains(where: { $0 == nil }) { return nil }
     let values = points.map { $0! }
-    return Set(values).count == values.count ? values : nil
+    guard Set(values).count == values.count else { return nil }
+    // Measured values resolve in the mapped property's own coordinates (v0.11).
+    var to: [[Double]] = []
+    for value in map.to {
+      switch value {
+      case let .channels(c): to.append(c)
+      case let .measure(m):
+        guard let v = measured(key, m) else { return nil }
+        to.append([v])
+      }
+    }
+    return (values, to)
   }
 
   private func clamp(_ key: String, _ value: Double) -> Double {
@@ -486,9 +497,9 @@ public final class Runtime {
   private func valueOf(_ key: String, _ t: Double) -> [Double] {
     let prop = program.property(key)!
     if let map = prop.map {
-      guard let from = resolvedMap(key, map) else { return prop.base }
+      guard let resolved = resolvedMap(key, map) else { return prop.base }
       let source = map.sourceKind == "input" ? inputAt(map.source, t) : displayed(map.source, t).0[0]
-      return interpolate(from, map.to, source)
+      return interpolate(resolved.from, resolved.to, source)
     }
     return displayed(key, t).0
   }

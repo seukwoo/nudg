@@ -211,6 +211,17 @@ Status: implemented as format 0.10 in TypeScript, Swift and Kotlin, with the [sp
 
 **Not in this cut:** loops that run a fixed number of times (an attention shake that repeats twice is entry keyframes, or a timer back to the state), loops on colors, and rate-driven values from app input (a progress-driven rotation is a `map`).
 
+## Screen transitions are one player with roles (format 0.11)
+
+Status: implemented. The recipe catalog had stack navigation, full-screen modal, shared element and drawer as gap-only under "screen composition", the most counted gap, on the assumption that two screens need two players composed. Trying them showed otherwise:
+
+- **A transition is one player whose targets are roles.** `screen` and `previous`, `modal` and `presenting`, `card`, `thumb` and `hero`: the host binds whichever screens play those roles for this transition. A deeper stack binds the top two screens for each push or pop; nothing in the file knows the depth.
+- **Mounting is the host's, as for any exit.** Both screens stay mounted while the player moves; the host unmounts the popped or dismissed one when the player settles in its exit state, which `onExit` already reports.
+- **Positions and sizes are already measured.** Shared element moves a card between two measured boxes with 0.4 measured targets; the DOM adapter measures untransformed layout, so the moving card never measures itself.
+- **The one missing piece was a measured map value.** A stack's previous screen moves a third of a width while the new one moves a whole width, and a push drawer moves the content a share of its own width: both are maps from a measured position to a measured distance. Format 0.9 allowed measured `from` points; 0.11 allows measured `to` values, with the same rules.
+
+Composing several machines remains open for flows that need it (onboarding, multi-step forms); no current recipe does.
+
 ## Type-safe host contracts
 
 Status: implemented as `nudg generate` and the `nudg_generate` MCP tool.

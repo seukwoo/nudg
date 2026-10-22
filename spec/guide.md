@@ -174,7 +174,7 @@ Reuse a measured layout value where a drag bound or map source point would other
 }
 ```
 
-Endpoints use the same `measure`, `times` and `plus` fields as state targets. Until all endpoint measurements arrive, a follow is unbounded and a map keeps its base; the first complete report applies immediately, and relayout updates the endpoints without restarting the drag.
+Endpoints use the same `measure`, `times` and `plus` fields as state targets. Format 0.11 also lets a numeric map value be measured, e.g. a previous screen that moves a third of the pushed screen's width: `"to": [{ "measure": "screen.width", "times": -0.3 }, 0]`. Until all endpoint measurements arrive, a follow is unbounded and a map keeps its base; the first complete report applies immediately, and relayout updates the endpoints without restarting the drag.
 
 ## Loops (format 0.10)
 
@@ -206,7 +206,7 @@ Libraries in `examples/motion/` carry the platforms' published spring values: `a
 
 When a person describes UI in natural language, call `nudg_recipe` (or `nudg recipe <term>`) before writing the file. It resolves aliases to a versioned mobile-first contract with expected parts, states, events, inputs, host responsibilities, motion, known gaps and a validated starter. Then express any requested variation with ordinary nudg fields.
 
-Some recipes have no starter (`"starter": null`): menus, speed dials, animated lists, hide-on-scroll bars, stack navigation, full-screen modals, shared-element transitions, drawers, image viewers and free-scrolling carousels. Their contract is still the standard answer: use its parts, states and events, write the nudg file for what the format can express (a menu's open and close, a drawer's drag), and tell the person which part the host does and why, from `gaps`. Don't imitate a missing capability with timers or extra states; that is the workaround the gap records.
+Some recipes have no starter (`"starter": null`): menus, speed dials, animated lists, hide-on-scroll bars, image viewers and free-scrolling carousels. Their contract is still the standard answer: use its parts, states and events, write the nudg file for what the format can express (a menu's open and close, a drawer's drag), and tell the person which part the host does and why, from `gaps`. Don't imitate a missing capability with timers or extra states; that is the workaround the gap records.
 
 | User says | Prefer |
 |---|---|
@@ -230,7 +230,8 @@ Some recipes have no starter (`"starter": null`): menus, speed dials, animated l
 | music player, audio player | play/pause, stop, seek, elapsed/duration, volume/mute, playback speed and optional skip/repeat; the host owns audio playback |
 | video player | music-player transport plus video surface, buffering, auto-hiding controls, fullscreen and picture-in-picture; the host owns media playback and platform APIs |
 | app bar, toolbar, command bar | actions tied to the current view; show/hide or collapse on scroll only when the host supplies that input |
-| bottom nav, navigation bar, navigation rail, drawer, side nav, GNB, LNB | navigation selection and indicator motion; do not treat navigation items as destructive actions |
+| push, navigation stack, back swipe, full-screen modal, drawer, hero / shared element | one player whose targets are roles (`screen` / `previous`, `modal` / `presenting`, `card` between `thumb` and `hero`); distances from measured sizes; the host binds the screens and unmounts on exit |
+| bottom nav, navigation bar, navigation rail, side nav, GNB, LNB | navigation selection and indicator motion; do not treat navigation items as destructive actions |
 
 Pattern words live in external recipe metadata, not core syntax. Every shipped example links to one recipe, and recipe gaps are the evidence for adding lower-level motion features. If a file needs extra intent, put it in `note` and keep stable target names (`sheet`, `scrim`, `handle`, `content`, `action`, `indicator`) so the next edit can find the right part.
 

@@ -248,14 +248,14 @@ nudg has one contract for anything that writes or edits its files, an AI coding 
 
 | Part | Where | What it promises |
 |---|---|---|
-| JSON Schema | `@nudg/core/schema.json` (the latest format), `spec/nudg-<format>.schema.json` for each format | Structure and vocabulary for completion and early checks. Put `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-0.10.schema.json"` in a file to get it in any JSON editor. |
+| JSON Schema | `@nudg/core/schema.json` (the latest format), `spec/nudg-<format>.schema.json` for each format | Structure and vocabulary for completion and early checks. Put `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-0.11.schema.json"` in a file to get it in any JSON editor. |
 | Validator | `nudg validate`, `nudg_validate`, `compile()` | The authority: every problem has a stable `code`, a JSON pointer `path` and a `hint` that says how to fix it. Codes are part of the spec and covered by the conformance suite, so an agent can rely on them across releases. |
 | Agent guide | `@nudg/core/guide.md`, `nudg_guide` | The format on one page, and which field each feel word changes ("bouncier" is `bounce`). It is versioned with the package and describes the formats this package accepts. |
 | Recipes | `@nudg/core/recipes.json`, `nudg recipe`, `nudg_recipe` | Interaction contracts for UI words (sheet, toast, video chat): parts, states, events, inputs, host duties, known gaps and a validated starter. |
 | Judge loop | `nudg skill`, the MCP server's instructions | When to validate, critique, compare against `HEAD` and observe the real page, so the person judges by looking. |
 | Host names | `nudg generate`, `nudg_generate` | The file's targets, events, inputs and states as TypeScript types, so host code can't drift from the file. |
 
-A file declares its format (`"nudg": "0.10"`); a runtime reads every older format, and the validator rejects fields newer than the declared one with a hint to raise it. Use the schema for completion and the validator for truth: where they disagree, the validator is right and the schema is the bug.
+A file declares its format (`"nudg": "0.11"`); a runtime reads every older format, and the validator rejects fields newer than the declared one with a hint to raise it. Use the schema for completion and the validator for truth: where they disagree, the validator is right and the schema is the bug.
 
 ## React adapter
 

@@ -1,0 +1,177 @@
+{
+  "conformance": "0.11",
+  "name": "Measured map values: to resolves in the mapped property's coordinates, holds the compiled base until layout, and tracks relayout",
+  "doc": {
+    "nudg": "0.11",
+    "targets": [
+      "screen",
+      "previous"
+    ],
+    "values": {
+      "screen.x": {
+        "measure": "screen.width"
+      },
+      "previous.x": {
+        "map": "screen.x",
+        "from": [
+          0,
+          {
+            "measure": "screen.width"
+          }
+        ],
+        "to": [
+          {
+            "measure": "screen.width",
+            "times": -0.3
+          },
+          0
+        ]
+      }
+    },
+    "animate": {
+      "screen.x": {
+        "spring": {
+          "duration": 0.35,
+          "bounce": 0
+        }
+      }
+    },
+    "initial": "pushed",
+    "states": {
+      "pushed": {
+        "set": {
+          "screen.x": 0
+        },
+        "when": {
+          "screen.dragstart": "dragging"
+        }
+      },
+      "popped": {},
+      "dragging": {
+        "follow": {
+          "screen.x": {
+            "input": "screen.drag.x",
+            "range": [
+              0,
+              {
+                "measure": "screen.width"
+              }
+            ]
+          }
+        },
+        "when": {
+          "screen.dragend": {
+            "nearest": [
+              "pushed",
+              "popped"
+            ],
+            "by": "screen.x"
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "pushed"
+        ],
+        "values": {
+          "screen.x": 0,
+          "previous.x": 0
+        }
+      }
+    },
+    {
+      "t": 0.1,
+      "input": "screen.layout.width",
+      "value": 300
+    },
+    {
+      "t": 0.1,
+      "expect": {
+        "values": {
+          "screen.x": 0,
+          "previous.x": -90
+        }
+      }
+    },
+    {
+      "t": 0.2,
+      "send": "screen.dragstart"
+    },
+    {
+      "t": 0.25,
+      "input": "screen.drag.x",
+      "value": 150
+    },
+    {
+      "t": 0.25,
+      "expect": {
+        "state": [
+          "dragging"
+        ],
+        "values": {
+          "screen.x": 150,
+          "previous.x": -45
+        }
+      }
+    },
+    {
+      "t": 0.3,
+      "input": "screen.layout.width",
+      "value": 200
+    },
+    {
+      "t": 0.3,
+      "expect": {
+        "values": {
+          "screen.x": 150,
+          "previous.x": -15
+        }
+      }
+    },
+    {
+      "t": 0.4,
+      "send": "screen.dragend"
+    },
+    {
+      "t": 0.5,
+      "expect": {
+        "state": [
+          "popped"
+        ],
+        "values": {
+          "screen.x": 176.786607805,
+          "previous.x": -6.964017659
+        }
+      }
+    },
+    {
+      "t": 0.7,
+      "expect": {
+        "state": [
+          "popped"
+        ],
+        "values": {
+          "screen.x": 198.537014688,
+          "previous.x": -0.438895594
+        }
+      }
+    },
+    {
+      "t": 1.5,
+      "expect": {
+        "state": [
+          "popped"
+        ],
+        "values": {
+          "screen.x": 199.999997247,
+          "previous.x": -8.26e-07
+        }
+      }
+    }
+  ]
+}

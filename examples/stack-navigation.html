@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Stack navigation</title>
+  <style>
+    .stack { position: relative; width: 240px; height: 180px; overflow: hidden; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #e4e4df; font: 14px ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; }
+    .stack .page { position: absolute; inset: 0; background: #fff; }
+    .stack .bar { display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border-bottom: 1px solid #f0f0ec; font-weight: 600; }
+    .stack .row { display: flex; justify-content: space-between; width: 100%; padding: 12px; border: 0; border-bottom: 1px solid #f0f0ec; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+    .stack .row span { color: #9ca3af; }
+    .stack .shade { position: absolute; inset: 0; background: #000; pointer-events: none; }
+    /* The pushed screen rests one measured width to the right; nudg brings it in. */
+    .stack .screen { box-shadow: -6px 0 16px rgb(0 0 0 / 0.08); cursor: grab; user-select: none; }
+    .stack .back { padding: 4px 6px 4px 0; border: 0; background: none; color: #2563eb; font: inherit; cursor: pointer; }
+    .stack .screen p { margin: 12px; color: #6b6b66; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="stack">
+    <div class="page" data-nudg="previous">
+      <div class="bar">Inbox</div>
+      <button class="row" data-nudg="open">Weekly report <span>›</span></button>
+      <div class="row">Team lunch</div>
+      <div class="shade" data-nudg="shade"></div>
+    </div>
+    <div class="page screen" data-nudg="screen">
+      <div class="bar"><button class="back" data-nudg="back">‹ Inbox</button></div>
+      <p>Weekly report. Swipe right, or tap Back, to return.</p>
+    </div>
+  </div>
+  <!-- Host markup for stack-navigation.nudg.json. The router owns the stack: for each push or pop it binds screen and previous to the top two screens, and unmounts the popped one once the player settles in root. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./stack-navigation.nudg.json");
+    play(program, document.body);
+  </script>
+</body>
+</html>

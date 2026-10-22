@@ -1,6 +1,6 @@
 package dev.nudg
 
-/** A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 3). */
+/** A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 4). */
 
 enum class PropertyKind { LENGTH, NUMBER, COLOR }
 
@@ -27,7 +27,12 @@ sealed interface MeasuredEndpoint {
 }
 /** A periodic offset added to a property while its state is active (v0.10). */
 data class Loop(val to: MeasuredEndpoint, val frames: List<Pair<Double, MeasuredEndpoint>>, val duration: Double, val ease: Ease, val delay: Double, val wrap: Double?)
-data class PropertyMap(val source: String, val sourceKind: String, val from: List<MeasuredEndpoint>, val to: List<List<Double>>)
+/** A map's value at one point: channels, or a measured number (v0.11). */
+sealed interface MapValue {
+    data class Channels(val values: List<Double>) : MapValue
+    data class Measured(val measure: Measure) : MapValue
+}
+data class PropertyMap(val source: String, val sourceKind: String, val from: List<MeasuredEndpoint>, val to: List<MapValue>)
 data class Property(val kind: PropertyKind, val base: List<Double>, val map: PropertyMap?, val measure: Measure?, val min: Double?, val max: Double?)
 data class Follow(val input: String, val range: Pair<MeasuredEndpoint, MeasuredEndpoint>?, val overdrag: Double)
 data class Nearest(val states: List<String>, val by: String, val momentum: Double)
@@ -66,13 +71,13 @@ class Program(val version: String, val targets: List<String>, val properties: Li
         fun decode(text: String): Program {
             @Suppress("UNCHECKED_CAST")
             val j = Json.parse(text) as Map<String, Any?>
-            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0)) { "Not a compiled nudg program (formats 1 to 3). Compile it with `nudg compile`." }
+            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0)) { "Not a compiled nudg program (formats 1 to 4). Compile it with `nudg compile`." }
             val properties = list(j["properties"]).map { p ->
                 obj(p).let { m ->
                     (m["key"] as String) to Property(
                         PropertyKind.valueOf((m["kind"] as String).uppercase()),
                         doubles(m["base"]),
-                        (m["map"] as? Map<*, *>)?.let { mp -> PropertyMap(mp["source"] as String, mp["sourceKind"] as? String ?: "property", list(mp["from"]).map(::endpoint), list(mp["to"]).map(::doubles)) },
+                        (m["map"] as? Map<*, *>)?.let { mp -> PropertyMap(mp["source"] as String, mp["sourceKind"] as? String ?: "property", list(mp["from"]).map(::endpoint), list(mp["to"]).map { v -> if (v is List<*>) MapValue.Channels(doubles(v)) else MapValue.Measured(measure(obj(v))) }) },
                         (m["measure"] as? Map<*, *>)?.let(::measure),
                         m["min"] as? Double,
                         m["max"] as? Double,

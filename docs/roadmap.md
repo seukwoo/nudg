@@ -24,6 +24,7 @@ The order below follows real app needs. Release numbers and dates are assigned w
 | Pausable timers | Released in package 0.9.0 as format 0.7; TypeScript, Swift and Kotlin share conformance | [Spec](spec.md#additions-in-07-draft) |
 | Entry keyframes | Released in package 0.9.0 as format 0.8; TypeScript, Swift and Kotlin share conformance | [Spec](spec.md#additions-in-08) |
 | Loops while a state is active | Implemented as format 0.10 (unreleased); spinner, skeleton and typing indicator have starters | [Spec](spec.md#additions-in-010-draft) |
+| Screen transitions (stack, full-screen modal, shared element, drawer) | Implemented as one player with roles plus format 0.11 measured map values (unreleased) | [Design](design.md#screen-transitions-are-one-player-with-roles-format-011) |
 | Decay | Open design work | [Open questions](design.md#open-questions) |
 
 ## Product Stages
@@ -67,7 +68,7 @@ Done when: a TypeScript host cannot misspell its generated target/event/input na
 
 ## Completed: Recipe Coverage for Common App Patterns
 
-Status: complete once format 0.10 is released. The next primitive is open between sequence/stagger (accordion, menu, speed dial) and screen composition (stack, full-screen modal, shared element, drawer); see the gap counts below.
+Status: complete once formats 0.10 and 0.11 are released. Screen composition turned out to need only measured map values (0.11); the next primitive by count is sequence/stagger (accordion, menu, speed dial).
 
 Goal: let an AI answer the common UI words of app development with a standard contract, and let the gaps decide the next motion primitive. The 22 recipes cover single components and media well; navigation, lists, loading, menus and form controls are missing.
 
@@ -75,7 +76,7 @@ Goal: let an AI answer the common UI words of app development with a standard co
 - Done: register the patterns the format can't express yet as recipe contracts with gaps and no starter, so an AI gives a standard answer ("the host does this part") instead of improvising: dropdown / popover menu and FAB speed dial (sequence, stagger), list insert / remove / reorder (collection coordination), spinner, skeleton shimmer and typing indicator (continuous motion), hide-on-scroll navigation (scroll direction), stack push / pop, full-screen modal, shared-element and drawer transitions (screen composition), pinch-zoom image viewer (multi-pointer), free-scrolling carousel (decay).
 - Done: gap-only contracts use `"starter": null` in catalog version 2, gap capabilities are a fixed list, and `nudg recipe` marks them and refuses `--source` with the gaps. Decisions in [Design](design.md#recipes-without-a-starter).
 - Count gaps across the catalog (`nudg recipe --gaps`) and promote the most needed one into the queue below. After registration: screen composition 4, continuous motion 4 (one a workaround), sequence 3, stagger 3, decay 2, others 1. Sequence and stagger together cover four recipes. The nine starter recipes needed no new capability, so the counts stood.
-- Done: continuous motion was promoted and implemented as format 0.10 loops; with `delay` it also covers the typing indicator's stagger. Counts now: screen composition 4, sequence 3, decay 2, stagger 2, others 1.
+- Done: continuous motion was promoted and implemented as format 0.10 loops; with `delay` it also covers the typing indicator's stagger. Then screen composition (4) was tried and needed only measured map values, format 0.11; its four recipes have starters. Counts now: sequence 3, decay 2, stagger 2, others 1.
 
 Done when: the catalog names every pattern above, each either with a validated starter or with explicit gaps, and the queue's next primitive is chosen from the gap counts.
 

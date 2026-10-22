@@ -84,7 +84,8 @@ export interface PropertyMap {
   sourceKind: "property" | "input";
   /** Source points; measured endpoints resolve from layout in v0.9. */
   from: MeasuredEndpoint[];
-  to: Channels[];
+  /** Values at those points; numeric ones may be measured in v0.11, in the mapped property's coordinates. */
+  to: (Channels | Measure)[];
 }
 
 /** A value read from the host's layout report (v0.4), optionally scaled and offset (v0.6). */

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Full-screen modal</title>
+  <style>
+    .fsm { position: relative; width: 240px; height: 180px; overflow: hidden; border-radius: 14px; background: #1c1c1a; font: 14px ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; }
+    .fsm .presenting { position: absolute; inset: 0; border-radius: 14px; background: #fff; }
+    .fsm .presenting h3 { margin: 14px 14px 8px; font-size: 16px; }
+    .fsm .open { margin: 0 14px; padding: 8px 12px; border: 0; border-radius: 8px; background: #2563eb; color: #fff; font: inherit; cursor: pointer; }
+    .fsm .shade { position: absolute; inset: 0; border-radius: 14px; background: #000; pointer-events: none; }
+    /* Rests one measured height below; nudg slides it up. */
+    .fsm .modal { position: absolute; inset: 8px 0 0; border-radius: 14px 14px 0 0; background: #fff; box-shadow: 0 -4px 20px rgb(0 0 0 / 0.15); cursor: grab; user-select: none; }
+    .fsm .modal header { display: flex; justify-content: space-between; align-items: center; height: 40px; padding: 0 12px; border-bottom: 1px solid #f0f0ec; font-weight: 600; }
+    .fsm .close { border: 0; background: none; color: #2563eb; font: inherit; cursor: pointer; }
+    .fsm .modal p { margin: 12px; color: #6b6b66; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="fsm">
+    <div class="presenting" data-nudg="presenting">
+      <h3>Notes</h3>
+      <button class="open" data-nudg="open">New note</button>
+      <div class="shade" data-nudg="shade"></div>
+    </div>
+    <div class="modal" role="dialog" aria-modal="true" aria-label="New note" data-nudg="modal">
+      <header>New note <button class="close" data-nudg="close">Close</button></header>
+      <p>Drag down, tap Close or press Escape to dismiss.</p>
+    </div>
+  </div>
+  <!-- Host markup for full-screen-modal.nudg.json. The app presents it as a modal route, moves focus into it and back, and asks before discarding unsaved work. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./full-screen-modal.nudg.json");
+    play(program, document.body);
+  </script>
+</body>
+</html>

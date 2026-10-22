@@ -168,10 +168,18 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         return minOf(a, b) to maxOf(a, b)
     }
 
-    private fun resolvedMap(key: String, map: PropertyMap): List<Double>? {
+    private fun resolvedMap(key: String, map: PropertyMap): Pair<List<Double>, List<List<Double>>>? {
         val context = if (map.sourceKind == "property") map.source else key
         val points = map.from.map { endpoint(context, it) ?: return null }
-        return if (points.toSet().size == points.size) points else null
+        if (points.toSet().size != points.size) return null
+        // Measured values resolve in the mapped property's own coordinates (v0.11).
+        val to = map.to.map { value ->
+            when (value) {
+                is MapValue.Channels -> value.values
+                is MapValue.Measured -> listOf(measured(key, value.measure) ?: return null)
+            }
+        }
+        return points to to
     }
 
     private fun clamp(key: String, value: Double): Double {
@@ -467,9 +475,9 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
     private fun valueOf(key: String, t: Double): List<Double> {
         val p = program.property(key)
         p.map?.let {
-            val from = resolvedMap(key, it) ?: return p.base
+            val (from, to) = resolvedMap(key, it) ?: return p.base
             val source = if (it.sourceKind == "input") inputAt(it.source, t) else displayed(it.source, t).first[0]
-            return interpolate(from, it.to, source)
+            return interpolate(from, to, source)
         }
         return displayed(key, t).first
     }

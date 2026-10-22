@@ -1,0 +1,33 @@
+{
+  "nudg": "0.11",
+  "note": "One level of a navigation stack. Opening a row pushes the detail screen in from the right while the list slides a third of a width left and dims; Back, or a swipe to the right, pops it. All distances come from the screen's measured width. For a deeper stack the host binds screen and previous to the top two screens for each push or pop, and unmounts the popped screen once the player settles in root.",
+  "targets": ["screen", "previous", "shade", "open", "back"],
+  "values": {
+    "screen.x": { "measure": "screen.width" },
+    "previous.x": {
+      "map": "screen.x",
+      "from": [0, { "measure": "screen.width" }],
+      "to": [{ "measure": "screen.width", "times": -0.3 }, 0]
+    },
+    "shade.opacity": {
+      "map": "screen.x",
+      "from": [0, { "measure": "screen.width" }],
+      "to": [0.15, 0]
+    }
+  },
+  "animate": {
+    "screen.x": { "spring": { "duration": 0.45, "bounce": 0 } }
+  },
+  "initial": "root",
+  "states": {
+    "root": { "when": { "open.tap": "pushed", "host.push": "pushed" } },
+    "pushed": {
+      "set": { "screen.x": 0 },
+      "when": { "back.tap": "root", "host.pop": "root", "screen.dragstart": "dragging" }
+    },
+    "dragging": {
+      "follow": { "screen.x": { "input": "screen.drag.x", "range": [0, { "measure": "screen.width" }] } },
+      "when": { "screen.dragend": { "nearest": ["pushed", "root"], "by": "screen.x", "momentum": 0.3 } }
+    }
+  }
+}

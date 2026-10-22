@@ -1,4 +1,4 @@
-// A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 3).
+// A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 4).
 // Everything is already validated and resolved; this only decodes it.
 
 import Foundation
@@ -47,11 +47,17 @@ public struct Loop {
   public let wrap: Double?
 }
 
+/** A map's value at one point: channels, or a measured number (v0.11). */
+public enum MapValue {
+  case channels([Double])
+  case measure(Measure)
+}
+
 public struct PropertyMap {
   public let source: String
   public let sourceKind: String
   public let from: [MeasuredEndpoint]
-  public let to: [[Double]]
+  public let to: [MapValue]
 }
 
 public struct Property {
@@ -139,14 +145,14 @@ public struct Program {
 
   /** Reads `nudg compile` output. */
   public static func decode(_ data: Data) throws -> Program {
-    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...3).contains(format) else {
-      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 3). Compile it with `nudg compile`.")
+    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...4).contains(format) else {
+      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 4). Compile it with `nudg compile`.")
     }
     let properties: [(String, Property)] = (j["properties"] as! [[String: Any]]).map { p in
       (p["key"] as! String, Property(
         kind: PropertyKind(rawValue: p["kind"] as! String)!,
         base: doubles(p["base"]),
-        map: (p["map"] as? [String: Any]).map { m in PropertyMap(source: m["source"] as! String, sourceKind: m["sourceKind"] as? String ?? "property", from: (m["from"] as! [Any]).map(readEndpoint), to: (m["to"] as! [Any]).map(doubles)) },
+        map: (p["map"] as? [String: Any]).map { m in PropertyMap(source: m["source"] as! String, sourceKind: m["sourceKind"] as? String ?? "property", from: (m["from"] as! [Any]).map(readEndpoint), to: (m["to"] as! [Any]).map { v in v is [Any] ? .channels(doubles(v)) : .measure(readMeasure(v as! [String: Any])) }) },
         measure: (p["measure"] as? [String: Any]).map(readMeasure),
         min: number(p["min"]),
         max: number(p["max"])))

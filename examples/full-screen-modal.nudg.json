@@ -1,0 +1,33 @@
+{
+  "nudg": "0.11",
+  "note": "A full-screen modal for a self-contained task. It slides up over the screen that presented it, which shrinks back and dims; Close, or a drag down, dismisses it. Distances come from the modal's measured height.",
+  "targets": ["modal", "presenting", "shade", "open", "close"],
+  "values": {
+    "modal.y": { "measure": "modal.height" },
+    "presenting.scale": {
+      "map": "modal.y",
+      "from": [0, { "measure": "modal.height" }],
+      "to": [0.92, 1]
+    },
+    "shade.opacity": {
+      "map": "modal.y",
+      "from": [0, { "measure": "modal.height" }],
+      "to": [0.25, 0]
+    }
+  },
+  "animate": {
+    "modal.y": { "spring": { "duration": 0.45, "bounce": 0 } }
+  },
+  "initial": "closed",
+  "states": {
+    "closed": { "when": { "open.tap": "open", "host.open": "open" } },
+    "open": {
+      "set": { "modal.y": 0 },
+      "when": { "close.tap": "closed", "host.close": "closed", "modal.key.escape": "closed", "modal.dragstart": "dragging" }
+    },
+    "dragging": {
+      "follow": { "modal.y": { "input": "modal.drag.y", "range": [0, { "measure": "modal.height" }], "overdrag": 0.1 } },
+      "when": { "modal.dragend": { "nearest": ["open", "closed"], "by": "modal.y", "momentum": 0.3 } }
+    }
+  }
+}

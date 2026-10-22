@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Drawer</title>
+  <style>
+    .drawer-demo { position: relative; width: 240px; height: 180px; overflow: hidden; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #e4e4df; font: 14px ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; }
+    .drawer-demo .content { position: absolute; inset: 0; background: #fff; }
+    .drawer-demo .bar { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 8px; border-bottom: 1px solid #f0f0ec; font-weight: 600; }
+    .drawer-demo .menu { width: 32px; height: 32px; border: 0; border-radius: 8px; background: none; font-size: 18px; cursor: pointer; }
+    .drawer-demo .content p { margin: 12px; color: #6b6b66; font-size: 13px; }
+    /* A strip along the left edge that starts the opening swipe. */
+    .drawer-demo .edge { position: absolute; top: 0; bottom: 0; left: 0; width: 16px; z-index: 1; cursor: grab; }
+    .drawer-demo .scrim { position: absolute; inset: 0; z-index: 2; background: #000; }
+    .drawer-demo [data-nudg-state~="closed"].scrim { pointer-events: none; }
+    /* Rests one measured width to the left; nudg slides it in. */
+    .drawer-demo .drawer { position: absolute; top: 0; bottom: 0; left: 0; z-index: 3; width: 168px; padding-top: 8px; background: #fff; box-shadow: 4px 0 16px rgb(0 0 0 / 0.12); cursor: grab; user-select: none; }
+    .drawer-demo .drawer a { display: block; padding: 10px 16px; color: inherit; text-decoration: none; }
+    .drawer-demo .drawer a[aria-current] { background: #dbeafe; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="drawer-demo">
+    <div class="content" data-nudg="content">
+      <div class="bar"><button class="menu" aria-label="Open navigation" data-nudg="menu">☰</button>Inbox</div>
+      <p>Tap the menu, or swipe in from the left edge.</p>
+    </div>
+    <div class="edge" data-nudg="edge"></div>
+    <div class="scrim" data-nudg="scrim"></div>
+    <nav class="drawer" aria-label="Main" data-nudg="drawer">
+      <a href="#" aria-current="page">Inbox</a>
+      <a href="#">Starred</a>
+      <a href="#">Sent</a>
+    </nav>
+  </div>
+  <!-- Host markup for drawer.nudg.json. The app owns navigation, traps focus while the drawer is open, and closes it on the system back action. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./drawer.nudg.json");
+    play(program, document.body);
+  </script>
+</body>
+</html>

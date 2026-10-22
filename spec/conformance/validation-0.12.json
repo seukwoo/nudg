@@ -1,0 +1,285 @@
+{
+  "conformance": "0.12",
+  "name": "Validator (0.12): motion delay",
+  "documents": [
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "0.11",
+        "targets": [
+          "header",
+          "chevron",
+          "panel"
+        ],
+        "values": {
+          "chevron.rotation": 0,
+          "panel.height": 0
+        },
+        "animate": {
+          "chevron.rotation": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "linear"
+            }
+          },
+          "panel.height": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            },
+            "delay": 0.1
+          }
+        },
+        "initial": "closed",
+        "states": {
+          "closed": {
+            "when": {
+              "header.tap": "open"
+            }
+          },
+          "open": {
+            "set": {
+              "chevron.rotation": 180,
+              "panel.height": 100
+            },
+            "when": {
+              "header.tap": {
+                "to": "closed",
+                "animate": {
+                  "chevron.rotation": {
+                    "tween": {
+                      "duration": 0.2,
+                      "ease": "linear"
+                    },
+                    "delay": 0.15
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/animate/panel.height/delay"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/open/when/header.tap/animate/chevron.rotation/delay"
+        }
+      ]
+    },
+    {
+      "name": "negative",
+      "doc": {
+        "nudg": "0.12",
+        "targets": [
+          "header",
+          "chevron",
+          "panel"
+        ],
+        "values": {
+          "chevron.rotation": 0,
+          "panel.height": 0
+        },
+        "animate": {
+          "chevron.rotation": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "linear"
+            }
+          },
+          "panel.height": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            },
+            "delay": -0.1
+          }
+        },
+        "initial": "closed",
+        "states": {
+          "closed": {
+            "when": {
+              "header.tap": "open"
+            }
+          },
+          "open": {
+            "set": {
+              "chevron.rotation": 180,
+              "panel.height": 100
+            },
+            "when": {
+              "header.tap": {
+                "to": "closed",
+                "animate": {
+                  "chevron.rotation": {
+                    "tween": {
+                      "duration": 0.2,
+                      "ease": "linear"
+                    },
+                    "delay": 0.15
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/animate/panel.height/delay"
+        }
+      ]
+    },
+    {
+      "name": "named",
+      "doc": {
+        "nudg": "0.12",
+        "targets": [
+          "header",
+          "chevron",
+          "panel"
+        ],
+        "values": {
+          "chevron.rotation": 0,
+          "panel.height": 0
+        },
+        "animate": {
+          "chevron.rotation": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "linear"
+            }
+          },
+          "panel.height": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            },
+            "delay": 0.1
+          }
+        },
+        "initial": "closed",
+        "states": {
+          "closed": {
+            "when": {
+              "header.tap": "open"
+            }
+          },
+          "open": {
+            "set": {
+              "chevron.rotation": 180,
+              "panel.height": 100
+            },
+            "when": {
+              "header.tap": {
+                "to": "closed",
+                "animate": {
+                  "chevron.rotation": {
+                    "tween": {
+                      "duration": 0.2,
+                      "ease": "linear"
+                    },
+                    "delay": 0.15
+                  }
+                }
+              }
+            }
+          }
+        },
+        "motions": {
+          "late": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            },
+            "delay": 0.1
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "delay-outside-animate",
+          "path": "/motions/late/delay"
+        }
+      ]
+    },
+    {
+      "name": "enter",
+      "doc": {
+        "nudg": "0.12",
+        "targets": [
+          "header",
+          "chevron",
+          "panel"
+        ],
+        "values": {
+          "chevron.rotation": 0,
+          "panel.height": 0
+        },
+        "animate": {
+          "chevron.rotation": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "linear"
+            }
+          },
+          "panel.height": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            },
+            "delay": 0.1
+          }
+        },
+        "initial": "closed",
+        "states": {
+          "closed": {
+            "when": {
+              "header.tap": "open"
+            }
+          },
+          "open": {
+            "set": {
+              "chevron.rotation": 180,
+              "panel.height": 100
+            },
+            "when": {
+              "header.tap": {
+                "to": "closed",
+                "animate": {
+                  "chevron.rotation": {
+                    "tween": {
+                      "duration": 0.2,
+                      "ease": "linear"
+                    },
+                    "delay": 0.15
+                  }
+                }
+              }
+            },
+            "enter": {
+              "chevron.rotation": {
+                "kick": 100,
+                "spring": {
+                  "duration": 0.3,
+                  "bounce": 0.5
+                },
+                "delay": 0.1
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "delay-outside-animate",
+          "path": "/states/open/enter/chevron.rotation/delay"
+        }
+      ]
+    }
+  ]
+}

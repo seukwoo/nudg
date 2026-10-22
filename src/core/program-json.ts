@@ -6,7 +6,7 @@
 
 import type { EntryEffect, Follow, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
 
-export const PROGRAM_FORMAT = 4;
+export const PROGRAM_FORMAT = 5;
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
@@ -23,7 +23,7 @@ export function programToJson(program: Program): Json {
 
 export function programFromJson(json: unknown): Program {
   const j = json as Record<string, any>;
-  if (![1, 2, 3, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
+  if (![1, 2, 3, 4, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
   return {
     version: j.version,
     targets: j.targets,
@@ -56,9 +56,10 @@ const endpoint = (value: MeasuredEndpoint): Json => typeof value === "number" ? 
 const readEndpoint = (value: any): MeasuredEndpoint => typeof value === "number" ? value : { target: value.target, of: value.of, times: value.times ?? 1, plus: value.plus ?? 0 };
 
 function motion(m: Motion): Json {
-  if (m.kind === "tween") return { kind: "tween", duration: m.duration, ease: m.ease === "linear" ? "linear" : [...m.ease] };
-  const out: Record<string, Json> = { kind: "spring", stiffness: m.stiffness, damping: m.damping, mass: m.mass };
-  if (m.kick !== undefined) out.kick = m.kick;
+  const out: Record<string, Json> =
+    m.kind === "tween" ? { kind: "tween", duration: m.duration, ease: m.ease === "linear" ? "linear" : [...m.ease] } : { kind: "spring", stiffness: m.stiffness, damping: m.damping, mass: m.mass };
+  if (m.kind === "spring" && m.kick !== undefined) out.kick = m.kick;
+  if (m.delay !== undefined) out.delay = m.delay;
   return out;
 }
 

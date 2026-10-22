@@ -203,10 +203,11 @@
         "height",
         "measure",
         "rotation",
-        "tween"
+        "tween",
+        "delay"
       ],
       "html": "accordion.html",
-      "summary": "The panel opens to exactly its content's height, measured from the page; it springs without overshoot, its content fades, and the chevron turns.",
+      "summary": "The panel opens to exactly its content's height, measured from the page; it springs without overshoot and the chevron turns. Opening, the content fades in after a 0.1 s delay, once there is room for it.",
       "prompts": [
         "Let the panel overshoot a little when it opens.",
         "Make the chevron turn a bit before the panel opens."
@@ -786,6 +787,43 @@
       "prompts": [
         "Push the content further along with the drawer.",
         "Darken the scrim less."
+      ]
+    },
+    {
+      "id": "menu",
+      "recipe": "menu",
+      "title": "Menu",
+      "category": "overlays",
+      "tags": [
+        "delay",
+        "stagger",
+        "keyboard",
+        "spring",
+        "tween"
+      ],
+      "html": "menu.html",
+      "summary": "The surface grows down from the anchor and the items arrive one after another, 30 ms apart, through per-property delays on the opening transition. Closing is faster and all at once.",
+      "prompts": [
+        "Space the items further apart.",
+        "Make the menu open with a little overshoot."
+      ]
+    },
+    {
+      "id": "speed-dial",
+      "recipe": "speed-dial",
+      "title": "Speed dial",
+      "category": "buttons",
+      "tags": [
+        "delay",
+        "stagger",
+        "spring",
+        "rotation"
+      ],
+      "html": "speed-dial.html",
+      "summary": "The plus turns into a close mark and three actions rise one after another from the nearest; closing, they leave in the reverse order.",
+      "prompts": [
+        "Make the actions pop in with more bounce.",
+        "Close everything at once instead of in order."
       ]
     }
   ]

@@ -25,6 +25,7 @@ The order below follows real app needs. Release numbers and dates are assigned w
 | Entry keyframes | Released in package 0.9.0 as format 0.8; TypeScript, Swift and Kotlin share conformance | [Spec](spec.md#additions-in-08) |
 | Loops while a state is active | Implemented as format 0.10 (unreleased); spinner, skeleton and typing indicator have starters | [Spec](spec.md#additions-in-010-draft) |
 | Screen transitions (stack, full-screen modal, shared element, drawer) | Implemented as one player with roles plus format 0.11 measured map values (unreleased) | [Design](design.md#screen-transitions-are-one-player-with-roles-format-011) |
+| Sequence and stagger | Implemented as format 0.12 motion delay (unreleased); menu and speed dial have starters | [Design](design.md#sequence-and-stagger-are-a-delay-per-property-format-012) |
 | Decay | Open design work | [Open questions](design.md#open-questions) |
 
 ## Product Stages
@@ -68,7 +69,7 @@ Done when: a TypeScript host cannot misspell its generated target/event/input na
 
 ## Completed: Recipe Coverage for Common App Patterns
 
-Status: complete once formats 0.10 and 0.11 are released. Screen composition turned out to need only measured map values (0.11); the next primitive by count is sequence/stagger (accordion, menu, speed dial).
+Status: complete once formats 0.10 and 0.11 are released. Screen composition turned out to need only measured map values (0.11), and sequence/stagger a motion delay (0.12). Next by the review of the host contract: an optional declared `host` block (events and inputs), then derived gestures and threshold events.
 
 Goal: let an AI answer the common UI words of app development with a standard contract, and let the gaps decide the next motion primitive. The 22 recipes cover single components and media well; navigation, lists, loading, menus and form controls are missing.
 
@@ -76,7 +77,7 @@ Goal: let an AI answer the common UI words of app development with a standard co
 - Done: register the patterns the format can't express yet as recipe contracts with gaps and no starter, so an AI gives a standard answer ("the host does this part") instead of improvising: dropdown / popover menu and FAB speed dial (sequence, stagger), list insert / remove / reorder (collection coordination), spinner, skeleton shimmer and typing indicator (continuous motion), hide-on-scroll navigation (scroll direction), stack push / pop, full-screen modal, shared-element and drawer transitions (screen composition), pinch-zoom image viewer (multi-pointer), free-scrolling carousel (decay).
 - Done: gap-only contracts use `"starter": null` in catalog version 2, gap capabilities are a fixed list, and `nudg recipe` marks them and refuses `--source` with the gaps. Decisions in [Design](design.md#recipes-without-a-starter).
 - Count gaps across the catalog (`nudg recipe --gaps`) and promote the most needed one into the queue below. After registration: screen composition 4, continuous motion 4 (one a workaround), sequence 3, stagger 3, decay 2, others 1. Sequence and stagger together cover four recipes. The nine starter recipes needed no new capability, so the counts stood.
-- Done: continuous motion was promoted and implemented as format 0.10 loops; with `delay` it also covers the typing indicator's stagger. Then screen composition (4) was tried and needed only measured map values, format 0.11; its four recipes have starters. Counts now: sequence 3, decay 2, stagger 2, others 1.
+- Done: continuous motion was promoted and implemented as format 0.10 loops; with `delay` it also covers the typing indicator's stagger. Then screen composition (4) was tried and needed only measured map values, format 0.11; its four recipes have starters. Then sequence and stagger became a per-property delay, format 0.12. Counts now: decay 2, collection coordination 1, multi-pointer 1, scroll direction 1.
 
 Done when: the catalog names every pattern above, each either with a validated starter or with explicit gaps, and the queue's next primitive is chosen from the gap counts.
 
@@ -116,7 +117,7 @@ Goal: deepen the interaction and motion language where current recipes demonstra
 | Layout arithmetic and relative snap points | Bottom sheet and swipe row resting states, drag bounds and derived opacity depended on constants | Implemented across formats 0.6 and 0.9; current recipe gaps are closed |
 | Pausable timers | Toast dismissal and video control auto-hide pause for focus, hover, scrubbing or app suspension | Implemented for format 0.7 with deterministic remaining-time semantics |
 | Keyframes | Reaction bursts and authored validation shakes need more than one kick | Implemented for format 0.8 as transient entry effects with deterministic interruption and reduced motion |
-| Sequence | Accordion requests already ask for the chevron and panel to move in order | Wait for a second independent recipe before adding syntax |
+| Sequence | Accordion, menu and speed dial | Implemented as format 0.12 motion delay |
 | Decay | Free-scrolling carousel variants need inertial travel before snapping | Define velocity, bounds and interruption across platforms |
 | Continuous active motion | Spinner, skeleton, typing indicator and pull-to-refresh | Implemented as format 0.10 loops, with wrap on exit and a per-loop delay |
 | Scroll direction and velocity | App bars can map position but cannot hide on down and reveal on up | Generalize as derived continuous inputs, not a header-only feature |

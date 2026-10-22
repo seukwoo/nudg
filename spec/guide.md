@@ -53,6 +53,7 @@ A motion is an object with exactly one of `spring` or `tween`, or the name of a 
 - `kick` — velocity (units/second) added on state entry without changing the target; always with a `spring`. Only in a state's `enter`, only on numbers. `{ "kick": 6, "spring": { "duration": 0.4, "bounce": 0.5 } }` on `scale` pops; `{ "kick": -400, "spring": { "duration": 0.25, "bounce": 0.7 } }` on `x` shakes.
 - `keyframes` (format 0.8) — intermediate values played on state entry. The current value at 0 and state target at 1 are implicit; list `{ "at", "value" }` points strictly between them with a positive `duration` and optional `ease`.
 - `loop` (format 0.10) — a periodic offset on a number while a state is active; see [Loops](#loops-format-010).
+- `delay` (format 0.12) — seconds before a motion in `animate` starts: `{ "tween": { "duration": 0.15 }, "delay": 0.05 }`. For order and stagger, give a transition's `animate` growing delays (items 30–40 ms apart); for the reverse order, give the closing transition its own. Until the delay ends, the property keeps doing what it was doing. Not in `motions` or `enter`.
 
 ## Structure
 
@@ -206,7 +207,7 @@ Libraries in `examples/motion/` carry the platforms' published spring values: `a
 
 When a person describes UI in natural language, call `nudg_recipe` (or `nudg recipe <term>`) before writing the file. It resolves aliases to a versioned mobile-first contract with expected parts, states, events, inputs, host responsibilities, motion, known gaps and a validated starter. Then express any requested variation with ordinary nudg fields.
 
-Some recipes have no starter (`"starter": null`): menus, speed dials, animated lists, hide-on-scroll bars, image viewers and free-scrolling carousels. Their contract is still the standard answer: use its parts, states and events, write the nudg file for what the format can express (a menu's open and close, a drawer's drag), and tell the person which part the host does and why, from `gaps`. Don't imitate a missing capability with timers or extra states; that is the workaround the gap records.
+Some recipes have no starter (`"starter": null`): animated lists, hide-on-scroll bars, image viewers and free-scrolling carousels. Their contract is still the standard answer: use its parts, states and events, write the nudg file for what the format can express (a menu's open and close, a drawer's drag), and tell the person which part the host does and why, from `gaps`. Don't imitate a missing capability with timers or extra states; that is the workaround the gap records.
 
 | User says | Prefer |
 |---|---|
@@ -254,6 +255,8 @@ Pattern words live in external recipe metadata, not core syntax. Every shipped e
 | slower, softer, more relaxed | raise `duration`; optionally lower `bounce` |
 | pop, punchier feedback | add or raise a `kick` on `scale` in the state's `enter` |
 | shake on error | format 0.8 `enter` keyframes on `x`; use a kick only for a less-authored physical wobble |
+| one after another, stagger, cascade, in order | growing `delay` per property in that transition's `animate`; reverse the delays on the way back |
+| the content should appear after it opens | `delay` on the content's opacity in the opening transition only |
 | keep it spinning / pulsing while loading | a `loop` in that state (format 0.10); `duration` is one cycle, slower = longer |
 | change it everywhere | edit the shared motion library, not each file |
 | make it draggable | add a `dragging` state with `follow`, entered on `dragstart`, left on `dragend` with `nearest` |

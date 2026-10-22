@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Speed dial</title>
+  <style>
+    .dial { position: relative; width: 200px; height: 176px; overflow: hidden; border-radius: 14px; background: #f6f6f4; font: 13px ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; }
+    .dial .scrim { position: absolute; inset: 0; background: #000; }
+    .dial [data-nudg-state~="closed"].scrim, .dial [data-nudg-state~="closed"].action { pointer-events: none; }
+    .dial .fab { position: absolute; right: 12px; bottom: 12px; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 16px; background: #2563eb; color: #fff; box-shadow: 0 4px 12px rgb(37 99 235 / 0.35); cursor: pointer; }
+    .dial .fab svg { width: 22px; height: 22px; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; }
+    .dial .action { position: absolute; right: 17px; display: flex; align-items: center; gap: 8px; padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; transform-origin: right center; }
+    .dial .action span { padding: 4px 8px; border-radius: 6px; background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / 0.12); }
+    .dial .action i { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #fff; box-shadow: 0 2px 8px rgb(0 0 0 / 0.15); font-style: normal; }
+    .dial .action1 { bottom: 62px; }
+    .dial .action2 { bottom: 100px; }
+    .dial .action3 { bottom: 138px; }
+  </style>
+</head>
+<body>
+  <div class="dial">
+    <div class="scrim" data-nudg="scrim"></div>
+    <button class="action action1" data-nudg="action1"><span>Photo</span><i>📷</i></button>
+    <button class="action action2" data-nudg="action2"><span>Note</span><i>📝</i></button>
+    <button class="action action3" data-nudg="action3"><span>Link</span><i>🔗</i></button>
+    <button class="fab" aria-label="Create" aria-expanded="false" data-nudg="fab"><svg viewBox="0 0 22 22" aria-hidden="true" data-nudg="icon"><path d="M11 4v14M4 11h14"/></svg></button>
+  </div>
+  <!-- Host markup for speed-dial.nudg.json. The host runs the chosen action, keeps aria-expanded in step and closes on Escape. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./speed-dial.nudg.json");
+    const fab = document.querySelector(".fab");
+    play(program, document.body, { onState: ([state]) => fab.setAttribute("aria-expanded", String(state === "open")) });
+  </script>
+</body>
+</html>

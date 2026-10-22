@@ -1,0 +1,107 @@
+{
+ "nudgProgram": 5,
+ "version": "0.12",
+ "targets": [
+  "header",
+  "chevron",
+  "panel"
+ ],
+ "properties": [
+  {
+   "key": "chevron.rotation",
+   "kind": "number",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "panel.height",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "chevron.rotation",
+   "motion": {
+    "kind": "tween",
+    "duration": 0.2,
+    "ease": "linear"
+   }
+  },
+  {
+   "key": "panel.height",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 438.6490844928604,
+    "damping": 41.88790204786391,
+    "mass": 1,
+    "delay": 0.1
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "closed",
+  "states": [
+   {
+    "name": "closed",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "header.tap",
+      "animate": [],
+      "to": "open"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "open",
+    "set": [
+     {
+      "key": "chevron.rotation",
+      "value": [
+       180
+      ]
+     },
+     {
+      "key": "panel.height",
+      "value": [
+       100
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "header.tap",
+      "animate": [
+       {
+        "key": "chevron.rotation",
+        "motion": {
+         "kind": "tween",
+         "duration": 0.2,
+         "ease": "linear",
+         "delay": 0.15
+        }
+       }
+      ],
+      "to": "closed"
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

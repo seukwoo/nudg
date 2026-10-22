@@ -1,0 +1,72 @@
+{
+  "nudg": "0.12",
+  "note": "A floating action button that fans out three actions. The plus turns into a close mark at once, and the actions rise one after another from the nearest; closing, they leave in the reverse order.",
+  "targets": ["fab", "icon", "scrim", "action1", "action2", "action3"],
+  "values": {
+    "icon.rotation": 0,
+    "scrim.opacity": 0,
+    "action1.opacity": 0, "action1.scale": 0.6, "action1.y": 12,
+    "action2.opacity": 0, "action2.scale": 0.6, "action2.y": 12,
+    "action3.opacity": 0, "action3.scale": 0.6, "action3.y": 12
+  },
+  "animate": {
+    "icon.rotation": { "spring": { "duration": 0.3, "bounce": 0.15 } },
+    "scrim.opacity": { "tween": { "duration": 0.2, "ease": "out" } },
+    "action1.opacity": { "tween": { "duration": 0.12, "ease": "out" } },
+    "action2.opacity": { "tween": { "duration": 0.12, "ease": "out" } },
+    "action3.opacity": { "tween": { "duration": 0.12, "ease": "out" } },
+    "action1.scale": { "spring": { "duration": 0.3, "bounce": 0.2 } },
+    "action2.scale": { "spring": { "duration": 0.3, "bounce": 0.2 } },
+    "action3.scale": { "spring": { "duration": 0.3, "bounce": 0.2 } },
+    "action1.y": { "spring": { "duration": 0.3, "bounce": 0.1 } },
+    "action2.y": { "spring": { "duration": 0.3, "bounce": 0.1 } },
+    "action3.y": { "spring": { "duration": 0.3, "bounce": 0.1 } }
+  },
+  "initial": "closed",
+  "states": {
+    "closed": {
+      "when": {
+        "fab.tap": {
+          "to": "open",
+          "note": "Nearest action first, 40 ms apart.",
+          "animate": {
+            "action2.opacity": { "tween": { "duration": 0.12, "ease": "out" }, "delay": 0.04 },
+            "action2.scale": { "spring": { "duration": 0.3, "bounce": 0.2 }, "delay": 0.04 },
+            "action2.y": { "spring": { "duration": 0.3, "bounce": 0.1 }, "delay": 0.04 },
+            "action3.opacity": { "tween": { "duration": 0.12, "ease": "out" }, "delay": 0.08 },
+            "action3.scale": { "spring": { "duration": 0.3, "bounce": 0.2 }, "delay": 0.08 },
+            "action3.y": { "spring": { "duration": 0.3, "bounce": 0.1 }, "delay": 0.08 }
+          }
+        }
+      }
+    },
+    "open": {
+      "set": {
+        "icon.rotation": 45,
+        "scrim.opacity": 0.3,
+        "action1.opacity": 1, "action1.scale": 1, "action1.y": 0,
+        "action2.opacity": 1, "action2.scale": 1, "action2.y": 0,
+        "action3.opacity": 1, "action3.scale": 1, "action3.y": 0
+      },
+      "when": {
+        "fab.tap": {
+          "to": "closed",
+          "note": "The reverse order: farthest action first.",
+          "animate": {
+            "action2.opacity": { "tween": { "duration": 0.1, "ease": "out" }, "delay": 0.03 },
+            "action2.scale": { "spring": { "duration": 0.25, "bounce": 0 }, "delay": 0.03 },
+            "action2.y": { "spring": { "duration": 0.25, "bounce": 0 }, "delay": 0.03 },
+            "action1.opacity": { "tween": { "duration": 0.1, "ease": "out" }, "delay": 0.06 },
+            "action1.scale": { "spring": { "duration": 0.25, "bounce": 0 }, "delay": 0.06 },
+            "action1.y": { "spring": { "duration": 0.25, "bounce": 0 }, "delay": 0.06 }
+          }
+        },
+        "scrim.tap": "closed",
+        "action1.tap": "closed",
+        "action2.tap": "closed",
+        "action3.tap": "closed",
+        "host.close": "closed"
+      }
+    }
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "conformance": "0.12",
+  "name": "Delay: reduced motion ignores delays",
+  "doc": {
+    "nudg": "0.12",
+    "targets": [
+      "header",
+      "chevron",
+      "panel"
+    ],
+    "values": {
+      "chevron.rotation": 0,
+      "panel.height": 0
+    },
+    "animate": {
+      "chevron.rotation": {
+        "tween": {
+          "duration": 0.2,
+          "ease": "linear"
+        }
+      },
+      "panel.height": {
+        "spring": {
+          "duration": 0.3,
+          "bounce": 0
+        },
+        "delay": 0.1
+      }
+    },
+    "initial": "closed",
+    "states": {
+      "closed": {
+        "when": {
+          "header.tap": "open"
+        }
+      },
+      "open": {
+        "set": {
+          "chevron.rotation": 180,
+          "panel.height": 100
+        },
+        "when": {
+          "header.tap": {
+            "to": "closed",
+            "animate": {
+              "chevron.rotation": {
+                "tween": {
+                  "duration": 0.2,
+                  "ease": "linear"
+                },
+                "delay": 0.15
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "reducedMotion": true,
+  "steps": [
+    {
+      "t": 0.1,
+      "send": "header.tap"
+    },
+    {
+      "t": 0.175,
+      "expect": {
+        "values": {
+          "chevron.rotation": 90,
+          "panel.height": 50
+        }
+      }
+    }
+  ]
+}

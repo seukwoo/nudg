@@ -13,13 +13,16 @@ public enum Value: Equatable {
 
 public enum RuntimeError: Error { case timeWentBackwards(Double, Double), badStatePath(String) }
 
-private enum Segment {
+private indirect enum Segment {
   case motion(t0: Double, from: [Double], v0: [Double], to: [Double], motion: Motion?)
+  /** A motion that starts at `t0` (v0.12); until then the property does what `prev` does. */
+  case delayed(t0: Double, prev: Segment, to: [Double], motion: Motion)
   case keyframes(t0: Double, from: [Double], to: [Double], frames: [Keyframe], duration: Double, ease: Ease, owner: State)
   case follow(key: String, t0: Double, anchor: Double, input0: Double, follow: Follow, owner: State)
+  var isKeyframes: Bool { if case .keyframes = self { return true }; return false }
   var to: [Double]? {
     switch self {
-    case let .motion(_, _, _, to, _), let .keyframes(_, _, to, _, _, _, _): return to
+    case let .motion(_, _, _, to, _), let .keyframes(_, _, to, _, _, _, _), let .delayed(_, _, to, _): return to
     case .follow: return nil
     }
   }
@@ -266,6 +269,10 @@ public final class Runtime {
       return evaluateMotion(t0: t0, from: from, v0: v0, to: to, motion: motion, t: t)
     case let .keyframes(t0, from, to, frames, duration, ease, _):
       return evaluateKeyframes(t0: t0, from: from, to: to, frames: frames, duration: duration, ease: ease, t: t)
+    case let .delayed(t0, prev, to, motion):
+      if t < t0 { return evaluate(prev, t) }
+      let (from, v0) = evaluate(prev, t0)
+      return evaluateMotion(t0: t0, from: from, v0: v0, to: to, motion: motion, t: t)
     }
   }
 
@@ -315,12 +322,12 @@ public final class Runtime {
     let zero = to.map { _ in 0.0 }
     guard let motion else { return (to, zero) }
     switch motion {
-    case let .tween(duration, ease):
+    case let .tween(duration, ease, _):
       if dt >= duration { return (to, zero) }
       let u = dt / duration
       let p = easeAt(ease, u), slope = easeSlope(ease, u) / duration
       return (zip(from, to).map { $0 + ($1 - $0) * p }, zip(from, to).map { ($1 - $0) * slope })
-    case let .spring(k, c, m, _):
+    case let .spring(k, c, m, _, _):
       var pos: [Double] = [], vel: [Double] = []
       for i in from.indices {
         let (x, v) = springAt(stiffness: k, damping: c, mass: m, x0: from[i] - to[i], v0: v0[i], t: dt)
@@ -425,7 +432,7 @@ public final class Runtime {
         segments[key] = .keyframes(t0: t0, from: from, to: to, frames: frames, duration: duration, ease: ease, owner: owner)
         continue
       }
-      if case let .motion(_, _, _, current, _) = segment, current == to, handoff[key] == nil { continue }
+      if let current = segment.to, current == to, handoff[key] == nil, !segment.isKeyframes { continue }
       if snap {
         segments[key] = .motion(t0: t, from: to, v0: to.map { _ in 0 }, to: to, motion: nil)
         continue
@@ -433,6 +440,15 @@ public final class Runtime {
       var (pos, vel) = handoff[key] ?? evaluate(segment, t)
       if committed.contains(key) { vel = vel.map { _ in 0 } }
       let motion = overrides[key] ?? program.animate[key]
+      if let motion, motion.delay > 0, !reduced {
+        // Until the delay ends the property keeps doing what it was doing: a pending
+        // motion that hasn't started is dropped, and a value placed here holds still.
+        var prev = segment
+        if handoff[key] != nil || committed.contains(key) { prev = .motion(t0: t, from: pos, v0: vel.map { _ in 0 }, to: pos, motion: nil) }
+        else if case let .delayed(t0, pending, _, _) = segment, t < t0 { prev = pending }
+        segments[key] = .delayed(t0: t + motion.delay, prev: prev, to: to, motion: motion)
+        continue
+      }
       segments[key] = .motion(t0: t, from: pos, v0: vel, to: to, motion: motion.map { reduced ? REDUCED : $0 })
     }
 
@@ -447,7 +463,7 @@ public final class Runtime {
           segments[key] = .keyframes(t0: t, from: pos, to: to, frames: frames, duration: duration, ease: ease, owner: state)
         case let .kick(kick):
           var vel = v
-          if case let .spring(_, _, _, k) = kick { vel[0] += k ?? 0 }
+          if case let .spring(_, _, _, k, _) = kick { vel[0] += k ?? 0 }
           segments[key] = .motion(t0: t, from: pos, v0: vel, to: to, motion: kick)
         }
       }
@@ -593,11 +609,18 @@ public final class Runtime {
     let prop = program.property(key)!
     if prop.map?.sourceKind == "input" { return true }
     let source = prop.map?.source ?? key
-    if case let .keyframes(t0, _, _, _, duration, _, _) = segments[source]! { return t - t0 >= duration }
-    guard case let .motion(t0, from, v0, to, motion) = segments[source]!, let motion else { return true }
+    var segment = segments[source]!
+    // A pending motion is a change still to come.
+    if case let .delayed(t0, prev, to, motion) = segment {
+      if t < t0 { return false }
+      let (from, v0) = evaluate(prev, t0)
+      segment = .motion(t0: t0, from: from, v0: v0, to: to, motion: motion)
+    }
+    if case let .keyframes(t0, _, _, _, duration, _, _) = segment { return t - t0 >= duration }
+    guard case let .motion(t0, from, v0, to, motion) = segment, let motion else { return true }
     switch motion {
-    case let .tween(duration, _): return t - t0 >= duration
-    case let .spring(k, _, m, _):
+    case let .tween(duration, _, _): return t - t0 >= duration
+    case let .spring(k, _, m, _, _):
       let (pos, vel) = evaluateMotion(t0: t0, from: from, v0: v0, to: to, motion: motion, t: t)
       let eps = program.property(source)!.kind == .color ? REST_COLOR : REST_NUMBER
       let inertia = m / k

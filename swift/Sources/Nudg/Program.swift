@@ -1,4 +1,4 @@
-// A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 4).
+// A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 5).
 // Everything is already validated and resolved; this only decodes it.
 
 import Foundation
@@ -11,8 +11,14 @@ public enum Ease {
 }
 
 public enum Motion {
-  case spring(stiffness: Double, damping: Double, mass: Double, kick: Double?)
-  case tween(duration: Double, ease: Ease)
+  case spring(stiffness: Double, damping: Double, mass: Double, kick: Double?, delay: Double = 0)
+  case tween(duration: Double, ease: Ease, delay: Double = 0)
+  /** Seconds before the motion starts (v0.12). */
+  public var delay: Double {
+    switch self {
+    case let .spring(_, _, _, _, delay), let .tween(_, _, delay): return delay
+    }
+  }
 }
 
 public struct Keyframe {
@@ -145,8 +151,8 @@ public struct Program {
 
   /** Reads `nudg compile` output. */
   public static func decode(_ data: Data) throws -> Program {
-    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...4).contains(format) else {
-      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 4). Compile it with `nudg compile`.")
+    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...5).contains(format) else {
+      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 5). Compile it with `nudg compile`.")
     }
     let properties: [(String, Property)] = (j["properties"] as! [[String: Any]]).map { p in
       (p["key"] as! String, Property(
@@ -179,9 +185,9 @@ private func readMotion(_ v: Any) -> Motion {
   if (m["kind"] as! String) == "tween" {
     let ease: Ease
     if let e = m["ease"] as? [Any] { let d = doubles(e); ease = .bezier(d[0], d[1], d[2], d[3]) } else { ease = .linear }
-    return .tween(duration: number(m["duration"])!, ease: ease)
+    return .tween(duration: number(m["duration"])!, ease: ease, delay: number(m["delay"]) ?? 0)
   }
-  return .spring(stiffness: number(m["stiffness"])!, damping: number(m["damping"])!, mass: number(m["mass"])!, kick: number(m["kick"]))
+  return .spring(stiffness: number(m["stiffness"])!, damping: number(m["damping"])!, mass: number(m["mass"])!, kick: number(m["kick"]), delay: number(m["delay"]) ?? 0)
 }
 
 private func readEase(_ v: Any?) -> Ease {

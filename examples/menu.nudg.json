@@ -1,0 +1,64 @@
+{
+  "nudg": "0.12",
+  "note": "A dropdown menu. The surface grows down from the anchor, then the items arrive one after another, 30 ms apart; choosing an item, tapping outside or Escape closes it faster than it opened, all at once.",
+  "targets": ["anchor", "scrim", "menu", "item1", "item2", "item3", "item4"],
+  "values": {
+    "menu.opacity": 0, "menu.scaleY": 0.85,
+    "item1.opacity": 0, "item1.y": -6,
+    "item2.opacity": 0, "item2.y": -6,
+    "item3.opacity": 0, "item3.y": -6,
+    "item4.opacity": 0, "item4.y": -6
+  },
+  "animate": {
+    "menu.opacity": { "tween": { "duration": 0.1, "ease": "out" } },
+    "menu.scaleY": { "spring": { "duration": 0.25, "bounce": 0 } },
+    "item1.opacity": { "tween": { "duration": 0.1, "ease": "out" } },
+    "item2.opacity": { "tween": { "duration": 0.1, "ease": "out" } },
+    "item3.opacity": { "tween": { "duration": 0.1, "ease": "out" } },
+    "item4.opacity": { "tween": { "duration": 0.1, "ease": "out" } },
+    "item1.y": { "spring": { "duration": 0.25, "bounce": 0 } },
+    "item2.y": { "spring": { "duration": 0.25, "bounce": 0 } },
+    "item3.y": { "spring": { "duration": 0.25, "bounce": 0 } },
+    "item4.y": { "spring": { "duration": 0.25, "bounce": 0 } }
+  },
+  "initial": "closed",
+  "states": {
+    "closed": {
+      "when": {
+        "anchor.tap": {
+          "to": "open",
+          "note": "The stagger: each item waits 30 ms longer than the one above it.",
+          "animate": {
+            "item1.opacity": { "tween": { "duration": 0.15, "ease": "out" }, "delay": 0.05 },
+            "item2.opacity": { "tween": { "duration": 0.15, "ease": "out" }, "delay": 0.08 },
+            "item3.opacity": { "tween": { "duration": 0.15, "ease": "out" }, "delay": 0.11 },
+            "item4.opacity": { "tween": { "duration": 0.15, "ease": "out" }, "delay": 0.14 },
+            "item1.y": { "spring": { "duration": 0.3, "bounce": 0 }, "delay": 0.05 },
+            "item2.y": { "spring": { "duration": 0.3, "bounce": 0 }, "delay": 0.08 },
+            "item3.y": { "spring": { "duration": 0.3, "bounce": 0 }, "delay": 0.11 },
+            "item4.y": { "spring": { "duration": 0.3, "bounce": 0 }, "delay": 0.14 }
+          }
+        }
+      }
+    },
+    "open": {
+      "set": {
+        "menu.opacity": 1, "menu.scaleY": 1,
+        "item1.opacity": 1, "item1.y": 0,
+        "item2.opacity": 1, "item2.y": 0,
+        "item3.opacity": 1, "item3.y": 0,
+        "item4.opacity": 1, "item4.y": 0
+      },
+      "when": {
+        "anchor.tap": "closed",
+        "scrim.tap": "closed",
+        "menu.key.escape": "closed",
+        "item1.tap": "closed",
+        "item2.tap": "closed",
+        "item3.tap": "closed",
+        "item4.tap": "closed",
+        "host.close": "closed"
+      }
+    }
+  }
+}

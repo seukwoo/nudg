@@ -78,7 +78,7 @@ test("filters: category, tag and search", { skip }, async () => {
   await go("#category=lists");
   assert.equal(await browser.evaluate("document.getElementById('browse-title').textContent"), "Lists & rows");
   await go("#tag=kick");
-  assert.deepEqual(await browser.evaluate("[...document.querySelectorAll('#grid h3')].map((h) => h.textContent)"), ["Like"]);
+  assert.deepEqual(await browser.evaluate("[...document.querySelectorAll('#grid h3')].map((h) => h.textContent).sort()"), ["Badge", "Like", "Rating", "Stepper"]);
   await go("#tag=keyframes");
   assert.deepEqual(await browser.evaluate("[...document.querySelectorAll('#grid h3')].map((h) => h.textContent)"), ["Shake on error"]);
   await go("#");

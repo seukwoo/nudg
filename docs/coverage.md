@@ -11,7 +11,7 @@ Legend: **yes** supported, with an example; **yes, no example** supported but no
 | Tap, press and release, cancel | yes | toggle, button-press, like |
 | Drag along x or y (follow the finger, throw) | yes | toggle-drag, swipe-row, bottom-sheet, carousel, slider |
 | Hover in and out | yes | hover-card, tooltip |
-| Focus and blur | yes, no example | |
+| Focus and blur | yes | text-field |
 | Keys | yes | slider, dialog |
 | Time (auto-dismiss, delays, pause/resume reasons) | yes | toast, tooltip, video player |
 | Events from the app (`host.*`) | yes | toast, pull-to-refresh, shake, voice chat, video call, camera, music player, video player |

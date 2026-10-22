@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Page indicator</title>
+  <style>
+    .page-dots { display: flex; align-items: center; gap: 8px; padding: 8px; }
+    /* Each dot is a button; nudg sets its width and color. The pseudo-element widens the hit area. */
+    .page-dots button { position: relative; width: 8px; height: 8px; padding: 0; border: 0; border-radius: 4px; background: #d1d5db; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .page-dots button::before { content: ""; position: absolute; inset: -8px -4px; }
+  </style>
+</head>
+<body>
+  <div class="page-dots" role="tablist" aria-label="Pages">
+    <button role="tab" aria-label="Page 1" data-nudg="dot1"></button>
+    <button role="tab" aria-label="Page 2" data-nudg="dot2"></button>
+    <button role="tab" aria-label="Page 3" data-nudg="dot3"></button>
+    <button role="tab" aria-label="Page 4" data-nudg="dot4"></button>
+  </div>
+  <!-- Host markup for page-indicator.nudg.json. In an app the pager selects the page; here each dot is tappable. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./page-indicator.nudg.json");
+    play(program, document.body);
+  </script>
+</body>
+</html>

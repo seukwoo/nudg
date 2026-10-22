@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Radio group</title>
+  <style>
+    .radio-group { display: grid; gap: 2px; font: 14px ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; }
+    .radio-group button { display: flex; align-items: center; gap: 10px; padding: 6px; border: 0; border-radius: 6px; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .radio-group .ring { display: grid; place-items: center; width: 20px; height: 20px; box-sizing: border-box; border: 2px solid #6b7280; border-radius: 50%; }
+    .radio-group .dot { width: 10px; height: 10px; border-radius: 50%; background: #2563eb; }
+  </style>
+</head>
+<body>
+  <div class="radio-group" role="radiogroup" aria-label="Delivery">
+    <button role="radio" aria-checked="true" tabindex="0" data-nudg="option1"><span class="ring"><span class="dot" data-nudg="dot1"></span></span>Standard</button>
+    <button role="radio" aria-checked="false" tabindex="-1" data-nudg="option2"><span class="ring"><span class="dot" data-nudg="dot2"></span></span>Express</button>
+    <button role="radio" aria-checked="false" tabindex="-1" data-nudg="option3"><span class="ring"><span class="dot" data-nudg="dot3"></span></span>Pick up</button>
+  </div>
+  <!-- Host markup for radio-group.nudg.json. The host keeps aria-checked and the roving tabindex in step, and moves focus with the arrow keys. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./radio-group.nudg.json");
+    const options = [...document.querySelectorAll("[role=radio]")];
+    play(program, document.body, {
+      onState: ([state]) => {
+        const selected = ["first", "second", "third"].indexOf(state);
+        const hadFocus = options.includes(document.activeElement);
+        options.forEach((option, i) => {
+          option.setAttribute("aria-checked", String(i === selected));
+          option.tabIndex = i === selected ? 0 : -1;
+        });
+        if (hadFocus) options[selected].focus();
+      },
+    });
+  </script>
+</body>
+</html>

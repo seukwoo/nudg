@@ -1,0 +1,29 @@
+{
+  "nudg": "0.2",
+  "note": "Page dots for a pager. The current dot stretches into a pill and darkens; tap a dot to go to its page.",
+  "targets": ["dot1", "dot2", "dot3", "dot4"],
+  "values": {
+    "dot1.width": 8, "dot1.color": "#D1D5DB",
+    "dot2.width": 8, "dot2.color": "#D1D5DB",
+    "dot3.width": 8, "dot3.color": "#D1D5DB",
+    "dot4.width": 8, "dot4.color": "#D1D5DB"
+  },
+  "animate": {
+    "dot1.width": { "spring": { "duration": 0.35, "bounce": 0.15 } },
+    "dot2.width": { "spring": { "duration": 0.35, "bounce": 0.15 } },
+    "dot3.width": { "spring": { "duration": 0.35, "bounce": 0.15 } },
+    "dot4.width": { "spring": { "duration": 0.35, "bounce": 0.15 } },
+    "dot1.color": { "tween": { "duration": 0.2, "ease": "out" } },
+    "dot2.color": { "tween": { "duration": 0.2, "ease": "out" } },
+    "dot3.color": { "tween": { "duration": 0.2, "ease": "out" } },
+    "dot4.color": { "tween": { "duration": 0.2, "ease": "out" } }
+  },
+  "initial": "page1",
+  "when": { "dot1.tap": "page1", "dot2.tap": "page2", "dot3.tap": "page3", "dot4.tap": "page4" },
+  "states": {
+    "page1": { "set": { "dot1.width": 24, "dot1.color": "#1C1C1A" } },
+    "page2": { "set": { "dot2.width": 24, "dot2.color": "#1C1C1A" } },
+    "page3": { "set": { "dot3.width": 24, "dot3.color": "#1C1C1A" } },
+    "page4": { "set": { "dot4.width": 24, "dot4.color": "#1C1C1A" } }
+  }
+}

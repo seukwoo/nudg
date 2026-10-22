@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Checkbox</title>
+  <style>
+    .checkbox { display: inline-flex; align-items: center; gap: 10px; padding: 6px; border: 0; background: none; font: 14px ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .checkbox .box { display: grid; place-items: center; width: 20px; height: 20px; box-sizing: border-box; border: 2px solid #6b7280; border-radius: 5px; background: #fff; }
+    .checkbox[data-nudg-state~="value/checked"] .box { border-color: #2563eb; }
+    .checkbox .check { width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+</head>
+<body>
+  <button class="checkbox" role="checkbox" aria-checked="false" data-nudg="control">
+    <span class="box" data-nudg="box"><svg class="check" data-nudg="check" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7"/></svg></span>
+    Remember me
+  </button>
+  <!-- Host markup for checkbox.nudg.json. The host keeps aria-checked in step with the state. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./checkbox.nudg.json");
+    const control = document.querySelector(".checkbox");
+    play(program, document.body, { onState: (state) => control.setAttribute("aria-checked", String(state.includes("value/checked"))) });
+  </script>
+</body>
+</html>

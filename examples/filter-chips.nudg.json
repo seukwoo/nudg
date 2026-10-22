@@ -1,0 +1,44 @@
+{
+  "nudg": "0.1",
+  "note": "Filter chips that select independently. A selected chip fills and makes room for a check mark, so it widens smoothly; each chip is its own region.",
+  "targets": ["chip1", "chip2", "chip3", "check1", "check2", "check3"],
+  "values": {
+    "chip1.color": "#FFFFFF", "check1.width": 0, "check1.opacity": 0,
+    "chip2.color": "#FFFFFF", "check2.width": 0, "check2.opacity": 0,
+    "chip3.color": "#FFFFFF", "check3.width": 0, "check3.opacity": 0
+  },
+  "animate": {
+    "chip1.color": { "tween": { "duration": 0.15, "ease": "out" } },
+    "chip2.color": { "tween": { "duration": 0.15, "ease": "out" } },
+    "chip3.color": { "tween": { "duration": 0.15, "ease": "out" } },
+    "check1.width": { "spring": { "duration": 0.3, "bounce": 0 } },
+    "check2.width": { "spring": { "duration": 0.3, "bounce": 0 } },
+    "check3.width": { "spring": { "duration": 0.3, "bounce": 0 } },
+    "check1.opacity": { "tween": { "duration": 0.15, "ease": "out" } },
+    "check2.opacity": { "tween": { "duration": 0.15, "ease": "out" } },
+    "check3.opacity": { "tween": { "duration": 0.15, "ease": "out" } }
+  },
+  "regions": {
+    "chip1": {
+      "initial": "off",
+      "states": {
+        "off": { "when": { "chip1.tap": "on" } },
+        "on": { "set": { "chip1.color": "#DBEAFE", "check1.width": 20, "check1.opacity": 1 }, "when": { "chip1.tap": "off" } }
+      }
+    },
+    "chip2": {
+      "initial": "on",
+      "states": {
+        "off": { "when": { "chip2.tap": "on" } },
+        "on": { "set": { "chip2.color": "#DBEAFE", "check2.width": 20, "check2.opacity": 1 }, "when": { "chip2.tap": "off" } }
+      }
+    },
+    "chip3": {
+      "initial": "off",
+      "states": {
+        "off": { "when": { "chip3.tap": "on" } },
+        "on": { "set": { "chip3.color": "#DBEAFE", "check3.width": 20, "check3.opacity": 1 }, "when": { "chip3.tap": "off" } }
+      }
+    }
+  }
+}

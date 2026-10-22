@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Text field</title>
+  <style>
+    .text-field { width: 240px; font: 14px ui-sans-serif, system-ui, sans-serif; }
+    .text-field .field { position: relative; height: 52px; border-radius: 6px 6px 0 0; background: #f3f4f6; }
+    /* Resting, the label sits where the text goes; nudg lifts and shrinks it from the left edge. */
+    .text-field label { position: absolute; left: 12px; top: 17px; color: #6b7280; transform-origin: left center; pointer-events: none; }
+    .text-field input { box-sizing: border-box; width: 100%; height: 100%; padding: 20px 12px 6px; border: 0; background: none; font: inherit; color: #1c1c1a; outline: none; }
+    .text-field .rest-line { position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: #9ca3af; }
+    /* The active line is full width at rest and scaled to 0; focus grows it from the center. */
+    .text-field .line { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: #2563eb; }
+    .text-field .message { margin: 4px 12px 0; font-size: 12px; color: #dc2626; }
+  </style>
+</head>
+<body>
+  <div class="text-field">
+    <div class="field" data-nudg="field">
+      <label for="email" data-nudg="label">Email</label>
+      <input id="email" type="email" autocomplete="off" aria-describedby="email-message">
+      <span class="rest-line"></span>
+      <span class="line" data-nudg="line"></span>
+    </div>
+    <p class="message" id="email-message" data-nudg="message">Enter an address with an @.</p>
+  </div>
+  <!-- Host markup for text-field.nudg.json. The app reports whether there is text, and validates on blur. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./text-field.nudg.json");
+    const player = play(program, document.body);
+    const input = document.querySelector("#email");
+    input.addEventListener("input", () => {
+      player.send(input.value ? "host.filled" : "host.empty");
+      player.send("host.valid");
+    });
+    input.addEventListener("blur", () => input.value && !input.value.includes("@") && player.send("host.invalid"));
+  </script>
+</body>
+</html>

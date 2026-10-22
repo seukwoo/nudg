@@ -14,6 +14,10 @@
       "title": "Toggles & checks"
     },
     {
+      "id": "forms",
+      "title": "Fields & forms"
+    },
+    {
       "id": "lists",
       "title": "Lists & rows"
     },
@@ -498,6 +502,162 @@
       "prompts": [
         "Keep the app bar large for the first 20 pixels of scrolling.",
         "Make the accent fade later than the header shrinks."
+      ]
+    },
+    {
+      "id": "text-field",
+      "recipe": "text-field",
+      "title": "Text field",
+      "category": "forms",
+      "tags": [
+        "focus",
+        "parallel",
+        "host-event",
+        "spring"
+      ],
+      "html": "text-field.html",
+      "summary": "The label floats while the field is focused or has text, the active line grows from the center on focus, and the app's validation turns it red with a message. Focus, label and validity are parallel regions.",
+      "prompts": [
+        "Make the label float a little faster than the line grows.",
+        "Show the error message sliding down instead of fading."
+      ]
+    },
+    {
+      "id": "search-bar",
+      "recipe": "search-bar",
+      "title": "Search bar",
+      "category": "forms",
+      "tags": [
+        "measure",
+        "width",
+        "keyboard",
+        "tween"
+      ],
+      "html": "search-bar.html",
+      "summary": "The search button opens into a field across the toolbar's measured width while the title fades out. Escape or the close button collapses it.",
+      "prompts": [
+        "Open the field with a little overshoot.",
+        "Fade the title out more slowly than the bar opens."
+      ]
+    },
+    {
+      "id": "stepper",
+      "recipe": "stepper",
+      "title": "Stepper",
+      "category": "forms",
+      "tags": [
+        "kick",
+        "host-event",
+        "parallel"
+      ],
+      "html": "stepper.html",
+      "summary": "The number nudges up on increase and down on decrease; at a limit it shakes and the button that can't go further dims. The app owns the number and the limits.",
+      "prompts": [
+        "Make the number move less on each step.",
+        "Make the refusal shake gentler."
+      ]
+    },
+    {
+      "id": "checkbox",
+      "recipe": "checkbox",
+      "title": "Checkbox",
+      "category": "toggles",
+      "tags": [
+        "spring",
+        "parallel",
+        "transition-animate"
+      ],
+      "html": "checkbox.html",
+      "summary": "The box fills and the check mark pops in; unchecking clears without a pop. The box sinks a little while pressed.",
+      "prompts": [
+        "Make the check mark pop more.",
+        "Let the box sink less while pressed."
+      ]
+    },
+    {
+      "id": "radio-group",
+      "recipe": "radio-group",
+      "title": "Radio group",
+      "category": "toggles",
+      "tags": [
+        "any-state-when",
+        "keyboard",
+        "spring"
+      ],
+      "html": "radio-group.html",
+      "summary": "The selected dot grows in while the previous one shrinks away. Tap an option or use the arrow keys; the host keeps the roving tabindex. WAI-ARIA radio group pattern.",
+      "prompts": [
+        "Make the dot grow in without overshoot.",
+        "Make the old dot disappear faster than the new one appears."
+      ]
+    },
+    {
+      "id": "filter-chips",
+      "recipe": "chip",
+      "title": "Filter chips",
+      "category": "toggles",
+      "tags": [
+        "width",
+        "parallel",
+        "spring",
+        "tween"
+      ],
+      "html": "filter-chips.html",
+      "summary": "Each chip selects on its own. A selected chip fills and opens room for a check mark, so it widens smoothly instead of jumping.",
+      "prompts": [
+        "Make the chips widen with a little bounce.",
+        "Use a stronger fill color for selected chips."
+      ]
+    },
+    {
+      "id": "rating",
+      "recipe": "rating",
+      "title": "Rating",
+      "category": "toggles",
+      "tags": [
+        "kick",
+        "any-state-when",
+        "tween"
+      ],
+      "html": "rating.html",
+      "summary": "Tap a star: it and every star before it fill, and the tapped one pops. Tapping it again pops it again, because re-entering a state replays its entry.",
+      "prompts": [
+        "Make the pop smaller and quicker.",
+        "Fill the stars a little slower."
+      ]
+    },
+    {
+      "id": "page-indicator",
+      "recipe": "page-indicator",
+      "title": "Page indicator",
+      "category": "navigation",
+      "tags": [
+        "width",
+        "any-state-when",
+        "spring"
+      ],
+      "html": "page-indicator.html",
+      "summary": "The current page's dot stretches into a pill and darkens. Tap a dot to go to its page.",
+      "prompts": [
+        "Make the active pill longer.",
+        "Let the pill stretch with a bit more bounce."
+      ]
+    },
+    {
+      "id": "badge",
+      "recipe": "badge",
+      "title": "Badge",
+      "category": "feedback",
+      "tags": [
+        "kick",
+        "host-event",
+        "spring"
+      ],
+      "html": "badge.html",
+      "summary": "The unread count scales in with the first message and pops with each new one the app reports; opening the bell clears it.",
+      "prompts": [
+        "Make each new message pop more.",
+        "Make clearing the badge a quick fade instead of a shrink."
       ]
     }
   ]

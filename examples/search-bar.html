@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Search bar</title>
+  <style>
+    .search-toolbar { position: relative; display: flex; align-items: center; width: 260px; height: 40px; font: 14px ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; }
+    .search-toolbar h2 { margin: 0 0 0 4px; font-size: 18px; }
+    /* Anchored to the right edge, so growing its width opens it leftward over the title. */
+    .search-toolbar .bar { position: absolute; top: 0; right: 0; display: flex; align-items: center; width: 40px; height: 40px; border-radius: 20px; background: #f3f4f6; overflow: hidden; }
+    .search-toolbar .bar button { flex: none; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .search-toolbar .bar svg { width: 18px; height: 18px; fill: none; stroke: #1c1c1a; stroke-width: 2; stroke-linecap: round; }
+    /* Same fill as the bar, so collapsed it covers the close button behind it. */
+    .search-toolbar .open { position: absolute; right: 0; background: #f3f4f6; }
+    .search-toolbar input { flex: 1; min-width: 0; margin-left: 14px; border: 0; background: none; font: inherit; color: inherit; outline: none; }
+    /* Collapsed, only the search button can be reached; expanded, it fades out of the way of the close button. */
+    .search-toolbar [data-nudg-state~="collapsed"] input, .search-toolbar [data-nudg-state~="collapsed"].close { visibility: hidden; }
+    .search-toolbar [data-nudg-state~="expanded"].open { pointer-events: none; }
+  </style>
+</head>
+<body>
+  <div class="search-toolbar" data-nudg="toolbar">
+    <h2 data-nudg="title">Inbox</h2>
+    <div class="bar" data-nudg="bar">
+      <input type="search" placeholder="Search mail" aria-label="Search mail" data-nudg="field">
+      <button class="close" aria-label="Close search" data-nudg="close"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M4 4l10 10M14 4L4 14"/></svg></button>
+      <button class="open" aria-label="Search" data-nudg="open"><svg viewBox="0 0 18 18" aria-hidden="true"><circle cx="7.5" cy="7.5" r="5"/><path d="M11.5 11.5L16 16"/></svg></button>
+    </div>
+  </div>
+  <!-- Host markup for search-bar.nudg.json. The host moves focus into the field when it opens and back to the search button when it closes. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./search-bar.nudg.json");
+    const input = document.querySelector("input");
+    play(program, document.body, {
+      onState: ([state]) => {
+        if (state === "expanded") input.focus({ preventScroll: true });
+        else if (document.activeElement === input || document.activeElement?.matches(".close")) {
+          input.value = "";
+          document.querySelector(".open").focus({ preventScroll: true });
+        }
+      },
+    });
+  </script>
+</body>
+</html>

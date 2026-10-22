@@ -15,7 +15,7 @@
   </picture>
 </a>
 
-**[Try all 26 examples in the live demo →](https://seukwoo.github.io/nudg/demo/)**
+**[Try all 35 examples in the live demo →](https://seukwoo.github.io/nudg/demo/)**
 
 </div>
 

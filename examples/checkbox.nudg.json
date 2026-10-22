@@ -1,0 +1,39 @@
+{
+  "nudg": "0.2",
+  "note": "A checkbox whose box fills and whose check mark pops in. The box sinks a little while pressed, in a parallel region.",
+  "targets": ["control", "box", "check"],
+  "values": {
+    "box.color": "#FFFFFF",
+    "box.scale": 1,
+    "check.scale": 0.4,
+    "check.opacity": 0
+  },
+  "animate": {
+    "box.color": { "tween": { "duration": 0.15, "ease": "out" } },
+    "box.scale": { "spring": { "duration": 0.2, "bounce": 0 } },
+    "check.scale": { "spring": { "duration": 0.3, "bounce": 0.35 } },
+    "check.opacity": { "tween": { "duration": 0.1, "ease": "out" } }
+  },
+  "regions": {
+    "value": {
+      "initial": "unchecked",
+      "states": {
+        "unchecked": { "when": { "control.tap": "checked", "host.check": "checked" } },
+        "checked": {
+          "set": { "box.color": "#2563EB", "check.scale": 1, "check.opacity": 1 },
+          "when": {
+            "control.tap": { "to": "unchecked", "animate": { "check.scale": { "spring": { "duration": 0.2, "bounce": 0 } } }, "note": "Unchecking clears without a pop." },
+            "host.uncheck": "unchecked"
+          }
+        }
+      }
+    },
+    "press": {
+      "initial": "up",
+      "states": {
+        "up": { "when": { "control.down": "down" } },
+        "down": { "set": { "box.scale": 0.88 }, "when": { "control.up": "up", "control.cancel": "up" } }
+      }
+    }
+  }
+}

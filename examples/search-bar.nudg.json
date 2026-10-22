@@ -1,0 +1,28 @@
+{
+  "nudg": "0.4",
+  "note": "A search button in a toolbar that expands into a field across the toolbar's measured width, while the title fades out. Escape or the close button collapses it; the app moves focus into the field and back.",
+  "targets": ["toolbar", "title", "bar", "open", "field", "close"],
+  "values": { "bar.width": 40, "title.opacity": 1, "field.opacity": 0, "open.opacity": 1, "close.opacity": 0 },
+  "animate": {
+    "bar.width": { "spring": { "duration": 0.35, "bounce": 0 } },
+    "title.opacity": { "tween": { "duration": 0.15, "ease": "out" } },
+    "field.opacity": { "tween": { "duration": 0.2, "ease": "out" } },
+    "open.opacity": { "tween": { "duration": 0.1, "ease": "out" } },
+    "close.opacity": { "tween": { "duration": 0.15, "ease": "out" } }
+  },
+  "initial": "collapsed",
+  "states": {
+    "collapsed": { "when": { "open.tap": "expanded", "host.expand": "expanded" } },
+    "expanded": {
+      "set": { "bar.width": { "measure": "toolbar.width" }, "title.opacity": 0, "field.opacity": 1, "open.opacity": 0, "close.opacity": 1 },
+      "when": {
+        "close.tap": "collapsed",
+        "bar.key.escape": "collapsed",
+        "host.collapse": {
+          "to": "collapsed",
+          "animate": { "bar.width": { "spring": { "duration": 0.3, "bounce": 0 } } }
+        }
+      }
+    }
+  }
+}

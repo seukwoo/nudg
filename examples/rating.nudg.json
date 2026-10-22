@@ -1,0 +1,44 @@
+{
+  "nudg": "0.2",
+  "note": "A five-star rating. Tapping a star fills it and every star before it, and the tapped star pops; tapping the same star again pops it again. Transitions are listed once on the machine.",
+  "targets": ["star1", "star2", "star3", "star4", "star5"],
+  "values": {
+    "star1.color": "#D1D5DB", "star1.scale": 1,
+    "star2.color": "#D1D5DB", "star2.scale": 1,
+    "star3.color": "#D1D5DB", "star3.scale": 1,
+    "star4.color": "#D1D5DB", "star4.scale": 1,
+    "star5.color": "#D1D5DB", "star5.scale": 1
+  },
+  "animate": {
+    "star1.color": { "tween": { "duration": 0.15, "ease": "out" } },
+    "star2.color": { "tween": { "duration": 0.15, "ease": "out" } },
+    "star3.color": { "tween": { "duration": 0.15, "ease": "out" } },
+    "star4.color": { "tween": { "duration": 0.15, "ease": "out" } },
+    "star5.color": { "tween": { "duration": 0.15, "ease": "out" } }
+  },
+  "initial": "none",
+  "when": { "star1.tap": "one", "star2.tap": "two", "star3.tap": "three", "star4.tap": "four", "star5.tap": "five" },
+  "states": {
+    "none": {},
+    "one": {
+      "set": { "star1.color": "#F59E0B" },
+      "enter": { "star1.scale": { "kick": 5, "spring": { "duration": 0.4, "bounce": 0.5 } } }
+    },
+    "two": {
+      "set": { "star1.color": "#F59E0B", "star2.color": "#F59E0B" },
+      "enter": { "star2.scale": { "kick": 5, "spring": { "duration": 0.4, "bounce": 0.5 } } }
+    },
+    "three": {
+      "set": { "star1.color": "#F59E0B", "star2.color": "#F59E0B", "star3.color": "#F59E0B" },
+      "enter": { "star3.scale": { "kick": 5, "spring": { "duration": 0.4, "bounce": 0.5 } } }
+    },
+    "four": {
+      "set": { "star1.color": "#F59E0B", "star2.color": "#F59E0B", "star3.color": "#F59E0B", "star4.color": "#F59E0B" },
+      "enter": { "star4.scale": { "kick": 5, "spring": { "duration": 0.4, "bounce": 0.5 } } }
+    },
+    "five": {
+      "set": { "star1.color": "#F59E0B", "star2.color": "#F59E0B", "star3.color": "#F59E0B", "star4.color": "#F59E0B", "star5.color": "#F59E0B" },
+      "enter": { "star5.scale": { "kick": 5, "spring": { "duration": 0.4, "bounce": 0.5 } } }
+    }
+  }
+}

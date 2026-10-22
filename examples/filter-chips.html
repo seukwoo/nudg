@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Filter chips</title>
+  <style>
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; font: 500 13px ui-sans-serif, system-ui, sans-serif; }
+    .chips button { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border: 1px solid #9ca3af; border-radius: 8px; background: #fff; font: inherit; color: #1c1c1a; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    /* The check's slot starts with no width; nudg opens it, and the chip grows around it. */
+    .chips .check { display: inline-block; width: 0; height: 14px; overflow: hidden; flex: none; }
+    .chips .check svg { width: 14px; height: 14px; fill: none; stroke: #1d4ed8; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+</head>
+<body>
+  <div class="chips" role="group" aria-label="Filters">
+    <button aria-pressed="false" data-nudg="chip1"><span class="check" data-nudg="check1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7"/></svg></span>Open now</button>
+    <button aria-pressed="true" data-nudg="chip2"><span class="check" data-nudg="check2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7"/></svg></span>Delivery</button>
+    <button aria-pressed="false" data-nudg="chip3"><span class="check" data-nudg="check3"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7"/></svg></span>Top rated</button>
+  </div>
+  <!-- Host markup for filter-chips.nudg.json. The host keeps aria-pressed in step and applies the filters. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./filter-chips.nudg.json");
+    const chips = [...document.querySelectorAll(".chips button")];
+    play(program, document.body, { onState: (state) => chips.forEach((chip, i) => chip.setAttribute("aria-pressed", String(state.includes(`chip${i + 1}/on`)))) });
+  </script>
+</body>
+</html>

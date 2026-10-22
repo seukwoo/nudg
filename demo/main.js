@@ -62,6 +62,61 @@ const HOOKS = {
     });
     input?.addEventListener("input", () => player.send("host.valid"));
   },
+  "text-field"(player, root) {
+    const input = root.querySelector("input");
+    input?.addEventListener("input", () => {
+      player.send(input.value ? "host.filled" : "host.empty");
+      player.send("host.valid");
+    });
+    input?.addEventListener("blur", () => input.value && !input.value.includes("@") && player.send("host.invalid"));
+  },
+  stepper(player, root) {
+    const output = root.querySelector("output");
+    let value = 1;
+    const change = (by) => {
+      const next = value + by;
+      if (next < 1 || next > 5) return player.send("host.refused");
+      value = next;
+      output.textContent = String(value);
+      player.send(by > 0 ? "host.increment" : "host.decrement");
+      player.send(value === 1 ? "host.min" : value === 5 ? "host.max" : "host.between");
+    };
+    root.querySelector("[data-nudg=minus]")?.addEventListener("click", () => change(-1));
+    root.querySelector("[data-nudg=plus]")?.addEventListener("click", () => change(1));
+    player.send("host.min");
+  },
+  badge(player, root) {
+    const badge = root.querySelector(".badge");
+    let count = 0;
+    root.querySelector(".message")?.addEventListener("click", () => {
+      badge.textContent = String(++count);
+      player.send("host.increment");
+    });
+    root.querySelector(".bell")?.addEventListener("click", () => (count = 0));
+  },
+  // Roving tabindex: the selected option is the one in the tab order, and arrow keys move focus with it.
+  "radio-group": (player, root) => ({
+    onState: ([state]) => {
+      const options = [...root.querySelectorAll("[role=radio]")];
+      const selected = ["first", "second", "third"].indexOf(state);
+      const hadFocus = options.includes(root.activeElement);
+      options.forEach((option, i) => {
+        option.setAttribute("aria-checked", String(i === selected));
+        option.tabIndex = i === selected ? 0 : -1;
+      });
+      if (hadFocus) options[selected]?.focus({ preventScroll: true });
+    },
+  }),
+  "search-bar": (player, root) => ({
+    onState: ([state]) => {
+      const input = root.querySelector("input");
+      if (state === "expanded") input?.focus({ preventScroll: true });
+      else if (root.activeElement === input || root.activeElement?.matches(".close")) {
+        input.value = "";
+        root.querySelector(".open")?.focus({ preventScroll: true });
+      }
+    },
+  }),
   // App timers follow the player's clock (`speed`), and die with the player.
   toast(player, root, { after }) {
     let cancel;

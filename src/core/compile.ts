@@ -11,6 +11,7 @@ import type { Measure,
   Ease,
   EntryEffect,
   Follow,
+  HostDeclaration,
   KeyframesEffect,
   Loop,
   Machine,
@@ -67,7 +68,7 @@ interface LibraryEntry {
   origin: string;
 }
 
-const TOP_LEVEL_KEYS = ["$schema", "nudg", "import", "targets", "values", "motions", "animate", "initial", "states", "regions", "when"];
+const TOP_LEVEL_KEYS = ["$schema", "nudg", "import", "host", "targets", "values", "motions", "animate", "initial", "states", "regions", "when"];
 const MACHINE_KEYS = ["initial", "states", "regions"];
 /** A region's object: a machine that may also have machine-level `when`. */
 const REGION_KEYS = [...MACHINE_KEYS, "when"];
@@ -127,7 +128,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.12.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.13.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -230,6 +231,9 @@ function addToLibrary(library: Map<string, LibraryEntry>, name: string, entry: L
 class ComponentCompiler {
   private targets = new Set<string>();
   private usedTargets = new Set<string>();
+  /** The declared host interface (v0.13), and the names the file actually uses. */
+  private host?: HostDeclaration;
+  private usedHost = new Set<string>();
   private properties = new Map<string, Property>();
   private r: Reporter;
   private library: Map<string, LibraryEntry>;
@@ -324,6 +328,7 @@ class ComponentCompiler {
 
   compile(doc: JsonObject): Program | undefined {
     const r = this.r;
+    if ("host" in doc) this.parseHost(doc.host);
     this.parseTargets(doc.targets);
     this.parseValues(doc.values);
     const animate = "animate" in doc ? this.parseAnimate(doc.animate, "/animate") : new Map<string, Motion>();
@@ -337,8 +342,91 @@ class ComponentCompiler {
         r.warn("unused-target", ptr("/targets", [...this.targets].indexOf(t)), `Target "${t}" is declared but never used.`, "Remove it from \"targets\", or use it in a value or event.");
       }
     }
+    if (this.host) {
+      this.host.events.forEach((name, i) => {
+        if (!this.usedHost.has(`event:${name}`)) r.warn("unused-host-event", ptr(ptr("/host", "events"), i), `The file declares host.${name} but no transition uses it.`, "Remove it, or handle it in a \"when\".");
+      });
+      for (const name of this.host.inputs.keys()) {
+        if (!this.usedHost.has(`input:${name}`)) r.warn("unused-host-input", ptr(ptr("/host", "inputs"), name), `The file declares host.${name} but no map or follow reads it.`, "Remove it, or read it with \"map\" or \"follow\".");
+      }
+    }
     if (!machine) return undefined;
-    return { version: this.version, targets: [...this.targets], properties: this.properties, animate, machine };
+    return { version: this.version, targets: [...this.targets], ...(this.host ? { host: this.host } : {}), properties: this.properties, animate, machine };
+  }
+
+  private parseHost(raw: Json) {
+    const r = this.r;
+    if (!this.needsVersion("0.13", "/host", "\"host\"")) return;
+    if (!isObject(raw)) {
+      r.error("invalid-type", "/host", "\"host\" must be an object with \"events\" and \"inputs\".", `For example: "host": { "events": ["show", "hide"], "inputs": { "volume": { "range": [0, 1] } } }`);
+      return;
+    }
+    r.keys(raw, "/host", ["events", "inputs"]);
+    const host: HostDeclaration = { events: [], inputs: new Map() };
+    const name = (value: Json, p: string, seen: (n: string) => boolean): string | undefined => {
+      const bare = typeof value === "string" && value.startsWith(`${HOST}.`) ? value.slice(HOST.length + 1) : value;
+      if (typeof bare !== "string" || !IDENTIFIER.test(bare)) {
+        r.error("invalid-name", p, `${JSON.stringify(value)} is not a host name.`, "Write the name without \"host.\": letters, digits, \"_\" and \"-\", starting with a letter.");
+        return undefined;
+      }
+      if (bare !== value) r.warn("host-prefix", p, `"${value}" is declared under "host" already.`, `Write "${bare}".`);
+      if (seen(bare)) {
+        r.error("duplicate-host-name", p, `host.${bare} is declared twice.`, "Remove the duplicate.");
+        return undefined;
+      }
+      return bare;
+    };
+    if ("events" in raw) {
+      if (!Array.isArray(raw.events)) r.error("invalid-type", "/host/events", "\"events\" must list event names.", `For example: "events": ["show", "hide"].`);
+      else raw.events.forEach((value, i) => {
+        const n = name(value, ptr("/host/events", i), (x) => host.events.includes(x));
+        if (n) host.events.push(n);
+      });
+    }
+    if ("inputs" in raw) {
+      if (!isObject(raw.inputs)) r.error("invalid-type", "/host/inputs", "\"inputs\" must map input names to what they carry.", `For example: "inputs": { "volume": { "range": [0, 1], "note": "microphone level" } }.`);
+      else for (const [key, spec] of Object.entries(raw.inputs)) {
+        if (key === "note" || key.startsWith("x-")) continue;
+        const p = ptr("/host/inputs", key);
+        const n = name(key, p, (x) => host.inputs.has(x));
+        if (!n) continue;
+        if (!isObject(spec)) {
+          r.error("invalid-type", p, "A host input is an object, {} when there is nothing to say.", `For example: { "range": [0, 1], "note": "download progress" }.`);
+          continue;
+        }
+        r.keys(spec, p, ["range"]);
+        const entry: { range?: [number, number] } = {};
+        if ("range" in spec) {
+          const range = spec.range;
+          if (!Array.isArray(range) || range.length !== 2 || !range.every((v) => typeof v === "number" && Number.isFinite(v)) || (range[0] as number) >= (range[1] as number)) {
+            // Still declared, so uses of it don't add errors of their own.
+            r.error("invalid-value", ptr(p, "range"), "\"range\" must be two increasing numbers.", "For example: [0, 1].");
+          } else {
+            entry.range = [range[0] as number, range[1] as number];
+          }
+        }
+        host.inputs.set(n, entry);
+      }
+    }
+    this.host = host;
+  }
+
+  /** With a declared host (v0.13), only declared names are accepted. */
+  private checkDeclared(kind: "event" | "input", bare: string, p: string): boolean {
+    if (!this.host) return true;
+    const declared = kind === "event" ? this.host.events : [...this.host.inputs.keys()];
+    if (declared.includes(bare)) {
+      this.usedHost.add(`${kind}:${bare}`);
+      return true;
+    }
+    const guess = didYouMean(bare, declared);
+    this.r.error(
+      `undeclared-host-${kind}`,
+      p,
+      `host.${bare} is not declared under "host".`,
+      guess ? `Did you mean "host.${guess}"? If not, add "${bare}" to host.${kind}s.` : `Add "${bare}" to host.${kind}s, or check the name the app ${kind === "event" ? "sends" : "supplies"}.`,
+    );
+    return false;
   }
 
   private parseTargets(raw: Json | undefined) {
@@ -475,6 +563,14 @@ class ComponentCompiler {
       if (point !== undefined) points.push(point);
     });
     if (points.length !== from.length) return;
+    const declared = sourceKind === "input" && typeof source === "string" ? this.host?.inputs.get(source.slice(HOST.length + 1))?.range : undefined;
+    if (declared) {
+      points.forEach((point, i) => {
+        if (typeof point === "number" && (point < declared[0] || point > declared[1])) {
+          r.warn("outside-input-range", ptr(ptr(p, "from"), i), `${point} is outside the range ${JSON.stringify(declared)} declared for ${source}.`, "The app never sends this value; map within the declared range, or correct the range.");
+        }
+      });
+    }
     const nums = points.every((point) => typeof point === "number") ? (points as number[]) : undefined;
     if (nums) {
       const rising = nums.every((n, i) => i === 0 || n > nums[i - 1]);
@@ -1158,7 +1254,7 @@ class ComponentCompiler {
     const target = parts[0];
     const input = parts.slice(1).join(".");
     if (target === HOST && parts.length === 2 && IDENTIFIER.test(parts[1])) {
-      return this.needsVersion("0.5", p, "An app input (host.<name>)");
+      return this.needsVersion("0.5", p, "An app input (host.<name>)") && this.checkDeclared("input", parts[1], p);
     }
     if (input === "scroll.x" || input === "scroll.y") {
       if (!this.needsVersion("0.5", p, "A scroll input")) return false;
@@ -1318,7 +1414,7 @@ class ComponentCompiler {
         r.error("invalid-event", p, `"${event}" is not a valid host event name.`, "Use letters, digits, \"_\" and \"-\", starting with a letter.");
         return false;
       }
-      return true;
+      return this.checkDeclared("event", event, p);
     }
     let ok = this.checkTarget(target, p);
     if (EVENTS_0_2.includes(event) && !this.needs02(p, `The "${event}" event`)) ok = false;
@@ -1586,14 +1682,17 @@ export function didYouMean(input: string, candidates: string[]): string | undefi
   return bestDistance <= Math.max(1, Math.floor(input.length / 3)) ? best : undefined;
 }
 
+/** Edits between two names, counting two swapped neighbors ("hdie") as one. */
 function editDistance(a: string, b: string): number {
+  let before: number[] = [];
   let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
   for (let i = 1; i <= a.length; i++) {
     const row = [i];
     for (let j = 1; j <= b.length; j++) {
       row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) row[j] = Math.min(row[j], before[j - 2] + 1);
     }
-    prev = row;
+    [before, prev] = [prev, row];
   }
   return prev[b.length];
 }

@@ -1,6 +1,10 @@
 {
-  "nudg": "0.5",
+  "nudg": "0.13",
   "note": "A voice-chat host owns microphone permission, MediaStream lifetime, mute and elapsed time. It supplies host.volume continuously and sends connection events; nudg keeps the speaking feedback and control-state transitions consistent across hosts.",
+  "host": {
+    "events": ["connect", "connected", "failed", "leave", "mute", "unmute"],
+    "inputs": { "volume": { "range": [0, 1], "note": "Microphone level, normalized by the host." } }
+  },
   "targets": ["pulse", "avatar", "level", "join", "actions", "mute"],
   "values": {
     "pulse.scale": { "map": "host.volume", "from": [0, 0.35, 1], "to": [0.84, 1.12, 1.48] },

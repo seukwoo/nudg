@@ -119,6 +119,18 @@ Use a number supplied by the app without inventing frame-by-frame events. The ap
 - On the DOM, a referenced `target.scroll.x` or `target.scroll.y` is reported automatically from the bound scrolling element.
 - Before the first sample an input is 0. Only referenced inputs are accepted. Use one descriptive `host.<name>` segment; the app owns microphones, sensors and downloads, while nudg only receives finite numbers.
 
+## Declare the host (format 0.13)
+
+When a file uses app events or inputs, list them once at the top:
+
+```json
+"host": {
+  "events": ["filled", "empty", "invalid", "valid"],
+  "inputs": { "volume": { "range": [0, 1], "note": "microphone level" } }
+}
+```
+
+Then every `host.*` name in the file must be declared, so a misspelled event is an error instead of a transition that never fires. Add a name here before using it; keep `range` to what the app actually sends. Don't keep app data in the file: there are no variables, and the app stays the source of truth.
 ## Pausable timers (format 0.7)
 
 When an auto-dismiss or control timeout must preserve the person's remaining time, make the timer transition an object with independent `pause` pairs:

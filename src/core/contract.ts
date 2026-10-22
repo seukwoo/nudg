@@ -9,7 +9,7 @@ import type { Machine, Program } from "./types.ts";
 export interface Contract {
   /** Targets to bind elements or views to. */
   targets: string[];
-  /** Events the file handles: app events (`host.check`) and the targets' own (`track.tap`). */
+  /** Events the file handles: app events (`host.check`, all declared ones when the file declares "host") and the targets' own (`track.tap`). */
   events: string[];
   /** Continuous inputs the file reads with `map` or `follow` (layout measurements excluded). */
   inputs: string[];
@@ -30,10 +30,15 @@ export function contract(program: Program): Contract {
     }
   };
   walk(program.machine, "");
+  const events = [...handledEvents(program)];
+  const inputs = createRuntime(program).requiredInputs();
+  // A declared host (v0.13) is the contract for app names, including ones no state handles yet.
+  const own = (names: string[]) => names.filter((name) => !name.startsWith("host."));
+  const host = program.host;
   return {
     targets: [...program.targets],
-    events: [...handledEvents(program)],
-    inputs: createRuntime(program).requiredInputs(),
+    events: host ? [...own(events), ...host.events.map((name) => `host.${name}`)] : events,
+    inputs: host ? [...own(inputs), ...[...host.inputs.keys()].map((name) => `host.${name}`)] : inputs,
     states,
   };
 }

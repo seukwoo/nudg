@@ -172,9 +172,19 @@ export type Machine =
     }
   | { kind: "regions"; regions: Map<string, Machine> };
 
+/** What a file declares it exchanges with the app (v0.13): the contract, not behavior. */
+export interface HostDeclaration {
+  /** Event names without "host.", in file order. */
+  events: string[];
+  /** Input names without "host.", with the range the app sends them in, when declared. */
+  inputs: Map<string, { range?: [number, number] }>;
+}
+
 export interface Program {
   version: string;
   targets: string[];
+  /** Present when the file declares "host" (v0.13); then no other host.* name is accepted. */
+  host?: HostDeclaration;
   /** Keyed by path, e.g. "knob.x". */
   properties: Map<string, Property>;
   animate: Map<string, Motion>;

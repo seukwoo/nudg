@@ -231,6 +231,14 @@ Status: implemented. Accordion, menu and speed dial needed things to move in ord
 - **Not in named motions or entry kicks.** A delay is choreography of one transition; a reusable motion with a built-in wait would surprise every other use.
 - **Loops already had their own `delay`** (0.10); this is the same word for the same idea on ordinary motion.
 
+## The host declaration, not a store (format 0.13)
+
+Status: implemented. Two questions came up together: should nudg have a store, variables that hold app data, and is `host.*` enough for both app data and sensors?
+
+- **No store.** App data (checked, count, text) already lives in the app. A copy in the file would be a second source of truth to keep in sync, and variables invite conditions and formulas next, which would turn the file into a program an AI can no longer edit safely. The patterns that felt clumsy without one (a text field's four label states, a stepper's limits) are clumsy for lack of conditions, which stay out on purpose.
+- **`host.*` carries everything the motion needs.** Two channels: events for things that happen (`player.send("host.connected")`) and inputs for numbers that change (`player.input("host.tilt", deg)`). Sensors are the same as data: the app reads the device and passes numbers; nudg never reads a device. Strings and lists are content, which the host renders.
+- **What was missing was the declaration.** Any `host.<name>` was accepted, so a typo (`host.filed`) silently made a transition that never fires, and nothing said whether `host.volume` is 0–1 or 0–100. An optional `host` block names the events and inputs (with their range); with it, an undeclared name is an error with a hint, a map outside the range is a warning, and `nudg generate` lists the declared names, so the host's types and the file can't drift. Like `targets`, it is a header, not data.
+
 ## Type-safe host contracts
 
 Status: implemented as `nudg generate` and the `nudg_generate` MCP tool.

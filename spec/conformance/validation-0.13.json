@@ -1,0 +1,416 @@
+{
+  "conformance": "0.13",
+  "name": "Validator (0.13): with a host declaration, only declared app events and inputs are accepted",
+  "documents": [
+    {
+      "name": "declared",
+      "doc": {
+        "nudg": "0.13",
+        "host": {
+          "events": [
+            "show",
+            "hide"
+          ],
+          "inputs": {
+            "level": {
+              "range": [
+                0,
+                1
+              ]
+            }
+          }
+        },
+        "targets": [
+          "toast"
+        ],
+        "values": {
+          "toast.opacity": 0,
+          "toast.scale": {
+            "map": "host.level",
+            "from": [
+              0,
+              1
+            ],
+            "to": [
+              1,
+              1.2
+            ]
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "toast.opacity": 1
+            },
+            "when": {
+              "host.hide": "hidden"
+            }
+          }
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "0.12",
+        "host": {
+          "events": [
+            "show",
+            "hide"
+          ],
+          "inputs": {
+            "level": {
+              "range": [
+                0,
+                1
+              ]
+            }
+          }
+        },
+        "targets": [
+          "toast"
+        ],
+        "values": {
+          "toast.opacity": 0,
+          "toast.scale": {
+            "map": "host.level",
+            "from": [
+              0,
+              1
+            ],
+            "to": [
+              1,
+              1.2
+            ]
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "toast.opacity": 1
+            },
+            "when": {
+              "host.hide": "hidden"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/host"
+        }
+      ]
+    },
+    {
+      "name": "undeclared-event",
+      "doc": {
+        "nudg": "0.13",
+        "host": {
+          "events": [
+            "show",
+            "hide"
+          ],
+          "inputs": {
+            "level": {
+              "range": [
+                0,
+                1
+              ]
+            }
+          }
+        },
+        "targets": [
+          "toast"
+        ],
+        "values": {
+          "toast.opacity": 0,
+          "toast.scale": {
+            "map": "host.level",
+            "from": [
+              0,
+              1
+            ],
+            "to": [
+              1,
+              1.2
+            ]
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "toast.opacity": 1
+            },
+            "when": {
+              "host.hdie": "hidden"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "undeclared-host-event",
+          "path": "/states/shown/when/host.hdie"
+        }
+      ]
+    },
+    {
+      "name": "undeclared-input",
+      "doc": {
+        "nudg": "0.13",
+        "host": {
+          "events": [
+            "show",
+            "hide"
+          ],
+          "inputs": {
+            "level": {
+              "range": [
+                0,
+                1
+              ]
+            }
+          }
+        },
+        "targets": [
+          "toast"
+        ],
+        "values": {
+          "toast.opacity": 0,
+          "toast.scale": {
+            "map": "host.levle",
+            "from": [
+              0,
+              1
+            ],
+            "to": [
+              1,
+              1.2
+            ]
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "toast.opacity": 1
+            },
+            "when": {
+              "host.hide": "hidden"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "undeclared-host-input",
+          "path": "/values/toast.scale/map"
+        }
+      ]
+    },
+    {
+      "name": "duplicate",
+      "doc": {
+        "nudg": "0.13",
+        "host": {
+          "events": [
+            "show",
+            "show",
+            "hide"
+          ],
+          "inputs": {
+            "level": {
+              "range": [
+                0,
+                1
+              ]
+            }
+          }
+        },
+        "targets": [
+          "toast"
+        ],
+        "values": {
+          "toast.opacity": 0,
+          "toast.scale": {
+            "map": "host.level",
+            "from": [
+              0,
+              1
+            ],
+            "to": [
+              1,
+              1.2
+            ]
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "toast.opacity": 1
+            },
+            "when": {
+              "host.hide": "hidden"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "duplicate-host-name",
+          "path": "/host/events/1"
+        }
+      ]
+    },
+    {
+      "name": "bad-name",
+      "doc": {
+        "nudg": "0.13",
+        "host": {
+          "events": [
+            "show",
+            "hide",
+            "2fast"
+          ],
+          "inputs": {
+            "level": {
+              "range": [
+                0,
+                1
+              ]
+            }
+          }
+        },
+        "targets": [
+          "toast"
+        ],
+        "values": {
+          "toast.opacity": 0,
+          "toast.scale": {
+            "map": "host.level",
+            "from": [
+              0,
+              1
+            ],
+            "to": [
+              1,
+              1.2
+            ]
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "toast.opacity": 1
+            },
+            "when": {
+              "host.hide": "hidden"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-name",
+          "path": "/host/events/2"
+        }
+      ]
+    },
+    {
+      "name": "range",
+      "doc": {
+        "nudg": "0.13",
+        "host": {
+          "events": [
+            "show",
+            "hide"
+          ],
+          "inputs": {
+            "level": {
+              "range": [
+                1,
+                0
+              ]
+            }
+          }
+        },
+        "targets": [
+          "toast"
+        ],
+        "values": {
+          "toast.opacity": 0,
+          "toast.scale": {
+            "map": "host.level",
+            "from": [
+              0,
+              1
+            ],
+            "to": [
+              1,
+              1.2
+            ]
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "toast.opacity": 1
+            },
+            "when": {
+              "host.hide": "hidden"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/host/inputs/level/range"
+        }
+      ]
+    }
+  ]
+}

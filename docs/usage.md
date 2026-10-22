@@ -132,7 +132,7 @@ nudg generate toggle.nudg.json            # writes toggle.nudg.ts beside it
 nudg generate src/**/*.nudg.json --check  # CI: exit 1 if a module is missing or stale
 ```
 
-Writes a types-only TypeScript module with the file's targets, handled events, continuous inputs and state paths (imports included), as one interface named after the file:
+Writes a types-only TypeScript module with the file's targets, handled events, continuous inputs and state paths (imports included), as one interface named after the file. When the file declares `host` (format 0.13), its app events and inputs are exactly the declared ones:
 
 ```ts
 import toggle from "./toggle.nudg.json";
@@ -248,14 +248,14 @@ nudg has one contract for anything that writes or edits its files, an AI coding 
 
 | Part | Where | What it promises |
 |---|---|---|
-| JSON Schema | `@nudg/core/schema.json` (the latest format), `spec/nudg-<format>.schema.json` for each format | Structure and vocabulary for completion and early checks. Put `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-0.12.schema.json"` in a file to get it in any JSON editor. |
+| JSON Schema | `@nudg/core/schema.json` (the latest format), `spec/nudg-<format>.schema.json` for each format | Structure and vocabulary for completion and early checks. Put `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-0.13.schema.json"` in a file to get it in any JSON editor. |
 | Validator | `nudg validate`, `nudg_validate`, `compile()` | The authority: every problem has a stable `code`, a JSON pointer `path` and a `hint` that says how to fix it. Codes are part of the spec and covered by the conformance suite, so an agent can rely on them across releases. |
 | Agent guide | `@nudg/core/guide.md`, `nudg_guide` | The format on one page, and which field each feel word changes ("bouncier" is `bounce`). It is versioned with the package and describes the formats this package accepts. |
 | Recipes | `@nudg/core/recipes.json`, `nudg recipe`, `nudg_recipe` | Interaction contracts for UI words (sheet, toast, video chat): parts, states, events, inputs, host duties, known gaps and a validated starter. |
 | Judge loop | `nudg skill`, the MCP server's instructions | When to validate, critique, compare against `HEAD` and observe the real page, so the person judges by looking. |
 | Host names | `nudg generate`, `nudg_generate` | The file's targets, events, inputs and states as TypeScript types, so host code can't drift from the file. |
 
-A file declares its format (`"nudg": "0.12"`); a runtime reads every older format, and the validator rejects fields newer than the declared one with a hint to raise it. Use the schema for completion and the validator for truth: where they disagree, the validator is right and the schema is the bug.
+A file declares its format (`"nudg": "0.13"`); a runtime reads every older format, and the validator rejects fields newer than the declared one with a hint to raise it. Use the schema for completion and the validator for truth: where they disagree, the validator is right and the schema is the bug.
 
 ## React adapter
 

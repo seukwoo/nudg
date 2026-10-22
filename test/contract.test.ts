@@ -27,6 +27,12 @@ test("contract: targets, handled events, read inputs and every state path, regio
   assert.deepEqual(drag.states, ["off", "on", "dragging"]);
 });
 
+test("contract: a declared host is the list of app names", () => {
+  const c = contract(compilePath(`${root}examples/microphone.nudg.json`).program!);
+  assert.deepEqual(c.inputs, ["host.volume"]);
+  assert.deepEqual(c.events.filter((e) => e.startsWith("host.")), ["host.connect", "host.connected", "host.failed", "host.leave", "host.mute", "host.unmute"]);
+});
+
 test("contract: names and the module text are stable", () => {
   assert.equal(contractName("examples/toggle-drag.nudg.json"), "ToggleDragContract");
   assert.equal(contractName("3d card.json"), "Nudg3dCardContract");

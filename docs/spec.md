@@ -485,6 +485,25 @@ A motion's `delay`, for sequence and stagger. A file that uses it declares `"nud
 
 The conformance cases `delay-sequence.json`, `delay-rest.json`, `delay-reduced.json` and `validation-0.12.json` define the behavior across TypeScript, Swift and Kotlin. Compiled programs carry `delay` in motion objects, as format 5.
 
+## Additions in 0.13 (draft)
+
+The `host` declaration: the app events and inputs a file uses, in one place. A file that has it declares `"nudg": "0.13"`; a 0.13 runtime also reads older files.
+
+```json
+"host": {
+  "events": ["connect", "connected", "failed", "leave"],
+  "inputs": { "volume": { "range": [0, 1], "note": "Microphone level, normalized by the host." } }
+}
+```
+
+- `events` lists event names and `inputs` maps input names to `{ "range"?, "note"? }`, all without `host.`. Names follow the `host.<name>` rules.
+- **When a file declares `host`, it is closed:** a `host.<name>` event in any `when` or timer `pause`, or a `host.<name>` input in a `map` or `follow`, that isn't declared is an error (`undeclared-host-event`, `undeclared-host-input`), with the nearest declared name as a hint. Without `host`, any name is accepted, as before.
+- Declared names nothing uses are warnings (`unused-host-event`, `unused-host-input`). A numeric `map.from` point outside an input's declared `range` is a warning (`outside-input-range`): the app never sends that value.
+- Errors: `invalid-name`, `duplicate-host-name`, and `invalid-value` for a range that isn't two increasing numbers (the input stays declared).
+- It changes no behavior. Runtimes accept any finite input value; the declaration is the contract, and `nudg generate` lists exactly the declared app names.
+
+The conformance case `validation-0.13.json` defines the errors.
+
 ## Rest and lifecycle
 
 Hosts need to know when motion is over: to move focus once a dialog has opened, to tell a component library its transition has entered, to remove an element once its exit has played. These rules make that moment the same in every runtime and adapter. They add no file syntax.

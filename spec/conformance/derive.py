@@ -1927,6 +1927,44 @@ def validation_v12_cases():
     })
 
 
+# --- v0.13: the host declaration --------------------------------------------
+
+
+def validation_v13_cases():
+    def doc():
+        return {
+            "nudg": "0.13",
+            "host": {"events": ["show", "hide"], "inputs": {"level": {"range": [0, 1]}}},
+            "targets": ["toast"],
+            "values": {"toast.opacity": 0, "toast.scale": {"map": "host.level", "from": [0, 1], "to": [1, 1.2]}},
+            "initial": "hidden",
+            "states": {
+                "hidden": {"when": {"host.show": "shown"}},
+                "shown": {"set": {"toast.opacity": 1}, "when": {"host.hide": "hidden"}},
+            },
+        }
+
+    out = []
+    out.append(("declared", doc(), []))
+    d = doc(); d["nudg"] = "0.12"
+    out.append(("needs-version", d, [("needs-version", "/host")]))
+    d = doc(); d["states"]["shown"]["when"] = {"host.hdie": "hidden"}
+    out.append(("undeclared-event", d, [("undeclared-host-event", "/states/shown/when/host.hdie")]))
+    d = doc(); d["values"]["toast.scale"]["map"] = "host.levle"
+    out.append(("undeclared-input", d, [("undeclared-host-input", "/values/toast.scale/map")]))
+    d = doc(); d["host"]["events"] = ["show", "show", "hide"]
+    out.append(("duplicate", d, [("duplicate-host-name", "/host/events/1")]))
+    d = doc(); d["host"]["events"] = ["show", "hide", "2fast"]
+    out.append(("bad-name", d, [("invalid-name", "/host/events/2")]))
+    d = doc(); d["host"]["inputs"]["level"]["range"] = [1, 0]
+    out.append(("range", d, [("invalid-value", "/host/inputs/level/range")]))
+    write("validation-0.13", {
+        "conformance": "0.13",
+        "name": "Validator (0.13): with a host declaration, only declared app events and inputs are accepted",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 def rest_time(prop, motion, start, limit=5.0, step=1e-3):
     """When a spring comes to rest: its remaining amplitude, position and velocity
     together (sqrt(x^2 + v^2 m/k)), drops below the rest threshold. Energy never grows."""
@@ -2028,5 +2066,6 @@ if __name__ == "__main__":
     validation_v11_cases()
     delay_cases()
     validation_v12_cases()
+    validation_v13_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

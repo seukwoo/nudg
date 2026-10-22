@@ -1,0 +1,61 @@
+{
+  "nudg": "0.2",
+  "note": "A filled text field. The label floats while the field is focused or has text, the active line grows from the center on focus, and the app's validation turns the field red and shows a message. Three regions: focus, label and validity.",
+  "targets": ["field", "label", "line", "message"],
+  "values": {
+    "field.color": "#F3F4F6",
+    "label.y": 0,
+    "label.scale": 1,
+    "line.scaleX": 0,
+    "line.color": "#2563EB",
+    "message.opacity": 0,
+    "message.y": -4
+  },
+  "animate": {
+    "field.color": { "tween": { "duration": 0.15, "ease": "out" } },
+    "label.y": { "spring": { "duration": 0.25, "bounce": 0 } },
+    "label.scale": { "spring": { "duration": 0.25, "bounce": 0 } },
+    "line.scaleX": { "spring": { "duration": 0.3, "bounce": 0 } },
+    "line.color": { "tween": { "duration": 0.15, "ease": "out" } },
+    "message.opacity": { "tween": { "duration": 0.15, "ease": "out" } },
+    "message.y": { "spring": { "duration": 0.3, "bounce": 0 } }
+  },
+  "regions": {
+    "focus": {
+      "initial": "blurred",
+      "states": {
+        "blurred": { "when": { "field.focus": "focused" } },
+        "focused": { "set": { "line.scaleX": 1 }, "when": { "field.blur": "blurred" } }
+      }
+    },
+    "label": {
+      "note": "The label rests in the field only when it is empty and blurred. The app sends host.filled and host.empty as the text changes.",
+      "initial": "empty",
+      "states": {
+        "empty": { "when": { "field.focus": "focused", "host.filled": "filled" } },
+        "focused": {
+          "set": { "label.y": -10, "label.scale": 0.75 },
+          "when": { "field.blur": "empty", "host.filled": "typing" }
+        },
+        "typing": {
+          "set": { "label.y": -10, "label.scale": 0.75 },
+          "when": { "field.blur": "filled", "host.empty": "focused" }
+        },
+        "filled": {
+          "set": { "label.y": -10, "label.scale": 0.75 },
+          "when": { "field.focus": "typing", "host.empty": "empty" }
+        }
+      }
+    },
+    "validity": {
+      "initial": "valid",
+      "states": {
+        "valid": { "when": { "host.invalid": "invalid" } },
+        "invalid": {
+          "set": { "field.color": "#FEF2F2", "line.color": "#DC2626", "message.opacity": 1, "message.y": 0 },
+          "when": { "host.valid": "valid" }
+        }
+      }
+    }
+  }
+}

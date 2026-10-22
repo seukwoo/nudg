@@ -1,0 +1,42 @@
+{
+  "nudg": "0.3",
+  "note": "Three radio options. The selected dot grows in while the previous one shrinks away; tapping an option or pressing the arrow keys selects. The app moves focus to the selected option (roving tabindex), as in the WAI-ARIA radio group pattern.",
+  "targets": ["option1", "option2", "option3", "dot1", "dot2", "dot3"],
+  "values": { "dot1.scale": 0, "dot2.scale": 0, "dot3.scale": 0 },
+  "animate": {
+    "dot1.scale": { "spring": { "duration": 0.3, "bounce": 0.3 } },
+    "dot2.scale": { "spring": { "duration": 0.3, "bounce": 0.3 } },
+    "dot3.scale": { "spring": { "duration": 0.3, "bounce": 0.3 } }
+  },
+  "initial": "first",
+  "when": { "option1.tap": "first", "option2.tap": "second", "option3.tap": "third" },
+  "states": {
+    "first": {
+      "set": { "dot1.scale": 1 },
+      "when": {
+        "option1.key.arrowdown": "second",
+        "option1.key.arrowright": "second",
+        "option1.key.arrowup": "third",
+        "option1.key.arrowleft": "third"
+      }
+    },
+    "second": {
+      "set": { "dot2.scale": 1 },
+      "when": {
+        "option2.key.arrowdown": "third",
+        "option2.key.arrowright": "third",
+        "option2.key.arrowup": "first",
+        "option2.key.arrowleft": "first"
+      }
+    },
+    "third": {
+      "set": { "dot3.scale": 1 },
+      "when": {
+        "option3.key.arrowdown": "first",
+        "option3.key.arrowright": "first",
+        "option3.key.arrowup": "second",
+        "option3.key.arrowleft": "second"
+      }
+    }
+  }
+}

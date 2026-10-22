@@ -198,6 +198,9 @@ Some recipes have no starter (`"starter": null`): menus, speed dials, animated l
 | swipe row, swipe actions | `content.x` follows drag; action opacity maps from `content.x`; `nearest` open/closed or dismiss |
 | list, grid, card list | item press/hover, insertion/removal, reorder or responsive collection behavior; keep the item pattern separate from the collection layout |
 | carousel, pager | drag on content, snap to neighbor, page indicator, optional momentum limit |
+| text field, input | `field.focus` / `field.blur`; label floats while focused or filled (`host.filled` / `host.empty`); active line on focus; error from `host.invalid` |
+| checkbox, radio, chip | fill and mark on select; radio dots move between options with arrow keys; chips widen to make room for a check |
+| rating, stepper, badge | rating fills up to the tapped star and pops it; stepper nudges the number and shakes at a limit; badge scales in and pops per `host.increment` |
 | switch, toggle | tap and drag; knob follows input; color maps from knob position; keyboard activation |
 | slider, range slider | drag, arrow keys with `step`, `commit` on release, value bounds |
 | dialog, modal, popover | present/dismiss, backdrop or anchor, focus/escape behavior, exit presence |

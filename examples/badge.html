@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Badge</title>
+  <style>
+    .badge-demo { display: flex; align-items: center; gap: 16px; font: 13px ui-sans-serif, system-ui, sans-serif; }
+    .badge-demo .bell { position: relative; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: #f3f4f6; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .badge-demo .bell svg { width: 22px; height: 22px; fill: #1c1c1a; }
+    .badge-demo .badge { position: absolute; top: 2px; right: 0; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: #dc2626; color: #fff; font: 600 11px/18px ui-sans-serif, system-ui, sans-serif; text-align: center; }
+    .badge-demo .message { padding: 8px 12px; border: 0; border-radius: 8px; background: #1c1c1a; color: #fff; font: inherit; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="badge-demo">
+    <button class="bell" aria-label="Notifications" data-nudg="bell">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a2.5 2.5 0 0 0 2.5-2.5h-5A2.5 2.5 0 0 0 12 22zm7-6V11a7 7 0 0 0-5.5-6.8V3.5a1.5 1.5 0 0 0-3 0v.7A7 7 0 0 0 5 11v5l-2 2v1h18v-1z"/></svg>
+      <span class="badge" data-nudg="badge">1</span>
+    </button>
+    <button class="message">New message</button>
+  </div>
+  <!-- Host markup for badge.nudg.json. The app owns the count: it updates the text and sends host.increment. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./badge.nudg.json");
+    const player = play(program, document.body);
+    const bell = document.querySelector(".bell");
+    const badge = document.querySelector(".badge");
+    let count = 0;
+    document.querySelector(".message").addEventListener("click", () => {
+      badge.textContent = String(++count);
+      bell.setAttribute("aria-label", `Notifications, ${count} unread`);
+      player.send("host.increment");
+    });
+    bell.addEventListener("click", () => {
+      count = 0;
+      bell.setAttribute("aria-label", "Notifications");
+    });
+  </script>
+</body>
+</html>

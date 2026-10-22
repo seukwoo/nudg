@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Stepper</title>
+  <style>
+    .stepper { display: inline-flex; align-items: center; gap: 4px; padding: 4px; border-radius: 22px; background: #f3f4f6; font: 600 16px ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; }
+    .stepper button { width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 0.15); font: 500 20px/1 ui-sans-serif, system-ui, sans-serif; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .stepper output { display: block; min-width: 32px; text-align: center; font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  <div class="stepper" role="group" aria-label="Quantity">
+    <button aria-label="Decrease" data-nudg="minus">−</button>
+    <output aria-live="polite" data-nudg="value">1</output>
+    <button aria-label="Increase" data-nudg="plus">+</button>
+  </div>
+  <!-- Host markup for stepper.nudg.json. The app owns the number and its limits (1 to 5 here) and reports each change. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./stepper.nudg.json");
+    const player = play(program, document.body);
+    const output = document.querySelector("output");
+    let value = 1;
+    const change = (by) => {
+      const next = value + by;
+      if (next < 1 || next > 5) return player.send("host.refused");
+      value = next;
+      output.textContent = String(value);
+      player.send(by > 0 ? "host.increment" : "host.decrement");
+      player.send(value === 1 ? "host.min" : value === 5 ? "host.max" : "host.between");
+    };
+    document.querySelector("[data-nudg=minus]").addEventListener("click", () => change(-1));
+    document.querySelector("[data-nudg=plus]").addEventListener("click", () => change(1));
+    player.send("host.min");
+  </script>
+</body>
+</html>

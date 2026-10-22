@@ -1,0 +1,32 @@
+{
+  "nudg": "0.2",
+  "note": "A quantity stepper. The app owns the number and its limits: it sends host.increment or host.decrement when the value changes, host.refused when a press would pass a limit, and host.min, host.max or host.between to dim the button that can't go further.",
+  "targets": ["minus", "plus", "value"],
+  "values": { "value.y": 0, "value.x": 0, "minus.opacity": 1, "plus.opacity": 1 },
+  "animate": {
+    "minus.opacity": { "tween": { "duration": 0.15, "ease": "out" } },
+    "plus.opacity": { "tween": { "duration": 0.15, "ease": "out" } }
+  },
+  "regions": {
+    "count": {
+      "note": "Each change re-enters its state, so every press nudges the number again.",
+      "initial": "still",
+      "when": { "host.increment": "up", "host.decrement": "down", "host.refused": "refused" },
+      "states": {
+        "still": {},
+        "up": { "enter": { "value.y": { "kick": -220, "spring": { "duration": 0.3, "bounce": 0.3 } } } },
+        "down": { "enter": { "value.y": { "kick": 220, "spring": { "duration": 0.3, "bounce": 0.3 } } } },
+        "refused": { "enter": { "value.x": { "kick": -300, "spring": { "duration": 0.25, "bounce": 0.7 } } } }
+      }
+    },
+    "limits": {
+      "initial": "between",
+      "when": { "host.min": "min", "host.max": "max", "host.between": "between" },
+      "states": {
+        "between": {},
+        "min": { "set": { "minus.opacity": 0.35 } },
+        "max": { "set": { "plus.opacity": 0.35 } }
+      }
+    }
+  }
+}

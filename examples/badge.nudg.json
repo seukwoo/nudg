@@ -1,0 +1,23 @@
+{
+  "nudg": "0.2",
+  "note": "An unread-count badge on a bell. It scales in with the first message and pops each time the app reports another; opening the bell clears it.",
+  "targets": ["bell", "badge"],
+  "values": { "badge.scale": 0, "badge.opacity": 0 },
+  "animate": {
+    "badge.scale": { "spring": { "duration": 0.35, "bounce": 0.4 } },
+    "badge.opacity": { "tween": { "duration": 0.12, "ease": "out" } }
+  },
+  "initial": "hidden",
+  "states": {
+    "hidden": { "when": { "host.increment": "shown" } },
+    "shown": {
+      "set": { "badge.scale": 1, "badge.opacity": 1 },
+      "enter": { "badge.scale": { "kick": 4, "spring": { "duration": 0.35, "bounce": 0.4 } } },
+      "when": {
+        "host.increment": "shown",
+        "bell.tap": { "to": "hidden", "animate": { "badge.scale": { "spring": { "duration": 0.2, "bounce": 0 } } }, "note": "Clearing shrinks away without a bounce." },
+        "host.clear": "hidden"
+      }
+    }
+  }
+}

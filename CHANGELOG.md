@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.12.0
+
+Recipe coverage for common app patterns. Every UI word in the catalog now has a standard answer, and most have a validated starter: formats 0.10 to 0.13 add loops, measured map values, motion delays and a declared host, which give starters to spinners, skeletons, typing indicators, screen transitions, menus and speed dials. The catalog grew from 22 to 44 recipes and the site to 44 examples.
 
 - **Recipes for what nudg can't do yet.** Menu, speed dial, animated list, spinner, skeleton, typing indicator, hide-on-scroll, stack navigation, full-screen modal, shared element, drawer, image viewer and free-scrolling carousel are in the catalog with `"starter": null` and the gaps the host fills. Gap capabilities are a fixed list, and `nudg recipe --gaps` counts them. Catalog version 2: `starter` may be null.
 - **Nine new recipes with starters:** text field (floating label, focus line, error), checkbox, radio group, filter chips, star rating, badge count, page indicator, stepper and expanding search bar, each with an example on the site. A new "Fields & forms" category holds the field, search bar and stepper.

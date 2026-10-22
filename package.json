@@ -1,6 +1,6 @@
 {
   "name": "@nudg/core",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Standard interaction recipes and portable motion your AI can nudge.",
   "keywords": [
     "animation",

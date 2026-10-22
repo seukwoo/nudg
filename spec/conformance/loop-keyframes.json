@@ -1,0 +1,189 @@
+{
+  "conformance": "0.10",
+  "name": "Loop: keyframes with a delay, a map reading the looping value, re-entry restarts from 0, leaving hands off to a new target",
+  "doc": {
+    "nudg": "0.10",
+    "targets": [
+      "dot",
+      "halo"
+    ],
+    "values": {
+      "dot.y": 0,
+      "halo.opacity": {
+        "map": "dot.y",
+        "from": [
+          0,
+          -6
+        ],
+        "to": [
+          0,
+          1
+        ]
+      }
+    },
+    "animate": {
+      "dot.y": {
+        "spring": {
+          "duration": 0.25,
+          "bounce": 0
+        }
+      }
+    },
+    "initial": "idle",
+    "states": {
+      "idle": {
+        "when": {
+          "host.typing": "typing"
+        }
+      },
+      "typing": {
+        "loop": {
+          "dot.y": {
+            "keyframes": [
+              {
+                "at": 0.25,
+                "value": -6
+              },
+              {
+                "at": 0.5,
+                "value": 0
+              }
+            ],
+            "duration": 1.2,
+            "delay": 0.2
+          }
+        },
+        "when": {
+          "host.typing": "typing",
+          "host.sent": "sent"
+        }
+      },
+      "sent": {
+        "set": {
+          "dot.y": -10
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0.1,
+      "send": "host.typing"
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "state": [
+          "typing"
+        ],
+        "values": {
+          "dot.y": 0,
+          "halo.opacity": 0
+        },
+        "looping": true
+      }
+    },
+    {
+      "t": 0.35,
+      "expect": {
+        "values": {
+          "dot.y": -1.0
+        }
+      }
+    },
+    {
+      "t": 0.6,
+      "expect": {
+        "values": {
+          "dot.y": -6,
+          "halo.opacity": 1
+        }
+      }
+    },
+    {
+      "t": 0.75,
+      "expect": {
+        "values": {
+          "dot.y": -3,
+          "halo.opacity": 0.5
+        }
+      }
+    },
+    {
+      "t": 1.65,
+      "expect": {
+        "values": {
+          "dot.y": -3.0
+        }
+      }
+    },
+    {
+      "t": 1.7,
+      "send": "host.typing"
+    },
+    {
+      "t": 1.75,
+      "expect": {
+        "values": {
+          "dot.y": -2.853651317
+        }
+      }
+    },
+    {
+      "t": 1.85,
+      "expect": {
+        "values": {
+          "dot.y": -0.509026575
+        }
+      }
+    },
+    {
+      "t": 2.0,
+      "expect": {
+        "values": {
+          "dot.y": -2.021344342
+        }
+      }
+    },
+    {
+      "t": 2.1,
+      "send": "host.sent"
+    },
+    {
+      "t": 2.15,
+      "expect": {
+        "state": [
+          "sent"
+        ],
+        "values": {
+          "dot.y": -6.431760488
+        },
+        "looping": false
+      }
+    },
+    {
+      "t": 2.3,
+      "expect": {
+        "state": [
+          "sent"
+        ],
+        "values": {
+          "dot.y": -9.789010956
+        },
+        "looping": false
+      }
+    },
+    {
+      "t": 2.6,
+      "expect": {
+        "state": [
+          "sent"
+        ],
+        "values": {
+          "dot.y": -9.999751027
+        },
+        "looping": false
+      }
+    }
+  ]
+}

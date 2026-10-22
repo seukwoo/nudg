@@ -4,9 +4,9 @@
 // of entries, because order matters (regions, states) and not every JSON reader keeps
 // object key order.
 
-import type { EntryEffect, Follow, Machine, Measure, MeasuredEndpoint, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
+import type { EntryEffect, Follow, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
 
-export const PROGRAM_FORMAT = 2;
+export const PROGRAM_FORMAT = 3;
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
@@ -23,7 +23,7 @@ export function programToJson(program: Program): Json {
 
 export function programFromJson(json: unknown): Program {
   const j = json as Record<string, any>;
-  if (j?.nudgProgram !== 1 && j?.nudgProgram !== PROGRAM_FORMAT) throw new Error(`Not a compiled nudg program (formats 1 or ${PROGRAM_FORMAT}).`);
+  if (![1, 2, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
   return {
     version: j.version,
     targets: j.targets,
@@ -90,6 +90,7 @@ function state(s: State): Json {
     measure: [...s.measure].map(([key, m]) => ({ key, ...(measure(m) as Record<string, Json>) })),
     follow: [...s.follow].map(([key, f]) => ({ key, ...follow(f) })),
     enter: [...s.enter].map(([key, effect]) => ({ key, effect: entryEffect(effect) })),
+    loop: [...s.loop].map(([key, l]) => ({ key, ...loop(l) })),
     when: [...s.when].map(([event, t]) => ({ event, ...transition(t) })),
     timers: s.timers.map((t: Timer) => ({ key: t.key, delay: t.delay, pause: t.pause.map((p) => ({ ...p })), transition: transition(t.transition) })),
   };
@@ -104,11 +105,24 @@ function readState(j: any): State {
     measure: new Map(j.measure.map((e: any) => [e.key, { target: e.target, of: e.of, times: e.times ?? 1, plus: e.plus ?? 0 }])),
     follow: new Map(j.follow.map((e: any) => [e.key, readFollow(e)])),
     enter: new Map(j.enter.map((e: any) => [e.key, readEntryEffect(e.effect ?? e.motion)])),
+    loop: new Map((j.loop ?? []).map((e: any) => [e.key, readLoop(e)])),
     when: new Map(j.when.map((w: any) => [w.event, readTransition(w)])),
     timers: j.timers.map((t: any) => ({ key: t.key, delay: t.delay, pause: (t.pause ?? []).map((p: any) => ({ on: p.on, off: p.off })), transition: readTransition(t.transition) })),
   };
   if (j.machine) s.machine = readMachine(j.machine);
   return s;
+}
+
+function loop(l: Loop): Record<string, Json> {
+  const out: Record<string, Json> = { to: endpoint(l.to), frames: l.frames.map((frame) => ({ at: frame.at, value: endpoint(frame.value) })), duration: l.duration, ease: l.ease === "linear" ? "linear" : [...l.ease], delay: l.delay };
+  if (l.wrap !== undefined) out.wrap = l.wrap;
+  return out;
+}
+
+function readLoop(j: any): Loop {
+  const l: Loop = { to: readEndpoint(j.to), frames: j.frames.map((frame: any) => ({ at: frame.at, value: readEndpoint(frame.value) })), duration: j.duration, ease: j.ease, delay: j.delay ?? 0 };
+  if (j.wrap !== undefined) l.wrap = j.wrap;
+  return l;
 }
 
 function follow(f: Follow): Record<string, Json> {

@@ -12,6 +12,7 @@ import type { Measure,
   EntryEffect,
   Follow,
   KeyframesEffect,
+  Loop,
   Machine,
   Timer,
   Motion,
@@ -70,13 +71,14 @@ const TOP_LEVEL_KEYS = ["$schema", "nudg", "import", "targets", "values", "motio
 const MACHINE_KEYS = ["initial", "states", "regions"];
 /** A region's object: a machine that may also have machine-level `when`. */
 const REGION_KEYS = [...MACHINE_KEYS, "when"];
-const STATE_KEYS = ["set", "follow", "enter", "when", ...MACHINE_KEYS];
+const STATE_KEYS = ["set", "follow", "enter", "loop", "when", ...MACHINE_KEYS];
 const TRANSITION_KEYS = ["to", "nearest", "by", "momentum", "animate", "step", "commit"];
 const VALUE_KEYS = ["base", "min", "max"];
 const FOLLOW_KEYS = ["input", "range", "overdrag"];
 const MAP_KEYS = ["map", "from", "to"];
 const MOTION_KEYS = ["spring", "tween", "kick"];
 const KEYFRAMES_KEYS = ["keyframes", "duration", "ease"];
+const LOOP_KEYS = ["to", "keyframes", "duration", "ease", "delay", "wrap"];
 const TWEEN_KEYS = ["duration", "ease"];
 const SPRING_FORMS = [
   { keys: ["duration", "bounce"], required: ["duration"] },
@@ -125,7 +127,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.9.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.10.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -645,6 +647,114 @@ class ComponentCompiler {
     return out;
   }
 
+  private parseLoop(raw: Json, p: string, state: State): Map<string, Loop> {
+    const r = this.r;
+    const out = new Map<string, Loop>();
+    if (!this.needsVersion("0.10", p, "\"loop\"")) return out;
+    if (!isObject(raw)) {
+      r.error("invalid-type", p, "\"loop\" must map properties to cycles.", `For example: "loop": { "spinner.rotation": { "to": 360, "duration": 0.8, "wrap": 360 } }`);
+      return out;
+    }
+    for (const [key, value] of Object.entries(raw)) {
+      if (key === "note" || key.startsWith("x-")) continue;
+      const kp = ptr(p, key);
+      const prop = this.property(key, kp);
+      if (!prop) continue;
+      if (prop.kind === "color") {
+        r.error("loop-not-numeric", kp, "A color can't loop.", "Loop a numeric property, and map the color from it with \"map\".");
+        continue;
+      }
+      if (state.follow.has(key)) {
+        r.error("loop-conflict", kp, `"${key}" is followed in this state, so it can't also loop here.`, "Loop a different property, or follow it in another state.");
+        continue;
+      }
+      if (!isObject(value)) {
+        r.error("invalid-loop", kp, "A loop is an object with \"to\" or \"keyframes\", and \"duration\".", `For example: { "to": 360, "duration": 0.8 } or { "keyframes": [{ "at": 0.5, "value": -6 }], "duration": 1.2 }.`);
+        continue;
+      }
+      r.keys(value, kp, LOOP_KEYS);
+      if (!("to" in value) && !("keyframes" in value)) {
+        r.error("invalid-loop", kp, "The loop doesn't move: it has neither \"to\" nor \"keyframes\".", "Add \"to\" (the offset at the end of a cycle) for a turn or a sweep, or \"keyframes\" for a pulse that returns to 0.");
+        continue;
+      }
+      let ok = true;
+      let to: MeasuredEndpoint = 0;
+      if ("to" in value) {
+        const parsed = this.parseEndpoint(prop.kind, key, value.to, ptr(kp, "to"), "invalid-value", "\"to\" must be a finite number or measure object.");
+        if (parsed === undefined) ok = false;
+        else to = parsed;
+      }
+      const frames: Loop["frames"] = [];
+      if ("keyframes" in value) {
+        const list = value.keyframes;
+        if (!Array.isArray(list) || list.length === 0) {
+          r.error("invalid-keyframes", ptr(kp, "keyframes"), '"keyframes" must be a non-empty list of points inside the cycle.', 'For example: [{ "at": 0.3, "value": -6 }, { "at": 0.6, "value": 0 }].');
+          ok = false;
+        } else {
+          let previous = 0;
+          list.forEach((frame, i) => {
+            const fp = ptr(ptr(kp, "keyframes"), i);
+            if (!isObject(frame)) {
+              r.error("invalid-keyframes", fp, "A keyframe must have normalized time and a value.", 'Write { "at": 0.5, "value": 8 }.');
+              ok = false;
+              return;
+            }
+            r.keys(frame, fp, ["at", "value"]);
+            const at = frame.at;
+            if (typeof at !== "number" || !Number.isFinite(at) || at <= 0 || at >= 1 || at <= previous) {
+              r.error("invalid-keyframe-time", ptr(fp, "at"), '"at" must increase strictly between 0 and 1.', "The cycle starts at 0 with offset 0 and ends at 1 with \"to\"; put the points in between in ascending order.");
+              ok = false;
+              return;
+            }
+            const point = "value" in frame ? this.parseEndpoint(prop.kind, key, frame.value, ptr(fp, "value"), "invalid-value", "A loop keyframe's value must be a finite number or measure object.") : undefined;
+            if (!("value" in frame)) r.error("invalid-keyframes", ptr(fp, "value"), "The keyframe has no value.", `Add an offset for "${key}".`);
+            if (point === undefined) {
+              ok = false;
+              return;
+            }
+            frames.push({ at, value: point });
+            previous = at;
+          });
+        }
+      }
+      if (!("duration" in value)) {
+        r.error("missing-duration", kp, "The loop has no duration.", 'Add "duration": the seconds one cycle takes, for example 0.8.');
+        continue;
+      }
+      const duration = parseTime(value.duration);
+      if (duration === undefined || duration <= 0) {
+        r.error("invalid-value", ptr(kp, "duration"), '"duration" must be a time greater than 0.', 'Use seconds (0.8) or a string like "800ms".');
+        continue;
+      }
+      let ease: Ease = "linear";
+      if ("ease" in value) {
+        const parsed = parseEase(value.ease, ptr(kp, "ease"), r);
+        if (!parsed) continue;
+        ease = parsed;
+      }
+      let delay = 0;
+      if ("delay" in value) {
+        const parsed = parseTime(value.delay);
+        if (parsed === undefined) {
+          r.error("invalid-value", ptr(kp, "delay"), '"delay" must be a time of 0 or more.', 'Use seconds (0.15) or a string like "150ms".');
+          continue;
+        }
+        delay = parsed;
+      }
+      let wrap: number | undefined;
+      if ("wrap" in value) {
+        if (typeof value.wrap !== "number" || !Number.isFinite(value.wrap) || value.wrap <= 0) {
+          r.error("invalid-value", ptr(kp, "wrap"), '"wrap" must be a period greater than 0.', "For a rotation, 360: a spinner then stops by the shortest turn.");
+          continue;
+        }
+        wrap = value.wrap;
+      }
+      if (!ok) continue;
+      out.set(key, wrap === undefined ? { to, frames, duration, ease, delay } : { to, frames, duration, ease, delay, wrap });
+    }
+    return out;
+  }
+
   private parseKeyframes(kind: PropertyKind, key: string, raw: JsonObject, p: string): KeyframesEffect | undefined {
     const r = this.r;
     if (["kick", "spring", "tween"].some((name) => name in raw)) {
@@ -829,7 +939,7 @@ class ComponentCompiler {
       return undefined;
     }
     r.keys(raw, p, STATE_KEYS);
-    const state: State = { name, set: new Map(), measure: new Map(), follow: new Map(), enter: new Map(), when: new Map(), timers: [] };
+    const state: State = { name, set: new Map(), measure: new Map(), follow: new Map(), enter: new Map(), loop: new Map(), when: new Map(), timers: [] };
 
     if ("set" in raw) {
       const set = raw.set;
@@ -863,6 +973,7 @@ class ComponentCompiler {
     for (const key of state.enter.keys()) {
       if (state.follow.has(key)) r.error("follow-conflict", ptr(ptr(p, "enter"), key), `"${key}" is followed in this state, so it can't also have an entry effect here.`, "Remove the entry effect, or follow a different property.");
     }
+    if ("loop" in raw) state.loop = this.parseLoop(raw.loop, ptr(p, "loop"), state);
     if ("when" in raw) state.when = this.parseWhen(raw.when, ptr(p, "when"), false, state.timers);
     if ("states" in raw || "regions" in raw || "initial" in raw) {
       const machine = this.parseMachine(raw, p);
@@ -1221,6 +1332,7 @@ function settable(machine: Machine): Set<string> {
   for (const state of children) {
     for (const key of state.set.keys()) out.add(key);
     for (const key of state.follow.keys()) out.add(key);
+    for (const key of state.loop.keys()) out.add(key);
     if (state.machine) for (const key of settable(state.machine)) out.add(key);
   }
   if (machine.kind === "regions") for (const m of machine.regions.values()) for (const key of settable(m)) out.add(key);

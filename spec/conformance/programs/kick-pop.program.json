@@ -1,5 +1,5 @@
 {
- "nudgProgram": 2,
+ "nudgProgram": 3,
  "version": "0.1",
  "targets": [
   "heart"
@@ -50,6 +50,7 @@
     "measure": [],
     "follow": [],
     "enter": [],
+    "loop": [],
     "when": [
      {
       "event": "heart.tap",
@@ -83,6 +84,7 @@
       }
      }
     ],
+    "loop": [],
     "when": [
      {
       "event": "heart.tap",

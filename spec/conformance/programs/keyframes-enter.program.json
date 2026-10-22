@@ -1,5 +1,5 @@
 {
- "nudgProgram": 2,
+ "nudgProgram": 3,
  "version": "0.8",
  "targets": [
   "field"
@@ -34,6 +34,7 @@
     "measure": [],
     "follow": [],
     "enter": [],
+    "loop": [],
     "when": [],
     "timers": []
    },
@@ -72,6 +73,7 @@
       }
      }
     ],
+    "loop": [],
     "when": [
      {
       "event": "host.invalid",

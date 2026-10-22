@@ -37,7 +37,7 @@ Legend: **yes** supported, with an example; **yes, no example** supported but no
 | Stepping and keeping a value (`step`, `commit`) | yes | slider |
 | Measured targets and follow/map endpoints (`measure`) | yes | tabs, accordion, bottom-sheet, swipe-row |
 | Reduced motion | yes, runtime-wide | every example |
-| Continuous motion while a state is active (a spinner, a marquee) | partly: CSS through `data-nudg-state` | pull-to-refresh |
+| Continuous motion while a state is active (a spinner, a marquee) | yes: `loop` (0.10) | spinner, skeleton, typing indicator, pull-to-refresh |
 | Sequence, delay, stagger (menu items one after another) | no: [open question](design.md#open-questions) | |
 | Decay (a fling that slows down without a snap point) | no: [open question](design.md#open-questions) | |
 | Arithmetic on measurements (an offset, half a sheet) | yes | bottom-sheet, swipe-row |

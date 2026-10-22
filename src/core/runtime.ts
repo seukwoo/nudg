@@ -5,7 +5,7 @@ import { oklabToHex } from "./color.ts";
 import { easeAt, easeSlope } from "./ease.ts";
 import { interpolate } from "./map.ts";
 import { springAt } from "./spring.ts";
-import type { Channels, Follow, Machine, Measure, MeasuredEndpoint, Motion, Program, PropertyMap, State, TimerPause, Transition } from "./types.ts";
+import type { Channels, Follow, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, PropertyMap, State, TimerPause, Transition } from "./types.ts";
 
 export type Value = number | string;
 
@@ -49,6 +49,8 @@ export interface Runtime {
   resting(t: number): boolean;
   /** The latest time the runtime has been advanced to by an event, input or sample. */
   time(): number;
+  /** True while an active state loops a property (v0.10): values change every frame though nothing is settling. */
+  looping(): boolean;
 }
 
 /** A property's behavior since its last change, evaluated in closed form. */
@@ -76,12 +78,21 @@ const REST = { number: 1e-3, color: 1e-4 };
 /** Seconds of input history used for velocity. */
 const VELOCITY_WINDOW = 0.1;
 const LAYOUT = /^(.+)\.layout\.(x|y|width|height|naturalWidth|naturalHeight)$/;
+/** A loop running since its state was entered at `t0`. */
+interface ActiveLoop {
+  loop: Loop;
+  owner: State;
+  t0: number;
+}
+
 /** What every motion becomes under reduced motion. */
 const REDUCED: Motion = { kind: "tween", duration: 0.15, ease: "linear" };
 
 export function createRuntime(program: Program, options: RuntimeOptions = {}): Runtime {
   const active = new Map<Machine, string>();
   const segments = new Map<string, Segment>();
+  /** Loops of the active states, by property (v0.10). Empty under reduced motion. */
+  const loops = new Map<string, ActiveLoop>();
   const inputs = new Map<string, [number, number][]>();
   /** Base values, which `step` and `commit` change for good. */
   const bases = new Map<string, Channels>();
@@ -110,6 +121,9 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       const f = follows.get(key);
       segments.set(key, f ? followSegment(key, f, to[0], 0) : { kind: "motion", t0: 0, from: to, v0: to.map(() => 0), to });
     }
+    if (!reduced) walkActive(active, (state) => {
+      for (const [key, loop] of state.loop) loops.set(key, { loop, owner: state, t0: 0 });
+    });
   }
 
   function enterMachine(machine: Machine, act: Map<Machine, string>, entered: State[], t: number) {
@@ -287,6 +301,37 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     return evaluateMotion(segment, t);
   }
 
+  /** A loop's offset and its rate at `t`; 0 before its delay, and while a measured point is unknown. */
+  function loopOffset(key: string, active: ActiveLoop, t: number): [number, number] {
+    const { loop } = active;
+    const local = t - active.t0 - loop.delay;
+    if (local < 0) return [0, 0];
+    const points: { at: number; value: number }[] = [{ at: 0, value: 0 }];
+    for (const frame of [...loop.frames, { at: 1, value: loop.to }]) {
+      const value = endpoint(key, frame.value);
+      if (value === undefined) return [0, 0];
+      points.push({ at: frame.at, value });
+    }
+    const u = (local - loop.duration * Math.floor(local / loop.duration)) / loop.duration;
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1];
+      const b = points[i];
+      if (u > b.at) continue;
+      const local = (u - a.at) / (b.at - a.at);
+      return [a.value + (b.value - a.value) * easeAt(loop.ease, local), ((b.value - a.value) * easeSlope(loop.ease, local)) / ((b.at - a.at) * loop.duration)];
+    }
+    return [points[points.length - 1].value, 0];
+  }
+
+  /** What a property shows: its motion, plus the offset of a running loop. */
+  function displayed(key: string, t: number): [Channels, Channels] {
+    const [pos, vel] = evaluate(segments.get(key)!, t);
+    const running = loops.get(key);
+    if (!running) return [pos, vel];
+    const [offset, rate] = loopOffset(key, running, t);
+    return [[pos[0] + offset], [vel[0] + rate]];
+  }
+
   function clamp(key: string, value: number): number {
     const prop = program.properties.get(key)!;
     if (prop.min !== undefined && value < prop.min) return prop.min;
@@ -296,7 +341,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
 
   /** Picks the candidate whose target for `by` is closest to where `by` was heading. */
   function nearest(machine: StatesMachine, choice: NonNullable<Transition["nearest"]>, t: number): string {
-    const [pos, vel] = evaluate(segments.get(choice.by)!, t);
+    const [pos, vel] = displayed(choice.by, t);
     const projected = pos[0] + vel[0] * choice.momentum;
     let best = choice.states[0];
     let bestDistance = Infinity;
@@ -345,7 +390,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     const committed = new Set<string>();
     for (const transition of fired) {
       for (const key of transition.commit ?? []) {
-        bases.set(key, [clamp(key, evaluate(segments.get(key)!, t)[0][0])]);
+        bases.set(key, [clamp(key, displayed(key, t)[0][0])]);
         measuredBases.delete(key);
         committed.add(key);
       }
@@ -364,29 +409,49 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     const activeStates = new Set<State>();
     walkActive(active, (state) => activeStates.add(state));
 
+    // A loop that ends hands off like a released drag: the motion continues from the
+    // displayed value with the loop's velocity, its offset first reduced by `wrap`.
+    const handoff = new Map<string, [Channels, Channels]>();
+    for (const [key, running] of loops) {
+      if (activeStates.has(running.owner) && !entered.includes(running.owner)) continue;
+      const [pos, vel] = evaluate(segments.get(key)!, t);
+      let [offset, rate] = loopOffset(key, running, t);
+      const wrap = running.loop.wrap;
+      // Into (-wrap/2, wrap/2]: the same rule in every runtime, whatever its rounding.
+      if (wrap !== undefined) offset -= wrap * Math.ceil(offset / wrap - 0.5);
+      handoff.set(key, [[pos[0] + offset], [vel[0] + rate]]);
+      loops.delete(key);
+    }
+    if (!reduced) {
+      for (const state of activeStates) {
+        if (!entered.includes(state)) continue;
+        for (const [key, loop] of state.loop) loops.set(key, { loop, owner: state, t0: t });
+      }
+    }
+
     for (const [key, prop] of program.properties) {
       if (prop.map) continue;
       const segment = segments.get(key)!;
       const f = follows.get(key);
       if (f) {
         // Start following from wherever the value is now, so there's no jump.
-        if (segment.kind !== "follow" || segment.owner !== f.owner || entered.includes(f.owner)) {
-          segments.set(key, followSegment(key, f, evaluate(segment, t)[0][0], t));
+        if (segment.kind !== "follow" || segment.owner !== f.owner || entered.includes(f.owner) || handoff.has(key)) {
+          segments.set(key, followSegment(key, f, (handoff.get(key) ?? evaluate(segment, t))[0][0], t));
         }
         continue;
       }
       const to = targets.get(key)!;
-      if (segment.kind === "keyframes" && activeStates.has(segment.owner) && !entered.includes(segment.owner)) {
+      if (segment.kind === "keyframes" && activeStates.has(segment.owner) && !entered.includes(segment.owner) && !handoff.has(key)) {
         segment.to = to;
         continue;
       }
       // Leaving a follow always hands off, carrying the input's velocity into the motion.
-      if (segment.kind === "motion" && sameChannels(segment.to, to)) continue;
+      if (segment.kind === "motion" && sameChannels(segment.to, to) && !handoff.has(key)) continue;
       if (snap) {
         segments.set(key, { kind: "motion", t0: t, from: to, v0: to.map(() => 0), to });
         continue;
       }
-      const [pos, vel] = evaluate(segment, t);
+      const [pos, vel] = handoff.get(key) ?? evaluate(segment, t);
       // A committed value is placed, not thrown: it keeps no velocity from the finger.
       if (committed.has(key)) vel.fill(0);
       const motion = overrides.get(key) ?? program.animate.get(key);
@@ -459,10 +524,10 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     if (prop.map) {
       const map = resolvedMap(key, prop.map);
       if (!map) return prop.base;
-      const source = prop.map.sourceKind === "input" ? inputAt(prop.map.source, t) : evaluate(segments.get(prop.map.source)!, t)[0][0];
+      const source = prop.map.sourceKind === "input" ? inputAt(prop.map.source, t) : displayed(prop.map.source, t)[0][0];
       return interpolate(map, source);
     }
-    return evaluate(segments.get(key)!, t)[0];
+    return displayed(key, t)[0];
   };
 
   return {
@@ -584,6 +649,8 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     },
 
     time: () => now,
+
+    looping: () => loops.size > 0,
 
     resting(t) {
       advanceTo(t);

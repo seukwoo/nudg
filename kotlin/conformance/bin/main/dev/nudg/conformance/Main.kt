@@ -50,6 +50,7 @@ fun main(args: Array<String>) {
                 }
                 (expect["resting"] as? Boolean)?.let { if (rt.resting(t) != it) problems.add("resting at ${t}s: expected $it") }
                 (expect["settled"] as? Boolean)?.let { if (rt.settled(t) != it) problems.add("settled at ${t}s: expected $it") }
+                (expect["looping"] as? Boolean)?.let { if (rt.looping() != it) problems.add("looping at ${t}s: expected $it") }
             }
             if (problems.isEmpty()) { passed++; println("ok    $name") } else { failures.add(name); println("FAIL  $name\n      " + problems.take(5).joinToString("\n      ")) }
         } catch (e: Exception) {

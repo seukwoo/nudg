@@ -1,5 +1,5 @@
 {
- "nudgProgram": 2,
+ "nudgProgram": 3,
  "version": "0.3",
  "targets": [
   "thumb"
@@ -36,6 +36,7 @@
     "measure": [],
     "follow": [],
     "enter": [],
+    "loop": [],
     "when": [
      {
       "event": "thumb.key.arrowright",
@@ -91,6 +92,7 @@
      }
     ],
     "enter": [],
+    "loop": [],
     "when": [
      {
       "event": "thumb.dragend",

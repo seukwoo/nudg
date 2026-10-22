@@ -1,5 +1,5 @@
 {
- "nudgProgram": 2,
+ "nudgProgram": 3,
  "version": "0.1",
  "targets": [
   "crit",
@@ -51,6 +51,7 @@
     "measure": [],
     "follow": [],
     "enter": [],
+    "loop": [],
     "when": [
      {
       "event": "crit.tap",
@@ -79,6 +80,7 @@
     "measure": [],
     "follow": [],
     "enter": [],
+    "loop": [],
     "when": [],
     "timers": []
    }

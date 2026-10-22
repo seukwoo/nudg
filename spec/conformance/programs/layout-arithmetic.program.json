@@ -1,5 +1,5 @@
 {
- "nudgProgram": 2,
+ "nudgProgram": 3,
  "version": "0.6",
  "targets": [
   "sheet",
@@ -58,6 +58,7 @@
     "measure": [],
     "follow": [],
     "enter": [],
+    "loop": [],
     "when": [
      {
       "event": "sheet.tap",
@@ -101,6 +102,7 @@
     ],
     "follow": [],
     "enter": [],
+    "loop": [],
     "when": [],
     "timers": []
    }

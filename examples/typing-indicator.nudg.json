@@ -1,0 +1,26 @@
+{
+  "nudg": "0.10",
+  "note": "Three dots in a bubble while someone is typing. The bubble scales in, and each dot bounces on the same loop, started 0.15 s after the one before so the wave keeps its shape; the bubble scales out when they stop.",
+  "targets": ["bubble", "dot1", "dot2", "dot3"],
+  "values": { "bubble.scale": 0, "bubble.opacity": 0, "dot1.y": 0, "dot2.y": 0, "dot3.y": 0 },
+  "animate": {
+    "bubble.scale": { "spring": { "duration": 0.3, "bounce": 0.2 } },
+    "bubble.opacity": { "tween": { "duration": 0.15, "ease": "out" } },
+    "dot1.y": { "spring": { "duration": 0.2, "bounce": 0 } },
+    "dot2.y": { "spring": { "duration": 0.2, "bounce": 0 } },
+    "dot3.y": { "spring": { "duration": 0.2, "bounce": 0 } }
+  },
+  "initial": "hidden",
+  "states": {
+    "hidden": { "when": { "host.typing": "typing" } },
+    "typing": {
+      "set": { "bubble.scale": 1, "bubble.opacity": 1 },
+      "loop": {
+        "dot1.y": { "keyframes": [{ "at": 0.2, "value": -5 }, { "at": 0.4, "value": 0 }], "duration": 1.2, "ease": "in-out" },
+        "dot2.y": { "keyframes": [{ "at": 0.2, "value": -5 }, { "at": 0.4, "value": 0 }], "duration": 1.2, "ease": "in-out", "delay": 0.15 },
+        "dot3.y": { "keyframes": [{ "at": 0.2, "value": -5 }, { "at": 0.4, "value": 0 }], "duration": 1.2, "ease": "in-out", "delay": 0.3 }
+      },
+      "when": { "host.idle": "hidden" }
+    }
+  }
+}

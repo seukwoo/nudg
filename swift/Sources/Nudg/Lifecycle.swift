@@ -53,7 +53,7 @@ public final class Lifecycle {
     }
     let settled = (try? runtime.settled(t)) ?? true
     if settled { syncPresence(t) }
-    return !settled || owed
+    return !settled || owed || runtime.looping()
   }
 
   private func inExit() -> Bool {

@@ -2,7 +2,7 @@
 // plus a summary an AI can read without looking at every sample.
 
 import { createRuntime, type Runtime, type Value } from "./runtime.ts";
-import type { Program } from "./types.ts";
+import type { Machine, Program } from "./types.ts";
 
 /**
  * An event, or an input sample (v0.2), at a time in seconds. `implied` marks events a
@@ -174,14 +174,28 @@ export function simulate(program: Program, options: SimulateOptions): Simulation
   return { samples, summary, unhandled };
 }
 
-/** Earliest time after the last event when everything is at rest, capped. */
+/**
+ * Earliest time after the last event when everything is at rest, capped. A loop never
+ * ends, so a running one extends the window to show at least one whole cycle.
+ */
 function findSettle(program: Program, events: TimedEvent[], lastEvent: number, start: { state?: string[]; reducedMotion?: boolean }): number {
   const rt = createRuntime(program, start);
   for (const e of events) apply(rt, e);
   for (let t = lastEvent; t <= lastEvent + MAX_SETTLE; t += 0.01) {
-    if (rt.settled(t)) return Math.max(t, lastEvent + 0.1);
+    if (rt.settled(t)) return Math.max(t, lastEvent + (rt.looping() ? longestCycle(program.machine) : 0.1));
   }
   return lastEvent + MAX_SETTLE;
+}
+
+/** The longest delay plus cycle of any loop in the file, in seconds. */
+function longestCycle(machine: Machine): number {
+  if (machine.kind === "regions") return Math.max(0, ...[...machine.regions.values()].map(longestCycle));
+  let out = 0;
+  for (const state of machine.states.values()) {
+    for (const loop of state.loop.values()) out = Math.max(out, loop.delay + loop.duration);
+    if (state.machine) out = Math.max(out, longestCycle(state.machine));
+  }
+  return Math.min(out, MAX_SETTLE);
 }
 
 function pick(values: Record<string, Value>, keys: string[]): Record<string, Value> {

@@ -1,0 +1,98 @@
+{
+ "nudgProgram": 3,
+ "version": "0.10",
+ "targets": [
+  "spinner"
+ ],
+ "properties": [
+  {
+   "key": "spinner.rotation",
+   "kind": "number",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "spinner.opacity",
+   "kind": "number",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "spinner.rotation",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 438.6490844928604,
+    "damping": 41.88790204786391,
+    "mass": 1
+   }
+  },
+  {
+   "key": "spinner.opacity",
+   "motion": {
+    "kind": "tween",
+    "duration": 0.2,
+    "ease": "linear"
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "idle",
+  "states": [
+   {
+    "name": "idle",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "host.start",
+      "animate": [],
+      "to": "busy"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "busy",
+    "set": [
+     {
+      "key": "spinner.opacity",
+      "value": [
+       1
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "loop": [
+     {
+      "key": "spinner.rotation",
+      "to": 360,
+      "frames": [],
+      "duration": 1,
+      "ease": "linear",
+      "delay": 0,
+      "wrap": 360
+     }
+    ],
+    "when": [
+     {
+      "event": "host.done",
+      "animate": [],
+      "to": "idle"
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

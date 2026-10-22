@@ -387,6 +387,8 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
 
   // Real time has already started; sampling at 0 now would run the clock backwards.
   apply(runtime.sample(now()));
+  // A starting state that loops moves from the first frame on.
+  if (!manual && runtime.looping()) frame = requestAnimationFrame(tick);
 
   return {
     runtime,

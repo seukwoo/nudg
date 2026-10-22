@@ -1,0 +1,130 @@
+{
+ "nudgProgram": 3,
+ "version": "0.10",
+ "targets": [
+  "dot",
+  "halo"
+ ],
+ "properties": [
+  {
+   "key": "dot.y",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "halo.opacity",
+   "kind": "number",
+   "base": [
+    0
+   ],
+   "map": {
+    "source": "dot.y",
+    "sourceKind": "property",
+    "from": [
+     0,
+     -6
+    ],
+    "to": [
+     [
+      0
+     ],
+     [
+      1
+     ]
+    ]
+   }
+  }
+ ],
+ "animate": [
+  {
+   "key": "dot.y",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 631.6546816697189,
+    "damping": 50.26548245743669,
+    "mass": 1
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "idle",
+  "states": [
+   {
+    "name": "idle",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "host.typing",
+      "animate": [],
+      "to": "typing"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "typing",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "loop": [
+     {
+      "key": "dot.y",
+      "to": 0,
+      "frames": [
+       {
+        "at": 0.25,
+        "value": -6
+       },
+       {
+        "at": 0.5,
+        "value": 0
+       }
+      ],
+      "duration": 1.2,
+      "ease": "linear",
+      "delay": 0.2
+     }
+    ],
+    "when": [
+     {
+      "event": "host.typing",
+      "animate": [],
+      "to": "typing"
+     },
+     {
+      "event": "host.sent",
+      "animate": [],
+      "to": "sent"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "sent",
+    "set": [
+     {
+      "key": "dot.y",
+      "value": [
+       -10
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "loop": [],
+    "when": [],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

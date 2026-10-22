@@ -55,7 +55,7 @@ class Lifecycle(private val runtime: Runtime, exit: List<String> = emptyList()) 
         }
         val settled = runtime.settled(t)
         if (settled) syncPresence(t)
-        return !settled || owed
+        return !settled || owed || runtime.looping()
     }
 
     private fun inExit() = runtime.state().any { it in exits || it.substringAfterLast('/') in exits }

@@ -1,5 +1,5 @@
 {
- "nudgProgram": 2,
+ "nudgProgram": 3,
  "version": "0.7",
  "targets": [
   "toast"
@@ -24,6 +24,7 @@
     "measure": [],
     "follow": [],
     "enter": [],
+    "loop": [],
     "when": [],
     "timers": []
    },
@@ -40,6 +41,7 @@
     "measure": [],
     "follow": [],
     "enter": [],
+    "loop": [],
     "when": [],
     "timers": [
      {

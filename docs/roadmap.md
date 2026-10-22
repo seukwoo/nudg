@@ -23,6 +23,7 @@ The order below follows real app needs. Release numbers and dates are assigned w
 | Measured follow/map endpoints | Released in package 0.10.0 as format 0.9; bottom sheet and swipe row no longer duplicate layout bounds | [Spec](spec.md#additions-in-09-draft) |
 | Pausable timers | Released in package 0.9.0 as format 0.7; TypeScript, Swift and Kotlin share conformance | [Spec](spec.md#additions-in-07-draft) |
 | Entry keyframes | Released in package 0.9.0 as format 0.8; TypeScript, Swift and Kotlin share conformance | [Spec](spec.md#additions-in-08) |
+| Loops while a state is active | Implemented as format 0.10 (unreleased); spinner, skeleton and typing indicator have starters | [Spec](spec.md#additions-in-010-draft) |
 | Decay | Open design work | [Open questions](design.md#open-questions) |
 
 ## Product Stages
@@ -64,14 +65,17 @@ Goal: close the adoption gaps exposed by the existing format without adding comp
 
 Done when: a TypeScript host cannot misspell its generated target/event/input names, React can supply dynamic values without dropping to the DOM player, lifecycle completion means the same thing across adapters, and a server-rendered initial view hydrates without a visible jump.
 
-## Now: Recipe Coverage for Common App Patterns
+## Completed: Recipe Coverage for Common App Patterns
+
+Status: complete once format 0.10 is released. The next primitive is open between sequence/stagger (accordion, menu, speed dial) and screen composition (stack, full-screen modal, shared element, drawer); see the gap counts below.
 
 Goal: let an AI answer the common UI words of app development with a standard contract, and let the gaps decide the next motion primitive. The 22 recipes cover single components and media well; navigation, lists, loading, menus and form controls are missing.
 
 - Done: add recipes the current format already expresses, each with a validated starter and an example: text field (focus, floating label, error), checkbox, radio group, chip / filter selection, rating, badge count bump, page indicator, stepper, expanding search bar.
 - Done: register the patterns the format can't express yet as recipe contracts with gaps and no starter, so an AI gives a standard answer ("the host does this part") instead of improvising: dropdown / popover menu and FAB speed dial (sequence, stagger), list insert / remove / reorder (collection coordination), spinner, skeleton shimmer and typing indicator (continuous motion), hide-on-scroll navigation (scroll direction), stack push / pop, full-screen modal, shared-element and drawer transitions (screen composition), pinch-zoom image viewer (multi-pointer), free-scrolling carousel (decay).
 - Done: gap-only contracts use `"starter": null` in catalog version 2, gap capabilities are a fixed list, and `nudg recipe` marks them and refuses `--source` with the gaps. Decisions in [Design](design.md#recipes-without-a-starter).
-- Count gaps across the catalog (`nudg recipe --gaps`) and promote the most needed one into the queue below. After registration: screen composition 4, continuous motion 4 (one a workaround), sequence 3, stagger 3, decay 2, others 1. Sequence and stagger together cover four recipes. The nine starter recipes needed no new capability, so the counts stand; the choice is the remaining item.
+- Count gaps across the catalog (`nudg recipe --gaps`) and promote the most needed one into the queue below. After registration: screen composition 4, continuous motion 4 (one a workaround), sequence 3, stagger 3, decay 2, others 1. Sequence and stagger together cover four recipes. The nine starter recipes needed no new capability, so the counts stood.
+- Done: continuous motion was promoted and implemented as format 0.10 loops; with `delay` it also covers the typing indicator's stagger. Counts now: screen composition 4, sequence 3, decay 2, stagger 2, others 1.
 
 Done when: the catalog names every pattern above, each either with a validated starter or with explicit gaps, and the queue's next primitive is chosen from the gap counts.
 
@@ -113,7 +117,7 @@ Goal: deepen the interaction and motion language where current recipes demonstra
 | Keyframes | Reaction bursts and authored validation shakes need more than one kick | Implemented for format 0.8 as transient entry effects with deterministic interruption and reduced motion |
 | Sequence | Accordion requests already ask for the chevron and panel to move in order | Wait for a second independent recipe before adding syntax |
 | Decay | Free-scrolling carousel variants need inertial travel before snapping | Define velocity, bounds and interruption across platforms |
-| Continuous active motion | Pull-to-refresh still uses a CSS spinner workaround | Decide whether indefinite loops belong in nudg or remain a host visual |
+| Continuous active motion | Spinner, skeleton, typing indicator and pull-to-refresh | Implemented as format 0.10 loops, with wrap on exit and a per-loop delay |
 | Scroll direction and velocity | App bars can map position but cannot hide on down and reveal on up | Generalize as derived continuous inputs, not a header-only feature |
 
 For each promoted primitive: start with the recipe contract and conformance case, implement TypeScript, Swift and Kotlin parity, then update the starter and judge tooling. `stagger`, collection coordination and screen transitions wait until recipes for lists, grids or flows supply concrete evidence.
@@ -128,7 +132,7 @@ Goal: deliver the original stage 2 scope with patterns proven in app workflows.
 - Add decay / inertia for fling and scroll-like motion without snap points.
 - Add small compositional primitives where real patterns need them: `delay`, `sequence`, or `stagger`.
 - Explore reusable behavior composition for patterns such as toast = presence + timer + dismiss + hover pause.
-- Add continuous active-state motion for spinners or marquees if CSS state hooks are not enough.
+- Done in format 0.10: loops for spinners, shimmers and typing dots. Marquees and loops that run a fixed number of times wait for a pattern.
 - Keep every new primitive tied to at least one real pattern and one conformance case.
 
 Done when: screen-level and collection-level interactions can be expressed without one-off host code for the motion logic.

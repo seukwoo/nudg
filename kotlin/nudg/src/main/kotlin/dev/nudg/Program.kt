@@ -1,6 +1,6 @@
 package dev.nudg
 
-/** A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 and 2). */
+/** A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 3). */
 
 enum class PropertyKind { LENGTH, NUMBER, COLOR }
 
@@ -25,6 +25,8 @@ sealed interface MeasuredEndpoint {
     data class Number(val value: Double) : MeasuredEndpoint
     data class Measured(val measure: Measure) : MeasuredEndpoint
 }
+/** A periodic offset added to a property while its state is active (v0.10). */
+data class Loop(val to: MeasuredEndpoint, val frames: List<Pair<Double, MeasuredEndpoint>>, val duration: Double, val ease: Ease, val delay: Double, val wrap: Double?)
 data class PropertyMap(val source: String, val sourceKind: String, val from: List<MeasuredEndpoint>, val to: List<List<Double>>)
 data class Property(val kind: PropertyKind, val base: List<Double>, val map: PropertyMap?, val measure: Measure?, val min: Double?, val max: Double?)
 data class Follow(val input: String, val range: Pair<MeasuredEndpoint, MeasuredEndpoint>?, val overdrag: Double)
@@ -40,6 +42,7 @@ class State(
     val measure: Map<String, Measure>,
     val follow: List<Pair<String, Follow>>,
     val enter: List<Pair<String, EntryEffect>>,
+    val loop: List<Pair<String, Loop>>,
     val `when`: List<Pair<String, Transition>>,
     val timers: List<Timer>,
     val machine: Machine?,
@@ -63,7 +66,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
         fun decode(text: String): Program {
             @Suppress("UNCHECKED_CAST")
             val j = Json.parse(text) as Map<String, Any?>
-            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0)) { "Not a compiled nudg program (formats 1 or 2). Compile it with `nudg compile`." }
+            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0)) { "Not a compiled nudg program (formats 1 to 3). Compile it with `nudg compile`." }
             val properties = list(j["properties"]).map { p ->
                 obj(p).let { m ->
                     (m["key"] as String) to Property(
@@ -141,6 +144,18 @@ class Program(val version: String, val targets: List<String>, val properties: Li
                     }
                 },
                 list(s["enter"]).map { e -> obj(e).let { (it["key"] as String) to entryEffect(it["effect"] ?: it["motion"]) } },
+                list(s["loop"]).map { e ->
+                    obj(e).let { l ->
+                        (l["key"] as String) to Loop(
+                            endpoint(l["to"]),
+                            list(l["frames"]).map { f -> obj(f).let { (it["at"] as Double) to endpoint(it["value"]) } },
+                            l["duration"] as Double,
+                            ease(l["ease"]),
+                            l["delay"] as? Double ?: 0.0,
+                            l["wrap"] as? Double,
+                        )
+                    }
+                },
                 list(s["when"]).map { w -> obj(w).let { (it["event"] as String) to transition(it) } },
                 list(s["timers"]).map { t -> obj(t).let {
                     Timer(

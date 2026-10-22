@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Typing indicator</title>
+  <style>
+    .typing-demo { display: grid; gap: 12px; justify-items: start; font: 13px ui-sans-serif, system-ui, sans-serif; }
+    .typing-demo .bubble { display: flex; gap: 5px; align-items: center; padding: 12px 14px; border-radius: 18px 18px 18px 4px; background: #eceae4; transform-origin: left bottom; }
+    .typing-demo .dot { width: 8px; height: 8px; border-radius: 50%; background: #8a8a84; }
+    .typing-demo .toggle { padding: 6px 12px; border: 0; border-radius: 8px; background: #1c1c1a; color: #fff; font: inherit; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="typing-demo">
+    <div class="bubble" role="status" aria-label="Ada is typing" data-nudg="bubble">
+      <span class="dot" data-nudg="dot1"></span><span class="dot" data-nudg="dot2"></span><span class="dot" data-nudg="dot3"></span>
+    </div>
+    <button class="toggle" aria-pressed="false">Start typing</button>
+  </div>
+  <!-- Host markup for typing-indicator.nudg.json. The conversation sends host.typing and host.idle. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./typing-indicator.nudg.json");
+    const player = play(program, document.body);
+    const button = document.querySelector(".toggle");
+    button.addEventListener("click", () => {
+      const typing = button.getAttribute("aria-pressed") !== "true";
+      button.setAttribute("aria-pressed", String(typing));
+      button.textContent = typing ? "Stop typing" : "Start typing";
+      player.send(typing ? "host.typing" : "host.idle");
+    });
+  </script>
+</body>
+</html>

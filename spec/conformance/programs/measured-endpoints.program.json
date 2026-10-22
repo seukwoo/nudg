@@ -1,5 +1,5 @@
 {
- "nudgProgram": 2,
+ "nudgProgram": 3,
  "version": "0.9",
  "targets": [
   "row",
@@ -54,6 +54,7 @@
     "measure": [],
     "follow": [],
     "enter": [],
+    "loop": [],
     "when": [
      {
       "event": "content.dragstart",
@@ -84,6 +85,7 @@
      }
     ],
     "enter": [],
+    "loop": [],
     "when": [
      {
       "event": "content.dragend",

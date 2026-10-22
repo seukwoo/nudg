@@ -186,6 +186,31 @@ Status: implemented as format 0.7. An `after:` transition owns its timeout and m
 
 Status: implemented as format 0.8. Keyframes live only under a state's `enter`: the sampled current value is the implicit start and the resolved state target is the implicit end. This makes re-entry continuous, gives interruption a well-defined outgoing velocity, lets relayout change the destination, and keeps the state responsible for every resting value. Reduced motion skips the authored sequence. General delay, sequence and stagger semantics remain separate because current recipes do not require them.
 
+## Loops while a state is active (format 0.10)
+
+Status: implemented as format 0.10 in TypeScript, Swift and Kotlin, with the [spec](spec.md#additions-in-010-draft) and conformance. Spinner, skeleton and typing indicator have starters, and pull-to-refresh turns its spinner with a loop. The most needed gap in the recipe catalog together with screen composition (`nudg recipe --gaps`): spinner, skeleton and typing indicator have no starter, and pull-to-refresh spins its spinner with host CSS through `data-nudg-state`. Screen composition is stage 2 work across players; loops stay inside one player.
+
+```json
+"refreshing": {
+  "set": { "list.y": 64 },
+  "loop": { "spinner.rotation": { "to": 360, "duration": 0.8, "wrap": 360 } }
+}
+```
+
+**A loop is an offset added to the property while its state is active.** The property keeps its ordinary value (base, `set`, springs, kicks, keyframes); the loop adds a periodic offset on top. The offset is 0 when the state is entered, so entering never jumps, and it composes with whatever the state's springs are doing.
+
+- **One cycle is a track from 0.** `"to"` is the offset at the end of a cycle, for a sawtooth such as a spinner (0 to 360) or a shimmer (0 to the travel distance); `"keyframes"` lists `{ "at", "value" }` points inside the cycle, for a pulse or a bounce, with 0 implied at both ends. `duration` is one cycle; `ease` applies to each leg, as for entry keyframes, default `linear`.
+- **`delay` starts the cycle later and keeps the phase.** The offset stays 0 for `delay` seconds after entry, then cycles; typing dots are the same loop with delays 0, 0.15 and 0.3 s. This is the one stagger loops need, without a general stagger primitive.
+- **Leaving hands off like a drag.** The property continues from its displayed value, with the loop's velocity, toward its new target, with the destination's motion. `wrap` (a period, e.g. 360 for a rotation) first reduces the offset to the nearest equivalent of 0, so a spinner at 630° stops by turning 90° forward, not 630° back.
+- **Values may be measured.** `to` and keyframe values take the 0.9 endpoint form (`{ "measure", "times", "plus" }`), so a shimmer travels its placeholder's measured width.
+- **Rest.** A looping property counts as at rest, like a followed one: `onSettle` reports once the state's other motion is over, and exit is unaffected. The runtime gains `looping()`, true while a loop is active, so adapters keep drawing frames.
+- **Reduced motion** holds the offset at 0: no looping, the state's other values still apply. A spinner then needs a visible status (text, `aria-busy`), which the recipe already lists as a host responsibility.
+- **Errors.** A property can't loop and follow in the same state, a mapped property can't loop, two parallel regions can't loop the same property, and colors can't loop (offsets are numeric). A map may read a looping property, which is how a shimmer's highlight can fade at its ends.
+
+**Starters it enables:** spinner, skeleton, typing indicator (with `delay`), and pull-to-refresh without the CSS workaround. The gaps for sequence and stagger outside loops (menu, speed dial, accordion) remain.
+
+**Not in this cut:** loops that run a fixed number of times (an attention shake that repeats twice is entry keyframes, or a timer back to the state), loops on colors, and rate-driven values from app input (a progress-driven rotation is a `map`).
+
 ## Type-safe host contracts
 
 Status: implemented as `nudg generate` and the `nudg_generate` MCP tool.
@@ -253,7 +278,7 @@ These are unresolved design choices. Scheduling and completion status live in th
 - Reduced motion inside the format: a way for a file to say which properties must not be reduced (a progress bar's width), beyond the runtime's blanket option.
 - Discrete steps for `commit` (a slider that snaps to 10s), beyond `min`/`max`.
 - Nonlinear rubber banding that depends on the view's size, instead of the linear `overdrag` factor.
-- Continuous motion while a state is active (a spinner turning, a marquee): a rate-driven value, and how it hands off when the state is left (a rotation at 720° shouldn't unwind to 0). Today this is left to CSS through `data-nudg-state`.
+- Loops that run a fixed number of times, and loops on colors; see [loops](#loops-while-a-state-is-active-format-010) for what 0.10 settled.
 - `nearest` limited to neighbors of the current state (a carousel that moves one slide per swipe however hard the flick), instead of tuning `momentum` down.
 - Pinch, rotate and other multi-pointer gestures.
 - Continuous app inputs and scroll position are implemented in format 0.5. Still open: portable direction and velocity derivation, including thresholds and how those become deterministic events.

@@ -117,6 +117,40 @@ const HOOKS = {
       }
     },
   }),
+  spinner(player, root, { after }) {
+    const button = root.querySelector(".load");
+    let busy = false;
+    button?.addEventListener("click", () => {
+      if (busy) return;
+      busy = true;
+      button.textContent = "Loading…";
+      player.send("host.start");
+      after(2000, () => {
+        busy = false;
+        button.textContent = "Load";
+        player.send("host.done");
+      });
+    });
+  },
+  skeleton(player, root, { after }) {
+    let cancel;
+    const load = () => {
+      player.send("host.loading");
+      cancel?.();
+      cancel = after(2500, () => player.send("host.loaded"));
+    };
+    root.querySelector(".reload")?.addEventListener("click", load);
+    load();
+  },
+  "typing-indicator"(player, root) {
+    const button = root.querySelector(".toggle");
+    button?.addEventListener("click", () => {
+      const typing = button.getAttribute("aria-pressed") !== "true";
+      button.setAttribute("aria-pressed", String(typing));
+      button.textContent = typing ? "Stop typing" : "Start typing";
+      player.send(typing ? "host.typing" : "host.idle");
+    });
+  },
   // App timers follow the player's clock (`speed`), and die with the player.
   toast(player, root, { after }) {
     let cancel;

@@ -97,6 +97,9 @@ public final class NudgModel: ObservableObject {
 
   public func settled(at date: Date) -> Bool { (try? runtime.settled(time(at: date))) ?? true }
 
+  /** True while a state loops a property (format 0.10), so views keep redrawing after motion settles. */
+  public var looping: Bool { runtime.looping() }
+
   /** The model's own clock: the real time in an app, a fixed one in tests and previews. */
   public var now: Date { clock() }
 }
@@ -108,7 +111,7 @@ public struct NudgTarget: ViewModifier {
 
   public func body(content: Content) -> some View {
     // The timeline only says when to redraw; the time comes from the model's clock.
-    TimelineView(.animation(minimumInterval: nil, paused: model.settled(at: model.now))) { _ in
+    TimelineView(.animation(minimumInterval: nil, paused: model.settled(at: model.now) && !model.looping)) { _ in
       let v = model.values(at: model.now)
       let n = { (p: String, d: Double) in v["\(name).\(p)"]?.number ?? d }
       let scale = n("scale", 1)

@@ -379,3 +379,15 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Problem:** Format 0.6 let bottom-sheet and swipe-row resting states derive from layout, but their drag bounds and opacity map points still copied the same height or width as numbers. A responsive resting point could therefore disagree with the gesture that reached it.
 - **Resolution:** Format 0.9 accepts the existing measure object in `follow.range` and `map.from`. Before layout arrives a follow is unconstrained and a map holds its base; the first complete report activates both, and relayout updates them without restarting the gesture. TypeScript, Swift and Kotlin share the same conformance case, while compiled program format 2 carries measured endpoints and current runtimes still read format 1.
 - **Lesson:** Reuse the smallest existing operator where the semantics already match. Endpoint measurement closes a demonstrated recipe gap without adding expressions or teaching the core about sheets and swipe actions.
+
+## 2026-10-22: Gap counts pick loops
+
+### The expected primitive was not the most needed one
+- **Problem:** The roadmap expected `sequence` / `stagger` to be the most repeated gap. Registering menus, spinners, screen transitions and the rest as gap-only recipes, and counting them with `nudg recipe --gaps`, put screen composition and continuous motion first (4 each), sequence and stagger at 3.
+- **Resolution:** Continuous motion was promoted because it stays inside one player while screen composition is stage 2 work across players. Format 0.10 loops gave spinner, skeleton and typing indicator starters and removed pull-to-refresh's CSS workaround; a per-loop `delay` also covered the typing dots' stagger without a general stagger primitive.
+- **Lesson:** Count before choosing. A fixed capability vocabulary turned "what's missing" from an impression into a number, and the number disagreed with the impression.
+
+### Rounding a wrapped offset differently in three languages
+- **Problem:** Leaving a loop with `wrap` reduces the offset to its nearest equivalent of 0. "Nearest" written as `round(offset / wrap)` rounds halves differently in JavaScript (`Math.round(-0.5)` is -0), Python (to even), Swift (away from zero) and Kotlin's `Math.round` (up), so a spinner stopped at exactly half a turn would have unwound in different directions per runtime.
+- **Resolution:** The spec states the range, `(-wrap/2, wrap/2]`, and the formula `offset - wrap * ceil(offset / wrap - 0.5)`, which every language computes the same way. All runtimes use it.
+- **Lesson:** "Nearest" is not a portable definition. Anything a conformance suite compares must be specified as arithmetic, down to ties.

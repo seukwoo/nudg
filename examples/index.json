@@ -240,10 +240,11 @@
         "follow",
         "nearest",
         "map",
+        "loop",
         "host-event"
       ],
       "html": "pull-to-refresh.html",
-      "summary": "The list follows the finger with growing resistance, the spinner fades and grows with the pull, and a release past halfway holds the list open until the app reports it's done. While refreshing, CSS spins the spinner through the state attribute nudg sets.",
+      "summary": "The list follows the finger with growing resistance, the spinner fades and grows with the pull, and a release past halfway holds the list open until the app reports it's done. While refreshing, a loop turns the spinner; when it's done, it stops by the shortest turn.",
       "prompts": [
         "Require a longer pull before it refreshes.",
         "Make the list spring back with more bounce."
@@ -658,6 +659,58 @@
       "prompts": [
         "Make each new message pop more.",
         "Make clearing the badge a quick fade instead of a shrink."
+      ]
+    },
+    {
+      "id": "spinner",
+      "recipe": "spinner",
+      "title": "Spinner",
+      "category": "feedback",
+      "tags": [
+        "loop",
+        "host-event",
+        "spring"
+      ],
+      "html": "spinner.html",
+      "summary": "Fades in when the app starts work, turns at a constant rate while it runs, and stops by the shortest turn as it fades out. Reduced motion holds it still.",
+      "prompts": [
+        "Make the spinner turn a little slower.",
+        "Let it settle with a small overshoot when the work is done."
+      ]
+    },
+    {
+      "id": "skeleton",
+      "recipe": "skeleton",
+      "title": "Skeleton",
+      "category": "feedback",
+      "tags": [
+        "loop",
+        "measure",
+        "host-event",
+        "tween"
+      ],
+      "html": "skeleton.html",
+      "summary": "A highlight sweeps across the placeholders' measured width on a loop while loading; the content fades in when it arrives.",
+      "prompts": [
+        "Make the sweep slower and gentler.",
+        "Cross-fade to the content faster."
+      ]
+    },
+    {
+      "id": "typing-indicator",
+      "recipe": "typing-indicator",
+      "title": "Typing indicator",
+      "category": "feedback",
+      "tags": [
+        "loop",
+        "host-event",
+        "spring"
+      ],
+      "html": "typing-indicator.html",
+      "summary": "The bubble scales in and the three dots bounce on one loop, each started 0.15 s after the one before, so the wave keeps its shape.",
+      "prompts": [
+        "Make the dots bounce higher.",
+        "Space the dots further apart in time."
       ]
     }
   ]

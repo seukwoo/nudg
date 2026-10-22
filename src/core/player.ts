@@ -67,6 +67,8 @@ export function createPlayer<C extends NudgContract = NudgContract>(program: Pro
     life.changed();
   };
   options.onFrame?.(lastValues);
+  // A starting state that loops moves from the first frame on.
+  if (runtime.looping()) cancel = host.frame(tick);
 
   return {
     runtime,

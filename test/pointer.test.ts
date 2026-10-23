@@ -97,3 +97,34 @@ test("pinch inputs: ratio of distances, turn in (-180, 180], centre travel", asy
   assert.equal(pinchInputs([[0, 0], [10, 0]], [[0, 0], [-10, 0]]).rotation, 180);
   assert.equal(Math.round(pinchInputs([[0, 0], [10, 0]], [[0, 0], [0, -10]]).rotation), -90);
 });
+
+test("React Native's touch lists drive the tracker: a tap, and a second finger that pinches", async () => {
+  const { touchSync } = await import("../src/native/touches.ts");
+  const log: string[] = [];
+  const sink = { send: (e: string) => log.push(e), input: (n: string, v: number) => log.push(`${n}=${Math.round(v * 100) / 100}`) };
+  const tap = touchSync(new PointerTracker("button", false, sink));
+  tap.sync([{ identifier: 3, pageX: 10, pageY: 10 }], false);
+  tap.sync([], true);
+  assert.deepEqual(log.splice(0), ["button.down", "button.up", "button.tap"]);
+
+  const pinch = touchSync(new PointerTracker("image", true, sink, true));
+  pinch.sync([{ identifier: 1, pageX: 100, pageY: 100 }], false);
+  pinch.sync([{ identifier: 1, pageX: 100, pageY: 100 }, { identifier: 2, pageX: 140, pageY: 100 }], false);
+  pinch.sync([{ identifier: 1, pageX: 80, pageY: 100 }, { identifier: 2, pageX: 160, pageY: 100 }], false);
+  pinch.sync([], true);
+  // Each finger in an event is reported in turn, so the first one's move is a sample of its own.
+  assert.deepEqual(log.splice(0), [
+    "image.down",
+    "image.pinchstart",
+    "image.pinch.scale=1.5",
+    "image.pinch.rotation=0",
+    "image.pinch.x=-10",
+    "image.pinch.y=0",
+    "image.pinch.scale=2",
+    "image.pinch.rotation=0",
+    "image.pinch.x=0",
+    "image.pinch.y=0",
+    "image.pinchend",
+    "image.up",
+  ]);
+});

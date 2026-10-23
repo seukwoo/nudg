@@ -431,7 +431,7 @@ struct Toggle: View {
 - `.nudg(model, "knob")` applies a target's values (offset, rotation, scale, opacity, size, background color) every frame through `TimelineView`. `.nudgPress(model, "track")` handles press and drag by the same rules as the web (`down`, `up`, `tap`; `dragstart`, `drag.x` / `drag.y`, `dragend` for targets the file drags). `.nudgKeys(model, "thumb")` sends `target.key.<name>` while focused, for the keys the file listens for. `.nudgLayout(model, "tab2")` reports the view's frame for `measure`.
 - `model.send("host.show")`, `model.state`, and Reduce Motion from the system on iOS. `NudgModel(program, exit: ["hidden"], onSettle: { states in ... }, onExit: { ... })` and `model.present` follow the same lifecycle rules as every adapter; the CI check covers a settle after an interrupted toggle and an exit.
 - The runtime passes the whole conformance suite from `spec/conformance/programs/` (`swift run NudgConformance ../spec/conformance`), and CI also renders a toggle with SwiftUI's `ImageRenderer` and checks the knob is where the runtime says.
-- Not yet: an iOS simulator check (needs Xcode; the pointer rules are checked in the conformance runner instead), Swift Package distribution outside this repository.
+- Checked on an iOS simulator: `swift/test-ios.sh` runs the conformance suite, renders a SwiftUI toggle and reads its pixels before and after a tap, and checks one settle per rest and the exit; CI runs it on every change. `swift test` runs the same on the Mac.
 
 ## Kotlin and Jetpack Compose
 
@@ -455,7 +455,7 @@ Box(Modifier.size(52.dp, 32.dp).nudg(toggle, "track").nudgPress(toggle, "track")
 - `Modifier.nudg(state, "knob")` reads values inside a graphics layer (offset in dp, rotation, scale, opacity), a layout block (width, height) and a draw block (color), so a frame redraws or relayouts what moves and never recomposes. `nudgPress` handles press and drag by the same rules as every adapter (`down`, `up` or `cancel`, `tap`; `dragstart`, `drag.x` / `drag.y` in dp, `dragend` for targets the file drags); `nudgKeys` sends `target.key.<name>` while focused; `nudgLayout` (before `nudg` in the chain) reports the untransformed box for `measure`.
 - `state.send("host.show")`, `state.state`, and a `reducedMotion` flag. `rememberNudg(program, exit = listOf("hidden"), onExit = { ... }, onSettle = { states -> ... })` and `state.present` follow the same lifecycle rules as every adapter.
 - The runtime passes the whole conformance suite (`./gradlew :conformance:run`, also in CI). The `demo` app (`./gradlew :demo:installDebug`, with `sdk.dir` in `kotlin/local.properties`) plays the web examples' toggle and press; checked on an Android emulator.
-- The drag toggle was checked on the emulator: drags past the 4 dp slop turn it on and off, a shorter nudge taps. Not yet: Maven distribution.
+- `./gradlew :demo:connectedDebugAndroidTest` drives the demo on a running emulator with real touch input: a tap turns the toggle on, a drag across turns the drag toggle on without a tap, and two fingers pinch an image to 3x and the zoom stays. Checked on Android 16. Not yet: Maven distribution.
 
 ## DOM adapter
 

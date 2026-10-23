@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AccessibilityInfo, Animated, PanResponder, type GestureResponderEvent, type LayoutChangeEvent } from "react-native";
 import { PointerTracker, draggableTargets, pinchableTargets } from "../core/pointer.ts";
+import { touchSync } from "./touches.ts";
 import { createPlayer, initialValues, toProgram, type HeadlessPlayer } from "../core/player.ts";
 import { createRuntime, type Value } from "../core/runtime.ts";
 import type { NudgContract, Program, StateName } from "../core/types.ts";
@@ -122,24 +123,8 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
       pinchable.has(name),
     );
     // Every finger by its identifier, so a second one can pinch (format 0.18).
-    const down = new Map<number, true>();
-    const id = (identifier: number | string) => Number(identifier) || 0;
-    const sync = (e: GestureResponderEvent, release: boolean) => {
-      const touches = e.nativeEvent.touches ?? [];
-      const now = new Set(touches.map((t) => id(t.identifier)));
-      for (const t of touches) {
-        const i = id(t.identifier);
-        if (!down.has(i)) {
-          down.set(i, true);
-          tracker.down(t.pageX, t.pageY, i);
-        } else tracker.move(t.pageX, t.pageY, i);
-      }
-      for (const i of [...down.keys()]) {
-        if (now.has(i) && !release) continue;
-        down.delete(i);
-        tracker.up(true, i);
-      }
-    };
+    const touches = touchSync(tracker);
+    const sync = (e: GestureResponderEvent, release: boolean) => touches.sync(e.nativeEvent.touches ?? [], release);
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
@@ -147,10 +132,7 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
       onPanResponderGrant: (e) => sync(e, false),
       onPanResponderMove: (e) => sync(e, false),
       onPanResponderRelease: (e) => sync(e, true),
-      onPanResponderTerminate: () => {
-        down.clear();
-        tracker.cancel();
-      },
+      onPanResponderTerminate: () => touches.cancel(),
     }).panHandlers;
   };
   const bound = useRef(new Map<string, Bound>());

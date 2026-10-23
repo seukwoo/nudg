@@ -34,10 +34,12 @@ class MainActivity : ComponentActivity() {
         val toggleProgram = Program.decode(assets.open("toggle.program.json").bufferedReader().readText())
         val pressProgram = Program.decode(assets.open("press.program.json").bufferedReader().readText())
         val dragProgram = Program.decode(assets.open("toggle-drag.program.json").bufferedReader().readText())
+        val pinchProgram = Program.decode(assets.open("pinch.program.json").bufferedReader().readText())
         setContent {
             val toggle = rememberNudg(toggleProgram)
             val press = rememberNudg(pressProgram)
             val drag = rememberNudg(dragProgram)
+            val pinch = rememberNudg(pinchProgram)
             Column(
                 Modifier.fillMaxSize().background(Color(0xFFFAFAF9)).semantics { testTagsAsResourceId = true },
                 verticalArrangement = Arrangement.spacedBy(40.dp, Alignment.CenterVertically),
@@ -63,6 +65,11 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Text("Press me", color = Color.White, fontSize = 17.sp)
                 }
+                Text("pinch: ${pinch.state.joinToString(" ")} ${"%.2f".format((pinch.values["image.scale"] as? dev.nudg.Value.Number)?.value ?: 1.0)}", fontSize = 18.sp, modifier = Modifier.testTag("pinchstate"))
+                Box(
+                    Modifier.testTag("image").size(160.dp).nudgPress(pinch, "image").nudg(pinch, "image")
+                        .background(Color(0xFF7C3AED), RoundedCornerShape(12.dp)),
+                )
             }
         }
     }

@@ -53,7 +53,7 @@ Legend: **yes** supported, with an example; **yes, no example** supported but no
 | Parallel regions (independent controls beside a primary state) | yes | toggle-press, video call |
 | Presence (stay until the exit has played) | yes, in the adapters | toast |
 | Two screens in one transition (push and pop, a modal over its presenter, a shared element, a push drawer) | yes: one player whose targets are roles, measured map values (0.11) | stack navigation, full-screen modal, shared element, drawer |
-| A collection's items coordinated (insert, remove, reorder) | no: stage 2 in the [roadmap](roadmap.md) | |
+| A collection's items coordinated (insert, remove, reorder) | yes: one player per item, host-driven order, input targets (0.17) | animated list |
 | Transitions across levels (into a nested state, out to a parent's sibling) | no: [open question](design.md#open-questions) | |
 
 ## Where it runs

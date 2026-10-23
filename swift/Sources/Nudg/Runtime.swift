@@ -88,6 +88,8 @@ public final class Runtime {
   private var layout: [String: Double] = [:]
   private var measuredBases: [String: Measure] = [:]
   private var requiredInputs: Set<String> = []
+  /** Inputs that states read as targets (v0.17): a new sample retargets, like a relayout. */
+  private var targetInputs: Set<String> = []
   private var order = 0
   // Gestures derived from down, up and tap (v0.14), only for targets whose events the file handles.
   private lazy var wants = program.handledEvents
@@ -204,6 +206,7 @@ public final class Runtime {
     case let .states(_, states, _):
       for state in states {
         for (_, follow) in state.follow { requiredInputs.insert(follow.input) }
+        for (_, target) in state.input { requiredInputs.insert(target.input); targetInputs.insert(target.input) }
         if let inner = state.machine { collectFollowInputs(inner) }
       }
     }
@@ -267,6 +270,11 @@ public final class Runtime {
     let resolvedBases = out
     walkActive(act) { state in
       for (key, value) in state.set {
+        if let target = state.input[key] {
+          // The input's latest sample (0 before the first), scaled and offset (v0.17).
+          out[key] = [clamp(key, (inputs[target.input]?.last?.1 ?? 0) * target.times + target.plus)]
+          continue
+        }
         guard let m = state.measure[key] else { out[key] = value; continue }
         if let v = measured(key, m) { out[key] = [clamp(key, v)] } else { out[key] = resolvedBases[key]! }
       }
@@ -679,6 +687,9 @@ public final class Runtime {
     }
     guard requiredInputs.contains(name) else { return false }
     inputs[name, default: []].append((t, value))
+    // A target read from this input moves to the new value with its motion, before any
+    // event the sample derives.
+    if targetInputs.contains(name) { settle(t, [], []) }
     // Direction first: a scroll that has come back SCROLL_SLOP from its furthest point turns.
     if let scroll = scrolls[name] {
       if scroll.dir != true && value >= scroll.ref + SCROLL_SLOP {

@@ -1,0 +1,250 @@
+{
+  "conformance": "0.17",
+  "name": "Validator (0.17): targets read from inputs",
+  "documents": [
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "0.16",
+        "host": {
+          "events": [
+            "live",
+            "off"
+          ],
+          "inputs": {
+            "level": {
+              "range": [
+                0,
+                1
+              ]
+            }
+          }
+        },
+        "targets": [
+          "needle"
+        ],
+        "values": {
+          "needle.rotation": -10
+        },
+        "animate": {
+          "needle.rotation": {
+            "spring": {
+              "duration": 0.4,
+              "bounce": 0.2
+            }
+          }
+        },
+        "initial": "off",
+        "states": {
+          "off": {
+            "when": {
+              "host.live": "live"
+            }
+          },
+          "live": {
+            "set": {
+              "needle.rotation": {
+                "input": "host.level",
+                "times": 180,
+                "plus": -90
+              }
+            },
+            "when": {
+              "host.off": "off"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/states/live/set/needle.rotation"
+        }
+      ]
+    },
+    {
+      "name": "undeclared",
+      "doc": {
+        "nudg": "0.17",
+        "host": {
+          "events": [
+            "live",
+            "off"
+          ],
+          "inputs": {
+            "level": {
+              "range": [
+                0,
+                1
+              ]
+            }
+          }
+        },
+        "targets": [
+          "needle"
+        ],
+        "values": {
+          "needle.rotation": -10
+        },
+        "animate": {
+          "needle.rotation": {
+            "spring": {
+              "duration": 0.4,
+              "bounce": 0.2
+            }
+          }
+        },
+        "initial": "off",
+        "states": {
+          "off": {
+            "when": {
+              "host.live": "live"
+            }
+          },
+          "live": {
+            "set": {
+              "needle.rotation": {
+                "input": "host.levle",
+                "times": 180,
+                "plus": -90
+              }
+            },
+            "when": {
+              "host.off": "off"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "undeclared-host-input",
+          "path": "/states/live/set/needle.rotation/input"
+        }
+      ]
+    },
+    {
+      "name": "times",
+      "doc": {
+        "nudg": "0.17",
+        "host": {
+          "events": [
+            "live",
+            "off"
+          ],
+          "inputs": {
+            "level": {
+              "range": [
+                0,
+                1
+              ]
+            }
+          }
+        },
+        "targets": [
+          "needle"
+        ],
+        "values": {
+          "needle.rotation": -10
+        },
+        "animate": {
+          "needle.rotation": {
+            "spring": {
+              "duration": 0.4,
+              "bounce": 0.2
+            }
+          }
+        },
+        "initial": "off",
+        "states": {
+          "off": {
+            "when": {
+              "host.live": "live"
+            }
+          },
+          "live": {
+            "set": {
+              "needle.rotation": {
+                "input": "host.level",
+                "times": "big",
+                "plus": -90
+              }
+            },
+            "when": {
+              "host.off": "off"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/states/live/set/needle.rotation/times"
+        }
+      ]
+    },
+    {
+      "name": "color",
+      "doc": {
+        "nudg": "0.17",
+        "host": {
+          "events": [
+            "live",
+            "off"
+          ],
+          "inputs": {
+            "level": {
+              "range": [
+                0,
+                1
+              ]
+            }
+          }
+        },
+        "targets": [
+          "needle"
+        ],
+        "values": {
+          "needle.rotation": -10,
+          "needle.color": "#000000"
+        },
+        "animate": {
+          "needle.rotation": {
+            "spring": {
+              "duration": 0.4,
+              "bounce": 0.2
+            }
+          }
+        },
+        "initial": "off",
+        "states": {
+          "off": {
+            "when": {
+              "host.live": "live"
+            }
+          },
+          "live": {
+            "set": {
+              "needle.rotation": {
+                "input": "host.level",
+                "times": 180,
+                "plus": -90
+              },
+              "needle.color": {
+                "input": "host.level"
+              }
+            },
+            "when": {
+              "host.off": "off"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-type",
+          "path": "/states/live/set/needle.color"
+        }
+      ]
+    }
+  ]
+}

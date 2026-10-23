@@ -1,5 +1,5 @@
 {
- "nudgProgram": 6,
+ "nudgProgram": 7,
  "version": "0.15",
  "targets": [
   "scroller",
@@ -36,6 +36,7 @@
        "name": "shown",
        "set": [],
        "measure": [],
+       "input": [],
        "follow": [],
        "glide": [],
        "enter": [],
@@ -60,6 +61,7 @@
         }
        ],
        "measure": [],
+       "input": [],
        "follow": [],
        "glide": [],
        "enter": [],
@@ -93,6 +95,7 @@
        "name": "quiet",
        "set": [],
        "measure": [],
+       "input": [],
        "follow": [],
        "glide": [],
        "enter": [],
@@ -117,6 +120,7 @@
         }
        ],
        "measure": [],
+       "input": [],
        "follow": [],
        "glide": [],
        "enter": [],
@@ -139,6 +143,7 @@
        "name": "loud",
        "set": [],
        "measure": [],
+       "input": [],
        "follow": [],
        "glide": [],
        "enter": [],

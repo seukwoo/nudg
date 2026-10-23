@@ -553,6 +553,21 @@ Glide: a value that keeps the velocity it had when its state was entered and slo
 
 The conformance cases `glide.json` and `validation-0.16.json` define the behavior across TypeScript, Swift and Kotlin. Compiled programs carry `glide` in each state, as format 6.
 
+## Additions in 0.17 (draft)
+
+A state target read from a continuous input. A file that uses it declares `"nudg": "0.17"`; a 0.17 runtime also reads older files.
+
+```json
+"live": { "set": { "needle.rotation": { "input": "host.level", "times": 180, "plus": -90 } } }
+```
+
+- In `set`, a numeric property's target may be `{ "input", "times"?, "plus"? }`: the input's latest sample (0 before the first) × `times` (default 1) + `plus` (default 0), clamped to the property's bounds. Any input is allowed (app, scroll, drag); with a declared `host`, an app input must be declared.
+- **A new sample retargets** every active target that reads it, with each property's motion, keeping its velocity, as a relayout does for measured targets. On one sample, targets move before any event the sample derives (0.15).
+- Unlike `map`, which jumps with the input, the property travels to the value with its motion: a needle that springs to a reading, a row that springs to the slot the host computed.
+- Errors: a color is `invalid-type`; `times` or `plus` that isn't a finite number is `invalid-value`; inputs use the existing input codes.
+
+The conformance cases `input-targets.json` and `validation-0.17.json` define the behavior across TypeScript, Swift and Kotlin. Compiled programs carry `input` targets in each state, as format 7.
+
 ## Rest and lifecycle
 
 Hosts need to know when motion is over: to move focus once a dialog has opened, to tell a component library its transition has entered, to remove an element once its exit has played. These rules make that moment the same in every runtime and adapter. They add no file syntax.
@@ -579,5 +594,5 @@ Settle is reported from the frame loop, never from inside the call that sent the
 
 ## Compiled programs (for native runtimes)
 
-`nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 6`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Format 2 carries measured endpoints, format 3 loops (`"loop"` in each state), format 4 measured map values, format 5 motion delays and format 6 glides; current runtimes read every earlier format. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms.
+`nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 7`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Format 2 carries measured endpoints, format 3 loops (`"loop"` in each state), format 4 measured map values, format 5 motion delays, format 6 glides and format 7 input targets; current runtimes read every earlier format. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms.
 

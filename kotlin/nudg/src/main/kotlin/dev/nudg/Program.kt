@@ -1,6 +1,6 @@
 package dev.nudg
 
-/** A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 6). */
+/** A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 7). */
 
 enum class PropertyKind { LENGTH, NUMBER, COLOR }
 
@@ -23,6 +23,8 @@ sealed interface EntryEffect {
 }
 
 data class Measure(val target: String, val of: String, val times: Double, val plus: Double)
+/** A state target read from a continuous input (v0.17), scaled and offset like a measurement. */
+data class InputTarget(val input: String, val times: Double, val plus: Double)
 sealed interface MeasuredEndpoint {
     data class Number(val value: Double) : MeasuredEndpoint
     data class Measured(val measure: Measure) : MeasuredEndpoint
@@ -49,6 +51,7 @@ class State(
     val name: String,
     val set: List<Pair<String, List<Double>>>,
     val measure: Map<String, Measure>,
+    val input: Map<String, InputTarget>,
     val follow: List<Pair<String, Follow>>,
     val glide: List<Pair<String, Glide>>,
     val enter: List<Pair<String, EntryEffect>>,
@@ -76,7 +79,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
         fun decode(text: String): Program {
             @Suppress("UNCHECKED_CAST")
             val j = Json.parse(text) as Map<String, Any?>
-            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0)) { "Not a compiled nudg program (formats 1 to 6). Compile it with `nudg compile`." }
+            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0)) { "Not a compiled nudg program (formats 1 to 7). Compile it with `nudg compile`." }
             val properties = list(j["properties"]).map { p ->
                 obj(p).let { m ->
                     (m["key"] as String) to Property(
@@ -147,6 +150,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
                 s["name"] as String,
                 list(s["set"]).map { e -> obj(e).let { (it["key"] as String) to doubles(it["value"]) } },
                 list(s["measure"]).associate { e -> obj(e).let { (it["key"] as String) to measure(it) } },
+                list(s["input"]).associate { e -> obj(e).let { (it["key"] as String) to InputTarget(it["input"] as String, it["times"] as? Double ?: 1.0, it["plus"] as? Double ?: 0.0) } },
                 list(s["follow"]).map { e ->
                     obj(e).let { f ->
                         val r = list(f["range"]).map(::endpoint)

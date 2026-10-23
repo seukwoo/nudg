@@ -1,5 +1,5 @@
 {
- "nudgProgram": 6,
+ "nudgProgram": 7,
  "version": "0.14",
  "targets": [
   "photo"
@@ -22,6 +22,7 @@
     "name": "idle",
     "set": [],
     "measure": [],
+    "input": [],
     "follow": [],
     "glide": [],
     "enter": [],
@@ -56,6 +57,7 @@
      }
     ],
     "measure": [],
+    "input": [],
     "follow": [],
     "glide": [],
     "enter": [],
@@ -83,6 +85,7 @@
     "name": "menu",
     "set": [],
     "measure": [],
+    "input": [],
     "follow": [],
     "glide": [],
     "enter": [],
@@ -107,6 +110,7 @@
      }
     ],
     "measure": [],
+    "input": [],
     "follow": [],
     "glide": [],
     "enter": [],

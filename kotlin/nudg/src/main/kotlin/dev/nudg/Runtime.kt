@@ -85,6 +85,8 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
     private val layout = HashMap<String, Double>()
     private val measuredBases = HashMap<String, Measure>()
     private val requiredInputs = HashSet<String>()
+    /** Inputs that states read as targets (v0.17): a new sample retargets, like a relayout. */
+    private val targetInputs = HashSet<String>()
     private var order = 0
     // Gestures derived from down, up and tap (v0.14), only for targets whose events the file handles.
     private val wants by lazy { program.handledEvents }
@@ -195,6 +197,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
             is Machine.Regions -> for ((_, region) in machine.regions) collectFollowInputs(region)
             is Machine.States -> for (state in machine.states) {
                 for ((_, follow) in state.follow) requiredInputs.add(follow.input)
+                for ((_, target) in state.input) { requiredInputs.add(target.input); targetInputs.add(target.input) }
                 state.machine?.let(::collectFollowInputs)
             }
         }
@@ -253,6 +256,12 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         val resolvedBases = HashMap(out)
         walkActive(act) { s ->
             for ((key, value) in s.set) {
+                val target = s.input[key]
+                if (target != null) {
+                    // The input's latest sample (0 before the first), scaled and offset (v0.17).
+                    out[key] = listOf(clamp(key, (inputs[target.input]?.lastOrNull()?.second ?: 0.0) * target.times + target.plus))
+                    continue
+                }
                 val m = s.measure[key]
                 if (m == null) { out[key] = value; continue }
                 out[key] = measured(key, m)?.let { listOf(clamp(key, it)) } ?: resolvedBases.getValue(key)
@@ -664,6 +673,9 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         }
         if (name !in requiredInputs) return false
         inputs.getOrPut(name) { ArrayList() }.add(t to value)
+        // A target read from this input moves to the new value with its motion, before any
+        // event the sample derives.
+        if (name in targetInputs) settle(t, emptyList(), emptyList())
         // Direction first: a scroll that has come back SCROLL_SLOP from its furthest point turns.
         scrolls[name]?.let { s ->
             if (s.dir != true && value >= s.ref + SCROLL_SLOP) {

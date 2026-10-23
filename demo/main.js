@@ -8,6 +8,7 @@ import { compileText, play } from "../dist/dom/index.js";
 import { compare } from "../dist/index.js";
 import { createCameraController } from "../examples/camera-host.js";
 import { createMediaController } from "../examples/media-host.js";
+import { createAnimatedList } from "../examples/list-host.js";
 
 const catalog = await fetch("../examples/index.json", { cache: "no-store" }).then((r) => r.json());
 const examples = catalog.examples;
@@ -150,6 +151,12 @@ const HOOKS = {
       button.textContent = typing ? "Stop typing" : "Start typing";
       player.send(typing ? "host.typing" : "host.idle");
     });
+  },
+  // One player per row, as the host page does: the site's single player steps aside.
+  "animated-list"(player, root) {
+    player.destroy();
+    const list = createAnimatedList(root.querySelector(".list"), player.runtime.program, play);
+    root.querySelector(".add")?.addEventListener("click", () => list.add());
   },
   // App timers follow the player's clock (`speed`), and die with the player.
   toast(player, root, { after }) {

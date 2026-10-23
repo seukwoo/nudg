@@ -103,6 +103,13 @@ export interface Measure {
   plus: number;
 }
 
+/** A state target read from a continuous input (v0.17), scaled and offset like a measurement. */
+export interface InputTarget {
+  input: string;
+  times: number;
+  plus: number;
+}
+
 export interface Property {
   kind: PropertyKind;
   /** A base value measured from layout instead of a number (v0.4). `base` holds 0 until then. */
@@ -164,6 +171,8 @@ export interface State {
   set: Map<string, Channels>;
   /** Entries of `set` that are measured (v0.4); their `set` value is a placeholder. */
   measure: Map<string, Measure>;
+  /** Entries of `set` read from an input (v0.17); their `set` value is a placeholder. */
+  input: Map<string, InputTarget>;
   follow: Map<string, Follow>;
   /** Properties that glide on with their velocity while the state is active (v0.16). */
   glide: Map<string, Glide>;

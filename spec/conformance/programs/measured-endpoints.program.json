@@ -1,5 +1,5 @@
 {
- "nudgProgram": 6,
+ "nudgProgram": 7,
  "version": "0.9",
  "targets": [
   "row",
@@ -52,6 +52,7 @@
     "name": "closed",
     "set": [],
     "measure": [],
+    "input": [],
     "follow": [],
     "glide": [],
     "enter": [],
@@ -69,6 +70,7 @@
     "name": "dragging",
     "set": [],
     "measure": [],
+    "input": [],
     "follow": [
      {
       "key": "content.x",

@@ -51,8 +51,10 @@ public final class Lifecycle {
       owed = false
       onSettle?(runtime.state())
     }
-    let settled = (try? runtime.settled(t)) ?? true
-    if settled { syncPresence(t) }
+    // The host may have sent events from inside onSettle, which advance the runtime.
+    let now = max(t, runtime.time())
+    let settled = (try? runtime.settled(now)) ?? true
+    if settled { syncPresence(now) }
     return !settled || owed || runtime.looping()
   }
 

@@ -176,6 +176,24 @@
       ]
     },
     {
+      "id": "double-tap-like",
+      "recipe": "reaction",
+      "title": "Double-tap like",
+      "category": "buttons",
+      "tags": [
+        "doubletap",
+        "longpress",
+        "keyframes",
+        "parallel"
+      ],
+      "html": "double-tap-like.html",
+      "summary": "Double-tap the photo and a heart bursts over it, every time; hold it half a second to lift it for a peek. The runtime derives both gestures, so a long press never also counts as a tap.",
+      "prompts": [
+        "Make the heart burst bigger and shorter.",
+        "Lift the photo higher while peeking."
+      ]
+    },
+    {
       "id": "swipe-row",
       "recipe": "swipe-row",
       "title": "Swipe row",

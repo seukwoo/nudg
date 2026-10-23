@@ -46,6 +46,8 @@ private struct ActiveLoop {
 }
 
 private let REST_NUMBER = 1e-3, REST_COLOR = 1e-4
+/** Seconds a press is held before it is a long press, and the most between two taps of a double tap (v0.14). */
+private let LONG_PRESS = 0.5, DOUBLE_TAP = 0.3
 private let VELOCITY_WINDOW = 0.1
 private let REDUCED: Motion = .tween(duration: 0.15, ease: .linear)
 private let LAYOUT_NAMES: Set<String> = ["x", "y", "width", "height", "naturalWidth", "naturalHeight"]
@@ -63,6 +65,13 @@ public final class Runtime {
   private var measuredBases: [String: Measure] = [:]
   private var requiredInputs: Set<String> = []
   private var order = 0
+  // Gestures derived from down, up and tap (v0.14), only for targets whose events the file handles.
+  private lazy var wants = program.handledEvents
+  /** When each pressed target becomes a long press, until up, cancel or dragstart. */
+  private var pressDue: [String: Double] = [:]
+  /** Targets whose current press was a long press: the tap that ends it is not a tap. */
+  private var longPressed = Set<String>()
+  private var lastTap: [String: Double] = [:]
   private var now = 0.0
   private let reduced: Bool
 
@@ -470,11 +479,22 @@ public final class Runtime {
     }
   }
 
+  /** Fires every timer and long press due by `t`, earliest first; a timer before a long press due at the same time. */
   private func fireDue(_ t: Double) {
     while true {
       var next: Pending?
       for p in pending where p.pausedAt == nil && p.due <= t + 1e-9 {
         if next == nil || p.due < next!.due || (p.due == next!.due && p.order < next!.order) { next = p }
+      }
+      var press: (String, Double)?
+      for (target, due) in pressDue.sorted(by: { $0.key < $1.key }) where due <= t + 1e-9 {
+        if press == nil || due < press!.1 { press = (target, due) }
+      }
+      if let press, next == nil || press.1 < next!.due {
+        pressDue[press.0] = nil
+        longPressed.insert(press.0)
+        dispatch("\(press.0).longpress", press.1)
+        continue
       }
       guard let due = next else { return }
       pending.removeAll { $0 === due }
@@ -526,10 +546,31 @@ public final class Runtime {
   @discardableResult
   public func send(_ event: String, at t: Double) throws -> Bool {
     try advanceTo(t)
-    if let dot = event.firstIndex(of: "."), event[event.index(after: dot)...] == "dragstart" {
-      let target = event[..<dot]
+    let parts = event.split(separator: ".", maxSplits: 1).map(String.init)
+    let target = parts[0], name = parts.count > 1 ? parts[1] : ""
+    if name == "dragstart" {
       for axis in ["x", "y"] { inputs["\(target).drag.\(axis)"] = [(t, 0)] }
     }
+    if name == "down" && wants.contains("\(target).longpress") {
+      pressDue[target] = t + LONG_PRESS
+      longPressed.remove(target)
+    }
+    if name == "up" || name == "cancel" || name == "dragstart" { pressDue[target] = nil }
+    if name == "tap" && longPressed.remove(target) != nil { return false }
+    let handled = dispatch(event, t)
+    if name == "tap" && wants.contains("\(target).doubletap") {
+      if let previous = lastTap[target], t - previous <= DOUBLE_TAP + 1e-9 {
+        lastTap[target] = nil
+        return dispatch("\(target).doubletap", t) || handled
+      }
+      lastTap[target] = t
+    }
+    return handled
+  }
+
+  /** Delivers one event at `t`: pause reasons first, then the machine. False if nothing handled it. */
+  @discardableResult
+  private func dispatch(_ event: String, _ t: Double) -> Bool {
     var fired: [Transition] = [], entered: [State] = []
     let timerHandled = controlTimers(event, t)
     if !handle(program.machine, event, t, &fired, &entered) { return timerHandled }
@@ -587,7 +628,7 @@ public final class Runtime {
   /** True when every property has come to rest and no unpaused timer is counting down. */
   public func settled(_ t: Double, property: String? = nil) throws -> Bool {
     try advanceTo(t)
-    if property == nil && pending.contains(where: { $0.pausedAt == nil }) { return false }
+    if property == nil && (pending.contains(where: { $0.pausedAt == nil }) || !pressDue.isEmpty) { return false }
     let keys = property.map { [$0] } ?? program.properties.map { $0.0 }
     return keys.allSatisfy { atRest($0, t) }
   }

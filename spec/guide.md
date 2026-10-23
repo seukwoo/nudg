@@ -36,7 +36,7 @@ nudg files describe a UI interaction: states, the events that move between them,
 | Kind | Allowed |
 |---|---|
 | Properties (`target.property`) | `x`, `y`, `width`, `height` (logical units: number or `"20px"`/`"pt"`/`"dp"`), `scale`, `scaleX`, `scaleY`, `rotation` (degrees), `opacity` (0–1), `color` (hex `#RGB`, `#RRGGBB`, `#RRGGBBAA`) |
-| Events (`target.event`) | `down`, `up`, `cancel`, `tap`. A click is `down`, `up`, `tap`. |
+| Events (`target.event`) | `down`, `up`, `cancel`, `tap`. A click is `down`, `up`, `tap`. Format 0.14: `longpress` (held 0.5 s; its tap is swallowed) and `doubletap` (a second tap within 0.3 s, right after it). |
 | Time | seconds (`0.3`) or `"300ms"` |
 
 Not nudg names: `translateX` (use `x`), `rotate` (`rotation`), `backgroundColor` / `fill` (`color`), `click` (`tap`), `press` (`down`).
@@ -269,6 +269,8 @@ Pattern words live in external recipe metadata, not core syntax. Every shipped e
 | shake on error | format 0.8 `enter` keyframes on `x`; use a kick only for a less-authored physical wobble |
 | one after another, stagger, cascade, in order | growing `delay` per property in that transition's `animate`; reverse the delays on the way back |
 | the content should appear after it opens | `delay` on the content's opacity in the opening transition only |
+| long press, hold, press and hold | `target.longpress` (format 0.14), not a `down` state with an `after:` timer; return on `target.up` |
+| double tap, double-tap to like / zoom | `target.doubletap` (format 0.14); replay the burst by transitioning to the same state |
 | keep it spinning / pulsing while loading | a `loop` in that state (format 0.10); `duration` is one cycle, slower = longer |
 | change it everywhere | edit the shared motion library, not each file |
 | make it draggable | add a `dragging` state with `follow`, entered on `dragstart`, left on `dragend` with `nearest` |

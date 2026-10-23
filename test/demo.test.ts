@@ -80,7 +80,7 @@ test("filters: category, tag and search", { skip }, async () => {
   await go("#tag=kick");
   assert.deepEqual(await browser.evaluate("[...document.querySelectorAll('#grid h3')].map((h) => h.textContent).sort()"), ["Badge", "Like", "Rating", "Stepper"]);
   await go("#tag=keyframes");
-  assert.deepEqual(await browser.evaluate("[...document.querySelectorAll('#grid h3')].map((h) => h.textContent)"), ["Shake on error"]);
+  assert.deepEqual(await browser.evaluate("[...document.querySelectorAll('#grid h3')].map((h) => h.textContent).sort()"), ["Double-tap like", "Shake on error"]);
   await go("#");
   await browser.evaluate(`(() => { const s = document.getElementById("search"); s.value = "sheet"; s.dispatchEvent(new Event("input")); })()`);
   await sleep(300);

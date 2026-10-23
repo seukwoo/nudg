@@ -1965,6 +1965,87 @@ def validation_v13_cases():
     })
 
 
+# --- v0.14: derived gestures ------------------------------------------------
+
+GESTURES = {
+    "nudg": "0.14",
+    "targets": ["photo"],
+    "values": {"photo.scale": 1},
+    "initial": "idle",
+    "states": {
+        "idle": {"when": {"photo.tap": "selected", "photo.longpress": "menu", "photo.doubletap": "zoomed"}},
+        "selected": {"set": {"photo.scale": 0.95}, "when": {"photo.tap": "idle", "photo.longpress": "menu", "photo.doubletap": "zoomed"}},
+        "menu": {"when": {"photo.tap": "idle"}},
+        "zoomed": {"set": {"photo.scale": 2}, "when": {"photo.doubletap": "idle"}},
+    },
+}
+
+
+def gesture_cases():
+    def press(t, hold, steps, tap=True):
+        steps.append({"t": t, "send": "photo.down"})
+        steps.append({"t": round(t + hold, 6), "send": "photo.up"})
+        if tap:
+            steps.append({"t": round(t + hold, 6), "send": "photo.tap"})
+
+    steps = []
+    # A short press is a tap.
+    press(0.1, 0.1, steps)
+    steps.append({"t": 0.2, "expect": {"state": ["selected"]}})
+    # A press held 0.5 s is a long press at exactly that moment; the tap that ends it is
+    # swallowed, and a pending long press keeps the runtime from settling.
+    steps.append({"t": 1.0, "send": "photo.down"})
+    steps.append({"t": 1.3, "expect": {"state": ["selected"], "settled": False}})
+    steps.append({"t": 1.499, "expect": {"state": ["selected"]}})
+    steps.append({"t": 1.5, "expect": {"state": ["menu"]}})
+    steps.append({"t": 1.8, "send": "photo.up"})
+    steps.append({"t": 1.8, "send": "photo.tap", "handled": False})
+    steps.append({"t": 1.8, "expect": {"state": ["menu"], "settled": True}})
+    # Releasing or dragging before 0.5 s cancels it.
+    press(2.0, 0.1, steps)
+    steps.append({"t": 2.1, "expect": {"state": ["idle"]}})
+    steps.append({"t": 3.0, "send": "photo.down"})
+    steps.append({"t": 3.2, "send": "photo.cancel"})
+    steps.append({"t": 3.8, "expect": {"state": ["idle"]}})
+    # Two taps 0.3 s apart: the first is a tap, the second a tap and then a double tap.
+    press(4.0, 0.05, steps)
+    steps.append({"t": 4.05, "expect": {"state": ["selected"]}})
+    steps.append({"t": 4.3, "send": "photo.down"})
+    steps.append({"t": 4.35, "send": "photo.up"})
+    steps.append({"t": 4.35, "send": "photo.tap", "handled": True})
+    steps.append({"t": 4.35, "expect": {"state": ["zoomed"]}})
+    # A third tap starts a new pair; taps further apart are single taps.
+    press(5.0, 0.05, steps)
+    press(5.5, 0.05, steps)
+    steps.append({"t": 5.6, "expect": {"state": ["zoomed"]}})
+    press(5.7, 0.05, steps)
+    steps.append({"t": 5.8, "expect": {"state": ["idle"]}})
+    write("gestures", {
+        "conformance": "0.14",
+        "name": "Gestures: a press held 0.5 s is a long press and swallows its tap; a second tap within 0.3 s is followed by a double tap",
+        "doc": GESTURES,
+        "steps": steps,
+    })
+
+
+def validation_v14_cases():
+    d = json.loads(json.dumps(GESTURES)); d["nudg"] = "0.13"
+    out = [("needs-version", d, [
+        ("needs-version", "/states/idle/when/photo.longpress"),
+        ("needs-version", "/states/idle/when/photo.doubletap"),
+        ("needs-version", "/states/selected/when/photo.longpress"),
+        ("needs-version", "/states/selected/when/photo.doubletap"),
+        ("needs-version", "/states/zoomed/when/photo.doubletap"),
+    ])]
+    d = json.loads(json.dumps(GESTURES)); d["states"]["idle"]["when"] = {"photo.dblclick": "zoomed"}
+    out.append(("alias", d, [("unknown-event", "/states/idle/when/photo.dblclick")]))
+    write("validation-0.14", {
+        "conformance": "0.14",
+        "name": "Validator (0.14): derived gesture events",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 def rest_time(prop, motion, start, limit=5.0, step=1e-3):
     """When a spring comes to rest: its remaining amplitude, position and velocity
     together (sqrt(x^2 + v^2 m/k)), drops below the rest threshold. Energy never grows."""
@@ -2067,5 +2148,7 @@ if __name__ == "__main__":
     delay_cases()
     validation_v12_cases()
     validation_v13_cases()
+    gesture_cases()
+    validation_v14_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

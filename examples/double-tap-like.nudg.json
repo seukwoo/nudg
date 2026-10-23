@@ -1,0 +1,34 @@
+{
+  "nudg": "0.14",
+  "note": "A photo you double-tap to like: a heart bursts over it and fades, every time. Holding it for half a second lifts it a little to peek, until you let go. The runtime derives both gestures from the presses, so a long press never also counts as a tap.",
+  "targets": ["photo", "heart"],
+  "values": { "photo.scale": 1, "heart.scale": 0, "heart.opacity": 0 },
+  "animate": {
+    "photo.scale": { "spring": { "duration": 0.3, "bounce": 0.15 } },
+    "heart.scale": { "spring": { "duration": 0.3, "bounce": 0 } },
+    "heart.opacity": { "tween": { "duration": 0.2, "ease": "out" } }
+  },
+  "regions": {
+    "like": {
+      "initial": "idle",
+      "states": {
+        "idle": { "when": { "photo.doubletap": "liked" } },
+        "liked": {
+          "note": "Liking again replays the burst; the app stores the like.",
+          "enter": {
+            "heart.scale": { "keyframes": [{ "at": 0.15, "value": 1.25 }, { "at": 0.3, "value": 1 }, { "at": 0.75, "value": 1 }], "duration": 0.9, "ease": "out" },
+            "heart.opacity": { "keyframes": [{ "at": 0.1, "value": 1 }, { "at": 0.75, "value": 1 }], "duration": 0.9 }
+          },
+          "when": { "photo.doubletap": "liked" }
+        }
+      }
+    },
+    "peek": {
+      "initial": "resting",
+      "states": {
+        "resting": { "when": { "photo.longpress": "peeking" } },
+        "peeking": { "set": { "photo.scale": 1.06 }, "when": { "photo.up": "resting", "photo.cancel": "resting" } }
+      }
+    }
+  }
+}

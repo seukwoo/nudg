@@ -284,6 +284,15 @@ Status: implemented. The image viewer was the last gap: a pinch's scale, turn an
 - **The tracker owns the rules, once.** The shared `PointerTracker` (TypeScript, Swift, Kotlin) turns pointers into events and inputs and is checked against the same sequence in every language; the DOM, React Native and Compose adapters feed it raw pointers. SwiftUI only exposes the system's magnify and rotate recognisers, so its pinch has no midpoint; that is a platform limit, documented, not papered over.
 - **Zoom about the midpoint is the file's choice.** The example moves the image with the midpoint and scales about its centre; a file that wants the midpoint fixed under the fingers can map its translation from the scale.
 
+## 1.0: what is stable
+
+Status: in progress (see the [roadmap](roadmap.md#now-10-stable-on-every-platform)).
+
+- **The format becomes "1.0".** 0.18's semantics are frozen under `"nudg": "1.0"`, so a file says plainly that it uses the stable format. Every 0.x file keeps working unchanged: runtimes read all of them, and `nudg upgrade` only raises the version string once the file validates, since every 0.x addition is a superset of the one before.
+- **Within 1.x, everything only gains.** New fields, events, inputs and error codes may appear with a new 1.x version, as 0.x additions did; nothing a 1.0 file says changes meaning, no error code is renamed, and no exported API is removed or narrowed. A change that breaks waits for 2.0.
+- **Native is in scope.** The format and conformance are already shared by the TypeScript, Swift and Kotlin runtimes; 1.0 also freezes the Swift package's and the Kotlin modules' public APIs and the React Native hook, and checks them on an iOS simulator and an Android emulator rather than only in their conformance runners.
+- **What is not frozen:** the examples site, the recipe catalog's contents (recipes may be added and improved; the catalog schema is versioned separately), the motion libraries' values, and anything documented as experimental.
+
 ## Type-safe host contracts
 
 Status: implemented as `nudg generate` and the `nudg_generate` MCP tool.

@@ -1,5 +1,5 @@
 {
-  "nudg": "0.7",
+  "nudg": "1.0",
   "note": "A video player host owns media playback, seeking, volume, rate, fullscreen and picture-in-picture. nudg coordinates playback feedback and pauses control auto-hide while hovered, focused, scrubbing or suspended.",
   "targets": ["status", "center-play", "controls", "buffered", "progress", "play", "mute"],
   "values": {

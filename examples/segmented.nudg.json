@@ -1,5 +1,5 @@
 {
-  "nudg": "0.4",
+  "nudg": "1.0",
   "note": "A three-way segmented control. Tapping a segment moves the indicator; dragging anywhere on the control slides it, and on release it snaps to the nearest segment. Transitions live on the machine, so each tap is listed once instead of once per state.",
   "targets": ["control", "seg1", "seg2", "seg3", "indicator"],
   "values": { "indicator.x": 0, "indicator.width": { "measure": "seg1.width" } },

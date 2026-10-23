@@ -1,5 +1,5 @@
 {
-  "nudg": "0.11",
+  "nudg": "1.0",
   "note": "A thumbnail that opens into a detail view. The card travels from the thumbnail's measured box on the list to the hero's measured box on the detail screen, while the list fades out and the details fade in; Back returns it. thumb and hero are layout slots; the card is what moves.",
   "targets": ["card", "thumb", "hero", "list", "details", "back"],
   "values": {

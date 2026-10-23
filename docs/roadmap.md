@@ -146,24 +146,24 @@ Done when: screen-level and collection-level interactions can be expressed witho
 
 Other existing candidates remain in [Design's open questions](design.md#open-questions), including cross-level transitions, a final-state marker, per-property reduced motion, discrete commit steps, nonlinear rubber banding, neighbor-limited snapping, gestures beyond a two-pointer pinch, motion overrides and schemes. They are retained design questions; a real pattern determines their priority.
 
-## 1.0: Stable Web and React Core
+## Now: 1.0, Stable on Every Platform
 
-Goal: make the TypeScript implementation and format stable enough for other people to build on.
+Goal: a format and APIs other people can build on, on the web and natively, without churn. Decisions in [Design](design.md#10-what-is-stable).
 
-- Freeze the 1.0 format surface: versioning, validation errors, conformance cases, and schema.
-- Complete the accepted type generation, React input parity, lifecycle and SSR work above; these are host API concerns, not reasons to enlarge the JSON grammar.
-- Mark the stable API for `@nudg/core`, `@nudg/core/dom`, `@nudg/core/react`, and `@nudg/core/node`.
-- Lock the judge workflow: `validate`, `simulate`, `compare`, `render`, `observe`, MCP, and the live demo.
-- Document upgrade paths for older `.nudg.json` files.
+- Done: format `"1.0"`: the semantics of 0.18, frozen. Runtimes keep reading every 0.x file; `nudg upgrade` rewrites a file's version after validating it. Schema 1.0; the examples and starters declare 1.0.
+- Done: frozen surface, checked by tests: every validator error code listed with its meaning ([errors](errors.md)); the conformance suite; the schema; the compiled program format; the public API of `@nudg/core` and its entry points, the CLI and MCP tools, the Swift package and the Kotlin modules, each against a committed snapshot in `api/`.
+- One spec: rewrite the 0.x "Additions" sections into a single 1.0 document, with the format history as an appendix.
+- Native checked for real: the Swift package's tests and a SwiftUI render on an iOS simulator; the Compose demo and React Native driven on an Android emulator.
+- Release 1.0.0, with the compatibility policy: within 1.x, files and APIs only gain; anything that breaks waits for 2.0.
 - Revisit semantic role metadata in files only if external recipe metadata proves insufficient; external metadata is the current decision.
 
-Done when: a user can adopt nudg in a production web/React component and trust that the format will not churn under them.
+Done when: a user can adopt nudg in a production web, React, iOS or Android component and trust that the format and APIs will not churn under them.
 
 ## After 1.0: Native and Beyond
 
 Goal: make the same interaction intent portable beyond web.
 
-- SwiftUI and Jetpack Compose: adapters, matching runtimes and tagged distribution are in; next, harden native host guidance and accessibility behavior.
+- Harden native host guidance and accessibility behavior beyond what 1.0 checks.
 - A portable core, possibly Rust/WASM/FFI, if maintaining multiple runtimes becomes expensive.
 - Native-specific host guidance for focus, accessibility, gesture systems, and reduced motion.
 - Flutter or React Native if dogfooding points there.

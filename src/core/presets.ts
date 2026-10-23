@@ -50,7 +50,7 @@ export function press(options: PressOptions = {}): NudgDocument {
     sink[`${t}.y`] = spring(options.sink ?? {}, 0.12, 0);
   }
   return {
-    nudg: "0.3",
+    nudg: "1.0",
     note: "presets.press(): sinks while pressed, springs back on release. Save this file to change more than the options cover.",
     targets: [t],
     values,
@@ -91,7 +91,7 @@ export function hover(options: HoverOptions = {}): NudgDocument {
     animate[`${t}.scale`] = spring(options.motion ?? {}, 0.3, 0.2);
   }
   return {
-    nudg: "0.3",
+    nudg: "1.0",
     note: "presets.hover(): lifts while hovered. Save this file to change more than the options cover.",
     targets: [t],
     values,
@@ -131,7 +131,7 @@ export function toggle(options: ToggleOptions = {}): NudgDocument {
     animate[`${track}.color`] = { tween: { duration: 0.2, ease: "out" } };
   }
   return {
-    nudg: "0.3",
+    nudg: "1.0",
     note: "presets.toggle(): tap to switch; host.check / host.uncheck set it. Save this file to change more than the options cover.",
     targets: [knob, track],
     values,
@@ -161,7 +161,7 @@ export function toast(options: ToastOptions = {}): NudgDocument {
   const shownWhen: Record<string, string> = { [`${t}.tap`]: "hidden" };
   if (duration > 0) shownWhen[`after:${duration}s`] = "hidden";
   return {
-    nudg: "0.3",
+    nudg: "1.0",
     note: "presets.toast(): the app sends host.show; it hides itself after a while or on tap. Save this file to change more than the options cover.",
     targets: [t],
     values: { [`${t}.y`]: options.rise ?? 12, [`${t}.opacity`]: 0 },
@@ -196,7 +196,7 @@ export function appear(options: AppearOptions = {}): NudgDocument {
   const t = options.target ?? "content";
   const s = spring(options.motion ?? {}, 0.3, 0.15);
   return {
-    nudg: "0.3",
+    nudg: "1.0",
     note: "presets.appear(): shown by host.show or host.open, hidden by host.hide or host.closed. Save this file to change more than the options cover.",
     targets: [t],
     values: { [`${t}.scale`]: options.scale ?? 0.96, [`${t}.y`]: options.rise ?? 8, [`${t}.opacity`]: 0 },

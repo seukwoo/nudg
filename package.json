@@ -45,7 +45,7 @@
       "types": "./dist/node/index.d.ts",
       "default": "./dist/node/index.js"
     },
-    "./schema.json": "./spec/nudg-0.18.schema.json",
+    "./schema.json": "./spec/nudg-1.0.schema.json",
     "./recipes.json": "./recipes/index.json",
     "./recipes.schema.json": "./recipes/schema.json",
     "./guide.md": "./spec/guide.md",
@@ -83,7 +83,8 @@
     "spec/nudg-0.15.schema.json",
     "spec/nudg-0.16.schema.json",
     "spec/nudg-0.17.schema.json",
-    "spec/nudg-0.18.schema.json"
+    "spec/nudg-0.18.schema.json",
+    "spec/nudg-1.0.schema.json"
   ],
   "scripts": {
     "test": "NUDG_LOG=off NUDG_OPEN=false node --test --test-force-exit --test-concurrency=3 \"test/*.test.ts\"",
@@ -92,6 +93,7 @@
     "prepack": "npm run build",
     "demo": "npm run build && node demo/serve.mjs",
     "media": "node scripts/readme-media.ts",
+    "api": "node scripts/api.ts",
     "nudg": "node src/cli.ts"
   },
   "devDependencies": {

@@ -568,6 +568,24 @@ A state target read from a continuous input. A file that uses it declares `"nudg
 
 The conformance cases `input-targets.json` and `validation-0.17.json` define the behavior across TypeScript, Swift and Kotlin. Compiled programs carry `input` targets in each state, as format 7.
 
+## Additions in 0.18 (draft)
+
+Pinches: two pointers on one target. A file that uses them declares `"nudg": "0.18"`; a 0.18 runtime also reads older files.
+
+```json
+"pinching": {
+  "follow": { "image.scale": { "input": "image.pinch.scale", "multiply": true, "range": [1, 4], "overdrag": 0.3 }, "image.x": "image.pinch.x" },
+  "when": { "image.pinchend": { "to": "held", "commit": ["image.scale", "image.x"] } }
+}
+```
+
+- **Events and inputs.** `target.pinchstart` and `target.pinchend`; inputs `target.pinch.scale` (the distance between the two pointers over their distance at the start), `target.pinch.rotation` (degrees the line between them has turned, in (-180, 180]) and `target.pinch.x` / `pinch.y` (how far their midpoint has moved). On `pinchstart` the runtime sets them to 1, 0, 0 and 0, as `dragstart` sets the drag inputs to 0, and cancels a pending long press.
+- **The pointer rules.** On a target that handles `pinchstart` or `pinchend`, a second pointer while the first is down ends any drag (`dragend`) and starts a pinch; the second pointer sends no `down`. Moves of either report the four inputs. Lifting either ends the pinch (`pinchend`); the first pointer's release still sends `up` (or `cancel`) but no `tap`, and the remaining pointer doesn't drag. Targets that don't handle pinches ignore a second pointer.
+- **A multiplying follow.** `"multiply": true` in a follow makes the value its value at entry × the input's ratio since entry, instead of adding the input's change: a second pinch continues from the zoom the first left. Range and overdrag apply to the result. From an input at 0 there is no ratio, and the value holds.
+- Errors: the new events, inputs and `multiply` need 0.18 (`needs-version`); `multiply` that isn't a boolean is `invalid-value`.
+
+The conformance cases `pinch.json` and `validation-0.18.json` define the runtime across TypeScript, Swift and Kotlin; each language's pointer tracker is checked against the same two-pointer sequence. The DOM, React Native and Compose adapters track pointers themselves; SwiftUI reports the system's magnify and rotate gestures, without the midpoint.
+
 ## Rest and lifecycle
 
 Hosts need to know when motion is over: to move focus once a dialog has opened, to tell a component library its transition has entered, to remove an element once its exit has played. These rules make that moment the same in every runtime and adapter. They add no file syntax.
@@ -594,5 +612,5 @@ Settle is reported from the frame loop, never from inside the call that sent the
 
 ## Compiled programs (for native runtimes)
 
-`nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 7`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Format 2 carries measured endpoints, format 3 loops (`"loop"` in each state), format 4 measured map values, format 5 motion delays, format 6 glides and format 7 input targets; current runtimes read every earlier format. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms.
+`nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 8`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Format 2 carries measured endpoints, format 3 loops (`"loop"` in each state), format 4 measured map values, format 5 motion delays, format 6 glides, format 7 input targets and format 8 multiplying follows; current runtimes read every earlier format. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms.
 

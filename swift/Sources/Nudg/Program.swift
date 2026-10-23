@@ -1,4 +1,4 @@
-// A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 7).
+// A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 8).
 // Everything is already validated and resolved; this only decodes it.
 
 import Foundation
@@ -86,6 +86,8 @@ public struct Follow {
   public let input: String
   public let range: (MeasuredEndpoint, MeasuredEndpoint)?
   public let overdrag: Double
+  /** Scale by the input's ratio since entry instead of adding its change, for a pinch (v0.18). */
+  public var multiply = false
 }
 
 /** A property that keeps its velocity and slows down by itself while a state is active (v0.16). */
@@ -166,8 +168,8 @@ public struct Program {
 
   /** Reads `nudg compile` output. */
   public static func decode(_ data: Data) throws -> Program {
-    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...7).contains(format) else {
-      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 7). Compile it with `nudg compile`.")
+    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...8).contains(format) else {
+      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 8). Compile it with `nudg compile`.")
     }
     let properties: [(String, Property)] = (j["properties"] as! [[String: Any]]).map { p in
       (p["key"] as! String, Property(
@@ -254,7 +256,7 @@ private func readState(_ s: [String: Any]) -> State {
     input: inputTargets,
     follow: (s["follow"] as! [[String: Any]]).map { f in
       let r = (f["range"] as? [Any] ?? []).map(readEndpoint)
-      return (f["key"] as! String, Follow(input: f["input"] as! String, range: r.count == 2 ? (r[0], r[1]) : nil, overdrag: number(f["overdrag"])!))
+      return (f["key"] as! String, Follow(input: f["input"] as! String, range: r.count == 2 ? (r[0], r[1]) : nil, overdrag: number(f["overdrag"])!, multiply: f["multiply"] as? Bool ?? false))
     },
     glide: (s["glide"] as? [[String: Any]] ?? []).map { g in
       let r = (g["range"] as? [Any] ?? []).map(readEndpoint)

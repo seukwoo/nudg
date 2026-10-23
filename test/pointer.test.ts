@@ -57,3 +57,43 @@ test("dragging the toggle's track 30 units to the right turns it on, through the
   assert.deepEqual(p.runtime.state(), ["on"]);
   assert.ok(Math.abs((p.values()["knob.x"] as number) - 20) < 0.01);
 });
+
+test("a second pointer on a pinchable target ends the drag and pinches; the press then doesn't tap", () => {
+  const log: string[] = [];
+  const t = new PointerTracker("image", true, { send: (e) => log.push(e), input: (n, v) => log.push(`${n}=${Math.round(v * 100) / 100}`) }, true);
+  t.down(100, 100, 1);
+  t.move(110, 100, 1);
+  t.down(200, 100, 2);
+  // 90 apart when the pinch starts (the first pointer had moved to 110, 100); then
+  // 90.55 apart turned -6.34 degrees, then 200 apart (2.22) turned a quarter.
+  t.move(110, 110, 1);
+  t.move(110, 310, 2);
+  t.up(true, 2);
+  t.move(150, 150, 1);
+  t.up(true, 1);
+  assert.deepEqual(log, [
+    "image.down",
+    "image.dragstart",
+    "image.drag.x=10",
+    "image.drag.y=0",
+    "image.dragend",
+    "image.pinchstart",
+    "image.pinch.scale=1.01",
+    "image.pinch.rotation=-6.34",
+    "image.pinch.x=0",
+    "image.pinch.y=5",
+    "image.pinch.scale=2.22",
+    "image.pinch.rotation=90",
+    "image.pinch.x=-45",
+    "image.pinch.y=110",
+    "image.pinchend",
+    "image.up",
+  ]);
+});
+
+test("pinch inputs: ratio of distances, turn in (-180, 180], centre travel", async () => {
+  const { pinchInputs } = await import("../src/core/pointer.ts");
+  assert.deepEqual(pinchInputs([[0, 0], [10, 0]], [[0, 0], [20, 0]]), { scale: 2, rotation: 0, x: 5, y: 0 });
+  assert.equal(pinchInputs([[0, 0], [10, 0]], [[0, 0], [-10, 0]]).rotation, 180);
+  assert.equal(Math.round(pinchInputs([[0, 0], [10, 0]], [[0, 0], [0, -10]]).rotation), -90);
+});

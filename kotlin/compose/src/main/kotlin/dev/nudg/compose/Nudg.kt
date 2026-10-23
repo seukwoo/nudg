@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -29,6 +30,7 @@ import dev.nudg.DRAG_SLOP
 import dev.nudg.PointerTracker
 import dev.nudg.Program
 import dev.nudg.draggableTargets
+import dev.nudg.pinchableTargets
 import dev.nudg.handledEvents
 import dev.nudg.Lifecycle
 import dev.nudg.nudgKeyName
@@ -168,25 +170,45 @@ fun Modifier.nudg(state: NudgState, name: String): Modifier = this
 
 /**
  * Press and drag for a target, by the same rules as every other adapter: down, up (or
- * cancel) and tap; for targets the file drags, dragstart, drag.x / drag.y in dp, dragend.
+ * cancel) and tap; for targets the file drags, dragstart, drag.x / drag.y in dp, dragend;
+ * for targets the file pinches (format 0.18), a second finger ends the drag and reports
+ * pinchstart, pinch.scale / rotation / x / y and pinchend.
  */
 fun Modifier.nudgPress(state: NudgState, name: String): Modifier = pointerInput(state, name) {
     val draggable = name in state.runtime.program.draggableTargets
+    val pinchable = name in state.runtime.program.pinchableTargets
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
-        val tracker = PointerTracker(name, draggable, { state.send(it) }, { n, v -> state.input(n, v) })
-        tracker.down(0.0, 0.0)
+        val tracker = PointerTracker(name, draggable, { state.send(it) }, { n, v -> state.input(n, v) }, pinchable)
+        val id = { c: PointerInputChange -> c.id.value.toInt() }
+        fun at(c: PointerInputChange) = (c.position.x / density).toDouble() to (c.position.y / density).toDouble()
+        at(down).let { (x, y) -> tracker.down(x, y, id(down)) }
+        val tracked = mutableSetOf(down.id)
         var released = false
         while (!released) {
             val event = awaitPointerEvent()
-            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-            val travel = (change.position - down.position) / density
-            tracker.move(travel.x.toDouble(), travel.y.toDouble())
-            if (draggable && travel.getDistance() > DRAG_SLOP) change.consume()
-            if (!change.pressed) {
-                released = true
-                val inside = change.position.x in 0f..size.width.toFloat() && change.position.y in 0f..size.height.toFloat()
-                tracker.up(inside)
+            if (event.changes.none { it.id == down.id }) break
+            for (change in event.changes) {
+                val (x, y) = at(change)
+                if (change.id !in tracked) {
+                    // A second finger: a pinch on a target that handles one.
+                    if (pinchable && change.pressed) {
+                        tracked.add(change.id)
+                        tracker.down(x, y, id(change))
+                        change.consume()
+                    }
+                    continue
+                }
+                if (change.pressed) {
+                    tracker.move(x, y, id(change))
+                    val travel = (change.position - down.position) / density
+                    if ((draggable && travel.getDistance() > DRAG_SLOP) || tracked.size > 1) change.consume()
+                } else {
+                    tracked.remove(change.id)
+                    val inside = change.position.x in 0f..size.width.toFloat() && change.position.y in 0f..size.height.toFloat()
+                    tracker.up(inside, id(change))
+                    if (change.id == down.id) released = true
+                }
             }
         }
         if (!released) tracker.cancel()

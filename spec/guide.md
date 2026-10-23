@@ -123,6 +123,12 @@ Use a number supplied by the app without inventing frame-by-frame events. The ap
 
 When the app computes where something should go and it should travel there with its motion, read the input as the state's target: `"set": { "needle.rotation": { "input": "host.level", "times": 180, "plus": -90 } }`. Each new sample retargets with the property's spring. Use `map` instead when the value should track the input instantly.
 
+## Pinch (format 0.18)
+
+- `target.pinchstart` / `target.pinchend`, and inputs `target.pinch.scale` (ratio, starts at 1), `pinch.rotation` (degrees), `pinch.x` / `pinch.y` (midpoint travel).
+- Zoom with a multiplying follow, so a second pinch continues from the first: `"follow": { "image.scale": { "input": "image.pinch.scale", "multiply": true, "range": [1, 4], "overdrag": 0.3 } }`, and leave with `commit` so the zoom stays.
+- Give the scale `min` / `max` in `values`: a commit then brings an over-pinched value back inside.
+
 ## Glide (format 0.16)
 
 For a fling that should carry on and slow down by itself, with no snap point: put the property in a state's `glide` and go there on `dragend`.
@@ -240,7 +246,7 @@ Libraries in `examples/motion/` carry the platforms' published spring values: `a
 
 When a person describes UI in natural language, call `nudg_recipe` (or `nudg recipe <term>`) before writing the file. It resolves aliases to a versioned mobile-first contract with expected parts, states, events, inputs, host responsibilities, motion, known gaps and a validated starter. Then express any requested variation with ordinary nudg fields.
 
-Some recipes have no starter (`"starter": null`): the image viewer (pinch zoom). Their contract is still the standard answer: use its parts, states and events, write the nudg file for what the format can express (a menu's open and close, a drawer's drag), and tell the person which part the host does and why, from `gaps`. Don't imitate a missing capability with timers or extra states; that is the workaround the gap records.
+Every recipe has a starter now. If a future recipe has `"starter": null`, its contract is still the standard answer: use its parts, states and events, write what the format can express, and tell the person which part the host does and why, from `gaps`. Don't imitate a missing capability with timers or extra states; that is the workaround the gap records.
 
 | User says | Prefer |
 |---|---|
@@ -290,6 +296,7 @@ Pattern words live in external recipe metadata, not core syntax. Every shipped e
 | shake on error | format 0.8 `enter` keyframes on `x`; use a kick only for a less-authored physical wobble |
 | one after another, stagger, cascade, in order | growing `delay` per property in that transition's `animate`; reverse the delays on the way back |
 | the content should appear after it opens | `delay` on the content's opacity in the opening transition only |
+| pinch to zoom, zoomable photo, image viewer | `pinchstart` / `pinchend` and a multiplying follow of `pinch.scale` (format 0.18); `doubletap` toggles a zoom; pan with `drag` and `glide` |
 | list, add / delete row, drag to reorder | one player per row (`animated-list` starter): presence states for insert and remove, host shifts neighbours, the dropped row springs to `host.drop` |
 | spring to the app's value (gauge, counter, progress) | a `set` target `{ "input": "host.x" }` (format 0.17), not `map` |
 | momentum, fling and let it glide, free scroll | `glide` in the state after `dragend` (format 0.16); `momentum` sets how far it carries |

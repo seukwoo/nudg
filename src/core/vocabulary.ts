@@ -1,8 +1,8 @@
 import type { PropertyKind } from "./types.ts";
 
 /** The newest format version; every listed version is read. */
-export const VERSION = "0.17";
-export const VERSIONS = ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "0.10", "0.11", "0.12", "0.13", "0.14", "0.15", "0.16", "0.17"];
+export const VERSION = "0.18";
+export const VERSIONS = ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "0.10", "0.11", "0.12", "0.13", "0.14", "0.15", "0.16", "0.17", "0.18"];
 
 /** What a host reports about each target's layout, as target.layout.<name> inputs (v0.4). */
 export const MEASUREMENTS = ["x", "y", "width", "height", "naturalWidth", "naturalHeight"] as const;
@@ -36,7 +36,7 @@ export const PROPERTY_ALIASES: Record<string, string> = {
   fill: "color",
 };
 
-export const EVENTS = ["down", "up", "cancel", "tap", "dragstart", "dragend", "hoverstart", "hoverend", "focus", "blur", "longpress", "doubletap", "scrollup", "scrolldown", "scrollleft", "scrollright"] as const;
+export const EVENTS = ["down", "up", "cancel", "tap", "dragstart", "dragend", "hoverstart", "hoverend", "focus", "blur", "longpress", "doubletap", "scrollup", "scrolldown", "scrollleft", "scrollright", "pinchstart", "pinchend"] as const;
 /** Events that need format 0.2. */
 export const EVENTS_0_2 = ["dragstart", "dragend", "hoverstart", "hoverend", "focus", "blur"];
 /** Gestures the runtime derives from down, up and tap (v0.14). */
@@ -51,7 +51,10 @@ export const SCROLL_SLOP = 8;
 /** An event that fires when an input crosses a value (v0.15): "host.volume>0.6". */
 export const CROSSING = /^(.+)([<>])(-?(?:\d+\.?\d*|\.\d+))$/;
 /** Inputs a target can supply, as target.<input> (v0.2). */
-export const INPUTS = ["drag.x", "drag.y"];
+export const INPUTS = ["drag.x", "drag.y", "pinch.scale", "pinch.rotation", "pinch.x", "pinch.y"];
+/** Two-pointer inputs and events (v0.18). */
+export const PINCH_INPUTS = ["pinch.scale", "pinch.rotation", "pinch.x", "pinch.y"];
+export const EVENTS_0_18 = ["pinchstart", "pinchend"];
 /** Event and target prefix for events the app sends: host.<name>. */
 export const HOST = "host";
 /** Named keys for target.key.<name> events (v0.3); single characters are also allowed. */
@@ -93,6 +96,8 @@ export const EVENT_ALIASES: Record<string, string> = {
   hold: "longpress",
   longtap: "longpress",
   dblclick: "doubletap",
+  zoomstart: "pinchstart",
+  zoomend: "pinchend",
   doubleclick: "doubletap",
 };
 

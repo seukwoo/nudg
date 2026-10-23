@@ -2292,6 +2292,76 @@ def validation_v17_cases():
     })
 
 
+# --- v0.18: pinch ---------------------------------------------------------------
+
+PINCH = {
+    "nudg": "0.18",
+    "targets": ["image"],
+    "values": {"image.scale": 1, "image.x": 0},
+    "initial": "held",
+    "states": {
+        "held": {"when": {"image.pinchstart": "pinching"}},
+        "pinching": {
+            "follow": {
+                "image.scale": {"input": "image.pinch.scale", "multiply": True, "range": [1, 4], "overdrag": 0.3},
+                "image.x": "image.pinch.x",
+            },
+            "when": {"image.pinchend": {"to": "held", "commit": ["image.scale", "image.x"]}},
+        },
+    },
+}
+
+
+def pinch_cases():
+    steps = [
+        {"t": 0.1, "send": "image.pinchstart"},
+        # The pinch inputs start over at ratio 1 and travel 0.
+        {"t": 0.1, "expect": {"state": ["pinching"], "values": {"image.scale": 1, "image.x": 0}}},
+        {"t": 0.15, "input": "image.pinch.scale", "value": 1.5},
+        {"t": 0.15, "input": "image.pinch.x", "value": 20},
+        {"t": 0.15, "expect": {"values": {"image.scale": 1.5, "image.x": 20}}},
+        {"t": 0.2, "send": "image.pinchend"},
+        {"t": 0.2, "expect": {"state": ["held"], "values": {"image.scale": 1.5, "image.x": 20}}},
+        # A second pinch multiplies from where the first left it: 1.5 x 2 = 3; travel adds.
+        {"t": 0.5, "send": "image.pinchstart"},
+        {"t": 0.5, "expect": {"values": {"image.scale": 1.5, "image.x": 20}}},
+        {"t": 0.55, "input": "image.pinch.scale", "value": 2},
+        {"t": 0.55, "input": "image.pinch.x", "value": -5},
+        {"t": 0.55, "expect": {"values": {"image.scale": 3, "image.x": 15}}},
+        # Past the range the scale moves at the overdrag ratio: 1.5 x 4 = 6 -> 4 + 2 x 0.3.
+        {"t": 0.6, "input": "image.pinch.scale", "value": 4},
+        {"t": 0.6, "expect": {"values": {"image.scale": 4.6}}},
+    ]
+    write("pinch", {
+        "conformance": "0.18",
+        "name": "Pinch: inputs start over at each pinchstart; a multiplying follow scales by the ratio since entry, within its range",
+        "doc": PINCH,
+        "steps": steps,
+    })
+
+
+def validation_v18_cases():
+    def doc():
+        return json.loads(json.dumps(PINCH))
+
+    follow = "/states/pinching/follow"
+    out = []
+    d = doc(); d["nudg"] = "0.17"
+    out.append(("needs-version", d, [
+        ("needs-version", "/states/held/when/image.pinchstart"),
+        ("needs-version", follow + "/image.scale/input"),
+        ("needs-version", follow + "/image.x"),
+        ("needs-version", "/states/pinching/when/image.pinchend"),
+    ]))
+    d = doc(); d["states"]["pinching"]["follow"]["image.scale"]["multiply"] = "yes"
+    out.append(("multiply", d, [("invalid-value", follow + "/image.scale/multiply")]))
+    write("validation-0.18", {
+        "conformance": "0.18",
+        "name": "Validator (0.18): pinch events, pinch inputs and multiplying follows",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 def rest_time(prop, motion, start, limit=5.0, step=1e-3):
     """When a spring comes to rest: its remaining amplitude, position and velocity
     together (sqrt(x^2 + v^2 m/k)), drops below the rest threshold. Energy never grows."""
@@ -2402,5 +2472,7 @@ if __name__ == "__main__":
     validation_v16_cases()
     input_target_cases()
     validation_v17_cases()
+    pinch_cases()
+    validation_v18_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

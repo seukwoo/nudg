@@ -129,28 +129,53 @@ public struct NudgTarget: ViewModifier {
 /**
  * Press and drag for a target, by the same rules as the web: down, up and tap; for
  * targets the file drags, dragstart, drag.x / drag.y and dragend, with a 4-point slop.
+ * For targets the file pinches (format 0.18), the system's magnify and rotate gestures
+ * end the press and report pinchstart, pinch.scale, pinch.rotation and pinchend; SwiftUI
+ * doesn't report the fingers' centre, so pinch.x and pinch.y stay 0.
  */
 public struct NudgPress: ViewModifier {
   @ObservedObject var model: NudgModel
   let name: String
   @SwiftUI.State private var tracker: PointerTracker?
+  @SwiftUI.State private var pinching = false
 
   public func body(content: Content) -> some View {
-    content.gesture(
-      DragGesture(minimumDistance: 0)
-        .onChanged { g in
-          if tracker == nil {
-            let t = PointerTracker(target: name, draggable: model.runtime.program.draggableTargets.contains(name), send: { model.send($0) }, input: { model.input($0, $1) })
-            t.down(0, 0)
-            tracker = t
+    let drag = DragGesture(minimumDistance: 0)
+      .onChanged { g in
+        guard !pinching else { return }
+        if tracker == nil {
+          let t = PointerTracker(target: name, draggable: model.runtime.program.draggableTargets.contains(name), send: { model.send($0) }, input: { model.input($0, $1) })
+          t.down(0, 0)
+          tracker = t
+        }
+        tracker?.move(Double(g.translation.width), Double(g.translation.height))
+      }
+      .onEnded { _ in
+        tracker?.up()
+        tracker = nil
+      }
+    if model.runtime.program.pinchableTargets.contains(name) {
+      content.gesture(drag).simultaneousGesture(
+        MagnifyGesture().simultaneously(with: RotateGesture())
+          .onChanged { value in
+            if !pinching {
+              // The second finger ends the press: no tap, no drag (as PointerTracker does).
+              tracker?.cancel()
+              tracker = nil
+              pinching = true
+              model.send("\(name).pinchstart")
+            }
+            model.input("\(name).pinch.scale", Double(value.first?.magnification ?? 1))
+            model.input("\(name).pinch.rotation", value.second?.rotation.degrees ?? 0)
           }
-          tracker?.move(Double(g.translation.width), Double(g.translation.height))
-        }
-        .onEnded { _ in
-          tracker?.up()
-          tracker = nil
-        }
-    )
+          .onEnded { _ in
+            pinching = false
+            model.send("\(name).pinchend")
+          }
+      )
+    } else {
+      content.gesture(drag)
+    }
   }
 }
 

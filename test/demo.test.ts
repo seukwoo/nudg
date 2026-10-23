@@ -650,6 +650,28 @@ test("the animated list adds, deletes and reorders rows, one player per row", { 
   assert.deepEqual(await browser.evaluate(`[...${shadow}.querySelectorAll('.row')].map((r) => r.style.transform.includes('translate(0px, 0px)'))`), [true, true, true], "every row is back at rest");
 });
 
+test("two real fingers pinch the image viewer open, and the commit keeps it", { skip }, async () => {
+  await go("#example/image-viewer");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent || undefined"), 5_000);
+  await browser.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 2 });
+  const [x, y] = await center("detail-stage", "[data-nudg=image]");
+  const touch = (type: string, points: [number, number][]) =>
+    browser.send("Input.dispatchTouchEvent", { type, touchPoints: points.map(([px, py], id) => ({ x: px, y: py, id })) });
+  await touch("touchStart", [[x - 20, y], [x + 20, y]]);
+  for (let i = 1; i <= 8; i++) {
+    await touch("touchMove", [[x - 20 - i * 5, y], [x + 20 + i * 5, y]]);
+    await sleep(16);
+  }
+  await touch("touchEnd", []);
+  await sleep(600);
+  await browser.send("Emulation.setTouchEmulationEnabled", { enabled: false });
+  // Leave no pointer over a stage for the tests after this one.
+  await browser.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 0, y: 0 });
+  assert.equal(await browser.evaluate("document.getElementById('detail-state').textContent"), "held");
+  const scale = await browser.evaluate(`new DOMMatrix(getComputedStyle(document.getElementById('detail-stage').shadowRoot.querySelector('[data-nudg=image]')).transform).a`) as number;
+  assert.ok(Math.abs(scale - 3) < 0.05, `40 apart to 120 apart is 3x (got ${scale})`);
+});
+
 test("no page errors were thrown", { skip }, () => {
   assert.deepEqual(errors, []);
 });

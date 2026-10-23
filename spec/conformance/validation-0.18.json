@@ -1,0 +1,118 @@
+{
+  "conformance": "0.18",
+  "name": "Validator (0.18): pinch events, pinch inputs and multiplying follows",
+  "documents": [
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "0.17",
+        "targets": [
+          "image"
+        ],
+        "values": {
+          "image.scale": 1,
+          "image.x": 0
+        },
+        "initial": "held",
+        "states": {
+          "held": {
+            "when": {
+              "image.pinchstart": "pinching"
+            }
+          },
+          "pinching": {
+            "follow": {
+              "image.scale": {
+                "input": "image.pinch.scale",
+                "multiply": true,
+                "range": [
+                  1,
+                  4
+                ],
+                "overdrag": 0.3
+              },
+              "image.x": "image.pinch.x"
+            },
+            "when": {
+              "image.pinchend": {
+                "to": "held",
+                "commit": [
+                  "image.scale",
+                  "image.x"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/states/held/when/image.pinchstart"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/pinching/follow/image.scale/input"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/pinching/follow/image.x"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/pinching/when/image.pinchend"
+        }
+      ]
+    },
+    {
+      "name": "multiply",
+      "doc": {
+        "nudg": "0.18",
+        "targets": [
+          "image"
+        ],
+        "values": {
+          "image.scale": 1,
+          "image.x": 0
+        },
+        "initial": "held",
+        "states": {
+          "held": {
+            "when": {
+              "image.pinchstart": "pinching"
+            }
+          },
+          "pinching": {
+            "follow": {
+              "image.scale": {
+                "input": "image.pinch.scale",
+                "multiply": "yes",
+                "range": [
+                  1,
+                  4
+                ],
+                "overdrag": 0.3
+              },
+              "image.x": "image.pinch.x"
+            },
+            "when": {
+              "image.pinchend": {
+                "to": "held",
+                "commit": [
+                  "image.scale",
+                  "image.x"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/states/pinching/follow/image.scale/multiply"
+        }
+      ]
+    }
+  ]
+}

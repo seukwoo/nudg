@@ -287,6 +287,25 @@
       ]
     },
     {
+      "id": "image-viewer",
+      "recipe": "image-viewer",
+      "title": "Image viewer",
+      "category": "media",
+      "tags": [
+        "pinch",
+        "doubletap",
+        "follow",
+        "glide",
+        "commit"
+      ],
+      "html": "image-viewer.html",
+      "summary": "Double-tap to zoom, pinch between 1x and 4x with a little rubber band past either, and pan a zoomed photo with a glide after a fling. Released below 1x, its bounds bring it back.",
+      "prompts": [
+        "Zoom further on double-tap.",
+        "Make panning a zoomed photo glide less."
+      ]
+    },
+    {
       "id": "pull-to-refresh",
       "recipe": "pull-to-refresh",
       "title": "Pull to refresh",

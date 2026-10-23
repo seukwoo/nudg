@@ -275,6 +275,15 @@ Status: implemented. The animated list was the last "collection coordination" ga
 - **The one missing piece was a target from the app.** The dragged row has to spring to the slot the host computed, and `map` jumps while `follow` adds deltas. Format 0.17 lets a `set` target read an input, like a measured target reads layout; a new sample retargets with the property's motion. It serves more than lists: a gauge, a progress ring or a counter that springs to the app's value.
 - **Committing the order without a jump.** Once the drop settles, the host reorders the page and sends `host.commit`, a transition whose `animate` is a zero-length tween, so every row is at rest exactly where the new layout puts it.
 
+## Pinch: two pointers and a multiplying follow (format 0.18)
+
+Status: implemented. The image viewer was the last gap: a pinch's scale, turn and centre come from two pointers.
+
+- **A pinch is inputs, like a drag.** `pinch.scale`, `pinch.rotation`, `pinch.x` and `pinch.y` start at 1, 0, 0, 0 on `pinchstart`, so `follow`, `map`, crossings and velocity work on them unchanged.
+- **Zoom multiplies.** Following a ratio by adding its change is wrong as soon as the value isn't 1 (a second pinch from 2x by 1.5 should reach 3x, not 2.5x), so `follow` gained `multiply`. It is one flag on the existing operator rather than a pinch-specific one.
+- **The tracker owns the rules, once.** The shared `PointerTracker` (TypeScript, Swift, Kotlin) turns pointers into events and inputs and is checked against the same sequence in every language; the DOM, React Native and Compose adapters feed it raw pointers. SwiftUI only exposes the system's magnify and rotate recognisers, so its pinch has no midpoint; that is a platform limit, documented, not papered over.
+- **Zoom about the midpoint is the file's choice.** The example moves the image with the midpoint and scales about its centre; a file that wants the midpoint fixed under the fingers can map its translation from the scale.
+
 ## Type-safe host contracts
 
 Status: implemented as `nudg generate` and the `nudg_generate` MCP tool.
@@ -343,7 +352,7 @@ These are unresolved design choices. Scheduling and completion status live in th
 - Nonlinear rubber banding that depends on the view's size, instead of the linear `overdrag` factor.
 - Loops that run a fixed number of times, and loops on colors; see [loops](#loops-while-a-state-is-active-format-010) for what 0.10 settled.
 - `nearest` limited to neighbors of the current state (a carousel that moves one slide per swipe however hard the flick), instead of tuning `momentum` down.
-- Pinch, rotate and other multi-pointer gestures.
+- Gestures with three or more pointers, and a pinch's midpoint on SwiftUI.
 - Continuous app inputs and scroll position are implemented in format 0.5. Still open: portable direction and velocity derivation, including thresholds and how those become deterministic events.
 - DOM CSS-variable output: whether an optional adapter mode should write custom properties so host CSS composes transforms and visual properties, rather than writing final inline properties. This stays an adapter concern and needs real Tailwind/design-system cases before it displaces the direct, low-overhead default.
 - A `sequence` combinator beyond per-property delays (0.12), if a pattern needs steps that wait on each other's completion rather than on time.

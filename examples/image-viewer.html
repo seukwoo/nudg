@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Image viewer</title>
+  <style>
+    .viewer { position: relative; display: grid; place-items: center; width: 240px; height: 176px; overflow: hidden; border-radius: 14px; background: #111; user-select: none; }
+    /* nudg owns the zoom and the offset; the image is the gesture target. */
+    .viewer .image { width: 200px; height: 140px; border-radius: 6px; background: radial-gradient(circle at 30% 35%, #fde68a 0 12%, transparent 13%), linear-gradient(160deg, #0ea5e9, #6366f1 55%, #0f172a); cursor: grab; }
+    .viewer .hint { position: absolute; bottom: 6px; left: 0; right: 0; color: rgb(255 255 255 / 0.6); font: 11px ui-sans-serif, system-ui, sans-serif; text-align: center; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <div class="viewer" data-nudg="viewer">
+    <div class="image" role="img" aria-label="Lake at dusk" data-nudg="image"></div>
+    <div class="hint">Double-tap or pinch to zoom</div>
+  </div>
+  <!-- Host markup for image-viewer.nudg.json. The host loads the full-resolution image, offers zoom from the keyboard and to assistive technology, and closes the viewer. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./image-viewer.nudg.json");
+    play(program, document.body);
+  </script>
+</body>
+</html>

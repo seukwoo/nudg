@@ -6,6 +6,9 @@ import { easeAt, easeSlope } from "./ease.ts";
 import { interpolate } from "./map.ts";
 import { springAt } from "./spring.ts";
 import { CROSSING, DOUBLE_TAP, LONG_PRESS, SCROLL_SLOP } from "./vocabulary.ts";
+
+/** Where a pinch's inputs start (v0.18): the ratio at 1, rotation and travel at 0. */
+const PINCH_START: [string, number][] = [["scale", 1], ["rotation", 0], ["x", 0], ["y", 0]];
 import type { Channels, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, PropertyMap, State, TimerPause, Transition } from "./types.ts";
 
 export type Value = number | string;
@@ -370,7 +373,10 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
   function evaluate(segment: Segment, t: number): [Channels, Channels] {
     if (segment.kind === "follow") {
       const { key, anchor, input0, follow } = segment;
-      const raw = anchor + inputAt(follow.input, t) - input0;
+      // A multiplying follow scales by the input's ratio since entry (a pinch); otherwise it adds the change.
+      // From an input at 0 there is no ratio, so it holds.
+      const gain = !follow.multiply ? 1 : input0 === 0 ? 0 : anchor / input0;
+      const raw = follow.multiply ? (input0 === 0 ? anchor : inputAt(follow.input, t) * gain) : anchor + inputAt(follow.input, t) - input0;
       let value = raw;
       let factor = 1;
       const range = resolvedRange(key, follow.range);
@@ -379,7 +385,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
         if (raw < lo) [value, factor] = [lo - (lo - raw) * follow.overdrag, follow.overdrag];
         else if (raw > hi) [value, factor] = [hi + (raw - hi) * follow.overdrag, follow.overdrag];
       }
-      return [[value], [velocityAt(follow.input, t) * factor]];
+      return [[value], [velocityAt(follow.input, t) * factor * gain]];
     }
     if (segment.kind === "keyframes") return evaluateKeyframes(segment, t);
     if (segment.kind === "glide") {
@@ -678,11 +684,19 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
         for (const axis of ["x", "y"]) inputs.set(`${target}.drag.${axis}`, [[t, 0]]);
         for (const c of crossings) if (c.input.startsWith(`${target}.drag.`)) c.inside = c.above ? 0 > c.value : 0 < c.value;
       }
+      if (name === "pinchstart") {
+        // A pinch's inputs start over: ratio 1, rotation and travel 0.
+        for (const [input, start] of PINCH_START) inputs.set(`${target}.pinch.${input}`, [[t, start]]);
+        for (const c of crossings) {
+          const start = PINCH_START.find(([input]) => c.input === `${target}.pinch.${input}`)?.[1];
+          if (start !== undefined) c.inside = c.above ? start > c.value : start < c.value;
+        }
+      }
       if (name === "down" && wants.has(`${target}.longpress`)) {
         pressDue.set(target, t + LONG_PRESS);
         longPressed.delete(target);
       }
-      if (name === "up" || name === "cancel" || name === "dragstart") pressDue.delete(target);
+      if (name === "up" || name === "cancel" || name === "dragstart" || name === "pinchstart") pressDue.delete(target);
       if (name === "tap" && longPressed.delete(target)) return false;
       const handled = dispatch(event, t);
       if (name === "tap" && wants.has(`${target}.doubletap`)) {

@@ -1,5 +1,5 @@
 {
-  "nudg": "0.5",
+  "nudg": "1.0",
   "note": "A video-call host owns camera and microphone tracks. Three parallel regions keep the call, camera and microphone controls independent while nudg coordinates their visible feedback.",
   "targets": ["video", "poster", "camera-cover", "join", "actions", "camera", "mute", "flip"],
   "values": {

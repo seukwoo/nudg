@@ -7,7 +7,7 @@ import { test } from "node:test";
 import { Ajv2020 } from "ajv/dist/2020.js";
 
 const read = (url: URL) => JSON.parse(readFileSync(url, "utf8"));
-const schema = read(new URL("../spec/nudg-0.18.schema.json", import.meta.url));
+const schema = read(new URL("../spec/nudg-1.0.schema.json", import.meta.url));
 const schema04 = read(new URL("../spec/nudg-0.4.schema.json", import.meta.url));
 const schema02 = read(new URL("../spec/nudg-0.2.schema.json", import.meta.url));
 const schema01 = read(new URL("../spec/nudg-0.1.schema.json", import.meta.url));
@@ -30,24 +30,17 @@ test("the semantic recipe catalog matches its schema", () => {
   assert.ok(validateRecipes(catalog), JSON.stringify(validateRecipes.errors, null, 2));
 });
 
-test("the 0.2 schema still compiles and accepts the 0.2 examples", () => {
-  const validate02 = new Ajv2020({ allErrors: true, strict: false }).compile(schema02);
-  for (const name of ["toggle-drag", "carousel"]) {
-    assert.ok(validate02(read(new URL(`../examples/${name}.nudg.json`, import.meta.url))), name);
-  }
-});
-
-test("the 0.4 schema still compiles and accepts the layout examples", () => {
-  const validate04 = new Ajv2020({ allErrors: true, strict: false }).compile(schema04);
-  for (const name of ["tabs"]) assert.ok(validate04(read(new URL(`../examples/${name}.nudg.json`, import.meta.url))), name);
-});
-
-test("the 0.1 schema still compiles and accepts the 0.1 examples", () => {
-  const validate01 = new Ajv2020({ allErrors: true, strict: false }).compile(schema01);
-  for (const name of ["toggle", "toggle-press", "like"]) {
-    assert.ok(validate01(read(new URL(`../examples/${name}.nudg.json`, import.meta.url))), name);
-  }
-});
+// Every older schema still compiles and accepts the conformance documents written for its version.
+for (const [version, older] of [["0.1", schema01], ["0.2", schema02], ["0.4", schema04]] as const) {
+  test(`the ${version} schema still compiles and accepts the ${version} documents`, () => {
+    const validateOlder = new Ajv2020({ allErrors: true, strict: false }).compile(older);
+    const docs = filesIn(new URL("../spec/conformance/", import.meta.url))
+      .map((url) => read(url).doc)
+      .filter((doc) => doc?.nudg === version);
+    assert.ok(docs.length > 0, `conformance has ${version} documents`);
+    for (const doc of docs) assert.ok(validateOlder(doc), JSON.stringify(validateOlder.errors));
+  });
+}
 
 test("schema accepts every example", () => {
   for (const url of filesIn(new URL("../examples/", import.meta.url))) {
@@ -102,6 +95,6 @@ test("schema rejects structural mistakes", () => {
   noted.note = "ok";
   noted.values.note = "base values";
   noted.states.off["x-vendor"] = { anything: true };
-  noted.$schema = "https://unpkg.com/@nudg/core/spec/nudg-0.18.schema.json";
+  noted.$schema = "https://unpkg.com/@nudg/core/spec/nudg-1.0.schema.json";
   assert.ok(valid(noted), `notes and x- extensions: ${JSON.stringify(validate.errors, null, 2)}`);
 });

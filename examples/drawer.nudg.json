@@ -1,5 +1,5 @@
 {
-  "nudg": "0.11",
+  "nudg": "1.0",
   "note": "A navigation drawer that slides in from the left edge and pushes the content a quarter of its width along. The menu button or a swipe from the edge opens it; the scrim, Escape or a swipe back closes it. Every distance comes from the drawer's measured width.",
   "targets": ["drawer", "scrim", "content", "menu", "edge"],
   "values": {

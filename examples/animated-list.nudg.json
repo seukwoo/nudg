@@ -1,5 +1,5 @@
 {
-  "nudg": "0.17",
+  "nudg": "1.0",
   "note": "One row of an animated list; the host plays one per row. A new row grows to its measured height and fades in; a deleted one collapses and the host unmounts it on exit. Dragged by its handle, the row follows the finger while the host shifts its neighbours by a row's height; released, it springs to the slot the host passes as host.drop, and the host then commits the new order with host.commit, which puts every row back at rest without motion.",
   "host": {
     "events": ["insert", "remove", "shift-up", "shift-down", "rest", "commit"],

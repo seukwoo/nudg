@@ -1,5 +1,5 @@
 {
-  "nudg": "0.8",
+  "nudg": "1.0",
   "note": "A field that turns red and plays an authored multi-beat shake when the app rejects it. Rejecting again restarts from the current position; reduced motion skips the shake.",
   "targets": ["field"],
   "values": { "field.x": 0, "field.color": "#D1D5DB" },

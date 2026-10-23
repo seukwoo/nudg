@@ -1,5 +1,5 @@
 {
-  "nudg": "0.13",
+  "nudg": "1.0",
   "note": "A voice-chat host owns microphone permission, MediaStream lifetime, mute and elapsed time. It supplies host.volume continuously and sends connection events; nudg keeps the speaking feedback and control-state transitions consistent across hosts.",
   "host": {
     "events": ["connect", "connected", "failed", "leave", "mute", "unmute"],

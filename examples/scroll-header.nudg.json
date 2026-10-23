@@ -1,5 +1,5 @@
 {
-  "nudg": "0.5",
+  "nudg": "1.0",
   "note": "The DOM adapter reports the scroller's vertical offset. The app bar and accent map that standard scroll input without scroll code in the component.",
   "targets": [
     "scroller",

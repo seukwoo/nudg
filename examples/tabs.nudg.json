@@ -1,5 +1,5 @@
 {
-  "nudg": "0.4",
+  "nudg": "1.0",
   "note": "Tabs whose labels have different widths. The underline moves under the selected tab and takes its width, both measured from the page, so renaming a tab or changing the font needs no new numbers.",
   "targets": [
     "tab1",

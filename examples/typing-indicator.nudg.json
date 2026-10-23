@@ -1,5 +1,5 @@
 {
-  "nudg": "0.10",
+  "nudg": "1.0",
   "note": "Three dots in a bubble while someone is typing. The bubble scales in, and each dot bounces on the same loop, started 0.15 s after the one before so the wave keeps its shape; the bubble scales out when they stop.",
   "targets": ["bubble", "dot1", "dot2", "dot3"],
   "values": { "bubble.scale": 0, "bubble.opacity": 0, "dot1.y": 0, "dot2.y": 0, "dot3.y": 0 },

@@ -1,0 +1,106 @@
+nudg <command> [options]
+
+Commands
+  validate <file...>        Check files. Exit code 1 if any has errors.
+  simulate <file>           Send events, advance time, report states and values.
+  plot <file>               Draw a motion graph: each property over time, with events,
+                            targets, overshoot and settle times marked.
+
+simulate and plot options
+  --send <event@time>       Event and time, e.g. track.tap@0.1 or track.tap@100ms. Repeatable.
+  --drag <t:dx[,dy]@a-b>    A drag on target t by (dx, dy) from time a to b, e.g. track:20@0.1-0.3.
+                            Sends down, dragstart, 60 input samples per second, up, dragend.
+  --input <name=v@time>     One input sample, e.g. track.drag.x=12@0.2. Repeatable.
+  --layout <t.m=v,...>      What the host would measure (0.4), e.g. tab2.x=96,tab2.width=88,
+                            underline.x=8. Measured values without it fall back to their base.
+  --start <path,...>        Start in these states instead of initial, e.g. on.
+  --reduced-motion          Play as a reduced-motion user would see it (0.3).
+  --until <seconds>         Last sample time. Default: when everything settles.
+  --every <seconds>         Sample interval (simulate only). Default: 0.05.
+  --props <a,b,...>         Properties to report. Default: all.
+
+  log [--json|--path|--clear|--share]
+                            What the judge loop looked like on this machine: compares,
+                            verdicts, rounds per change. Local only (~/.nudg/log.jsonl);
+                            NUDG_LOG=off turns logging off, NUDG_LOG=<file> moves it.
+                            --share opens a prefilled GitHub issue with counts only;
+                            --note "..." adds a line in your words.
+  skill [--user|--print]    Install a Claude Code skill that teaches the agent the loop,
+                            for this project (default) or for every project (--user).
+  mcp                       Run the MCP server on stdio (tools: nudg_guide, nudg_validate,
+                            nudg_simulate, nudg_plot, nudg_compare, nudg_render, nudg_observe).
+  preset <name> [--options '{"scale":0.9}']
+                            Print a preset (press, hover, toggle, toast) as a nudg file,
+                            to save and edit: nudg preset press > press.nudg.json
+  recipe [name] [--json|--source|--gaps]
+                            List semantic interaction contracts, or resolve a human UI term
+                            such as toggle, video chat or sheet. --source prints its starter file.
+                            --gaps counts the capabilities the catalog is missing, most needed first.
+  compare <a> <b>           Two versions under the same events: says first whether a person
+                            would notice the difference, then shows it. --html gives real A/B
+                            filmstrips in rows; without it, both curves on one graph.
+  compare <file> --before <rev>
+                            The same, against the file as it was at a git revision (HEAD,
+                            HEAD~1, a branch): no copy of the "before" to keep around.
+  render <file>             Draw real frames of the component with headless Chrome, as one
+                            filmstrip PNG. Uses the page's markup and styles; its scripts don't run.
+  compile <file> [--out x]  The file compiled for a native runtime (Swift, Kotlin): validated,
+                            imports and named motions resolved, as plain JSON. Ship it with
+                            the app; the runtime there reads it without a validator.
+  generate <file...>        TypeScript names for the host: writes x.nudg.ts beside x.nudg.json with
+                            its targets, events, inputs and state paths (imports included), for
+                            useNudg<XContract>(x). --check writes nothing and exits 1 if a module
+                            is missing or stale (for CI). --out <file.ts> with one file.
+  upgrade <file...>         Raise each file's "nudg" version to the current format (1.0) once it
+                            validates; everything else in the file is kept as written.
+                            --check writes nothing and exits 1 if a file is older (for CI).
+  critique <file...>        Whether the motion is good, not only valid: each transition checked
+                            against the platforms' motion guidelines and accessibility rules
+                            (slow transitions, late press feedback, invisible changes, bouncy
+                            fades, slow exits, short timeouts, dialogs without Escape).
+                            --strict exits 1 on warnings.
+  observe <url|page.html>   Host truth: open the real page (scripts and all) in headless Chrome,
+                            do what a finger would, measure the element every frame, and say
+                            what the page actually showed. With --file, judge it against the file.
+
+plot options
+  --out <file.svg|file.png> Where to write. PNG needs Chrome (or NUDG_CHROME). Default: SVG to stdout.
+  --title <text>            Graph title. Default: the file name.
+
+compare options
+  --url <url|page.html>     The running app (or a local page, served from the working directory):
+                            the component is snapshotted from it, styles and all, and the
+                            side-by-side page is written from that. No --html needed.
+  --select <css>            Which element to snapshot. Default: the smallest element holding
+                            every bound target (a toggle's track with its knob).
+  --open                    Open the page in the browser once written.
+  --html <page.html>        Real markup. With --out x.html: a page that plays A and B side by side
+                            in a loop with slow motion, for a person to judge (needs a browser, not
+                            Chrome). With --out x.png: A/B filmstrip rows (needs Chrome).
+  --out <file.html|png|svg> Where to write. Default: graph as SVG to stdout, or compare.png with --html.
+  --at / --frames           Frame times, as for render.
+  --labels <A,B>            Names for the two versions.
+
+observe options
+  --select <css>            The element to measure (shadow roots included). Default, with --file:
+                            [data-nudg="<the file's first target>"].
+  --do <action@time>        An action on it: down, up, tap, hover, leave, or key:<name>, e.g.
+                            tap@0.1 or key:escape@0.5. Repeatable. The page's own handlers run.
+  --file <x.nudg.json>      The file the page should be playing. Its events default to the actions,
+                            on the first target that handles them (a toggle's track, not its
+                            knob), at the times they happened; --send overrides them.
+  --on <target>             Which target the actions are for, when the file's choice is wrong.
+                            Exit codes: 0 played, 1 the page didn't play the file, 2 couldn't observe.
+  --settle <seconds>        How long to keep measuring after the last action. Default: 1.5.
+  --warmup <seconds>        How long to let the page's scripts start first. Default: 0.5.
+  --viewport <w>x<h>        Window size, e.g. 390x844 for a phone.
+
+render options
+  --html <page.html>        Page with the component's markup (data-nudg names) and styles. Required.
+  --at <seconds>            A frame time. Repeatable. Default: evenly spaced frames until at rest.
+  --frames <n>              Number of evenly spaced frames when --at is not given. Default: 6.
+  --out <file.png>          Where to write. Required.
+
+Common options
+  --json                    Machine-readable output.
+  --help                    Show this help.

@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.14.0
+
+Every recipe has a starter. Targets read from app inputs (format 0.17) give the animated list its drag-to-reorder and any gauge or counter a spring to the app's value; pinches with two pointers (0.18) give the image viewer its zoom. The recipe catalog has no gaps left.
 
 - **Format 0.18: pinch.** `pinchstart` / `pinchend` and the inputs `pinch.scale`, `pinch.rotation`, `pinch.x`, `pinch.y` from two pointers, and `"multiply": true` in a follow so a zoom scales by the pinch's ratio. The shared pointer tracker (TypeScript, Swift, Kotlin) implements the two-pointer rules and is checked the same way in each; the DOM, React Native and Compose adapters track pointers, SwiftUI reports the system's magnify and rotate gestures. The image viewer has a starter, checked with two real touches in Chrome. Every recipe in the catalog now has a starter. Schema 0.18.
 - **Format 0.17: targets from inputs.** A `set` target may read an input, `{ "input": "host.level", "times": 180, "plus": -90 }`; each new sample retargets with the property's motion instead of jumping like `map`. TypeScript, Swift and Kotlin share conformance; compiled programs are format 7. Schema 0.17.

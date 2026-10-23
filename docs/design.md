@@ -188,7 +188,7 @@ Status: implemented as format 0.8. Keyframes live only under a state's `enter`: 
 
 ## Loops while a state is active (format 0.10)
 
-Status: implemented as format 0.10 in TypeScript, Swift and Kotlin, with the [spec](spec.md#additions-in-010-draft) and conformance. Spinner, skeleton and typing indicator have starters, and pull-to-refresh turns its spinner with a loop. The most needed gap in the recipe catalog together with screen composition (`nudg recipe --gaps`): spinner, skeleton and typing indicator have no starter, and pull-to-refresh spins its spinner with host CSS through `data-nudg-state`. Screen composition is stage 2 work across players; loops stay inside one player.
+Status: implemented as format 0.10 in TypeScript, Swift and Kotlin, with the [spec](spec.md#loops) and conformance. Spinner, skeleton and typing indicator have starters, and pull-to-refresh turns its spinner with a loop. The most needed gap in the recipe catalog together with screen composition (`nudg recipe --gaps`): spinner, skeleton and typing indicator have no starter, and pull-to-refresh spins its spinner with host CSS through `data-nudg-state`. Screen composition is stage 2 work across players; loops stay inside one player.
 
 ```json
 "refreshing": {

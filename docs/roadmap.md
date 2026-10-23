@@ -17,18 +17,18 @@ The order below follows real app needs. Release numbers and dates are assigned w
 | Semantic UI recipes | Versioned contracts cover every shipped example; CLI and MCP resolve names and aliases to contracts and starters | [Recipe catalog](../recipes/index.json), [agent guide](../spec/guide.md#semantic-ui-words) |
 | AI editing contract | Versioned JSON Schemas, a published agent guide, MCP tools and an installable agent skill ship with the package | [Package exports](../package.json), [agent guide](../spec/guide.md), [usage](usage.md#skill) |
 | Headless renderer bridge | `createPlayer` accepts events and inputs and emits state/values; DOM and native adapters are consumers of the same core | [Design](design.md#any-platform), [usage](usage.md#headless-renderer-bridge) |
-| Continuous app and scroll inputs | Implemented in format 0.5; the headless and DOM players and the React and React Native hooks expose `input` | [Spec](spec.md#additions-in-05-draft), [usage](usage.md#react-adapter) |
+| Continuous app and scroll inputs | Implemented in format 0.5; the headless and DOM players and the React and React Native hooks expose `input` | [Spec](spec.md#inputs), [usage](usage.md#react-adapter) |
 | Layout measurement and natural size | Implemented in format 0.4 | [Spec](spec.md#layout-inputs) |
-| Layout arithmetic and relative measured values | Released in package 0.9.0 as format 0.6 | [Spec](spec.md#additions-in-06) |
-| Measured follow/map endpoints | Released in package 0.10.0 as format 0.9; bottom sheet and swipe row no longer duplicate layout bounds | [Spec](spec.md#additions-in-09-draft) |
-| Pausable timers | Released in package 0.9.0 as format 0.7; TypeScript, Swift and Kotlin share conformance | [Spec](spec.md#additions-in-07-draft) |
-| Entry keyframes | Released in package 0.9.0 as format 0.8; TypeScript, Swift and Kotlin share conformance | [Spec](spec.md#additions-in-08) |
-| Loops while a state is active | Implemented as format 0.10 in 0.12.0; spinner, skeleton and typing indicator have starters | [Spec](spec.md#additions-in-010-draft) |
+| Layout arithmetic and relative measured values | Released in package 0.9.0 as format 0.6 | [Spec](spec.md#measured-values) |
+| Measured follow/map endpoints | Released in package 0.10.0 as format 0.9; bottom sheet and swipe row no longer duplicate layout bounds | [Spec](spec.md#measured-values) |
+| Pausable timers | Released in package 0.9.0 as format 0.7; TypeScript, Swift and Kotlin share conformance | [Spec](spec.md#timers) |
+| Entry keyframes | Released in package 0.9.0 as format 0.8; TypeScript, Swift and Kotlin share conformance | [Spec](spec.md#entry-effects) |
+| Loops while a state is active | Implemented as format 0.10 in 0.12.0; spinner, skeleton and typing indicator have starters | [Spec](spec.md#loops) |
 | Screen transitions (stack, full-screen modal, shared element, drawer) | Implemented as one player with roles plus format 0.11 measured map values in 0.12.0 | [Design](design.md#screen-transitions-are-one-player-with-roles-format-011) |
 | Sequence and stagger | Implemented as format 0.12 motion delay in 0.12.0; menu and speed dial have starters | [Design](design.md#sequence-and-stagger-are-a-delay-per-property-format-012) |
 | Host declaration | Implemented as format 0.13 in 0.12.0: declared app events and inputs, checked by the validator and used by `nudg generate` | [Design](design.md#the-host-declaration-not-a-store-format-013) |
-| Long press and double tap | Implemented as format 0.14 in 0.13.0, derived by the runtime | [Spec](spec.md#additions-in-014-draft) |
-| Crossings and scroll direction | Implemented as format 0.15 in 0.13.0; hide-on-scroll has a starter | [Spec](spec.md#additions-in-015-draft) |
+| Long press and double tap | Implemented as format 0.14 in 0.13.0, derived by the runtime | [Spec](spec.md#derived-gestures) |
+| Crossings and scroll direction | Implemented as format 0.15 in 0.13.0; hide-on-scroll has a starter | [Spec](spec.md#events-from-inputs) |
 | Pinch zoom | Format 0.18 pinch events and inputs, multiplying follows in 0.14.0; image viewer has a starter | [Design](design.md#pinch-two-pointers-and-a-multiplying-follow-format-018) |
 | Animated list | One player per row plus format 0.17 input targets in 0.14.0 | [Design](design.md#a-list-is-one-player-per-item-format-017) |
 | Decay | Implemented as format 0.16 `glide` in 0.13.0; free-scrolling carousel has a starter | [Design](design.md#glide-decay-with-the-same-momentum-as-nearest-format-016) |
@@ -152,7 +152,7 @@ Goal: a format and APIs other people can build on, on the web and natively, with
 
 - Done: format `"1.0"`: the semantics of 0.18, frozen. Runtimes keep reading every 0.x file; `nudg upgrade` rewrites a file's version after validating it. Schema 1.0; the examples and starters declare 1.0.
 - Done: frozen surface, checked by tests: every validator error code listed with its meaning ([errors](errors.md)); the conformance suite; the schema; the compiled program format; the public API of `@nudg/core` and its entry points, the CLI and MCP tools, the Swift package and the Kotlin modules, each against a committed snapshot in `api/`.
-- One spec: rewrite the 0.x "Additions" sections into a single 1.0 document, with the format history as an appendix.
+- Done: one spec. The 0.x "Additions" sections are rewritten into a single [1.0 document](spec.md) organized by topic, with the [format history](spec.md#appendix-format-history) as an appendix.
 - Native checked for real: the Swift package's tests and a SwiftUI render on an iOS simulator; the Compose demo and React Native driven on an Android emulator.
 - Release 1.0.0, with the compatibility policy: within 1.x, files and APIs only gain; anything that breaks waits for 2.0.
 - Revisit semantic role metadata in files only if external recipe metadata proves insufficient; external metadata is the current decision.

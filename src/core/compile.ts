@@ -29,6 +29,7 @@ import { MEASUREMENTS,
   EVENT_ALIASES,
   EVENTS,
   EVENTS_0_2,
+  EVENTS_0_14,
   HOST,
   IDENTIFIER,
   INPUTS,
@@ -128,7 +129,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.13.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.14.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -1418,6 +1419,7 @@ class ComponentCompiler {
     }
     let ok = this.checkTarget(target, p);
     if (EVENTS_0_2.includes(event) && !this.needs02(p, `The "${event}" event`)) ok = false;
+    if (EVENTS_0_14.includes(event) && !this.needsVersion("0.14", p, `The "${event}" event`)) ok = false;
     if (!(EVENTS as readonly string[]).includes(event)) {
       const alias = EVENT_ALIASES[event] ?? EVENT_ALIASES[event.toLowerCase()];
       const guess = alias ?? didYouMean(event, [...EVENTS]);

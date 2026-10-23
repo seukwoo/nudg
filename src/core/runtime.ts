@@ -5,6 +5,7 @@ import { oklabToHex } from "./color.ts";
 import { easeAt, easeSlope } from "./ease.ts";
 import { interpolate } from "./map.ts";
 import { springAt } from "./spring.ts";
+import { DOUBLE_TAP, LONG_PRESS } from "./vocabulary.ts";
 import type { Channels, Follow, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, PropertyMap, State, TimerPause, Transition } from "./types.ts";
 
 export type Value = number | string;
@@ -43,7 +44,7 @@ export interface Runtime {
   targets(): Record<string, Value | undefined>;
   /** Active leaf states as paths, e.g. ["on"] or ["checked/on", "press/up"]. */
   state(): string[];
-  /** True when every property (or the given one) has come to rest at time `t` and no timer is pending. */
+  /** True when every property (or the given one) has come to rest at time `t` and no timer or long press is pending. */
   settled(t: number, property?: string): boolean;
   /** True when every property has come to rest at time `t`, whatever timers are pending: nothing is moving. */
   resting(t: number): boolean;
@@ -110,6 +111,13 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
   let order = 0;
   let now = 0;
   const reduced = options.reducedMotion === true;
+  // Gestures derived from down, up and tap (v0.14), only for targets whose events the file handles.
+  const wants = handledEventNames(program.machine);
+  /** When each pressed target becomes a long press, until up, cancel or dragstart. */
+  const pressDue = new Map<string, number>();
+  /** Targets whose current press was a long press: the tap that ends it is not a tap. */
+  const longPressed = new Set<string>();
+  const lastTap = new Map<string, number>();
 
   for (const [key, prop] of program.properties) if (!prop.map) bases.set(key, prop.base);
   enterMachine(program.machine, active, [], 0);
@@ -508,10 +516,19 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
   }
 
   /** Fires every timer due by `t`, earliest first, each at its own due time. */
+  /** Fires every timer and long press due by `t`, earliest first; a timer before a long press due at the same time. */
   function fireDue(t: number) {
     for (;;) {
       let next: Pending | undefined;
       for (const p of pending) if (p.pausedAt === undefined && p.due <= t + 1e-9 && (!next || p.due < next.due || (p.due === next.due && p.order < next.order))) next = p;
+      let press: [string, number] | undefined;
+      for (const [target, due] of pressDue) if (due <= t + 1e-9 && (!press || due < press[1])) press = [target, due];
+      if (press && (!next || press[1] < next.due)) {
+        pressDue.delete(press[0]);
+        longPressed.add(press[0]);
+        dispatch(`${press[0]}.longpress`, press[1]);
+        continue;
+      }
       if (!next) return;
       pending.splice(pending.indexOf(next), 1);
       const fired: Transition[] = [];
@@ -519,6 +536,16 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       perform(next.machine, next.transition, next.due, fired, entered);
       settle(next.due, fired, entered);
     }
+  }
+
+  /** Delivers one event at `t`: pause reasons first, then the machine. False if nothing handled it. */
+  function dispatch(event: string, t: number): boolean {
+    const fired: Transition[] = [];
+    const entered: State[] = [];
+    const timerHandled = controlTimers(event, t);
+    if (!handle(program.machine, event, t, fired, entered)) return timerHandled;
+    settle(t, fired, entered);
+    return true;
   }
 
   /** Applies all pause reasons owned by timers that were active when this event arrived. */
@@ -567,16 +594,28 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     send(event, t) {
       advanceTo(t);
       const dot = event.indexOf(".");
-      if (event.slice(dot + 1) === "dragstart") {
+      const target = event.slice(0, dot);
+      const name = event.slice(dot + 1);
+      if (name === "dragstart") {
         // A drag's inputs count from 0 at dragstart (the host reports travel since down).
-        for (const axis of ["x", "y"]) inputs.set(`${event.slice(0, dot)}.drag.${axis}`, [[t, 0]]);
+        for (const axis of ["x", "y"]) inputs.set(`${target}.drag.${axis}`, [[t, 0]]);
       }
-      const fired: Transition[] = [];
-      const entered: State[] = [];
-      const timerHandled = controlTimers(event, t);
-      if (!handle(program.machine, event, t, fired, entered)) return timerHandled;
-      settle(t, fired, entered);
-      return true;
+      if (name === "down" && wants.has(`${target}.longpress`)) {
+        pressDue.set(target, t + LONG_PRESS);
+        longPressed.delete(target);
+      }
+      if (name === "up" || name === "cancel" || name === "dragstart") pressDue.delete(target);
+      if (name === "tap" && longPressed.delete(target)) return false;
+      const handled = dispatch(event, t);
+      if (name === "tap" && wants.has(`${target}.doubletap`)) {
+        const previous = lastTap.get(target);
+        if (previous !== undefined && t - previous <= DOUBLE_TAP + 1e-9) {
+          lastTap.delete(target);
+          return dispatch(`${target}.doubletap`, t) || handled;
+        }
+        lastTap.set(target, t);
+      }
+      return handled;
     },
 
     input(name, value, t) {
@@ -675,7 +714,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
 
     settled(t, property) {
       advanceTo(t);
-      if (property === undefined && pending.some((timer) => timer.pausedAt === undefined)) return false;
+      if (property === undefined && (pending.some((timer) => timer.pausedAt === undefined) || pressDue.size > 0)) return false;
       const keys = property === undefined ? [...program.properties.keys()] : [property];
       return keys.every((key) => atRest(key, t));
     },
@@ -752,6 +791,21 @@ function evaluateKeyframes(segment: Segment & { kind: "keyframes" }, t: number):
     return [a.value.map((value, channel) => value + (b.value[channel] - value) * progress), a.value.map((value, channel) => (b.value[channel] - value) * slope)];
   }
   return [segment.to.slice(), segment.to.map(() => 0)];
+}
+
+/** Every event a machine's transitions name, for deciding which gestures to derive. */
+function handledEventNames(machine: Machine, out = new Set<string>()): Set<string> {
+  if (machine.kind === "regions") {
+    for (const region of machine.regions.values()) handledEventNames(region, out);
+    return out;
+  }
+  for (const key of machine.when.keys()) out.add(key);
+  for (const state of machine.states.values()) {
+    for (const key of state.when.keys()) out.add(key);
+    for (const timer of state.timers) for (const pair of timer.pause) out.add(pair.on).add(pair.off);
+    if (state.machine) handledEventNames(state.machine, out);
+  }
+  return out;
 }
 
 function collectFollowInputs(machine: Machine, out: Set<string>) {

@@ -1,0 +1,122 @@
+{
+ "nudgProgram": 5,
+ "version": "0.14",
+ "targets": [
+  "photo"
+ ],
+ "properties": [
+  {
+   "key": "photo.scale",
+   "kind": "number",
+   "base": [
+    1
+   ]
+  }
+ ],
+ "animate": [],
+ "machine": {
+  "kind": "states",
+  "initial": "idle",
+  "states": [
+   {
+    "name": "idle",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "photo.tap",
+      "animate": [],
+      "to": "selected"
+     },
+     {
+      "event": "photo.longpress",
+      "animate": [],
+      "to": "menu"
+     },
+     {
+      "event": "photo.doubletap",
+      "animate": [],
+      "to": "zoomed"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "selected",
+    "set": [
+     {
+      "key": "photo.scale",
+      "value": [
+       0.95
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "photo.tap",
+      "animate": [],
+      "to": "idle"
+     },
+     {
+      "event": "photo.longpress",
+      "animate": [],
+      "to": "menu"
+     },
+     {
+      "event": "photo.doubletap",
+      "animate": [],
+      "to": "zoomed"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "menu",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "photo.tap",
+      "animate": [],
+      "to": "idle"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "zoomed",
+    "set": [
+     {
+      "key": "photo.scale",
+      "value": [
+       2
+      ]
+     }
+    ],
+    "measure": [],
+    "follow": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "photo.doubletap",
+      "animate": [],
+      "to": "idle"
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

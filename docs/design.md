@@ -239,6 +239,16 @@ Status: implemented. Two questions came up together: should nudg have a store, v
 - **`host.*` carries everything the motion needs.** Two channels: events for things that happen (`player.send("host.connected")`) and inputs for numbers that change (`player.input("host.tilt", deg)`). Sensors are the same as data: the app reads the device and passes numbers; nudg never reads a device. Strings and lists are content, which the host renders.
 - **What was missing was the declaration.** Any `host.<name>` was accepted, so a typo (`host.filed`) silently made a transition that never fires, and nothing said whether `host.volume` is 0–1 or 0–100. An optional `host` block names the events and inputs (with their range); with it, an undeclared name is an error with a hint, a map outside the range is a warning, and `nudg generate` lists the declared names, so the host's types and the file can't drift. Like `targets`, it is a header, not data.
 
+## Gestures the runtime derives (format 0.14)
+
+Status: implemented. Long press and double tap were possible only as a workaround (a state entered on `down` with an `after:` timer), which every file rewrote and which couldn't swallow the tap that ends a long press.
+
+- **Derived in the runtime, not the adapters.** Both are functions of `down`, `up`, `cancel`, `dragstart` and `tap` over time, which every adapter already sends. Deriving them in the runtime makes them deterministic, shared by every host without new adapter code, and testable by the conformance suite; adapters would have needed their own clocks.
+- **Only where the file asks.** A target gets them only when a transition handles them, so the tap of a target without `longpress` is never swallowed and older files see no change.
+- **Fixed thresholds.** 0.5 s and 0.3 s, the platforms' defaults. A file that needs another hold time keeps the `after:` pattern.
+- **No delayed single tap.** Waiting to rule out a double tap would make every tap feel late; the first tap is delivered at once, as on the web and on iOS without failure requirements.
+- **Fling stays `nearest`.** A throw already chooses its state by projected position and momentum; a separate directional fling event would duplicate it.
+
 ## Type-safe host contracts
 
 Status: implemented as `nudg generate` and the `nudg_generate` MCP tool.

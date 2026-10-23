@@ -504,6 +504,18 @@ The `host` declaration: the app events and inputs a file uses, in one place. A f
 
 The conformance case `validation-0.13.json` defines the errors.
 
+## Additions in 0.14 (draft)
+
+Long press and double tap, derived by the runtime from the events a host already sends. A file that handles them declares `"nudg": "0.14"`; a 0.14 runtime also reads older files.
+
+- **`target.longpress`** fires when `target.down` has been held 0.5 s without `target.up`, `target.cancel` or `target.dragstart`. It fires at exactly that moment, from the runtime's clock like a timer (a timer due at the same time fires first). The `target.tap` that ends a long press is not delivered: `send` returns false.
+- **`target.doubletap`** follows a `target.tap` that comes at most 0.3 s after the previous delivered `target.tap`, at the same time and right after it. The pair is then complete; a third tap starts a new one. The first tap is never delayed: a file that must not react to it gives the tap and the double tap different meanings, as platforms do.
+- Both are derived only for targets whose `longpress` or `doubletap` some transition handles, so files that don't use them see no change. A host may also send them itself.
+- A pending long press keeps the runtime from settling, like an unpaused timer, so adapters keep their clock running until it fires or is cancelled.
+- The DOM adapter suppresses the browser's context menu and touch callout on targets that handle `longpress`. Moving a finger without a drag doesn't cancel a long press; a scroll that takes the pointer does (`cancel`).
+
+The conformance cases `gestures.json` and `validation-0.14.json` define the behavior across TypeScript, Swift and Kotlin.
+
 ## Rest and lifecycle
 
 Hosts need to know when motion is over: to move focus once a dialog has opened, to tell a component library its transition has entered, to remove an element once its exit has played. These rules make that moment the same in every runtime and adapter. They add no file syntax.

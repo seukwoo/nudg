@@ -32,6 +32,9 @@ private class Pending(var due: Double, val order: Int, val machine: Machine.Stat
 /** A loop running since its state was entered at [t0]. */
 private class ActiveLoop(val loop: Loop, val owner: State, val t0: Double)
 
+/** Seconds a press is held before it is a long press, and the most between two taps of a double tap (v0.14). */
+private const val LONG_PRESS = 0.5
+private const val DOUBLE_TAP = 0.3
 private const val REST_NUMBER = 1e-3
 private const val REST_COLOR = 1e-4
 private const val VELOCITY_WINDOW = 0.1
@@ -50,6 +53,13 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
     private val measuredBases = HashMap<String, Measure>()
     private val requiredInputs = HashSet<String>()
     private var order = 0
+    // Gestures derived from down, up and tap (v0.14), only for targets whose events the file handles.
+    private val wants by lazy { program.handledEvents }
+    /** When each pressed target becomes a long press, until up, cancel or dragstart. */
+    private val pressDue = LinkedHashMap<String, Double>()
+    /** Targets whose current press was a long press: the tap that ends it is not a tap. */
+    private val longPressed = HashSet<String>()
+    private val lastTap = HashMap<String, Double>()
     private var now = 0.0
 
     init {
@@ -456,10 +466,19 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         }
     }
 
+    /** Fires every timer and long press due by [t], earliest first; a timer before a long press due at the same time. */
     private fun fireDue(t: Double) {
         while (true) {
             var next: Pending? = null
             for (p in pending) if (p.pausedAt == null && p.due <= t + 1e-9 && (next == null || p.due < next.due || (p.due == next.due && p.order < next.order))) next = p
+            var press: Pair<String, Double>? = null
+            for ((target, due) in pressDue) if (due <= t + 1e-9 && (press == null || due < press.second)) press = target to due
+            if (press != null && (next == null || press.second < next.due)) {
+                pressDue.remove(press.first)
+                longPressed.add(press.first)
+                dispatch("${press.first}.longpress", press.second)
+                continue
+            }
             val due = next ?: return
             pending.remove(due)
             val fired = ArrayList<Transition>()
@@ -508,10 +527,31 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
     /** Sends an event at time `t` (seconds). Returns false if nothing handled it. */
     fun send(event: String, t: Double): Boolean {
         advanceTo(t)
-        val dot = event.indexOf('.')
-        if (dot > 0 && event.substring(dot + 1) == "dragstart") {
-            for (axis in listOf("x", "y")) inputs["${event.substring(0, dot)}.drag.$axis"] = mutableListOf(t to 0.0)
+        val target = event.substringBefore('.')
+        val name = event.substringAfter('.', "")
+        if (name == "dragstart") {
+            for (axis in listOf("x", "y")) inputs["$target.drag.$axis"] = mutableListOf(t to 0.0)
         }
+        if (name == "down" && "$target.longpress" in wants) {
+            pressDue[target] = t + LONG_PRESS
+            longPressed.remove(target)
+        }
+        if (name == "up" || name == "cancel" || name == "dragstart") pressDue.remove(target)
+        if (name == "tap" && longPressed.remove(target)) return false
+        val handled = dispatch(event, t)
+        if (name == "tap" && "$target.doubletap" in wants) {
+            val previous = lastTap[target]
+            if (previous != null && t - previous <= DOUBLE_TAP + 1e-9) {
+                lastTap.remove(target)
+                return dispatch("$target.doubletap", t) || handled
+            }
+            lastTap[target] = t
+        }
+        return handled
+    }
+
+    /** Delivers one event at [t]: pause reasons first, then the machine. False if nothing handled it. */
+    private fun dispatch(event: String, t: Double): Boolean {
         val fired = ArrayList<Transition>()
         val entered = ArrayList<State>()
         val timerHandled = controlTimers(event, t)
@@ -568,7 +608,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
     /** True when every property has come to rest and no unpaused timer is counting down. */
     fun settled(t: Double, property: String? = null): Boolean {
         advanceTo(t)
-        if (property == null && pending.any { it.pausedAt == null }) return false
+        if (property == null && (pending.any { it.pausedAt == null } || pressDue.isNotEmpty())) return false
         val keys = property?.let { listOf(it) } ?: program.properties.map { it.first }
         return keys.all { atRest(it, t) }
     }

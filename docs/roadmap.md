@@ -27,6 +27,7 @@ The order below follows real app needs. Release numbers and dates are assigned w
 | Screen transitions (stack, full-screen modal, shared element, drawer) | Implemented as one player with roles plus format 0.11 measured map values in 0.12.0 | [Design](design.md#screen-transitions-are-one-player-with-roles-format-011) |
 | Sequence and stagger | Implemented as format 0.12 motion delay in 0.12.0; menu and speed dial have starters | [Design](design.md#sequence-and-stagger-are-a-delay-per-property-format-012) |
 | Host declaration | Implemented as format 0.13 in 0.12.0: declared app events and inputs, checked by the validator and used by `nudg generate` | [Design](design.md#the-host-declaration-not-a-store-format-013) |
+| Long press and double tap | Implemented as format 0.14 (unreleased), derived by the runtime | [Spec](spec.md#additions-in-014-draft) |
 | Decay | Open design work | [Open questions](design.md#open-questions) |
 
 ## Product Stages
@@ -70,7 +71,7 @@ Done when: a TypeScript host cannot misspell its generated target/event/input na
 
 ## Completed: Recipe Coverage for Common App Patterns
 
-Status: complete in 0.12.0 (formats 0.10 to 0.13). Screen composition turned out to need only measured map values (0.11), and sequence/stagger a motion delay (0.12). The declared `host` block followed as format 0.13. Next: derived gestures (long press, double tap, fling) and threshold events.
+Status: complete in 0.12.0 (formats 0.10 to 0.13). Screen composition turned out to need only measured map values (0.11), and sequence/stagger a motion delay (0.12). The declared `host` block followed as format 0.13, and long press and double tap as 0.14. Next: threshold events from continuous values, with scroll direction for hide-on-scroll; fling stays covered by `nearest` and its momentum.
 
 Goal: let an AI answer the common UI words of app development with a standard contract, and let the gaps decide the next motion primitive. The 22 recipes cover single components and media well; navigation, lists, loading, menus and form controls are missing.
 

@@ -3,6 +3,7 @@
 // in the core.
 
 import { compile } from "../core/compile.ts";
+import { handledEvents } from "../core/observe.ts";
 import { createLifecycle } from "../core/lifecycle.ts";
 import { propertiesByTarget, styleOf } from "./style.ts";
 import { createRuntime, type Runtime, type Value } from "../core/runtime.ts";
@@ -124,6 +125,8 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   const manual = options.clock === "manual";
   const start = performance.now();
   const draggable = dragTargets(program);
+  // A long press is the file's (v0.14), not the browser's context menu or text callout.
+  const longPressable = new Set([...handledEvents(program)].filter((e) => e.endsWith(".longpress")).map((e) => e.split(".")[0]));
   const speed = options.speed ?? 1;
   if (!(speed > 0)) throw new RangeError("`speed` must be greater than 0.");
   let manualTime = 0;
@@ -259,6 +262,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
       changed();
     };
     if (scrollAxes) listeners.push(["scroll", reportScroll]);
+    if (longPressable.has(name)) listeners.push(["contextmenu", (e) => e.preventDefault()]);
     for (const [type, fn] of listeners) el.addEventListener(type, fn);
     // Mark the element with its name, so a snapshot of the page (and observe's default
     // selector) can find targets bound by ref as well as by attribute.
@@ -268,6 +272,8 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     const touchAction = style?.touchAction;
     // Let a drag reach us instead of scrolling the page.
     if (draggable.has(name) && style) style.touchAction = "none";
+    const callout = style?.getPropertyValue("-webkit-touch-callout");
+    if (longPressable.has(name) && style) style.setProperty("-webkit-touch-callout", "none");
     if (scrollAxes) reportScroll();
     applyTo(name, runtime.sample(now()), [el]);
     reflectState([el]);
@@ -280,6 +286,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
       if (marked) el.removeAttribute("data-nudg");
       for (const [type, fn] of listeners) el.removeEventListener(type, fn);
       if (draggable.has(name) && style) style.touchAction = touchAction;
+      if (longPressable.has(name) && style) style.setProperty("-webkit-touch-callout", callout ?? "");
       elements.get(name)?.delete(el);
       if (elements.get(name)?.size === 0) elements.delete(name);
       cleanups.delete(el);

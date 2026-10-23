@@ -1,0 +1,122 @@
+{
+  "conformance": "0.14",
+  "name": "Validator (0.14): derived gesture events",
+  "documents": [
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "0.13",
+        "targets": [
+          "photo"
+        ],
+        "values": {
+          "photo.scale": 1
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "photo.tap": "selected",
+              "photo.longpress": "menu",
+              "photo.doubletap": "zoomed"
+            }
+          },
+          "selected": {
+            "set": {
+              "photo.scale": 0.95
+            },
+            "when": {
+              "photo.tap": "idle",
+              "photo.longpress": "menu",
+              "photo.doubletap": "zoomed"
+            }
+          },
+          "menu": {
+            "when": {
+              "photo.tap": "idle"
+            }
+          },
+          "zoomed": {
+            "set": {
+              "photo.scale": 2
+            },
+            "when": {
+              "photo.doubletap": "idle"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/states/idle/when/photo.longpress"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/idle/when/photo.doubletap"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/selected/when/photo.longpress"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/selected/when/photo.doubletap"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/zoomed/when/photo.doubletap"
+        }
+      ]
+    },
+    {
+      "name": "alias",
+      "doc": {
+        "nudg": "0.14",
+        "targets": [
+          "photo"
+        ],
+        "values": {
+          "photo.scale": 1
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "photo.dblclick": "zoomed"
+            }
+          },
+          "selected": {
+            "set": {
+              "photo.scale": 0.95
+            },
+            "when": {
+              "photo.tap": "idle",
+              "photo.longpress": "menu",
+              "photo.doubletap": "zoomed"
+            }
+          },
+          "menu": {
+            "when": {
+              "photo.tap": "idle"
+            }
+          },
+          "zoomed": {
+            "set": {
+              "photo.scale": 2
+            },
+            "when": {
+              "photo.doubletap": "idle"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-event",
+          "path": "/states/idle/when/photo.dblclick"
+        }
+      ]
+    }
+  ]
+}

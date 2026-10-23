@@ -1,0 +1,244 @@
+{
+  "conformance": "0.14",
+  "name": "Gestures: a press held 0.5 s is a long press and swallows its tap; a second tap within 0.3 s is followed by a double tap",
+  "doc": {
+    "nudg": "0.14",
+    "targets": [
+      "photo"
+    ],
+    "values": {
+      "photo.scale": 1
+    },
+    "initial": "idle",
+    "states": {
+      "idle": {
+        "when": {
+          "photo.tap": "selected",
+          "photo.longpress": "menu",
+          "photo.doubletap": "zoomed"
+        }
+      },
+      "selected": {
+        "set": {
+          "photo.scale": 0.95
+        },
+        "when": {
+          "photo.tap": "idle",
+          "photo.longpress": "menu",
+          "photo.doubletap": "zoomed"
+        }
+      },
+      "menu": {
+        "when": {
+          "photo.tap": "idle"
+        }
+      },
+      "zoomed": {
+        "set": {
+          "photo.scale": 2
+        },
+        "when": {
+          "photo.doubletap": "idle"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0.1,
+      "send": "photo.down"
+    },
+    {
+      "t": 0.2,
+      "send": "photo.up"
+    },
+    {
+      "t": 0.2,
+      "send": "photo.tap"
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "state": [
+          "selected"
+        ]
+      }
+    },
+    {
+      "t": 1.0,
+      "send": "photo.down"
+    },
+    {
+      "t": 1.3,
+      "expect": {
+        "state": [
+          "selected"
+        ],
+        "settled": false
+      }
+    },
+    {
+      "t": 1.499,
+      "expect": {
+        "state": [
+          "selected"
+        ]
+      }
+    },
+    {
+      "t": 1.5,
+      "expect": {
+        "state": [
+          "menu"
+        ]
+      }
+    },
+    {
+      "t": 1.8,
+      "send": "photo.up"
+    },
+    {
+      "t": 1.8,
+      "send": "photo.tap",
+      "handled": false
+    },
+    {
+      "t": 1.8,
+      "expect": {
+        "state": [
+          "menu"
+        ],
+        "settled": true
+      }
+    },
+    {
+      "t": 2.0,
+      "send": "photo.down"
+    },
+    {
+      "t": 2.1,
+      "send": "photo.up"
+    },
+    {
+      "t": 2.1,
+      "send": "photo.tap"
+    },
+    {
+      "t": 2.1,
+      "expect": {
+        "state": [
+          "idle"
+        ]
+      }
+    },
+    {
+      "t": 3.0,
+      "send": "photo.down"
+    },
+    {
+      "t": 3.2,
+      "send": "photo.cancel"
+    },
+    {
+      "t": 3.8,
+      "expect": {
+        "state": [
+          "idle"
+        ]
+      }
+    },
+    {
+      "t": 4.0,
+      "send": "photo.down"
+    },
+    {
+      "t": 4.05,
+      "send": "photo.up"
+    },
+    {
+      "t": 4.05,
+      "send": "photo.tap"
+    },
+    {
+      "t": 4.05,
+      "expect": {
+        "state": [
+          "selected"
+        ]
+      }
+    },
+    {
+      "t": 4.3,
+      "send": "photo.down"
+    },
+    {
+      "t": 4.35,
+      "send": "photo.up"
+    },
+    {
+      "t": 4.35,
+      "send": "photo.tap",
+      "handled": true
+    },
+    {
+      "t": 4.35,
+      "expect": {
+        "state": [
+          "zoomed"
+        ]
+      }
+    },
+    {
+      "t": 5.0,
+      "send": "photo.down"
+    },
+    {
+      "t": 5.05,
+      "send": "photo.up"
+    },
+    {
+      "t": 5.05,
+      "send": "photo.tap"
+    },
+    {
+      "t": 5.5,
+      "send": "photo.down"
+    },
+    {
+      "t": 5.55,
+      "send": "photo.up"
+    },
+    {
+      "t": 5.55,
+      "send": "photo.tap"
+    },
+    {
+      "t": 5.6,
+      "expect": {
+        "state": [
+          "zoomed"
+        ]
+      }
+    },
+    {
+      "t": 5.7,
+      "send": "photo.down"
+    },
+    {
+      "t": 5.75,
+      "send": "photo.up"
+    },
+    {
+      "t": 5.75,
+      "send": "photo.tap"
+    },
+    {
+      "t": 5.8,
+      "expect": {
+        "state": [
+          "idle"
+        ]
+      }
+    }
+  ]
+}

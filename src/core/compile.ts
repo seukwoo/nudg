@@ -11,6 +11,7 @@ import type { Measure,
   Ease,
   EntryEffect,
   Follow,
+  Glide,
   HostDeclaration,
   KeyframesEffect,
   Loop,
@@ -75,7 +76,7 @@ const TOP_LEVEL_KEYS = ["$schema", "nudg", "import", "host", "targets", "values"
 const MACHINE_KEYS = ["initial", "states", "regions"];
 /** A region's object: a machine that may also have machine-level `when`. */
 const REGION_KEYS = [...MACHINE_KEYS, "when"];
-const STATE_KEYS = ["set", "follow", "enter", "loop", "when", ...MACHINE_KEYS];
+const STATE_KEYS = ["set", "follow", "glide", "enter", "loop", "when", ...MACHINE_KEYS];
 const TRANSITION_KEYS = ["to", "nearest", "by", "momentum", "animate", "step", "commit"];
 const VALUE_KEYS = ["base", "min", "max"];
 const FOLLOW_KEYS = ["input", "range", "overdrag"];
@@ -131,7 +132,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.15.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.16.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -1058,7 +1059,7 @@ class ComponentCompiler {
       return undefined;
     }
     r.keys(raw, p, STATE_KEYS);
-    const state: State = { name, set: new Map(), measure: new Map(), follow: new Map(), enter: new Map(), loop: new Map(), when: new Map(), timers: [] };
+    const state: State = { name, set: new Map(), measure: new Map(), follow: new Map(), glide: new Map(), enter: new Map(), loop: new Map(), when: new Map(), timers: [] };
 
     if ("set" in raw) {
       const set = raw.set;
@@ -1088,11 +1089,16 @@ class ComponentCompiler {
       }
     }
     if ("follow" in raw) state.follow = this.parseFollow(raw.follow, ptr(p, "follow"), state);
+    if ("glide" in raw) state.glide = this.parseGlide(raw.glide, ptr(p, "glide"), state);
     if ("enter" in raw) state.enter = this.parseEnter(raw.enter, ptr(p, "enter"));
     for (const key of state.enter.keys()) {
       if (state.follow.has(key)) r.error("follow-conflict", ptr(ptr(p, "enter"), key), `"${key}" is followed in this state, so it can't also have an entry effect here.`, "Remove the entry effect, or follow a different property.");
+      if (state.glide.has(key)) r.error("glide-conflict", ptr(ptr(p, "enter"), key), `"${key}" glides in this state, so it can't also have an entry effect here.`, "Remove the entry effect; the glide starts from the velocity the property already has.");
     }
     if ("loop" in raw) state.loop = this.parseLoop(raw.loop, ptr(p, "loop"), state);
+    for (const key of state.loop.keys()) {
+      if (state.glide.has(key)) r.error("glide-conflict", ptr(ptr(p, "loop"), key), `"${key}" glides in this state, so it can't also loop here.`, "Loop a different property, or glide it in another state.");
+    }
     if ("when" in raw) state.when = this.parseWhen(raw.when, ptr(p, "when"), false, state.timers);
     if ("states" in raw || "regions" in raw || "initial" in raw) {
       const machine = this.parseMachine(raw, p);
@@ -1247,6 +1253,70 @@ class ComponentCompiler {
         follow.overdrag = o;
       }
       out.set(key, follow);
+    }
+    return out;
+  }
+
+  private parseGlide(raw: Json, p: string, state: State): Map<string, Glide> {
+    const r = this.r;
+    const out = new Map<string, Glide>();
+    if (!this.needsVersion("0.16", p, "\"glide\"")) return out;
+    if (!isObject(raw)) {
+      r.error("invalid-type", p, "\"glide\" must map properties to glides.", `For example: "glide": { "strip.x": { "momentum": 0.5, "range": [-400, 0] } }`);
+      return out;
+    }
+    for (const [key, value] of Object.entries(raw)) {
+      if (key === "note" || key.startsWith("x-")) continue;
+      const kp = ptr(p, key);
+      const prop = this.property(key, kp);
+      if (!prop) continue;
+      if (prop.kind === "color") {
+        r.error("glide-not-numeric", kp, "A color can't glide.", "Glide a numeric property, and map the color from it with \"map\".");
+        continue;
+      }
+      if (state.set.has(key) || state.follow.has(key)) {
+        r.error("glide-conflict", kp, `"${key}" is ${state.set.has(key) ? "set" : "followed"} in this state, so it can't also glide here.`, "A gliding property goes where its velocity takes it; remove it from \"set\" or \"follow\".");
+        continue;
+      }
+      if (!isObject(value)) {
+        r.error("invalid-type", kp, "A glide is an object, {} for the defaults.", `For example: { "momentum": 0.5, "range": [-400, 0] }.`);
+        continue;
+      }
+      r.keys(value, kp, ["momentum", "range"]);
+      const glide: Glide = { momentum: 0.5 };
+      if (prop.min !== undefined && prop.max !== undefined) glide.range = [prop.min, prop.max];
+      if ("momentum" in value) {
+        const m = parseTime(value.momentum);
+        if (m === undefined || m <= 0) {
+          r.error("invalid-value", ptr(kp, "momentum"), '"momentum" must be a time greater than 0.', "0.5 glides about as far as a native scroll view; larger glides further.");
+          continue;
+        }
+        glide.momentum = m;
+      }
+      if ("range" in value) {
+        const range = value.range;
+        if (!Array.isArray(range) || range.length !== 2) {
+          r.error("invalid-value", ptr(kp, "range"), "\"range\" must be two different numeric or measured endpoints.", "For example: \"range\": [{ \"measure\": \"strip.width\", \"times\": -1, \"plus\": 240 }, 0].");
+          continue;
+        }
+        const endpoints: MeasuredEndpoint[] = [];
+        range.forEach((v, i) => {
+          const endpoint = this.parseEndpoint(prop.kind, key, v, ptr(ptr(kp, "range"), i), "invalid-value", "A glide range endpoint must be a finite number or measure object.");
+          if (endpoint !== undefined) endpoints.push(endpoint);
+        });
+        if (endpoints.length !== 2) continue;
+        const [a, b] = endpoints;
+        if (typeof a === "number" && typeof b === "number") {
+          if (a === b) {
+            r.error("invalid-value", ptr(kp, "range"), "\"range\" must be two different endpoints.", "For example: \"range\": [-400, 0].");
+            continue;
+          }
+          glide.range = [Math.min(a, b), Math.max(a, b)];
+        } else {
+          glide.range = [a, b];
+        }
+      }
+      out.set(key, glide);
     }
     return out;
   }
@@ -1463,6 +1533,7 @@ function settable(machine: Machine): Set<string> {
   for (const state of children) {
     for (const key of state.set.keys()) out.add(key);
     for (const key of state.follow.keys()) out.add(key);
+    for (const key of state.glide.keys()) out.add(key);
     for (const key of state.loop.keys()) out.add(key);
     if (state.machine) for (const key of settable(state.machine)) out.add(key);
   }

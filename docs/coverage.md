@@ -40,7 +40,7 @@ Legend: **yes** supported, with an example; **yes, no example** supported but no
 | Reduced motion | yes, runtime-wide | every example |
 | Continuous motion while a state is active (a spinner, a marquee) | yes: `loop` (0.10) | spinner, skeleton, typing indicator, pull-to-refresh |
 | Sequence, delay, stagger (menu items one after another) | yes: `delay` on a motion in `animate` (0.12) | accordion, menu, speed dial |
-| Decay (a fling that slows down without a snap point) | no: [open question](design.md#open-questions) | |
+| Decay (a fling that slows down without a snap point) | yes: `glide` (0.16) | free-scrolling carousel |
 | Arithmetic on measurements (an offset, half a sheet) | yes | bottom-sheet, swipe-row |
 
 ## Structure: how states fit together

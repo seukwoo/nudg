@@ -1,5 +1,5 @@
 {
- "nudgProgram": 5,
+ "nudgProgram": 6,
  "version": "0.5",
  "targets": [
   "ring",
@@ -82,6 +82,7 @@
       ]
      }
     ],
+    "glide": [],
     "enter": [],
     "loop": [],
     "when": [],

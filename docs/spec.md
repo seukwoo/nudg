@@ -533,6 +533,26 @@ Events derived from continuous inputs: crossings and scroll direction. A file th
 
 The conformance cases `thresholds.json` and `validation-0.15.json` define the behavior across TypeScript, Swift and Kotlin.
 
+## Additions in 0.16 (draft)
+
+Glide: a value that keeps the velocity it had when its state was entered and slows down by itself. A file that uses it declares `"nudg": "0.16"`; a 0.16 runtime also reads older files.
+
+```json
+"free": {
+  "glide": { "strip.x": { "momentum": 0.5, "range": [{ "measure": "strip.width", "times": -1, "plus": 240 }, 0] } },
+  "when": { "strip.dragstart": "dragging" }
+}
+```
+
+- In a state's `glide`, a numeric property starts from its value and velocity at entry (a released follow hands over the finger's speed) and moves as `x0 + v0·m·(1 − e^(−t/m))`, with velocity `v0·e^(−t/m)`, where `m` is `momentum` (seconds, default 0.5). It travels `v0·m` in all: exactly where `nearest` with the same momentum projects a throw.
+- **Range** (optional; the property's `min`/`max` by default) bounds it, with numbers or 0.9 measure objects. If the glide would pass a bound, it reaches it at `t = −m·ln(1 − (bound − x0)/(v0·m))` and from then on settles at the bound with the property's motion in `animate`, starting at the speed it had (no motion: it stops there). A glide that starts outside the range settles at the nearer bound at once. Measured bounds resolve when evaluated.
+- **Rest.** A gliding property is at rest when what is left of its travel, `|v|·m`, is under 0.001; once settling at a bound, the motion's rule applies.
+- It has no target: `targets()` reports it like a followed value. Leaving the state hands its value and velocity to the next motion, as a follow does; a committed property glides from rest.
+- Reduced motion keeps the glide, which is the user's own throw; settling at a bound uses the reduced-motion tween.
+- **Validation.** `momentum` is a time greater than 0. A property that a state sets, follows, loops or gives an entry effect can't glide there (`glide-conflict`); colors can't glide (`glide-not-numeric`); two parallel regions can't glide the same property (`region-conflict`).
+
+The conformance cases `glide.json` and `validation-0.16.json` define the behavior across TypeScript, Swift and Kotlin. Compiled programs carry `glide` in each state, as format 6.
+
 ## Rest and lifecycle
 
 Hosts need to know when motion is over: to move focus once a dialog has opened, to tell a component library its transition has entered, to remove an element once its exit has played. These rules make that moment the same in every runtime and adapter. They add no file syntax.
@@ -559,5 +579,5 @@ Settle is reported from the frame loop, never from inside the call that sent the
 
 ## Compiled programs (for native runtimes)
 
-`nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 5`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Format 2 carries measured endpoints, format 3 loops (`"loop"` in each state), format 4 measured map values and format 5 motion delays; current runtimes read every earlier format. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms.
+`nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 6`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Format 2 carries measured endpoints, format 3 loops (`"loop"` in each state), format 4 measured map values, format 5 motion delays and format 6 glides; current runtimes read every earlier format. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms.
 

@@ -1,6 +1,6 @@
 package dev.nudg
 
-/** A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 5). */
+/** A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 6). */
 
 enum class PropertyKind { LENGTH, NUMBER, COLOR }
 
@@ -37,6 +37,8 @@ sealed interface MapValue {
 data class PropertyMap(val source: String, val sourceKind: String, val from: List<MeasuredEndpoint>, val to: List<MapValue>)
 data class Property(val kind: PropertyKind, val base: List<Double>, val map: PropertyMap?, val measure: Measure?, val min: Double?, val max: Double?)
 data class Follow(val input: String, val range: Pair<MeasuredEndpoint, MeasuredEndpoint>?, val overdrag: Double)
+/** A property that keeps its velocity and slows down by itself while a state is active (v0.16). */
+data class Glide(val momentum: Double, val range: Pair<MeasuredEndpoint, MeasuredEndpoint>?)
 data class Nearest(val states: List<String>, val by: String, val momentum: Double)
 
 class Transition(val to: String?, val nearest: Nearest?, val animate: List<Pair<String, Motion>>, val step: List<Pair<String, Double>>?, val commit: List<String>?)
@@ -48,6 +50,7 @@ class State(
     val set: List<Pair<String, List<Double>>>,
     val measure: Map<String, Measure>,
     val follow: List<Pair<String, Follow>>,
+    val glide: List<Pair<String, Glide>>,
     val enter: List<Pair<String, EntryEffect>>,
     val loop: List<Pair<String, Loop>>,
     val `when`: List<Pair<String, Transition>>,
@@ -73,7 +76,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
         fun decode(text: String): Program {
             @Suppress("UNCHECKED_CAST")
             val j = Json.parse(text) as Map<String, Any?>
-            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0)) { "Not a compiled nudg program (formats 1 to 5). Compile it with `nudg compile`." }
+            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0)) { "Not a compiled nudg program (formats 1 to 6). Compile it with `nudg compile`." }
             val properties = list(j["properties"]).map { p ->
                 obj(p).let { m ->
                     (m["key"] as String) to Property(
@@ -148,6 +151,12 @@ class Program(val version: String, val targets: List<String>, val properties: Li
                     obj(e).let { f ->
                         val r = list(f["range"]).map(::endpoint)
                         (f["key"] as String) to Follow(f["input"] as String, if (r.size == 2) r[0] to r[1] else null, f["overdrag"] as Double)
+                    }
+                },
+                list(s["glide"]).map { e ->
+                    obj(e).let { g ->
+                        val r = list(g["range"]).map(::endpoint)
+                        (g["key"] as String) to Glide(g["momentum"] as Double, if (r.size == 2) r[0] to r[1] else null)
                     }
                 },
                 list(s["enter"]).map { e -> obj(e).let { (it["key"] as String) to entryEffect(it["effect"] ?: it["motion"]) } },

@@ -1,0 +1,301 @@
+{
+  "conformance": "0.16",
+  "name": "Validator (0.16): glide",
+  "documents": [
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "0.15",
+        "targets": [
+          "strip"
+        ],
+        "values": {
+          "strip.x": 0
+        },
+        "animate": {
+          "strip.x": {
+            "spring": {
+              "duration": 0.4,
+              "bounce": 0
+            }
+          }
+        },
+        "initial": "free",
+        "states": {
+          "free": {
+            "glide": {
+              "strip.x": {
+                "momentum": 0.4,
+                "range": [
+                  -300,
+                  0
+                ]
+              }
+            },
+            "when": {
+              "strip.dragstart": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "strip.x": {
+                "input": "strip.drag.x",
+                "range": [
+                  -300,
+                  0
+                ],
+                "overdrag": 0.3
+              }
+            },
+            "when": {
+              "strip.dragend": "free"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/states/free/glide"
+        }
+      ]
+    },
+    {
+      "name": "momentum",
+      "doc": {
+        "nudg": "0.16",
+        "targets": [
+          "strip"
+        ],
+        "values": {
+          "strip.x": 0
+        },
+        "animate": {
+          "strip.x": {
+            "spring": {
+              "duration": 0.4,
+              "bounce": 0
+            }
+          }
+        },
+        "initial": "free",
+        "states": {
+          "free": {
+            "glide": {
+              "strip.x": {
+                "momentum": 0,
+                "range": [
+                  -300,
+                  0
+                ]
+              }
+            },
+            "when": {
+              "strip.dragstart": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "strip.x": {
+                "input": "strip.drag.x",
+                "range": [
+                  -300,
+                  0
+                ],
+                "overdrag": 0.3
+              }
+            },
+            "when": {
+              "strip.dragend": "free"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/states/free/glide/strip.x/momentum"
+        }
+      ]
+    },
+    {
+      "name": "set-conflict",
+      "doc": {
+        "nudg": "0.16",
+        "targets": [
+          "strip"
+        ],
+        "values": {
+          "strip.x": 0
+        },
+        "animate": {
+          "strip.x": {
+            "spring": {
+              "duration": 0.4,
+              "bounce": 0
+            }
+          }
+        },
+        "initial": "free",
+        "states": {
+          "free": {
+            "glide": {
+              "strip.x": {
+                "momentum": 0.4,
+                "range": [
+                  -300,
+                  0
+                ]
+              }
+            },
+            "when": {
+              "strip.dragstart": "dragging"
+            },
+            "set": {
+              "strip.x": 0
+            }
+          },
+          "dragging": {
+            "follow": {
+              "strip.x": {
+                "input": "strip.drag.x",
+                "range": [
+                  -300,
+                  0
+                ],
+                "overdrag": 0.3
+              }
+            },
+            "when": {
+              "strip.dragend": "free"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "glide-conflict",
+          "path": "/states/free/glide/strip.x"
+        }
+      ]
+    },
+    {
+      "name": "color",
+      "doc": {
+        "nudg": "0.16",
+        "targets": [
+          "strip"
+        ],
+        "values": {
+          "strip.x": 0,
+          "strip.color": "#000000"
+        },
+        "animate": {
+          "strip.x": {
+            "spring": {
+              "duration": 0.4,
+              "bounce": 0
+            }
+          }
+        },
+        "initial": "free",
+        "states": {
+          "free": {
+            "glide": {
+              "strip.x": {
+                "momentum": 0.4,
+                "range": [
+                  -300,
+                  0
+                ]
+              },
+              "strip.color": {}
+            },
+            "when": {
+              "strip.dragstart": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "strip.x": {
+                "input": "strip.drag.x",
+                "range": [
+                  -300,
+                  0
+                ],
+                "overdrag": 0.3
+              }
+            },
+            "when": {
+              "strip.dragend": "free"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "glide-not-numeric",
+          "path": "/states/free/glide/strip.color"
+        }
+      ]
+    },
+    {
+      "name": "range",
+      "doc": {
+        "nudg": "0.16",
+        "targets": [
+          "strip"
+        ],
+        "values": {
+          "strip.x": 0
+        },
+        "animate": {
+          "strip.x": {
+            "spring": {
+              "duration": 0.4,
+              "bounce": 0
+            }
+          }
+        },
+        "initial": "free",
+        "states": {
+          "free": {
+            "glide": {
+              "strip.x": {
+                "momentum": 0.4,
+                "range": [
+                  0,
+                  0
+                ]
+              }
+            },
+            "when": {
+              "strip.dragstart": "dragging"
+            }
+          },
+          "dragging": {
+            "follow": {
+              "strip.x": {
+                "input": "strip.drag.x",
+                "range": [
+                  -300,
+                  0
+                ],
+                "overdrag": 0.3
+              }
+            },
+            "when": {
+              "strip.dragend": "free"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/states/free/glide/strip.x/range"
+        }
+      ]
+    }
+  ]
+}

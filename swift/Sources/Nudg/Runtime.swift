@@ -19,11 +19,13 @@ private indirect enum Segment {
   case delayed(t0: Double, prev: Segment, to: [Double], motion: Motion)
   case keyframes(t0: Double, from: [Double], to: [Double], frames: [Keyframe], duration: Double, ease: Ease, owner: State)
   case follow(key: String, t0: Double, anchor: Double, input0: Double, follow: Follow, owner: State)
+  /** A property slowing down from `v0` (v0.16), and settling at a range bound if it reaches one. */
+  case glide(key: String, t0: Double, x0: Double, v0: Double, glide: Glide, owner: State)
   var isKeyframes: Bool { if case .keyframes = self { return true }; return false }
   var to: [Double]? {
     switch self {
     case let .motion(_, _, _, to, _), let .keyframes(_, _, to, _, _, _, _), let .delayed(_, _, to, _): return to
-    case .follow: return nil
+    case .follow, .glide: return nil
     }
   }
 }
@@ -278,6 +280,36 @@ public final class Runtime {
     return out
   }
 
+  private func activeGlides(_ act: [ObjectIdentifier: String]) -> [String: (glide: Glide, owner: State)] {
+    var out: [String: (glide: Glide, owner: State)] = [:]
+    walkActive(act) { state in for (key, g) in state.glide { out[key] = (g, state) } }
+    return out
+  }
+
+  /** A glide's phase at `t`: still slowing down, or settling at a range bound with the property's motion. */
+  private enum GlidePhase { case gliding(pos: Double, vel: Double), settling(t0: Double, from: Double, v0: Double, bound: Double, motion: Motion?) }
+
+  /**
+   * Where a glide is at `t`: x0 + v0·m·(1 − e^(−t/m)), so it travels v0·m in all. If that
+   * would pass a range bound, it reaches the bound and settles there with the property's own
+   * motion, keeping the speed it had; one that starts outside the range goes straight back.
+   */
+  private func glidePhase(key: String, t0: Double, x0: Double, v0: Double, glide: Glide, t: Double) -> GlidePhase {
+    let m = glide.momentum
+    let motion = program.animate[key].map { reduced ? REDUCED : $0 }
+    if let (lo, hi) = resolvedRange(key, glide.range) {
+      if x0 < lo || x0 > hi { return .settling(t0: t0, from: x0, v0: v0, bound: x0 < lo ? lo : hi, motion: motion) }
+      let end = x0 + v0 * m
+      if end < lo || end > hi {
+        let bound = end < lo ? lo : hi
+        let hit = -m * log(1 - (bound - x0) / (v0 * m))
+        if t - t0 >= hit { return .settling(t0: t0 + hit, from: bound, v0: v0 * exp(-hit / m), bound: bound, motion: motion) }
+      }
+    }
+    let e = exp(-(t - t0) / m)
+    return .gliding(pos: x0 + v0 * m * (1 - e), vel: v0 * e)
+  }
+
   private func followSegment(_ key: String, _ f: (follow: Follow, owner: State), _ anchor: Double, _ t: Double) -> Segment {
     .follow(key: key, t0: t, anchor: anchor, input0: inputAt(f.follow.input, t), follow: f.follow, owner: f.owner)
   }
@@ -318,6 +350,11 @@ public final class Runtime {
       if t < t0 { return evaluate(prev, t) }
       let (from, v0) = evaluate(prev, t0)
       return evaluateMotion(t0: t0, from: from, v0: v0, to: to, motion: motion, t: t)
+    case let .glide(key, t0, x0, v0, glide, _):
+      switch glidePhase(key: key, t0: t0, x0: x0, v0: v0, glide: glide, t: t) {
+      case let .gliding(pos, vel): return ([pos], [vel])
+      case let .settling(start, from, v, bound, motion): return evaluateMotion(t0: start, from: [from], v0: [v], to: [bound], motion: motion, t: t)
+      }
     }
   }
 
@@ -440,6 +477,7 @@ public final class Runtime {
     for transition in fired { for (key, m) in transition.animate { overrides[key] = m } }
     let targets = resolveTargets(active)
     let follows = activeFollows(active)
+    let glides = activeGlides(active)
     var activeStates = Set<ObjectIdentifier>()
     var activeList: [State] = []
     walkActive(active) { activeStates.insert(ObjectIdentifier($0)); activeList.append($0) }
@@ -469,6 +507,16 @@ public final class Runtime {
         var restart = true
         if case let .follow(_, _, _, _, _, owner) = segment, owner === f.owner, !isEntered(f.owner), handoff[key] == nil { restart = false }
         if restart { segments[key] = followSegment(key, f, (handoff[key] ?? evaluate(segment, t)).0[0], t) }
+        continue
+      }
+      if let g = glides[key] {
+        // Glide on from wherever the value is, with the velocity it has.
+        var restart = true
+        if case let .glide(_, _, _, _, _, owner) = segment, owner === g.owner, !isEntered(g.owner), handoff[key] == nil { restart = false }
+        if restart {
+          let (pos, vel) = handoff[key] ?? evaluate(segment, t)
+          segments[key] = .glide(key: key, t0: t, x0: pos[0], v0: committed.contains(key) ? 0 : vel[0], glide: g.glide, owner: g.owner)
+        }
         continue
       }
       let to = targets[key]!
@@ -710,6 +758,13 @@ public final class Runtime {
       if t < t0 { return false }
       let (from, v0) = evaluate(prev, t0)
       segment = .motion(t0: t0, from: from, v0: v0, to: to, motion: motion)
+    }
+    if case let .glide(gkey, t0, x0, v0, glide, _) = segment {
+      switch glidePhase(key: gkey, t0: t0, x0: x0, v0: v0, glide: glide, t: t) {
+      // Still gliding: at rest once what is left of its travel is under the threshold.
+      case let .gliding(_, vel): return abs(vel) * glide.momentum < REST_NUMBER
+      case let .settling(start, from, v, bound, motion): segment = .motion(t0: start, from: [from], v0: [v], to: [bound], motion: motion)
+      }
     }
     if case let .keyframes(t0, _, _, _, duration, _, _) = segment { return t - t0 >= duration }
     guard case let .motion(t0, from, v0, to, motion) = segment, let motion else { return true }

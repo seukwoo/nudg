@@ -1,5 +1,5 @@
 {
-  "nudg": "0.5",
+  "nudg": "1.0",
   "note": "A music player host owns audio playback, seeking, volume and rate. nudg receives normalized media values and lifecycle events so playback, mute and repeat feedback stay portable.",
   "targets": ["artwork", "status", "buffered", "progress", "play", "mute", "repeat"],
   "values": {

@@ -1,5 +1,5 @@
 {
-  "nudg": "0.3",
+  "nudg": "1.0",
   "note": "A tooltip that waits before it shows (WAI-ARIA tooltip pattern). Hovering or focusing the trigger starts a timer; the tip appears after 500 ms unless the pointer has left, and goes away as soon as it does, or on Escape.",
   "targets": ["trigger", "tip"],
   "values": { "tip.opacity": 0, "tip.y": 4, "tip.scale": 0.96 },

@@ -1,5 +1,5 @@
 {
-  "nudg": "0.2",
+  "nudg": "1.0",
   "note": "Page dots for a pager. The current dot stretches into a pill and darkens; tap a dot to go to its page.",
   "targets": ["dot1", "dot2", "dot3", "dot4"],
   "values": {

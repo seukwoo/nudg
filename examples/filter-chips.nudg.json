@@ -1,5 +1,5 @@
 {
-  "nudg": "0.1",
+  "nudg": "1.0",
   "note": "Filter chips that select independently. A selected chip fills and makes room for a check mark, so it widens smoothly; each chip is its own region.",
   "targets": ["chip1", "chip2", "chip3", "check1", "check2", "check3"],
   "values": {

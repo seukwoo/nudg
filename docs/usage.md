@@ -125,6 +125,15 @@ The toast passes because its 3 s timer pauses for hover, focus and app suspensio
 
 Findings are warnings or suggestions, never errors; `--strict` exits 1 on warnings, for CI. Over MCP it is `nudg_critique`, and the server tells the agent to run it after every change.
 
+### upgrade
+
+```sh
+nudg upgrade toggle.nudg.json             # 0.1 → 1.0, the rest of the file as written
+nudg upgrade src/**/*.nudg.json --check   # CI: exit 1 if a file declares an older format
+```
+
+Raises each file's `"nudg"` version to 1.0, the stable format, once the file validates. Every 0.x format is a superset of the one before and 1.0 freezes 0.18, so nothing else changes; runtimes keep reading older files, so upgrading is a choice, not a requirement.
+
 ### generate
 
 ```sh
@@ -248,14 +257,14 @@ nudg has one contract for anything that writes or edits its files, an AI coding 
 
 | Part | Where | What it promises |
 |---|---|---|
-| JSON Schema | `@nudg/core/schema.json` (the latest format), `spec/nudg-<format>.schema.json` for each format | Structure and vocabulary for completion and early checks. Put `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-0.18.schema.json"` in a file to get it in any JSON editor. |
-| Validator | `nudg validate`, `nudg_validate`, `compile()` | The authority: every problem has a stable `code`, a JSON pointer `path` and a `hint` that says how to fix it. Codes are part of the spec and covered by the conformance suite, so an agent can rely on them across releases. |
+| JSON Schema | `@nudg/core/schema.json` (the latest format), `spec/nudg-<format>.schema.json` for each format | Structure and vocabulary for completion and early checks. Put `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.0.schema.json"` in a file to get it in any JSON editor. |
+| Validator | `nudg validate`, `nudg_validate`, `compile()` | The authority: every problem has a stable `code`, a JSON pointer `path` and a `hint` that says how to fix it. Codes are listed in [the error reference](errors.md), part of the spec and covered by the conformance suite, so an agent can rely on them across releases. |
 | Agent guide | `@nudg/core/guide.md`, `nudg_guide` | The format on one page, and which field each feel word changes ("bouncier" is `bounce`). It is versioned with the package and describes the formats this package accepts. |
 | Recipes | `@nudg/core/recipes.json`, `nudg recipe`, `nudg_recipe` | Interaction contracts for UI words (sheet, toast, video chat): parts, states, events, inputs, host duties, known gaps and a validated starter. |
 | Judge loop | `nudg skill`, the MCP server's instructions | When to validate, critique, compare against `HEAD` and observe the real page, so the person judges by looking. |
 | Host names | `nudg generate`, `nudg_generate` | The file's targets, events, inputs and states as TypeScript types, so host code can't drift from the file. |
 
-A file declares its format (`"nudg": "0.18"`); a runtime reads every older format, and the validator rejects fields newer than the declared one with a hint to raise it. Use the schema for completion and the validator for truth: where they disagree, the validator is right and the schema is the bug.
+A file declares its format (`"nudg": "1.0"`); a runtime reads every older format, and the validator rejects fields newer than the declared one with a hint to raise it. Use the schema for completion and the validator for truth: where they disagree, the validator is right and the schema is the bug.
 
 ## React adapter
 
@@ -422,7 +431,7 @@ struct Toggle: View {
 - `.nudg(model, "knob")` applies a target's values (offset, rotation, scale, opacity, size, background color) every frame through `TimelineView`. `.nudgPress(model, "track")` handles press and drag by the same rules as the web (`down`, `up`, `tap`; `dragstart`, `drag.x` / `drag.y`, `dragend` for targets the file drags). `.nudgKeys(model, "thumb")` sends `target.key.<name>` while focused, for the keys the file listens for. `.nudgLayout(model, "tab2")` reports the view's frame for `measure`.
 - `model.send("host.show")`, `model.state`, and Reduce Motion from the system on iOS. `NudgModel(program, exit: ["hidden"], onSettle: { states in ... }, onExit: { ... })` and `model.present` follow the same lifecycle rules as every adapter; the CI check covers a settle after an interrupted toggle and an exit.
 - The runtime passes the whole conformance suite from `spec/conformance/programs/` (`swift run NudgConformance ../spec/conformance`), and CI also renders a toggle with SwiftUI's `ImageRenderer` and checks the knob is where the runtime says.
-- Not yet: an iOS simulator check (needs Xcode; the pointer rules are checked in the conformance runner instead), Swift Package distribution outside this repository.
+- Checked on an iOS simulator: `swift/test-ios.sh` runs the conformance suite, renders a SwiftUI toggle and reads its pixels before and after a tap, and checks one settle per rest and the exit; CI runs it on every change. `swift test` runs the same on the Mac.
 
 ## Kotlin and Jetpack Compose
 
@@ -446,7 +455,7 @@ Box(Modifier.size(52.dp, 32.dp).nudg(toggle, "track").nudgPress(toggle, "track")
 - `Modifier.nudg(state, "knob")` reads values inside a graphics layer (offset in dp, rotation, scale, opacity), a layout block (width, height) and a draw block (color), so a frame redraws or relayouts what moves and never recomposes. `nudgPress` handles press and drag by the same rules as every adapter (`down`, `up` or `cancel`, `tap`; `dragstart`, `drag.x` / `drag.y` in dp, `dragend` for targets the file drags); `nudgKeys` sends `target.key.<name>` while focused; `nudgLayout` (before `nudg` in the chain) reports the untransformed box for `measure`.
 - `state.send("host.show")`, `state.state`, and a `reducedMotion` flag. `rememberNudg(program, exit = listOf("hidden"), onExit = { ... }, onSettle = { states -> ... })` and `state.present` follow the same lifecycle rules as every adapter.
 - The runtime passes the whole conformance suite (`./gradlew :conformance:run`, also in CI). The `demo` app (`./gradlew :demo:installDebug`, with `sdk.dir` in `kotlin/local.properties`) plays the web examples' toggle and press; checked on an Android emulator.
-- The drag toggle was checked on the emulator: drags past the 4 dp slop turn it on and off, a shorter nudge taps. Not yet: Maven distribution.
+- `./gradlew :demo:connectedDebugAndroidTest` drives the demo on a running emulator with real touch input: a tap turns the toggle on, a drag across turns the drag toggle on without a tap, and two fingers pinch an image to 3x and the zoom stays. Checked on Android 16. Not yet: Maven distribution.
 
 ## DOM adapter
 

@@ -17,6 +17,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
@@ -77,10 +79,18 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
         }
     }
 
-    private var moving by mutableStateOf(false)
+    /** True from creation and after a send or input, until a frame finds nothing left to move. */
+    private var moving by mutableStateOf(true)
+    /** Frames stopped: nothing moves and no timer or long press is pending, so time can stand still. */
+    private var idle = false
 
     internal fun time(nanos: Long): Double {
-        if (startNanos < 0) startNanos = nanos
+        // Resuming after idle continues the timeline where it stopped, so a motion started
+        // by the event that woke it doesn't skip the time spent idle.
+        if (startNanos < 0 || idle) {
+            startNanos = nanos - (lastTime * 1e9).toLong()
+            idle = false
+        }
         lastTime = maxOf(lastTime, (nanos - startNanos) / 1e9)
         return lastTime
     }
@@ -89,6 +99,7 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
         val t = time(nanos)
         values = runtime.sample(t)
         moving = lifecycle.frame(t) // a timer may have fired; settle and exit are reported from here
+        if (!moving) idle = true
         if (lifecycle.present) present = true
     }
 
@@ -137,7 +148,10 @@ fun rememberNudg(
     nudg.onExit = onExit
     LaunchedEffect(nudg) {
         // Frames run while something moves; a send or input wakes the loop again.
-        while (true) withFrameNanos { nudg.frame(it) }
+        while (true) {
+            snapshotFlow { nudg.isMoving }.first { it }
+            withFrameNanos { nudg.frame(it) }
+        }
     }
     return nudg
 }

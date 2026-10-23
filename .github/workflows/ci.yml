@@ -59,6 +59,8 @@ jobs:
       - name: SwiftUI renders a nudg toggle
         working-directory: swift
         run: swift run NudgSwiftUICheck ../spec/conformance/programs/toggle-tap.program.json "$RUNNER_TEMP"
+      - name: The same tests on an iOS simulator
+        run: swift/test-ios.sh
 
   kotlin:
     # The Kotlin runtime (JVM and Android) must pass the same conformance suite.

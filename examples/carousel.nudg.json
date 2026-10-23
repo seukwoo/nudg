@@ -1,5 +1,5 @@
 {
-  "nudg": "0.2",
+  "nudg": "1.0",
   "note": "A three-slide carousel. Drag the strip and release: it snaps to the nearest slide, carrying the finger's speed. The dots are mapped from the strip's position, so they cross-fade while dragging. Tapping a dot jumps to its slide.",
   "targets": ["strip", "dot1", "dot2", "dot3"],
   "values": {

@@ -6,7 +6,7 @@ nudg files describe a UI interaction: states, the events that move between them,
 
 ```json
 {
-  "nudg": "0.1",
+  "nudg": "1.0",
   "note": "What this interaction is for.",
   "targets": ["knob", "track"],
   "values": { "knob.x": 0, "track.color": "#D1D5DB" },
@@ -25,6 +25,7 @@ nudg files describe a UI interaction: states, the events that move between them,
 }
 ```
 
+- Write new files as `"nudg": "1.0"`, the stable format: every feature in this guide is in it. Older files keep working; `nudg upgrade file.nudg.json` raises one to 1.0.
 - **States say where** (`set`), **`animate` says how** each property travels there. A change mid-flight retargets from the current value; springs keep their velocity.
 - `targets` are names the host binds to its views (`data-nudg="knob"` on the web).
 - Every property used anywhere needs a base value in `values`.
@@ -64,7 +65,7 @@ A motion is an object with exactly one of `spring` or `tween`, or the name of a 
 
 ## Drag and derived values (format 0.2)
 
-Declare `"nudg": "0.2"` to use these.
+Available from format 0.2; new files declare `"nudg": "1.0"`, which includes everything here.
 
 ```json
 "values": {
@@ -90,7 +91,7 @@ Declare `"nudg": "0.2"` to use these.
 
 ## Keys, timers, sliders, reduced motion (format 0.3)
 
-Declare `"nudg": "0.3"` to use these.
+Available from format 0.3.
 
 - **Key events:** `target.key.<name>` while the target has focus: `space`, `enter`, `escape`, `tab`, `arrowleft/right/up/down`, `home`, `end`, `backspace`, `delete`, `pageup`, `pagedown`, single characters, `f1`–`f12` (lowercase `KeyboardEvent.key`). A native button still taps on Space/Enter by itself.
 - **Timers:** `"after:3s": "hidden"` in a state's `when` fires that long after the state was entered, if it's still active; re-entering restarts it. Not on a machine's `when`.

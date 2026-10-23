@@ -1,5 +1,5 @@
 {
-  "nudg": "0.4",
+  "nudg": "1.0",
   "note": "A search button in a toolbar that expands into a field across the toolbar's measured width, while the title fades out. Escape or the close button collapses it; the app moves focus into the field and back.",
   "targets": ["toolbar", "title", "bar", "open", "field", "close"],
   "values": { "bar.width": 40, "title.opacity": 1, "field.opacity": 0, "open.opacity": 1, "close.opacity": 0 },

@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Format 1.0.** The stable format: 0.18's semantics under `"nudg": "1.0"`. Every 0.x file keeps working; `nudg upgrade <file...>` raises a file to 1.0 once it validates, keeping the rest of its text, and `--check` fails CI on older files. Schema 1.0. The examples, motion libraries and presets declare 1.0; the speed dial gained Escape to close, which the critique asks of overlays from 0.3 on.
+- **A frozen surface.** [`docs/errors.md`](docs/errors.md) lists every validator, warning and critique code with what it means, and a test keeps it in step with the source. `api/` records the public API of every package entry point, the CLI, the MCP tools and the Swift and Kotlin modules; a test fails on any change until `npm run api` records it on purpose.
 - **The 1.0 plan.** The roadmap's 1.0 stage covers the format, the frozen surface (error codes, conformance, schema, compiled programs, public APIs on every platform), one consolidated spec, native checks on an iOS simulator and an Android emulator, and a compatibility policy: within 1.x everything only gains.
 
 ## 0.14.0

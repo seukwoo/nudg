@@ -28,7 +28,8 @@ npm run build       # compiles to dist/, which is what the npm package ships
 - **The spec is the source of truth.** Behavior is defined by [the format spec](docs/spec.md) plus the conformance suite in [`spec/conformance/`](spec/conformance/), not by the TypeScript runtime.
 - **Behavior changes start in `spec/conformance/derive.py`.** Edit it, regenerate the cases with `python3 spec/conformance/derive.py`, then make the runtime pass. Never edit the case JSON by hand.
 - **`src/core/` is headless.** No Node or DOM APIs there; platform code goes in `src/node/`, `src/dom/`, and so on.
-- **Validator errors are part of the spec.** Every error has a stable code, a JSON pointer, and a hint that says how to fix it.
+- **Validator errors are part of the spec.** Every error has a stable code, a JSON pointer, and a hint that says how to fix it. Each code is listed in [`docs/errors.md`](docs/errors.md), and a test fails if the list and the source disagree.
+- **The public API is frozen for 1.0.** `api/` holds the TypeScript declarations of every entry point, the CLI help, the MCP tools, and the Swift and Kotlin public declarations. A test fails when the source no longer matches; after a deliberate change, run `npm run api` and review the diff. Within 1.x the API only gains.
 - **Write down what you learn.** Notable problems and how they were solved go in [`docs/devlog.md`](docs/devlog.md).
 - **The README's images are generated.** `npm run media` replays the examples with the runtime and rewrites `docs/media/`; run it after changing those examples or the motion math, and don't edit the SVGs by hand.
 - **Erasable TypeScript only.** Node runs the sources without a build, so no enums, namespaces, or parameter properties, and imports use `.ts` paths.

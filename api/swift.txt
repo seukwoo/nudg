@@ -1,0 +1,146 @@
+// Nudg/Lifecycle.swift
+public final class Lifecycle
+public var onState: (([String]) -> Void)?
+public var onSettle: (([String]) -> Void)?
+public var onExit: (() -> Void)?
+public private(set) var present
+public init(_ runtime: Runtime, exit: [String]
+public func changed()
+public func frame(_ at: Double) -> Bool
+// Nudg/Math.swift
+// Nudg/Pointer.swift
+public let dragSlop
+public extension Program
+public func nudgPinchInputs(start: [(Double, Double)], now: [(Double, Double)]) -> (scale: Double, rotation: Double, x: Double, y: Double)
+public final class PointerTracker
+public init(target: String, draggable: Bool, pinchable: Bool
+public func down(_ x: Double, _ y: Double, id: Int
+public func move(_ x: Double, _ y: Double, id: Int
+public func up(inside: Bool
+public func cancel()
+public func nudgKeyName(_ key: String) -> String
+// Nudg/Program.swift
+public enum PropertyKind: String
+public enum Ease
+public enum Motion
+public var delay: Double
+public struct Keyframe
+public let at: Double
+public let value: [Double]
+public enum EntryEffect
+public struct Measure
+public let target: String
+public let of: String
+public let times: Double
+public let plus: Double
+public struct InputTarget
+public let input: String
+public let times: Double
+public let plus: Double
+public enum MeasuredEndpoint
+public struct Loop
+public let to: MeasuredEndpoint
+public let frames: [(at: Double, value: MeasuredEndpoint)]
+public let duration: Double
+public let ease: Ease
+public let delay: Double
+public let wrap: Double?
+public enum MapValue
+public struct PropertyMap
+public let source: String
+public let sourceKind: String
+public let from: [MeasuredEndpoint]
+public let to: [MapValue]
+public struct Property
+public let kind: PropertyKind
+public let base: [Double]
+public let map: PropertyMap?
+public let measure: Measure?
+public let min: Double?
+public let max: Double?
+public struct Follow
+public let input: String
+public let range: (MeasuredEndpoint, MeasuredEndpoint)?
+public let overdrag: Double
+public var multiply
+public struct Glide
+public let momentum: Double
+public let range: (MeasuredEndpoint, MeasuredEndpoint)?
+public final class Transition
+public let to: String?
+public let nearest: (states: [String], by: String, momentum: Double)?
+public let animate: [(String, Motion)]
+public let step: [(String, Double)]?
+public let commit: [String]?
+public struct TimerPause
+public let on: String
+public let off: String
+public final class Timer
+public let key: String
+public let delay: Double
+public let transition: Transition
+public let pause: [TimerPause]
+public final class State
+public let name: String
+public let set: [(String, [Double])]
+public let measure: [String: Measure]
+public let input: [String: InputTarget]
+public let follow: [(String, Follow)]
+public let glide: [(String, Glide)]
+public let enter: [(String, EntryEffect)]
+public let loop: [(String, Loop)]
+public let when: [(String, Transition)]
+public let timers: [Timer]
+public let machine: Machine?
+public final class Machine
+public enum Kind
+public let kind: Kind
+public struct Program
+public let version: String
+public let targets: [String]
+public let properties: [(String, Property)]
+public let animate: [String: Motion]
+public let machine: Machine
+public func property(_ key: String) -> Property?
+public enum DecodeError: Error, CustomStringConvertible
+public var description: String
+public static func decode(_ data: Data) throws -> Program
+// Nudg/Runtime.swift
+public enum Value: Equatable
+public var number: Double?
+public var color: String?
+public enum RuntimeError: Error
+public final class Runtime
+public let program: Program
+public init(_ program: Program, state: [String]
+public func send(_ event: String, at t: Double) throws -> Bool
+public func input(_ name: String, _ value: Double, at t: Double) throws -> Bool
+public func sample(_ t: Double) throws -> [String: Value]
+public func state() -> [String]
+public func settled(_ t: Double, property: String?
+public func resting(_ t: Double) throws -> Bool
+public func time() -> Double
+public func looping() -> Bool
+// NudgSwiftUI/Nudg+SwiftUI.swift
+public final class NudgModel: ObservableObject
+public let runtime: Runtime
+@Published public private(set) var state: [String]
+@Published public private(set) var present
+public init(_ program: Program, state: [String]
+public func time(at date: Date) -> Double
+public func send(_ event: String) -> Bool
+public func input(_ name: String, _ value: Double) -> Bool
+public func values(at date: Date) -> [String: Value]
+public func settled(at date: Date) -> Bool
+public var looping: Bool
+public var now: Date
+public struct NudgTarget: ViewModifier
+public func body(content: Content) -> some View
+public struct NudgPress: ViewModifier
+public func body(content: Content) -> some View
+public struct NudgKeys: ViewModifier
+public func body(content: Content) -> some View
+public struct NudgLayout: ViewModifier
+public func body(content: Content) -> some View
+public extension View
+public extension Color

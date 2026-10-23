@@ -150,8 +150,8 @@ Other existing candidates remain in [Design's open questions](design.md#open-que
 
 Goal: a format and APIs other people can build on, on the web and natively, without churn. Decisions in [Design](design.md#10-what-is-stable).
 
-- Format `"1.0"`: the semantics of 0.18, frozen. Runtimes keep reading every 0.x file; `nudg upgrade` rewrites a file's version after validating it. Schema 1.0; the examples and starters declare 1.0.
-- Frozen surface, checked by tests: every validator error code listed with its meaning; the conformance suite; the schema; the compiled program format; the public API of `@nudg/core` and its entry points, the CLI and MCP tools, the Swift package and the Kotlin modules, each against a committed snapshot.
+- Done: format `"1.0"`: the semantics of 0.18, frozen. Runtimes keep reading every 0.x file; `nudg upgrade` rewrites a file's version after validating it. Schema 1.0; the examples and starters declare 1.0.
+- Done: frozen surface, checked by tests: every validator error code listed with its meaning ([errors](errors.md)); the conformance suite; the schema; the compiled program format; the public API of `@nudg/core` and its entry points, the CLI and MCP tools, the Swift package and the Kotlin modules, each against a committed snapshot in `api/`.
 - One spec: rewrite the 0.x "Additions" sections into a single 1.0 document, with the format history as an appendix.
 - Native checked for real: the Swift package's tests and a SwiftUI render on an iOS simulator; the Compose demo and React Native driven on an Android emulator.
 - Release 1.0.0, with the compatibility policy: within 1.x, files and APIs only gain; anything that breaks waits for 2.0.

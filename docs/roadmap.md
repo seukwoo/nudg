@@ -4,7 +4,7 @@ nudg is early. The format can still change before 1.0, but the development direc
 
 This is the single development plan for priorities, stage status and completion criteria. It consolidates the stages previously listed in the README and design doc, and the next steps previously kept in `CLAUDE.md`. Design rationale and unresolved technical choices stay in [Design](design.md#open-questions); implemented behavior is defined by [the spec](spec.md), and release history stays in the [changelog](../CHANGELOG.md). The [devlog](devlog.md) records findings at the time, not the current queue.
 
-The order below follows real app needs. Release numbers and dates are assigned when scope is established; the earlier 0.6-0.9 headings were provisional. Package and format versions are separate: package 0.12.0 ships format 0.13.
+The order below follows real app needs. Release numbers and dates are assigned when scope is established; the earlier 0.6-0.9 headings were provisional. Package and format versions are separate: package 0.13.0 ships format 0.16.
 
 ## Current Baseline
 
@@ -27,9 +27,9 @@ The order below follows real app needs. Release numbers and dates are assigned w
 | Screen transitions (stack, full-screen modal, shared element, drawer) | Implemented as one player with roles plus format 0.11 measured map values in 0.12.0 | [Design](design.md#screen-transitions-are-one-player-with-roles-format-011) |
 | Sequence and stagger | Implemented as format 0.12 motion delay in 0.12.0; menu and speed dial have starters | [Design](design.md#sequence-and-stagger-are-a-delay-per-property-format-012) |
 | Host declaration | Implemented as format 0.13 in 0.12.0: declared app events and inputs, checked by the validator and used by `nudg generate` | [Design](design.md#the-host-declaration-not-a-store-format-013) |
-| Long press and double tap | Implemented as format 0.14 (unreleased), derived by the runtime | [Spec](spec.md#additions-in-014-draft) |
-| Crossings and scroll direction | Implemented as format 0.15 (unreleased); hide-on-scroll has a starter | [Spec](spec.md#additions-in-015-draft) |
-| Decay | Implemented as format 0.16 `glide` (unreleased); free-scrolling carousel has a starter | [Design](design.md#glide-decay-with-the-same-momentum-as-nearest-format-016) |
+| Long press and double tap | Implemented as format 0.14 in 0.13.0, derived by the runtime | [Spec](spec.md#additions-in-014-draft) |
+| Crossings and scroll direction | Implemented as format 0.15 in 0.13.0; hide-on-scroll has a starter | [Spec](spec.md#additions-in-015-draft) |
+| Decay | Implemented as format 0.16 `glide` in 0.13.0; free-scrolling carousel has a starter | [Design](design.md#glide-decay-with-the-same-momentum-as-nearest-format-016) |
 
 ## Product Stages
 

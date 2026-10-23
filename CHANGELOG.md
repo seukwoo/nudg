@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.13.0
+
+Gestures and motion from input: long press and double tap, events when an input crosses a value or a scroll changes direction, and glide for flings without a snap point. Formats 0.14 to 0.16; hide-on-scroll, the free-scrolling carousel and a double-tap like have starters, and only two gaps remain in the catalog (animated list, pinch zoom).
 
 - **Format 0.16: glide.** A state's `glide` lets a released value carry on with its velocity and slow down by itself, travelling velocity × `momentum`, the same projection `nearest` uses. At a range end (numbers or measured) it settles with the property's own spring. It rests when what's left of the travel is under 0.001. TypeScript, Swift and Kotlin share conformance; compiled programs are format 6. The free-scrolling carousel has a starter, checked with a real fling in Chrome; the decay gap is gone. Schema 0.16.
 - **Format 0.15: events from inputs.** A crossing is an event key such as `host.volume>0.6` or `list.scroll.y<24`: it fires when an input sample crosses into the condition, once until it leaves. `target.scrolldown` / `scrollup` (and `scrollright` / `scrollleft`) report a scroll's direction, turning only after 8 units back from the furthest point. Inputs only, so every runtime agrees; TypeScript, Swift and Kotlin share conformance. Hide-on-scroll has a starter and the scroll-direction gap is gone. Schema 0.15.

@@ -1,5 +1,5 @@
 {
-  "nudg": "0.10",
+  "nudg": "1.0",
   "note": "Pull a list down to refresh. The list follows the finger with growing resistance, the spinner fades and grows in with the pull, and a release past the halfway point holds the list open, the spinner turning, until the app reports it's done.",
   "targets": ["list", "spinner"],
   "values": {

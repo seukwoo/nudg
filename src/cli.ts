@@ -25,6 +25,8 @@ import { serveMcp } from "./node/mcp.ts";
 import { frameTimes, renderFrames } from "./node/render.ts";
 import { ACTIONS, checkAction, observe, type HostAction } from "./node/observe.ts";
 import { actionTarget, actionsToEvents, judgeHost } from "./core/observe.ts";
+import { upgradeText } from "./core/upgrade.ts";
+import { VERSION } from "./core/vocabulary.ts";
 import { findRecipe, formatGaps, formatRecipe, noStarter, recipeCatalog, recipeGaps, recipeSource } from "./node/recipes.ts";
 
 /** The package version, for what --share reports. */
@@ -89,6 +91,9 @@ simulate and plot options
                             its targets, events, inputs and state paths (imports included), for
                             useNudg<XContract>(x). --check writes nothing and exits 1 if a module
                             is missing or stale (for CI). --out <file.ts> with one file.
+  upgrade <file...>         Raise each file's "nudg" version to the current format (1.0) once it
+                            validates; everything else in the file is kept as written.
+                            --check writes nothing and exits 1 if a file is older (for CI).
   critique <file...>        Whether the motion is good, not only valid: each transition checked
                             against the platforms' motion guidelines and accessibility rules
                             (slow transitions, late press feedback, invisible changes, bouncy
@@ -549,6 +554,40 @@ async function runRender(args: Args, json: boolean): Promise<number> {
   return 0;
 }
 
+function runUpgrade(args: Args, json: boolean): number {
+  if (args.positional.length === 0) fail("upgrade needs at least one file.");
+  const check = args.flags.has("check");
+  const results: { file: string; from?: string; status: "upgraded" | "current" | "outdated" | "errors" | "no-version"; diagnostics?: Diagnostic[] }[] = [];
+  for (const file of args.positional) {
+    // Only a file that validates is raised: every format is a superset of the one before.
+    const { diagnostics } = load(file);
+    if (diagnostics.some((d) => d.severity === "error")) {
+      results.push({ file, status: "errors", diagnostics: diagnostics.filter((d) => d.severity === "error") });
+      continue;
+    }
+    const upgrade = upgradeText(readFileSync(file, "utf8"));
+    if (!upgrade) results.push({ file, status: "no-version" });
+    else if (upgrade.from === VERSION) results.push({ file, from: upgrade.from, status: "current" });
+    else if (check) results.push({ file, from: upgrade.from, status: "outdated" });
+    else {
+      writeFileSync(file, upgrade.text);
+      results.push({ file, from: upgrade.from, status: "upgraded" });
+    }
+  }
+  const failed = results.some((r) => r.status === "errors" || r.status === "outdated" || r.status === "no-version");
+  if (json) process.stdout.write(JSON.stringify({ ok: !failed, version: VERSION, results }, null, 2) + "\n");
+  else
+    for (const r of results) {
+      if (r.status === "errors") {
+        process.stdout.write(`${r.file}: can't upgrade, the file has errors\n`);
+        for (const d of r.diagnostics!) process.stdout.write(formatDiagnostic(d) + "\n");
+      } else if (r.status === "no-version") process.stdout.write(`${r.file}: no "nudg" version to upgrade\n`);
+      else if (r.status === "outdated") process.stdout.write(`${r.file}: ${r.from}, run \`nudg upgrade ${r.file}\`\n`);
+      else process.stdout.write(`${r.file}: ${r.status === "current" ? `already ${VERSION}` : `${r.from} → ${VERSION}`}\n`);
+    }
+  return failed ? 1 : 0;
+}
+
 function runGenerate(args: Args, json: boolean): number {
   if (args.positional.length === 0) fail("generate needs at least one file.");
   const out = args.flags.get("out")?.at(-1);
@@ -615,6 +654,7 @@ if (command === "compile") {
   process.exit(0);
 }
 if (command === "generate") process.exit(runGenerate(args, json));
+if (command === "upgrade") process.exit(runUpgrade(args, json));
 if (command === "critique") {
   if (args.positional.length === 0) fail("critique needs at least one file.");
   let warnings = 0;
@@ -720,4 +760,4 @@ if (command === "mcp") {
   await serveMcp();
   process.exit(0);
 }
-fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, compile, critique, observe, recipe, preset, log, skill, mcp.`);
+fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, compile, generate, upgrade, critique, observe, recipe, preset, log, skill, mcp.`);

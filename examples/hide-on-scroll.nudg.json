@@ -1,5 +1,5 @@
 {
-  "nudg": "0.15",
+  "nudg": "1.0",
   "note": "A bottom bar that slides away by its own measured height while the content scrolls down, and comes back as soon as it scrolls up, or near the top. The runtime derives the direction from the scroll position, ignoring wobbles under 8 units.",
   "targets": ["scroller", "bar"],
   "values": { "bar.y": 0 },

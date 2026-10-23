@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import { hexToOklab, oklabToHex } from "../src/core/color.ts";
@@ -178,6 +180,32 @@ test("cli validate and simulate speak JSON", () => {
   assert.match(run("recipe", "pinch zoom", "--source"), /"image\.pinchstart"/);
   assert.deepEqual(JSON.parse(run("recipe", "--gaps", "--json")).gaps, []);
   assert.match(run("recipe", "--gaps"), /No gaps/);
+});
+
+test("upgrade raises a valid file to 1.0 and keeps the rest of its text", async () => {
+  const { upgradeText } = await import("../src/core/upgrade.ts");
+  const text = '{\n  "nudg":  "0.3",\n  "note": "keep  this",\n  "targets": []\n}\n';
+  assert.deepEqual(upgradeText(text), { from: "0.3", text: '{\n  "nudg":  "1.0",\n  "note": "keep  this",\n  "targets": []\n}\n' });
+  assert.equal(upgradeText('{ "nudg": "1.0" }')?.text, '{ "nudg": "1.0" }');
+  assert.equal(upgradeText('{ "targets": [] }'), undefined);
+  assert.equal(upgradeText("not json"), undefined);
+
+  const dir = mkdtempSync(join(tmpdir(), "nudg-upgrade-"));
+  try {
+    const run = (...args: string[]) => spawnSync(process.execPath, [`${root}src/cli.ts`, "upgrade", ...args], { encoding: "utf8" });
+    const old = join(dir, "toggle.nudg.json");
+    writeFileSync(old, readFileSync(`${root}spec/conformance/toggle-tap.json`, "utf8").replace(/[\s\S]*"doc": /, "").replace(/,\s*"steps"[\s\S]*/, ""));
+    assert.equal(run(old, "--check").status, 1, "--check fails on an older file");
+    assert.match(run(old).stdout, /0\.1 → 1\.0/);
+    assert.equal(JSON.parse(readFileSync(old, "utf8")).nudg, "1.0");
+    assert.equal(run(old, "--check").status, 0);
+    const broken = join(dir, "broken.nudg.json");
+    writeFileSync(broken, '{ "nudg": "0.1", "targets": ["a"], "initial": "missing", "states": {} }');
+    assert.equal(run(broken).status, 1, "a file with errors is not upgraded");
+    assert.equal(JSON.parse(readFileSync(broken, "utf8")).nudg, "0.1");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("plot draws a labeled graph with overshoot and settle marks", async () => {

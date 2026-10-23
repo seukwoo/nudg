@@ -1,5 +1,5 @@
 {
-  "nudg": "0.2",
+  "nudg": "1.0",
   "note": "A card that lifts on hover and settles under a press. Hover and press are independent, so they run as parallel regions on different properties.",
   "targets": ["card"],
   "values": { "card.y": 0, "card.scale": 1 },

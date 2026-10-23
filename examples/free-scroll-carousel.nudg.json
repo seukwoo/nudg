@@ -1,5 +1,5 @@
 {
-  "nudg": "0.16",
+  "nudg": "1.0",
   "note": "A strip of cards that follows the finger and, released, glides on with the finger's speed and slows to a stop wherever that takes it: velocity × momentum further. At either end it settles with its spring instead of overshooting. 240 is the viewport's width; the strip's own width is measured.",
   "targets": ["strip"],
   "values": { "strip.x": 0 },

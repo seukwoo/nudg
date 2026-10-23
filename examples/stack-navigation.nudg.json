@@ -1,5 +1,5 @@
 {
-  "nudg": "0.11",
+  "nudg": "1.0",
   "note": "One level of a navigation stack. Opening a row pushes the detail screen in from the right while the list slides a third of a width left and dims; Back, or a swipe to the right, pops it. All distances come from the screen's measured width. For a deeper stack the host binds screen and previous to the top two screens for each push or pop, and unmounts the popped screen once the player settles in root.",
   "targets": ["screen", "previous", "shade", "open", "back"],
   "values": {

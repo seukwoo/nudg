@@ -73,6 +73,7 @@ export function recipeGaps(): GapCount[] {
 }
 
 export function formatGaps(gaps: GapCount[]): string {
+  if (gaps.length === 0) return "No gaps: every recipe has a starter.";
   return gaps
     .map(({ capability, missing, workaround }) => `${capability.padEnd(24)} ${String(missing.length + workaround.length).padStart(2)}  ${[...missing, ...workaround.map((id) => `${id} (workaround)`)].join(", ")}`)
     .join("\n");

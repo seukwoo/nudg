@@ -594,15 +594,15 @@
       "id": "image-viewer",
       "aliases": ["pinch zoom", "zoomable image", "photo viewer", "lightbox"],
       "summary": "A full-screen image that can be pinched to zoom, panned, double-tapped and swiped down to close.",
-      "starter": null,
-      "examples": [],
+      "starter": "image-viewer",
+      "examples": ["image-viewer"],
       "parts": { "required": ["image", "viewer"], "optional": ["scrim", "close action", "caption"] },
-      "states": ["fit", "zoomed", "dismissing"],
-      "events": ["image.doubletap", "image.dragstart", "image.dragend", "close.tap"],
-      "inputs": ["image.drag.x", "image.drag.y"],
+      "states": ["fit", "zoomed", "pinching", "held", "panning", "drifting"],
+      "events": ["image.doubletap", "image.pinchstart", "image.pinchend", "image.dragstart", "image.dragend"],
+      "inputs": ["image.pinch.scale", "image.pinch.x", "image.pinch.y", "image.drag.x", "image.drag.y"],
       "hostResponsibilities": ["Load the full-resolution image, clamp panning to the image bounds, and restore focus to the thumbnail on close."],
-      "motion": ["Scale about the pinch center, pan with momentum inside the bounds, spring back from over-zoom, and follow a downward swipe to dismiss."],
-      "gaps": [{ "capability": "multi-pointer", "status": "missing", "need": "Pinch scale and its center come from two pointers." }]
+      "motion": ["Toggle a zoom on double tap, scale by the pinch's ratio between bounds with a little rubber band (format 0.18 multiplying follow), commit where it was let go, and pan a zoomed image with a glide after a fling."],
+      "gaps": []
     },
     {
       "id": "free-scroll-carousel",

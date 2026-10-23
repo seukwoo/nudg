@@ -1,6 +1,6 @@
 package dev.nudg
 
-/** A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 7). */
+/** A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 8). */
 
 enum class PropertyKind { LENGTH, NUMBER, COLOR }
 
@@ -38,7 +38,8 @@ sealed interface MapValue {
 }
 data class PropertyMap(val source: String, val sourceKind: String, val from: List<MeasuredEndpoint>, val to: List<MapValue>)
 data class Property(val kind: PropertyKind, val base: List<Double>, val map: PropertyMap?, val measure: Measure?, val min: Double?, val max: Double?)
-data class Follow(val input: String, val range: Pair<MeasuredEndpoint, MeasuredEndpoint>?, val overdrag: Double)
+/** [multiply]: scale by the input's ratio since entry instead of adding its change, for a pinch (v0.18). */
+data class Follow(val input: String, val range: Pair<MeasuredEndpoint, MeasuredEndpoint>?, val overdrag: Double, val multiply: Boolean = false)
 /** A property that keeps its velocity and slows down by itself while a state is active (v0.16). */
 data class Glide(val momentum: Double, val range: Pair<MeasuredEndpoint, MeasuredEndpoint>?)
 data class Nearest(val states: List<String>, val by: String, val momentum: Double)
@@ -79,7 +80,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
         fun decode(text: String): Program {
             @Suppress("UNCHECKED_CAST")
             val j = Json.parse(text) as Map<String, Any?>
-            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0)) { "Not a compiled nudg program (formats 1 to 7). Compile it with `nudg compile`." }
+            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0)) { "Not a compiled nudg program (formats 1 to 8). Compile it with `nudg compile`." }
             val properties = list(j["properties"]).map { p ->
                 obj(p).let { m ->
                     (m["key"] as String) to Property(
@@ -154,7 +155,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
                 list(s["follow"]).map { e ->
                     obj(e).let { f ->
                         val r = list(f["range"]).map(::endpoint)
-                        (f["key"] as String) to Follow(f["input"] as String, if (r.size == 2) r[0] to r[1] else null, f["overdrag"] as Double)
+                        (f["key"] as String) to Follow(f["input"] as String, if (r.size == 2) r[0] to r[1] else null, f["overdrag"] as Double, f["multiply"] as? Boolean ?: false)
                     }
                 },
                 list(s["glide"]).map { e ->

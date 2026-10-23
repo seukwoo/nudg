@@ -1,0 +1,87 @@
+{
+ "nudgProgram": 8,
+ "version": "0.18",
+ "targets": [
+  "image"
+ ],
+ "properties": [
+  {
+   "key": "image.scale",
+   "kind": "number",
+   "base": [
+    1
+   ]
+  },
+  {
+   "key": "image.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [],
+ "machine": {
+  "kind": "states",
+  "initial": "held",
+  "states": [
+   {
+    "name": "held",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "image.pinchstart",
+      "animate": [],
+      "to": "pinching"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "pinching",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [
+     {
+      "key": "image.scale",
+      "input": "image.pinch.scale",
+      "overdrag": 0.3,
+      "multiply": true,
+      "range": [
+       1,
+       4
+      ]
+     },
+     {
+      "key": "image.x",
+      "input": "image.pinch.x",
+      "overdrag": 0
+     }
+    ],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "image.pinchend",
+      "animate": [],
+      "to": "held",
+      "commit": [
+       "image.scale",
+       "image.x"
+      ]
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

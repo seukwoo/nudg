@@ -127,6 +127,8 @@ export interface Follow {
   input: string;
   range?: [MeasuredEndpoint, MeasuredEndpoint];
   overdrag: number;
+  /** Scale by the input's ratio since entry instead of adding its change, for a pinch (v0.18). */
+  multiply?: boolean;
 }
 
 /**

@@ -78,5 +78,18 @@ do {
   else { failures.append("pointer"); print("FAIL  pointer: state \(rt.state()), events \(log)") }
 }
 
+// Two pointers on a pinchable target (v0.18): the drag ends, a pinch reports its inputs, and the press doesn't tap.
+do {
+  var log: [String] = []
+  let tracker = PointerTracker(target: "image", draggable: true, pinchable: true, send: { log.append($0) }, input: { log.append("\($0)=\(($1 * 100).rounded() / 100)") })
+  tracker.down(100, 100, id: 1); tracker.move(110, 100, id: 1); tracker.down(200, 100, id: 2)
+  tracker.move(110, 110, id: 1); tracker.move(110, 310, id: 2); tracker.up(id: 2); tracker.move(150, 150, id: 1); tracker.up(id: 1)
+  let expected = ["image.down", "image.dragstart", "image.drag.x=10.0", "image.drag.y=0.0", "image.dragend", "image.pinchstart",
+    "image.pinch.scale=1.01", "image.pinch.rotation=-6.34", "image.pinch.x=0.0", "image.pinch.y=5.0",
+    "image.pinch.scale=2.22", "image.pinch.rotation=90.0", "image.pinch.x=-45.0", "image.pinch.y=110.0", "image.pinchend", "image.up"]
+  if log == expected { passed += 1; print("ok    pointer: a second pointer ends the drag and pinches; the press doesn't tap") }
+  else { failures.append("pinch"); print("FAIL  pinch: \(log)") }
+}
+
 print("\n\(passed) passed, \(failures.count) failed")
 exit(failures.isEmpty ? 0 : 1)

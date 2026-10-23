@@ -326,14 +326,17 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
 
     private fun evaluate(seg: Segment, t: Double): Pair<List<Double>, List<Double>> = when (seg) {
         is Segment.FollowSeg -> {
-            val raw = seg.anchor + inputAt(seg.follow.input, t) - seg.input0
+            // A multiplying follow scales by the input's ratio since entry (a pinch); otherwise it adds the change.
+            // From an input at 0 there is no ratio, so it holds.
+            val gain = if (!seg.follow.multiply) 1.0 else if (seg.input0 == 0.0) 0.0 else seg.anchor / seg.input0
+            val raw = if (seg.follow.multiply) (if (seg.input0 == 0.0) seg.anchor else inputAt(seg.follow.input, t) * gain) else seg.anchor + inputAt(seg.follow.input, t) - seg.input0
             var value = raw
             var factor = 1.0
             resolvedRange(seg.key, seg.follow.range)?.let { (lo, hi) ->
                 if (raw < lo) { value = lo - (lo - raw) * seg.follow.overdrag; factor = seg.follow.overdrag }
                 else if (raw > hi) { value = hi + (raw - hi) * seg.follow.overdrag; factor = seg.follow.overdrag }
             }
-            listOf(value) to listOf(velocityAt(seg.follow.input, t) * factor)
+            listOf(value) to listOf(velocityAt(seg.follow.input, t) * factor * gain)
         }
         is Segment.MotionSeg -> evaluateMotion(seg, t)
         is Segment.KeyframesSeg -> evaluateKeyframes(seg, t)
@@ -630,11 +633,18 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
             for (axis in listOf("x", "y")) inputs["$target.drag.$axis"] = mutableListOf(t to 0.0)
             for (c in crossings) if (c.input.startsWith("$target.drag.")) c.inside = c.initial()
         }
+        if (name == "pinchstart") {
+            // A pinch's inputs start over: ratio 1, rotation and travel 0 (v0.18).
+            for ((input, start) in listOf("scale" to 1.0, "rotation" to 0.0, "x" to 0.0, "y" to 0.0)) {
+                inputs["$target.pinch.$input"] = mutableListOf(t to start)
+                for (c in crossings) if (c.input == "$target.pinch.$input") c.inside = if (c.above) start > c.value else start < c.value
+            }
+        }
         if (name == "down" && "$target.longpress" in wants) {
             pressDue[target] = t + LONG_PRESS
             longPressed.remove(target)
         }
-        if (name == "up" || name == "cancel" || name == "dragstart") pressDue.remove(target)
+        if (name == "up" || name == "cancel" || name == "dragstart" || name == "pinchstart") pressDue.remove(target)
         if (name == "tap" && longPressed.remove(target)) return false
         val handled = dispatch(event, t)
         if (name == "tap" && "$target.doubletap" in wants) {

@@ -5,8 +5,8 @@
 //   <Pressable {...bind("track").press}><Animated.View {...bind("knob")} /></Pressable>
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AccessibilityInfo, Animated, PanResponder, type LayoutChangeEvent } from "react-native";
-import { PointerTracker, draggableTargets } from "../core/pointer.ts";
+import { AccessibilityInfo, Animated, PanResponder, type GestureResponderEvent, type LayoutChangeEvent } from "react-native";
+import { PointerTracker, draggableTargets, pinchableTargets } from "../core/pointer.ts";
 import { createPlayer, initialValues, toProgram, type HeadlessPlayer } from "../core/player.ts";
 import { createRuntime, type Value } from "../core/runtime.ts";
 import type { NudgContract, Program, StateName } from "../core/types.ts";
@@ -113,19 +113,44 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
   }, [program, animated]);
 
   const draggable = useMemo(() => draggableTargets(program), [program]);
+  const pinchable = useMemo(() => pinchableTargets(program), [program]);
   const gestureFor = (name: string) => {
-    const tracker = new PointerTracker(name, draggable.has(name), {
-      send: (e) => void player.current?.send(e),
-      input: (n, v) => void player.current?.input(n, v),
-    });
+    const tracker = new PointerTracker(
+      name,
+      draggable.has(name),
+      { send: (e) => void player.current?.send(e), input: (n, v) => void player.current?.input(n, v) },
+      pinchable.has(name),
+    );
+    // Every finger by its identifier, so a second one can pinch (format 0.18).
+    const down = new Map<number, true>();
+    const id = (identifier: number | string) => Number(identifier) || 0;
+    const sync = (e: GestureResponderEvent, release: boolean) => {
+      const touches = e.nativeEvent.touches ?? [];
+      const now = new Set(touches.map((t) => id(t.identifier)));
+      for (const t of touches) {
+        const i = id(t.identifier);
+        if (!down.has(i)) {
+          down.set(i, true);
+          tracker.down(t.pageX, t.pageY, i);
+        } else tracker.move(t.pageX, t.pageY, i);
+      }
+      for (const i of [...down.keys()]) {
+        if (now.has(i) && !release) continue;
+        down.delete(i);
+        tracker.up(true, i);
+      }
+    };
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderTerminationRequest: () => !draggable.has(name),
-      onPanResponderGrant: () => tracker.down(0, 0),
-      onPanResponderMove: (_, g) => tracker.move(g.dx, g.dy),
-      onPanResponderRelease: () => tracker.up(),
-      onPanResponderTerminate: () => tracker.cancel(),
+      onPanResponderTerminationRequest: () => !draggable.has(name) && !pinchable.has(name),
+      onPanResponderGrant: (e) => sync(e, false),
+      onPanResponderMove: (e) => sync(e, false),
+      onPanResponderRelease: (e) => sync(e, true),
+      onPanResponderTerminate: () => {
+        down.clear();
+        tracker.cancel();
+      },
     }).panHandlers;
   };
   const bound = useRef(new Map<string, Bound>());

@@ -6,7 +6,7 @@
 
 import type { EntryEffect, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
 
-export const PROGRAM_FORMAT = 7;
+export const PROGRAM_FORMAT = 8;
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
@@ -23,7 +23,7 @@ export function programToJson(program: Program): Json {
 
 export function programFromJson(json: unknown): Program {
   const j = json as Record<string, any>;
-  if (![1, 2, 3, 4, 5, 6, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
+  if (![1, 2, 3, 4, 5, 6, 7, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
   return {
     version: j.version,
     targets: j.targets,
@@ -132,12 +132,14 @@ function readLoop(j: any): Loop {
 
 function follow(f: Follow): Record<string, Json> {
   const out: Record<string, Json> = { input: f.input, overdrag: f.overdrag };
+  if (f.multiply) out.multiply = true;
   if (f.range) out.range = f.range.map(endpoint);
   return out;
 }
 
 function readFollow(j: any): Follow {
   const f: Follow = { input: j.input, overdrag: j.overdrag };
+  if (j.multiply) f.multiply = true;
   if (j.range) f.range = [readEndpoint(j.range[0]), readEndpoint(j.range[1])];
   return f;
 }

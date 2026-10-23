@@ -29,6 +29,7 @@ The order below follows real app needs. Release numbers and dates are assigned w
 | Host declaration | Implemented as format 0.13 in 0.12.0: declared app events and inputs, checked by the validator and used by `nudg generate` | [Design](design.md#the-host-declaration-not-a-store-format-013) |
 | Long press and double tap | Implemented as format 0.14 in 0.13.0, derived by the runtime | [Spec](spec.md#additions-in-014-draft) |
 | Crossings and scroll direction | Implemented as format 0.15 in 0.13.0; hide-on-scroll has a starter | [Spec](spec.md#additions-in-015-draft) |
+| Pinch zoom | Format 0.18 pinch events and inputs, multiplying follows (unreleased); image viewer has a starter | [Design](design.md#pinch-two-pointers-and-a-multiplying-follow-format-018) |
 | Animated list | One player per row plus format 0.17 input targets (unreleased) | [Design](design.md#a-list-is-one-player-per-item-format-017) |
 | Decay | Implemented as format 0.16 `glide` in 0.13.0; free-scrolling carousel has a starter | [Design](design.md#glide-decay-with-the-same-momentum-as-nearest-format-016) |
 
@@ -73,7 +74,7 @@ Done when: a TypeScript host cannot misspell its generated target/event/input na
 
 ## Completed: Recipe Coverage for Common App Patterns
 
-Status: complete in 0.12.0 (formats 0.10 to 0.13). Screen composition turned out to need only measured map values (0.11), and sequence/stagger a motion delay (0.12). The declared `host` block followed as format 0.13, and long press and double tap as 0.14. Crossings and scroll direction followed as 0.15. Decay followed as 0.16 `glide`. The animated list followed with format 0.17 input targets. Remaining gap: multi-pointer (image viewer).
+Status: complete in 0.12.0 (formats 0.10 to 0.13). Screen composition turned out to need only measured map values (0.11), and sequence/stagger a motion delay (0.12). The declared `host` block followed as format 0.13, and long press and double tap as 0.14. Crossings and scroll direction followed as 0.15. Decay followed as 0.16 `glide`. The animated list followed with format 0.17 input targets and the image viewer with 0.18 pinches: every recipe in the catalog has a starter.
 
 Goal: let an AI answer the common UI words of app development with a standard contract, and let the gaps decide the next motion primitive. The 22 recipes cover single components and media well; navigation, lists, loading, menus and form controls are missing.
 
@@ -81,7 +82,7 @@ Goal: let an AI answer the common UI words of app development with a standard co
 - Done: register the patterns the format can't express yet as recipe contracts with gaps and no starter, so an AI gives a standard answer ("the host does this part") instead of improvising: dropdown / popover menu and FAB speed dial (sequence, stagger), list insert / remove / reorder (collection coordination), spinner, skeleton shimmer and typing indicator (continuous motion), hide-on-scroll navigation (scroll direction), stack push / pop, full-screen modal, shared-element and drawer transitions (screen composition), pinch-zoom image viewer (multi-pointer), free-scrolling carousel (decay).
 - Done: gap-only contracts use `"starter": null` in catalog version 2, gap capabilities are a fixed list, and `nudg recipe` marks them and refuses `--source` with the gaps. Decisions in [Design](design.md#recipes-without-a-starter).
 - Count gaps across the catalog (`nudg recipe --gaps`) and promote the most needed one into the queue below. After registration: screen composition 4, continuous motion 4 (one a workaround), sequence 3, stagger 3, decay 2, others 1. Sequence and stagger together cover four recipes. The nine starter recipes needed no new capability, so the counts stood.
-- Done: continuous motion was promoted and implemented as format 0.10 loops; with `delay` it also covers the typing indicator's stagger. Then screen composition (4) was tried and needed only measured map values, format 0.11; its four recipes have starters. Then sequence and stagger became a per-property delay, format 0.12. Then scroll direction (0.15) and decay (0.16) followed. Counts now: collection coordination 1, multi-pointer 1.
+- Done: continuous motion was promoted and implemented as format 0.10 loops; with `delay` it also covers the typing indicator's stagger. Then screen composition (4) was tried and needed only measured map values, format 0.11; its four recipes have starters. Then sequence and stagger became a per-property delay, format 0.12. Then scroll direction (0.15), decay (0.16), collection coordination (0.17) and multi-pointer (0.18) followed. No gaps remain.
 
 Done when: the catalog names every pattern above, each either with a validated starter or with explicit gaps, and the queue's next primitive is chosen from the gap counts.
 
@@ -143,7 +144,7 @@ Goal: deliver the original stage 2 scope with patterns proven in app workflows.
 
 Done when: screen-level and collection-level interactions can be expressed without one-off host code for the motion logic.
 
-Other existing candidates remain in [Design's open questions](design.md#open-questions), including cross-level transitions, a final-state marker, per-property reduced motion, discrete commit steps, nonlinear rubber banding, neighbor-limited snapping, multi-pointer gestures, motion overrides and schemes. They are retained design questions; a real pattern determines their priority.
+Other existing candidates remain in [Design's open questions](design.md#open-questions), including cross-level transitions, a final-state marker, per-property reduced motion, discrete commit steps, nonlinear rubber banding, neighbor-limited snapping, gestures beyond a two-pointer pinch, motion overrides and schemes. They are retained design questions; a real pattern determines their priority.
 
 ## 1.0: Stable Web and React Core
 

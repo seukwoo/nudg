@@ -4,6 +4,7 @@
 
 import { compile } from "../core/compile.ts";
 import { handledEvents } from "../core/observe.ts";
+import { pinchInputs, pinchableTargets } from "../core/pointer.ts";
 import { createLifecycle } from "../core/lifecycle.ts";
 import { propertiesByTarget, styleOf } from "./style.ts";
 import { createRuntime, type Runtime, type Value } from "../core/runtime.ts";
@@ -125,6 +126,8 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   const manual = options.clock === "manual";
   const start = performance.now();
   const draggable = dragTargets(program);
+  // Two pointers on these targets pinch (v0.18).
+  const pinchable = pinchableTargets(program);
   // A long press is the file's (v0.14), not the browser's context menu or text callout.
   const longPressable = new Set([...handledEvents(program)].filter((e) => e.endsWith(".longpress")).map((e) => e.split(".")[0]));
   const speed = options.speed ?? 1;
@@ -206,9 +209,16 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     pointer: number;
     x: number;
     y: number;
+    /** Where the pointer is now, for a pinch that starts later. */
+    cx: number;
+    cy: number;
     dragging: boolean;
+    /** A second pointer joined: this press pinched, so it neither drags nor taps. */
+    pinched: boolean;
   }
   const pressed = new Map<string, Press>();
+  /** Each pinching target's two pointers, where they started and where they are. */
+  const pinches = new Map<string, { ids: [number, number]; start: [number, number][]; at: Map<number, [number, number]> }>();
   const suppressTap = new Set<string>();
 
   /** Set once layout reporting starts: elements bound later (React refs) are measured too. */
@@ -224,7 +234,21 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
         "pointerdown",
         (e) => {
           const p = e as PointerEvent;
-          pressed.set(name, { pointer: p.pointerId, x: p.clientX, y: p.clientY, dragging: false });
+          const press = pressed.get(name);
+          if (press && press.pointer !== p.pointerId) {
+            // A second pointer: a pinch on a target that handles one, otherwise nothing.
+            if (!pinchable.has(name) || pinches.has(name)) return;
+            if (press.dragging) {
+              press.dragging = false;
+              emit(`${name}.dragend`);
+            }
+            press.pinched = true;
+            const start: [number, number][] = [[press.cx, press.cy], [p.clientX, p.clientY]];
+            pinches.set(name, { ids: [press.pointer, p.pointerId], start, at: new Map([[press.pointer, start[0]], [p.pointerId, start[1]]]) });
+            emit(`${name}.pinchstart`);
+            return;
+          }
+          pressed.set(name, { pointer: p.pointerId, x: p.clientX, y: p.clientY, cx: p.clientX, cy: p.clientY, dragging: false, pinched: false });
           emit(`${name}.down`);
         },
       ],
@@ -271,7 +295,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     const style = (el as HTMLElement).style;
     const touchAction = style?.touchAction;
     // Let a drag reach us instead of scrolling the page.
-    if (draggable.has(name) && style) style.touchAction = "none";
+    if ((draggable.has(name) || pinchable.has(name)) && style) style.touchAction = "none";
     const callout = style?.getPropertyValue("-webkit-touch-callout");
     if (longPressable.has(name) && style) style.setProperty("-webkit-touch-callout", "none");
     if (scrollAxes) reportScroll();
@@ -285,7 +309,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
       el.removeAttribute("data-nudg-state");
       if (marked) el.removeAttribute("data-nudg");
       for (const [type, fn] of listeners) el.removeEventListener(type, fn);
-      if (draggable.has(name) && style) style.touchAction = touchAction;
+      if ((draggable.has(name) || pinchable.has(name)) && style) style.touchAction = touchAction;
       if (longPressable.has(name) && style) style.setProperty("-webkit-touch-callout", callout ?? "");
       elements.get(name)?.delete(el);
       if (elements.get(name)?.size === 0) elements.delete(name);
@@ -297,8 +321,22 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
 
   const onMove = (e: Event) => {
     const p = e as PointerEvent;
+    for (const [name, pinch] of pinches) {
+      if (!pinch.ids.includes(p.pointerId)) continue;
+      pinch.at.set(p.pointerId, [p.clientX, p.clientY]);
+      const inputs = pinchInputs(pinch.start, pinch.ids.map((id) => pinch.at.get(id)!));
+      const t = now();
+      for (const key of ["scale", "rotation", "x", "y"] as const) {
+        runtime.input(`${name}.pinch.${key}`, inputs[key], t);
+        options.onEvent?.({ input: `${name}.pinch.${key}`, value: inputs[key] }, t);
+      }
+      changed();
+    }
     for (const [name, press] of pressed) {
-      if (press.pointer !== p.pointerId || !draggable.has(name)) continue;
+      if (press.pointer !== p.pointerId) continue;
+      press.cx = p.clientX;
+      press.cy = p.clientY;
+      if (!draggable.has(name) || press.pinched) continue;
       if (!press.dragging) {
         if (Math.hypot(p.clientX - press.x, p.clientY - press.y) <= DRAG_SLOP) continue;
         // Inputs measure travel since the press, so the first sample catches the value
@@ -317,8 +355,13 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
 
   const onRelease = (e: Event, cancelled: boolean) => {
     const p = e as PointerEvent;
-    // One pointer can press nested targets at once; if it dragged any of them, none taps.
-    const dragged = [...pressed.values()].some((press) => press.pointer === p.pointerId && press.dragging);
+    for (const [name, pinch] of pinches) {
+      if (!pinch.ids.includes(p.pointerId)) continue;
+      pinches.delete(name);
+      emit(`${name}.pinchend`);
+    }
+    // One pointer can press nested targets at once; if it dragged or pinched any of them, none taps.
+    const dragged = [...pressed.values()].some((press) => press.pointer === p.pointerId && (press.dragging || press.pinched));
     for (const [name, press] of pressed) {
       if (press.pointer !== p.pointerId) continue;
       pressed.delete(name);

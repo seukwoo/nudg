@@ -343,13 +343,16 @@ public final class Runtime {
   private func evaluate(_ segment: Segment, _ t: Double) -> ([Double], [Double]) {
     switch segment {
     case let .follow(key, _, anchor, input0, follow, _):
-      let raw = anchor + inputAt(follow.input, t) - input0
+      // A multiplying follow scales by the input's ratio since entry (a pinch); otherwise it adds the change.
+      // From an input at 0 there is no ratio, so it holds.
+      let gain = !follow.multiply ? 1 : input0 == 0 ? 0 : anchor / input0
+      let raw = follow.multiply ? (input0 == 0 ? anchor : inputAt(follow.input, t) * gain) : anchor + inputAt(follow.input, t) - input0
       var value = raw, factor = 1.0
       if let (lo, hi) = resolvedRange(key, follow.range) {
         if raw < lo { value = lo - (lo - raw) * follow.overdrag; factor = follow.overdrag }
         else if raw > hi { value = hi + (raw - hi) * follow.overdrag; factor = follow.overdrag }
       }
-      return ([value], [velocityAt(follow.input, t) * factor])
+      return ([value], [velocityAt(follow.input, t) * factor * gain])
     case let .motion(t0, from, v0, to, motion):
       return evaluateMotion(t0: t0, from: from, v0: v0, to: to, motion: motion, t: t)
     case let .keyframes(t0, from, to, frames, duration, ease, _):
@@ -644,11 +647,18 @@ public final class Runtime {
       for axis in ["x", "y"] { inputs["\(target).drag.\(axis)"] = [(t, 0)] }
       for c in crossings where c.input.hasPrefix("\(target).drag.") { c.reset() }
     }
+    if name == "pinchstart" {
+      // A pinch's inputs start over: ratio 1, rotation and travel 0 (v0.18).
+      for (input, start) in [("scale", 1.0), ("rotation", 0), ("x", 0), ("y", 0)] {
+        inputs["\(target).pinch.\(input)"] = [(t, start)]
+        for c in crossings where c.input == "\(target).pinch.\(input)" { c.inside = c.above ? start > c.value : start < c.value }
+      }
+    }
     if name == "down" && wants.contains("\(target).longpress") {
       pressDue[target] = t + LONG_PRESS
       longPressed.remove(target)
     }
-    if name == "up" || name == "cancel" || name == "dragstart" { pressDue[target] = nil }
+    if name == "up" || name == "cancel" || name == "dragstart" || name == "pinchstart" { pressDue[target] = nil }
     if name == "tap" && longPressed.remove(target) != nil { return false }
     let handled = dispatch(event, t)
     if name == "tap" && wants.contains("\(target).doubletap") {

@@ -33,6 +33,8 @@ import { MEASUREMENTS,
   EVENTS_0_2,
   EVENTS_0_14,
   EVENTS_0_15,
+  EVENTS_0_18,
+  PINCH_INPUTS,
   CROSSING,
   HOST,
   IDENTIFIER,
@@ -80,7 +82,7 @@ const REGION_KEYS = [...MACHINE_KEYS, "when"];
 const STATE_KEYS = ["set", "follow", "glide", "enter", "loop", "when", ...MACHINE_KEYS];
 const TRANSITION_KEYS = ["to", "nearest", "by", "momentum", "animate", "step", "commit"];
 const VALUE_KEYS = ["base", "min", "max"];
-const FOLLOW_KEYS = ["input", "range", "overdrag"];
+const FOLLOW_KEYS = ["input", "range", "overdrag", "multiply"];
 const MAP_KEYS = ["map", "from", "to"];
 const MOTION_KEYS = ["spring", "tween", "kick", "delay"];
 const KEYFRAMES_KEYS = ["keyframes", "duration", "ease"];
@@ -133,7 +135,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.17.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.18.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -1260,6 +1262,14 @@ class ComponentCompiler {
         }
         follow.overdrag = o;
       }
+      if ("multiply" in spec) {
+        if (!this.needsVersion("0.18", ptr(kp, "multiply"), "\"multiply\"")) continue;
+        if (typeof spec.multiply !== "boolean") {
+          r.error("invalid-value", ptr(kp, "multiply"), "\"multiply\" must be true or false.", "true scales the value by the input's ratio, as a pinch zooms.");
+          continue;
+        }
+        if (spec.multiply) follow.multiply = true;
+      }
       out.set(key, follow);
     }
     return out;
@@ -1364,6 +1374,7 @@ class ComponentCompiler {
       if (!this.needsVersion("0.5", p, "A scroll input")) return false;
       return this.checkTarget(target, p);
     }
+    if (PINCH_INPUTS.includes(input) && !this.needsVersion("0.18", p, "A pinch input")) return false;
     if (INPUTS.includes(input)) return this.checkTarget(target, p);
     const options = target && this.targets.has(target)
       ? [...INPUTS.map((i) => `${target}.${i}`), `${target}.scroll.x`, `${target}.scroll.y`, "host.<name>"]
@@ -1534,6 +1545,7 @@ class ComponentCompiler {
     if (EVENTS_0_2.includes(event) && !this.needs02(p, `The "${event}" event`)) ok = false;
     if (EVENTS_0_14.includes(event) && !this.needsVersion("0.14", p, `The "${event}" event`)) ok = false;
     if (EVENTS_0_15.includes(event) && !this.needsVersion("0.15", p, `The "${event}" event`)) ok = false;
+    if (EVENTS_0_18.includes(event) && !this.needsVersion("0.18", p, `The "${event}" event`)) ok = false;
     if (!(EVENTS as readonly string[]).includes(event)) {
       const alias = EVENT_ALIASES[event] ?? EVENT_ALIASES[event.toLowerCase()];
       const guess = alias ?? didYouMean(event, [...EVENTS]);

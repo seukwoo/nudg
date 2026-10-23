@@ -1,5 +1,8 @@
 package dev.nudg
 
+import kotlin.math.PI
+import kotlin.math.atan2
+import kotlin.math.ceil
 import kotlin.math.hypot
 
 /**
@@ -31,6 +34,13 @@ val Program.handledEvents: Set<String>
         return out
     }
 
+/** Targets whose pinches the program listens for (v0.18). */
+val Program.pinchableTargets: Set<String>
+    get() = handledEvents.mapNotNull { e ->
+        val p = e.split(".")
+        if (p.size == 2 && (p[1] == "pinchstart" || p[1] == "pinchend")) p[0] else null
+    }.toSet()
+
 /** Targets whose drags the program listens for. */
 val Program.draggableTargets: Set<String>
     get() = handledEvents.mapNotNull { e ->
@@ -38,19 +48,66 @@ val Program.draggableTargets: Set<String>
         if (p.size == 2 && (p[1] == "dragstart" || p[1] == "dragend")) p[0] else null
     }.toSet()
 
-class PointerTracker(private val target: String, private val draggable: Boolean, private val send: (String) -> Unit, private val input: (String, Double) -> Unit) {
-    private var origin: Pair<Double, Double>? = null
-    private var dragging = false
+/** What a pinch reports, from where the two pointers were when it started (v0.18). */
+data class PinchInputs(val scale: Double, val rotation: Double, val x: Double, val y: Double)
 
-    fun down(x: Double, y: Double) {
-        origin = x to y
-        dragging = false
-        send("$target.down")
+fun nudgPinchInputs(start: List<Pair<Double, Double>>, now: List<Pair<Double, Double>>): PinchInputs {
+    val (a0, b0) = start
+    val (a, b) = now
+    val d0 = hypot(b0.first - a0.first, b0.second - a0.second)
+    val d = hypot(b.first - a.first, b.second - a.second)
+    var rotation = (atan2(b.second - a.second, b.first - a.first) - atan2(b0.second - a0.second, b0.first - a0.first)) * 180 / PI
+    // The turn between the two, in (-180, 180].
+    rotation -= 360 * ceil(rotation / 360 - 0.5)
+    return PinchInputs(if (d0 == 0.0) 1.0 else d / d0, rotation, (a.first + b.first - a0.first - b0.first) / 2, (a.second + b.second - a0.second - b0.second) / 2)
+}
+
+class PointerTracker(
+    private val target: String,
+    private val draggable: Boolean,
+    private val send: (String) -> Unit,
+    private val input: (String, Double) -> Unit,
+    private val pinchable: Boolean = false,
+) {
+    private var origin: Pair<Double, Double>? = null
+    /** The pointer that pressed first: it alone drags, taps and releases the press. */
+    private var first: Int? = null
+    private var dragging = false
+    /** Every pointer on the target, by id, where it is now. */
+    private val points = HashMap<Int, Pair<Double, Double>>()
+    /** The two pointers of a pinch and where they were when it started (v0.18). */
+    private var pinch: Pair<List<Int>, List<Pair<Double, Double>>>? = null
+    /** This press pinched, so it neither drags nor taps afterwards. */
+    private var pinched = false
+
+    /** Pointer [id] pressed at (x, y). A second one on a pinchable target starts a pinch. */
+    fun down(x: Double, y: Double, id: Int = 0) {
+        points[id] = x to y
+        if (origin == null) {
+            origin = x to y; first = id; dragging = false; pinched = false
+            send("$target.down")
+            return
+        }
+        val firstId = first ?: return
+        if (!pinchable || pinch != null || points.size != 2) return
+        // A drag in progress becomes the pinch.
+        if (dragging) { dragging = false; send("$target.dragend") }
+        pinch = listOf(firstId, id) to listOf(points.getValue(firstId), points.getValue(id))
+        pinched = true
+        send("$target.pinchstart")
     }
 
-    fun move(x: Double, y: Double) {
+    fun move(x: Double, y: Double, id: Int = 0) {
+        if (id !in points) return
+        points[id] = x to y
+        pinch?.let { (ids, start) ->
+            if (id !in ids) return
+            val p = nudgPinchInputs(start, ids.map { points.getValue(it) })
+            for ((name, value) in listOf("scale" to p.scale, "rotation" to p.rotation, "x" to p.x, "y" to p.y)) input("$target.pinch.$name", value)
+            return
+        }
         val (x0, y0) = origin ?: return
-        if (!draggable) return
+        if (id != first || !draggable || pinched) return
         val dx = x - x0
         val dy = y - y0
         if (!dragging) {
@@ -62,19 +119,24 @@ class PointerTracker(private val target: String, private val draggable: Boolean,
         input("$target.drag.y", dy)
     }
 
-    fun up(inside: Boolean = true) {
-        origin ?: return
-        origin = null
+    /** Pointer [id] released; [inside] is false when it left the target. */
+    fun up(inside: Boolean = true, id: Int = 0) {
+        points.remove(id) ?: return
+        if (pinch?.first?.contains(id) == true) { pinch = null; send("$target.pinchend") }
+        if (id != first || origin == null) return
+        origin = null; first = null
         send("$target.${if (inside) "up" else "cancel"}")
-        if (dragging) send("$target.dragend") else if (inside) send("$target.tap")
+        if (dragging) send("$target.dragend") else if (inside && !pinched) send("$target.tap")
         dragging = false
     }
 
     fun cancel() {
         origin ?: return
-        origin = null
+        origin = null; first = null; points.clear()
         send("$target.cancel")
+        if (pinch != null) send("$target.pinchend")
         if (dragging) send("$target.dragend")
+        pinch = null
         dragging = false
     }
 }

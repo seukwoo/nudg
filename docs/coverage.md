@@ -22,7 +22,7 @@ Legend: **yes** supported, with an example; **yes, no example** supported but no
 | Scroll position | yes | scroll-header |
 | Scroll direction | yes: `scrollup`, `scrolldown` (0.15) | hide-on-scroll |
 | A value crossing a threshold (louder than, scrolled past) | yes: `host.volume>0.6`, `list.scroll.y<24` (0.15) | hide-on-scroll |
-| Pinch, rotate (two fingers) | no: [open question](design.md#open-questions) | |
+| Pinch, rotate (two fingers) | yes: `pinchstart`, `pinch.scale` / `rotation` / `x` / `y`, multiplying follow (0.18) | image viewer |
 
 ## Responses: how values move
 

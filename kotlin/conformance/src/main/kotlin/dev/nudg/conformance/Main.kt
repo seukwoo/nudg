@@ -71,6 +71,18 @@ fun main(args: Array<String>) {
         if (rt.state() == listOf("on") && log == listOf("track.down", "track.dragstart", "track.up", "track.dragend")) { passed++; println("ok    pointer: a 30-unit drag turns the drag toggle on, with no tap") }
         else { failures.add("pointer"); println("FAIL  pointer: state ${rt.state()}, events $log") }
     }
+    // Two pointers on a pinchable target (v0.18): the drag ends, a pinch reports its inputs, and the press doesn't tap.
+    run {
+        val log = ArrayList<String>()
+        val tracker = dev.nudg.PointerTracker("image", true, { log.add(it) }, { n, v -> log.add("$n=${Math.round(v * 100) / 100.0}") }, pinchable = true)
+        tracker.down(100.0, 100.0, 1); tracker.move(110.0, 100.0, 1); tracker.down(200.0, 100.0, 2)
+        tracker.move(110.0, 110.0, 1); tracker.move(110.0, 310.0, 2); tracker.up(true, 2); tracker.move(150.0, 150.0, 1); tracker.up(true, 1)
+        val expected = listOf("image.down", "image.dragstart", "image.drag.x=10.0", "image.drag.y=0.0", "image.dragend", "image.pinchstart",
+            "image.pinch.scale=1.01", "image.pinch.rotation=-6.34", "image.pinch.x=0.0", "image.pinch.y=5.0",
+            "image.pinch.scale=2.22", "image.pinch.rotation=90.0", "image.pinch.x=-45.0", "image.pinch.y=110.0", "image.pinchend", "image.up")
+        if (log == expected) { passed++; println("ok    pointer: a second pointer ends the drag and pinches; the press doesn't tap") }
+        else { failures.add("pinch"); println("FAIL  pinch: $log") }
+    }
     // Lifecycle, by the same rules as every adapter: one settle per rest, exit once settled.
     run {
         val rt = Runtime(Program.decode(File(dir, "programs/toggle-tap.program.json").readText()))

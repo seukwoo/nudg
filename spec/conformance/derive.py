@@ -2227,6 +2227,71 @@ def validation_v16_cases():
     })
 
 
+# --- v0.17: targets read from inputs ------------------------------------------
+
+GAUGE = {
+    "nudg": "0.17",
+    "host": {"events": ["live", "off"], "inputs": {"level": {"range": [0, 1]}}},
+    "targets": ["needle"],
+    "values": {"needle.rotation": -10},
+    "animate": {"needle.rotation": spring_json(0.4, 0.2)},
+    "initial": "off",
+    "states": {
+        "off": {"when": {"host.live": "live"}},
+        "live": {"set": {"needle.rotation": {"input": "host.level", "times": 180, "plus": -90}}, "when": {"host.off": "off"}},
+    },
+}
+
+
+def input_target_cases():
+    n = Prop(-10)
+    steps = [{"t": 0, "expect": {"state": ["off"], "values": {"needle.rotation": -10}}}]
+    # Entering reads the input's latest value, 0 before any sample: -90.
+    steps.append({"t": 0.1, "send": "host.live"})
+    n.retarget(-90, spring(0.4, 0.2), 0.1)
+    steps.append({"t": 0.2, "expect": {"state": ["live"], "values": {"needle.rotation": n.value(0.2)}}})
+    # A new sample retargets with the property's motion, keeping its velocity.
+    steps.append({"t": 0.3, "input": "host.level", "value": 0.5})
+    n.retarget(0, spring(0.4, 0.2), 0.3)
+    steps.append({"t": 0.4, "expect": {"values": {"needle.rotation": n.value(0.4)}}})
+    steps.append({"t": 0.5, "input": "host.level", "value": 1})
+    n.retarget(90, spring(0.4, 0.2), 0.5)
+    steps.append({"t": 0.6, "expect": {"values": {"needle.rotation": n.value(0.6)}, "resting": False}})
+    steps.append({"t": 2.0, "expect": {"values": {"needle.rotation": n.value(2.0)}}})
+    # Samples while the state isn't active change nothing; leaving springs back to the base.
+    steps.append({"t": 2.1, "send": "host.off"})
+    n.retarget(-10, spring(0.4, 0.2), 2.1)
+    steps.append({"t": 2.2, "input": "host.level", "value": 0.2})
+    steps.append({"t": 2.3, "expect": {"state": ["off"], "values": {"needle.rotation": n.value(2.3)}}})
+    write("input-targets", {
+        "conformance": "0.17",
+        "name": "Input targets: a state target read from an input, scaled and offset; a new sample retargets with the property's motion",
+        "doc": GAUGE,
+        "steps": steps,
+    })
+
+
+def validation_v17_cases():
+    def doc():
+        return json.loads(json.dumps(GAUGE))
+
+    target = "/states/live/set/needle.rotation"
+    out = []
+    d = doc(); d["nudg"] = "0.16"
+    out.append(("needs-version", d, [("needs-version", target)]))
+    d = doc(); d["states"]["live"]["set"]["needle.rotation"]["input"] = "host.levle"
+    out.append(("undeclared", d, [("undeclared-host-input", target + "/input")]))
+    d = doc(); d["states"]["live"]["set"]["needle.rotation"]["times"] = "big"
+    out.append(("times", d, [("invalid-value", target + "/times")]))
+    d = doc(); d["values"]["needle.color"] = "#000000"; d["states"]["live"]["set"]["needle.color"] = {"input": "host.level"}
+    out.append(("color", d, [("invalid-type", "/states/live/set/needle.color")]))
+    write("validation-0.17", {
+        "conformance": "0.17",
+        "name": "Validator (0.17): targets read from inputs",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 def rest_time(prop, motion, start, limit=5.0, step=1e-3):
     """When a spring comes to rest: its remaining amplitude, position and velocity
     together (sqrt(x^2 + v^2 m/k)), drops below the rest threshold. Energy never grows."""
@@ -2335,5 +2400,7 @@ if __name__ == "__main__":
     validation_v15_cases()
     glide_cases()
     validation_v16_cases()
+    input_target_cases()
+    validation_v17_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

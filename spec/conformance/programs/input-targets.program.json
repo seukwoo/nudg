@@ -1,0 +1,84 @@
+{
+ "nudgProgram": 7,
+ "version": "0.17",
+ "targets": [
+  "needle"
+ ],
+ "properties": [
+  {
+   "key": "needle.rotation",
+   "kind": "number",
+   "base": [
+    -10
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "needle.rotation",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 246.74011002723395,
+    "damping": 25.132741228718345,
+    "mass": 1
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "off",
+  "states": [
+   {
+    "name": "off",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "host.live",
+      "animate": [],
+      "to": "live"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "live",
+    "set": [
+     {
+      "key": "needle.rotation",
+      "value": [
+       0
+      ]
+     }
+    ],
+    "measure": [],
+    "input": [
+     {
+      "key": "needle.rotation",
+      "input": "host.level",
+      "times": 180,
+      "plus": -90
+     }
+    ],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "host.off",
+      "animate": [],
+      "to": "off"
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

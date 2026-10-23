@@ -78,8 +78,10 @@ export function createLifecycle(runtime: Runtime, hooks: LifecycleHooks): Lifecy
         owed = false;
         hooks.onSettle?.(runtime.state());
       }
-      const settled = runtime.settled(t);
-      if (settled) syncPresence(t);
+      // The host may have sent events from inside onSettle, which advance the runtime.
+      const now = Math.max(t, runtime.time());
+      const settled = runtime.settled(now);
+      if (settled) syncPresence(now);
       return !settled || owed || runtime.looping();
     },
     present: () => present,

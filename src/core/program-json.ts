@@ -6,7 +6,7 @@
 
 import type { EntryEffect, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
 
-export const PROGRAM_FORMAT = 6;
+export const PROGRAM_FORMAT = 7;
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
@@ -23,7 +23,7 @@ export function programToJson(program: Program): Json {
 
 export function programFromJson(json: unknown): Program {
   const j = json as Record<string, any>;
-  if (![1, 2, 3, 4, 5, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
+  if (![1, 2, 3, 4, 5, 6, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
   return {
     version: j.version,
     targets: j.targets,
@@ -89,6 +89,7 @@ function state(s: State): Json {
     name: s.name,
     set: [...s.set].map(([key, value]) => ({ key, value })),
     measure: [...s.measure].map(([key, m]) => ({ key, ...(measure(m) as Record<string, Json>) })),
+    input: [...s.input].map(([key, i]) => ({ key, input: i.input, times: i.times, plus: i.plus })),
     follow: [...s.follow].map(([key, f]) => ({ key, ...follow(f) })),
     glide: [...s.glide].map(([key, g]) => ({ key, momentum: g.momentum, ...(g.range ? { range: g.range.map(endpoint) } : {}) })),
     enter: [...s.enter].map(([key, effect]) => ({ key, effect: entryEffect(effect) })),
@@ -105,6 +106,7 @@ function readState(j: any): State {
     name: j.name,
     set: new Map(j.set.map((e: any) => [e.key, e.value])),
     measure: new Map(j.measure.map((e: any) => [e.key, { target: e.target, of: e.of, times: e.times ?? 1, plus: e.plus ?? 0 }])),
+    input: new Map((j.input ?? []).map((e: any) => [e.key, { input: e.input, times: e.times, plus: e.plus }])),
     follow: new Map(j.follow.map((e: any) => [e.key, readFollow(e)])),
     glide: new Map((j.glide ?? []).map((e: any): [string, Glide] => [e.key, e.range ? { momentum: e.momentum, range: [readEndpoint(e.range[0]), readEndpoint(e.range[1])] } : { momentum: e.momentum }])),
     enter: new Map(j.enter.map((e: any) => [e.key, readEntryEffect(e.effect ?? e.motion)])),

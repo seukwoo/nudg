@@ -1,5 +1,5 @@
 {
- "nudgProgram": 6,
+ "nudgProgram": 7,
  "version": "0.1",
  "targets": [
   "panel"
@@ -29,6 +29,7 @@
     "name": "closed",
     "set": [],
     "measure": [],
+    "input": [],
     "follow": [],
     "glide": [],
     "enter": [],
@@ -59,6 +60,7 @@
      }
     ],
     "measure": [],
+    "input": [],
     "follow": [],
     "glide": [],
     "enter": [
@@ -90,6 +92,7 @@
        "name": "idle",
        "set": [],
        "measure": [],
+       "input": [],
        "follow": [],
        "glide": [],
        "enter": [],
@@ -114,6 +117,7 @@
         }
        ],
        "measure": [],
+       "input": [],
        "follow": [],
        "glide": [],
        "enter": [],

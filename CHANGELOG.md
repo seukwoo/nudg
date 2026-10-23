@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Format 0.17: targets from inputs.** A `set` target may read an input, `{ "input": "host.level", "times": 180, "plus": -90 }`; each new sample retargets with the property's motion instead of jumping like `map`. TypeScript, Swift and Kotlin share conformance; compiled programs are format 7. Schema 0.17.
+- **Animated list.** Insert, delete and drag-to-reorder with one player per row and the order in the host (`examples/list-host.js`); the dropped row springs to the slot the host passes and the order is committed without a jump. Checked in Chrome. The collection-coordination gap is gone.
+
 ## 0.13.0
 
 Gestures and motion from input: long press and double tap, events when an input crosses a value or a scroll changes direction, and glide for flings without a snap point. Formats 0.14 to 0.16; hide-on-scroll, the free-scrolling carousel and a double-tap like have starters, and only two gaps remain in the catalog (animated list, pinch zoom).

@@ -1,5 +1,5 @@
 {
- "nudgProgram": 6,
+ "nudgProgram": 7,
  "version": "0.1",
  "targets": [
   "knob",
@@ -45,6 +45,7 @@
        "name": "off",
        "set": [],
        "measure": [],
+       "input": [],
        "follow": [],
        "glide": [],
        "enter": [],
@@ -69,6 +70,7 @@
         }
        ],
        "measure": [],
+       "input": [],
        "follow": [],
        "glide": [],
        "enter": [],
@@ -106,6 +108,7 @@
        "name": "up",
        "set": [],
        "measure": [],
+       "input": [],
        "follow": [],
        "glide": [],
        "enter": [],
@@ -130,6 +133,7 @@
         }
        ],
        "measure": [],
+       "input": [],
        "follow": [],
        "glide": [],
        "enter": [],

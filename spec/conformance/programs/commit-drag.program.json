@@ -1,5 +1,5 @@
 {
- "nudgProgram": 6,
+ "nudgProgram": 7,
  "version": "0.3",
  "targets": [
   "thumb"
@@ -34,6 +34,7 @@
     "name": "idle",
     "set": [],
     "measure": [],
+    "input": [],
     "follow": [],
     "glide": [],
     "enter": [],
@@ -81,6 +82,7 @@
     "name": "dragging",
     "set": [],
     "measure": [],
+    "input": [],
     "follow": [
      {
       "key": "thumb.x",

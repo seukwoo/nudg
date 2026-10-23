@@ -1,0 +1,53 @@
+{
+  "nudg": "0.17",
+  "note": "One row of an animated list; the host plays one per row. A new row grows to its measured height and fades in; a deleted one collapses and the host unmounts it on exit. Dragged by its handle, the row follows the finger while the host shifts its neighbours by a row's height; released, it springs to the slot the host passes as host.drop, and the host then commits the new order with host.commit, which puts every row back at rest without motion.",
+  "host": {
+    "events": ["insert", "remove", "shift-up", "shift-down", "rest", "commit"],
+    "inputs": { "drop": { "note": "Where the dragged row lands, from where it started: (new index - old index) x row height." } }
+  },
+  "targets": ["row", "handle"],
+  "values": { "row.height": 0, "row.opacity": 0, "row.y": 0, "row.scale": 1 },
+  "animate": {
+    "row.height": { "spring": { "duration": 0.3, "bounce": 0 } },
+    "row.opacity": { "tween": { "duration": 0.15, "ease": "out" } },
+    "row.y": { "spring": { "duration": 0.25, "bounce": 0 } },
+    "row.scale": { "spring": { "duration": 0.2, "bounce": 0 } }
+  },
+  "regions": {
+    "presence": {
+      "initial": "hidden",
+      "states": {
+        "hidden": { "when": { "host.insert": "present" } },
+        "present": {
+          "set": { "row.height": { "measure": "row.naturalHeight" }, "row.opacity": 1 },
+          "when": { "host.remove": "removed" }
+        },
+        "removed": {}
+      }
+    },
+    "order": {
+      "initial": "rest",
+      "when": {
+        "host.shift-up": "up",
+        "host.shift-down": "down",
+        "host.rest": "rest",
+        "host.commit": {
+          "to": "rest",
+          "animate": { "row.y": { "tween": { "duration": 0 } } },
+          "note": "The new order is in the page now, so the row is already where it belongs."
+        }
+      },
+      "states": {
+        "rest": { "when": { "handle.dragstart": "dragging" } },
+        "up": { "set": { "row.y": { "measure": "row.height", "times": -1 } } },
+        "down": { "set": { "row.y": { "measure": "row.height" } } },
+        "dragging": {
+          "set": { "row.scale": 1.03 },
+          "follow": { "row.y": "handle.drag.y" },
+          "when": { "handle.dragend": "dropping" }
+        },
+        "dropping": { "set": { "row.y": { "input": "host.drop" } } }
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-// A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 6).
+// A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 7).
 // Everything is already validated and resolved; this only decodes it.
 
 import Foundation
@@ -34,6 +34,13 @@ public enum EntryEffect {
 public struct Measure {
   public let target: String
   public let of: String
+  public let times: Double
+  public let plus: Double
+}
+
+/** A state target read from a continuous input (v0.17), scaled and offset like a measurement. */
+public struct InputTarget {
+  public let input: String
   public let times: Double
   public let plus: Double
 }
@@ -115,6 +122,7 @@ public final class State {
   public let name: String
   public let set: [(String, [Double])]
   public let measure: [String: Measure]
+  public let input: [String: InputTarget]
   public let follow: [(String, Follow)]
   public let glide: [(String, Glide)]
   public let enter: [(String, EntryEffect)]
@@ -122,8 +130,8 @@ public final class State {
   public let when: [(String, Transition)]
   public let timers: [Timer]
   public let machine: Machine?
-  init(name: String, set: [(String, [Double])], measure: [String: Measure], follow: [(String, Follow)], glide: [(String, Glide)], enter: [(String, EntryEffect)], loop: [(String, Loop)], when: [(String, Transition)], timers: [Timer], machine: Machine?) {
-    self.name = name; self.set = set; self.measure = measure; self.follow = follow; self.glide = glide; self.enter = enter; self.loop = loop; self.when = when; self.timers = timers; self.machine = machine
+  init(name: String, set: [(String, [Double])], measure: [String: Measure], input: [String: InputTarget], follow: [(String, Follow)], glide: [(String, Glide)], enter: [(String, EntryEffect)], loop: [(String, Loop)], when: [(String, Transition)], timers: [Timer], machine: Machine?) {
+    self.name = name; self.set = set; self.measure = measure; self.input = input; self.follow = follow; self.glide = glide; self.enter = enter; self.loop = loop; self.when = when; self.timers = timers; self.machine = machine
   }
   func transition(for event: String) -> Transition? { when.first { $0.0 == event }?.1 }
 }
@@ -158,8 +166,8 @@ public struct Program {
 
   /** Reads `nudg compile` output. */
   public static func decode(_ data: Data) throws -> Program {
-    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...6).contains(format) else {
-      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 6). Compile it with `nudg compile`.")
+    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...7).contains(format) else {
+      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 7). Compile it with `nudg compile`.")
     }
     let properties: [(String, Property)] = (j["properties"] as! [[String: Any]]).map { p in
       (p["key"] as! String, Property(
@@ -235,10 +243,15 @@ private func readMachine(_ v: Any) -> Machine {
 private func readState(_ s: [String: Any]) -> State {
   var measures: [String: Measure] = [:]
   for e in s["measure"] as! [[String: Any]] { measures[e["key"] as! String] = readMeasure(e) }
+  var inputTargets: [String: InputTarget] = [:]
+  for e in s["input"] as? [[String: Any]] ?? [] {
+    inputTargets[e["key"] as! String] = InputTarget(input: e["input"] as! String, times: number(e["times"]) ?? 1, plus: number(e["plus"]) ?? 0)
+  }
   return State(
     name: s["name"] as! String,
     set: (s["set"] as! [[String: Any]]).map { ($0["key"] as! String, doubles($0["value"])) },
     measure: measures,
+    input: inputTargets,
     follow: (s["follow"] as! [[String: Any]]).map { f in
       let r = (f["range"] as? [Any] ?? []).map(readEndpoint)
       return (f["key"] as! String, Follow(input: f["input"] as! String, range: r.count == 2 ? (r[0], r[1]) : nil, overdrag: number(f["overdrag"])!))

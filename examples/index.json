@@ -213,6 +213,25 @@
       ]
     },
     {
+      "id": "animated-list",
+      "recipe": "list",
+      "title": "Animated list",
+      "category": "lists",
+      "tags": [
+        "per-item",
+        "host-event",
+        "input-target",
+        "measure",
+        "drag"
+      ],
+      "html": "animated-list.html",
+      "summary": "New rows grow to their measured height, deleted ones collapse before they go, and a row dragged by its handle pushes its neighbours aside, then springs to the slot the host passes. One player per row; the host owns the order.",
+      "prompts": [
+        "Make new rows appear with a little bounce.",
+        "Make the neighbours move out of the way faster."
+      ]
+    },
+    {
       "id": "accordion",
       "recipe": "accordion",
       "title": "Accordion",

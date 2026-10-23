@@ -102,6 +102,27 @@ test("onSettle: once per rest, after the toast is shown though its timer runs, a
   assert.equal(h.pending(), 0, "no frames once idle");
 });
 
+test("onSettle: the host may send events from inside it, even as its clock moves on", () => {
+  const h = fakeHost();
+  let late = 0;
+  const host = { now: () => h.host.now() + late, frame: h.host.frame };
+  let settles = 0;
+  const p = createPlayer(toProgram(presets.toggle()), {
+    host,
+    onSettle: () => {
+      settles++;
+      // The page's clock has moved past the frame's time by the time the host reacts.
+      late += 0.001;
+      if (settles === 1) p.send("track.tap");
+    },
+  });
+  p.send("track.tap");
+  assert.doesNotThrow(() => {
+    for (let i = 0; i < 240 && h.pending(); i++) h.advance(1 / 60);
+  });
+  assert.equal(settles, 2, "the event sent from the first settle moved and settled again");
+});
+
 test("onSettle: an interrupted motion reports only the rest after the interruption; a drag doesn't report", () => {
   const h = fakeHost();
   const settles: string[][] = [];

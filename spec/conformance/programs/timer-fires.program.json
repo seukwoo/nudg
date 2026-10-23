@@ -1,5 +1,5 @@
 {
- "nudgProgram": 6,
+ "nudgProgram": 7,
  "version": "0.3",
  "targets": [
   "toast"
@@ -47,6 +47,7 @@
     "name": "hidden",
     "set": [],
     "measure": [],
+    "input": [],
     "follow": [],
     "glide": [],
     "enter": [],
@@ -71,6 +72,7 @@
      }
     ],
     "measure": [],
+    "input": [],
     "follow": [],
     "glide": [],
     "enter": [],

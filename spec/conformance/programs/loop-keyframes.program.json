@@ -1,5 +1,5 @@
 {
- "nudgProgram": 6,
+ "nudgProgram": 7,
  "version": "0.10",
  "targets": [
   "dot",
@@ -56,6 +56,7 @@
     "name": "idle",
     "set": [],
     "measure": [],
+    "input": [],
     "follow": [],
     "glide": [],
     "enter": [],
@@ -73,6 +74,7 @@
     "name": "typing",
     "set": [],
     "measure": [],
+    "input": [],
     "follow": [],
     "glide": [],
     "enter": [],
@@ -120,6 +122,7 @@
      }
     ],
     "measure": [],
+    "input": [],
     "follow": [],
     "glide": [],
     "enter": [],

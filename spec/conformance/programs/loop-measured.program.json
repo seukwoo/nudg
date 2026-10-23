@@ -1,5 +1,5 @@
 {
- "nudgProgram": 6,
+ "nudgProgram": 7,
  "version": "0.10",
  "targets": [
   "track",
@@ -23,6 +23,7 @@
     "name": "loading",
     "set": [],
     "measure": [],
+    "input": [],
     "follow": [],
     "glide": [],
     "enter": [],
@@ -59,6 +60,7 @@
     "name": "loaded",
     "set": [],
     "measure": [],
+    "input": [],
     "follow": [],
     "glide": [],
     "enter": [],

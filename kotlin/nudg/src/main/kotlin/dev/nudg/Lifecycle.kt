@@ -53,8 +53,10 @@ class Lifecycle(private val runtime: Runtime, exit: List<String> = emptyList()) 
             owed = false
             onSettle?.invoke(runtime.state())
         }
-        val settled = runtime.settled(t)
-        if (settled) syncPresence(t)
+        // The host may have sent events from inside onSettle, which advance the runtime.
+        val now = maxOf(t, runtime.time())
+        val settled = runtime.settled(now)
+        if (settled) syncPresence(now)
         return !settled || owed || runtime.looping()
     }
 

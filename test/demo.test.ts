@@ -625,6 +625,31 @@ test("a fling glides the strip on and it stops inside its ends", { skip }, async
   assert.ok(stopped >= 240 - width - 1, "and stops inside the far end");
 });
 
+test("the animated list adds, deletes and reorders rows, one player per row", { skip }, async () => {
+  await go("#example/animated-list");
+  await sleep(300);
+  const shadow = "document.getElementById('detail-stage').shadowRoot";
+  const labels = () => browser.evaluate(`[...${shadow}.querySelectorAll('.row .label')].map((l) => l.textContent)`) as Promise<string[]>;
+  assert.deepEqual(await labels(), ["Milk", "Bread", "Eggs"]);
+  await browser.evaluate(`${shadow}.querySelector('.add').click()`);
+  await sleep(600);
+  assert.equal(await browser.evaluate(`${shadow}.querySelectorAll('.row')[3].offsetHeight`), 41, "the new row grows to its measured height");
+  await browser.evaluate(`${shadow}.querySelectorAll('.row .delete')[1].click()`);
+  await sleep(900);
+  assert.deepEqual(await labels(), ["Milk", "Eggs", "Item 4"], "the deleted row collapses and is removed on exit");
+  // Drag Milk down past two rows by its handle; it lands last once the drop settles.
+  const [x, y] = await center("detail-stage", ".row .handle");
+  await mouse("mousePressed", x, y);
+  for (let i = 1; i <= 10; i++) {
+    await mouse("mouseMoved", x, y + i * 9);
+    await sleep(16);
+  }
+  await mouse("mouseReleased", x, y + 90);
+  await sleep(900);
+  assert.deepEqual(await labels(), ["Eggs", "Item 4", "Milk"]);
+  assert.deepEqual(await browser.evaluate(`[...${shadow}.querySelectorAll('.row')].map((r) => r.style.transform.includes('translate(0px, 0px)'))`), [true, true, true], "every row is back at rest");
+});
+
 test("no page errors were thrown", { skip }, () => {
   assert.deepEqual(errors, []);
 });

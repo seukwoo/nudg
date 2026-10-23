@@ -13,6 +13,7 @@ import type { Measure,
   Follow,
   Glide,
   HostDeclaration,
+  InputTarget,
   KeyframesEffect,
   Loop,
   Machine,
@@ -132,7 +133,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.16.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-0.17.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -1059,7 +1060,7 @@ class ComponentCompiler {
       return undefined;
     }
     r.keys(raw, p, STATE_KEYS);
-    const state: State = { name, set: new Map(), measure: new Map(), follow: new Map(), glide: new Map(), enter: new Map(), loop: new Map(), when: new Map(), timers: [] };
+    const state: State = { name, set: new Map(), measure: new Map(), input: new Map(), follow: new Map(), glide: new Map(), enter: new Map(), loop: new Map(), when: new Map(), timers: [] };
 
     if ("set" in raw) {
       const set = raw.set;
@@ -1071,6 +1072,13 @@ class ComponentCompiler {
           const kp = ptr(ptr(p, "set"), key);
           const prop = this.property(key, kp);
           if (!prop) continue;
+          if (isObject(value) && "input" in value) {
+            const target = this.parseInputTarget(prop.kind, key, value, kp);
+            if (!target) continue;
+            state.set.set(key, [0]);
+            state.input.set(key, target);
+            continue;
+          }
           if (isObject(value) && "measure" in value) {
             const measure = this.parseMeasure(prop.kind, key, value, kp);
             if (!measure) continue;
@@ -1255,6 +1263,29 @@ class ComponentCompiler {
       out.set(key, follow);
     }
     return out;
+  }
+
+  /** { "input", "times"?, "plus"? } as a state target (v0.17). */
+  private parseInputTarget(kind: PropertyKind, key: string, raw: JsonObject, p: string): InputTarget | undefined {
+    const r = this.r;
+    if (!this.needsVersion("0.17", p, "A target read from an input")) return undefined;
+    r.keys(raw, p, ["input", "times", "plus"]);
+    if (kind === "color") {
+      r.error("invalid-type", p, `"${key}" is a color; an input supplies a number.`, "Read the input into a numeric property, and map the color from it.");
+      return undefined;
+    }
+    if (!this.checkInput(raw.input, ptr(p, "input"), ptr(p, "input"))) return undefined;
+    const target: InputTarget = { input: raw.input as string, times: 1, plus: 0 };
+    for (const field of ["times", "plus"] as const) {
+      if (!(field in raw)) continue;
+      const v = raw[field];
+      if (typeof v !== "number" || !Number.isFinite(v)) {
+        r.error("invalid-value", ptr(p, field), `"${field}" must be a finite number.`, field === "times" ? "For example 180, to turn 0–1 into degrees." : "For example 8.");
+        return undefined;
+      }
+      target[field] = v;
+    }
+    return target;
   }
 
   private parseGlide(raw: Json, p: string, state: State): Map<string, Glide> {

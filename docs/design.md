@@ -267,6 +267,14 @@ Status: implemented. A free-scrolling carousel and an image viewer's pan need a 
 - **Bounds settle with the property's spring.** Reaching a bound hands the remaining speed to the same motion that `animate` gives the property, so the end feels like the rest of the component; there is no separate rubber-band parameter.
 - **Not under reduced motion's control.** The travel is the user's own throw; only the settling at a bound becomes the short tween.
 
+## A list is one player per item (format 0.17)
+
+Status: implemented. The animated list was the last "collection coordination" gap, expected to need machines per item inside one file. Writing it showed the same answer as screen transitions:
+
+- **One player per row, the order in the host.** Insert, remove and the neighbours' shifts during a drag are each one row's own states, driven by host events; which rows shift is index arithmetic on the app's data, which the host owns anyway. In React each row component calls `useNudg`; on the web the example's `list-host.js` plays one per row.
+- **The one missing piece was a target from the app.** The dragged row has to spring to the slot the host computed, and `map` jumps while `follow` adds deltas. Format 0.17 lets a `set` target read an input, like a measured target reads layout; a new sample retargets with the property's motion. It serves more than lists: a gauge, a progress ring or a counter that springs to the app's value.
+- **Committing the order without a jump.** Once the drop settles, the host reorders the page and sends `host.commit`, a transition whose `animate` is a zero-length tween, so every row is at rest exactly where the new layout puts it.
+
 ## Type-safe host contracts
 
 Status: implemented as `nudg generate` and the `nudg_generate` MCP tool.

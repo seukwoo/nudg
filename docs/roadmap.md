@@ -29,6 +29,7 @@ The order below follows real app needs. Release numbers and dates are assigned w
 | Host declaration | Implemented as format 0.13 in 0.12.0: declared app events and inputs, checked by the validator and used by `nudg generate` | [Design](design.md#the-host-declaration-not-a-store-format-013) |
 | Long press and double tap | Implemented as format 0.14 in 0.13.0, derived by the runtime | [Spec](spec.md#additions-in-014-draft) |
 | Crossings and scroll direction | Implemented as format 0.15 in 0.13.0; hide-on-scroll has a starter | [Spec](spec.md#additions-in-015-draft) |
+| Animated list | One player per row plus format 0.17 input targets (unreleased) | [Design](design.md#a-list-is-one-player-per-item-format-017) |
 | Decay | Implemented as format 0.16 `glide` in 0.13.0; free-scrolling carousel has a starter | [Design](design.md#glide-decay-with-the-same-momentum-as-nearest-format-016) |
 
 ## Product Stages
@@ -72,7 +73,7 @@ Done when: a TypeScript host cannot misspell its generated target/event/input na
 
 ## Completed: Recipe Coverage for Common App Patterns
 
-Status: complete in 0.12.0 (formats 0.10 to 0.13). Screen composition turned out to need only measured map values (0.11), and sequence/stagger a motion delay (0.12). The declared `host` block followed as format 0.13, and long press and double tap as 0.14. Crossings and scroll direction followed as 0.15. Decay followed as 0.16 `glide`. Remaining gaps: collection coordination (animated list) and multi-pointer (image viewer).
+Status: complete in 0.12.0 (formats 0.10 to 0.13). Screen composition turned out to need only measured map values (0.11), and sequence/stagger a motion delay (0.12). The declared `host` block followed as format 0.13, and long press and double tap as 0.14. Crossings and scroll direction followed as 0.15. Decay followed as 0.16 `glide`. The animated list followed with format 0.17 input targets. Remaining gap: multi-pointer (image viewer).
 
 Goal: let an AI answer the common UI words of app development with a standard contract, and let the gaps decide the next motion primitive. The 22 recipes cover single components and media well; navigation, lists, loading, menus and form controls are missing.
 

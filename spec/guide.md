@@ -119,6 +119,10 @@ Use a number supplied by the app without inventing frame-by-frame events. The ap
 - On the DOM, a referenced `target.scroll.x` or `target.scroll.y` is reported automatically from the bound scrolling element.
 - Before the first sample an input is 0. Only referenced inputs are accepted. Use one descriptive `host.<name>` segment; the app owns microphones, sensors and downloads, while nudg only receives finite numbers.
 
+## Targets from the app (format 0.17)
+
+When the app computes where something should go and it should travel there with its motion, read the input as the state's target: `"set": { "needle.rotation": { "input": "host.level", "times": 180, "plus": -90 } }`. Each new sample retargets with the property's spring. Use `map` instead when the value should track the input instantly.
+
 ## Glide (format 0.16)
 
 For a fling that should carry on and slow down by itself, with no snap point: put the property in a state's `glide` and go there on `dragend`.
@@ -236,7 +240,7 @@ Libraries in `examples/motion/` carry the platforms' published spring values: `a
 
 When a person describes UI in natural language, call `nudg_recipe` (or `nudg recipe <term>`) before writing the file. It resolves aliases to a versioned mobile-first contract with expected parts, states, events, inputs, host responsibilities, motion, known gaps and a validated starter. Then express any requested variation with ordinary nudg fields.
 
-Some recipes have no starter (`"starter": null`): animated lists and image viewers. Their contract is still the standard answer: use its parts, states and events, write the nudg file for what the format can express (a menu's open and close, a drawer's drag), and tell the person which part the host does and why, from `gaps`. Don't imitate a missing capability with timers or extra states; that is the workaround the gap records.
+Some recipes have no starter (`"starter": null`): the image viewer (pinch zoom). Their contract is still the standard answer: use its parts, states and events, write the nudg file for what the format can express (a menu's open and close, a drawer's drag), and tell the person which part the host does and why, from `gaps`. Don't imitate a missing capability with timers or extra states; that is the workaround the gap records.
 
 | User says | Prefer |
 |---|---|
@@ -286,6 +290,8 @@ Pattern words live in external recipe metadata, not core syntax. Every shipped e
 | shake on error | format 0.8 `enter` keyframes on `x`; use a kick only for a less-authored physical wobble |
 | one after another, stagger, cascade, in order | growing `delay` per property in that transition's `animate`; reverse the delays on the way back |
 | the content should appear after it opens | `delay` on the content's opacity in the opening transition only |
+| list, add / delete row, drag to reorder | one player per row (`animated-list` starter): presence states for insert and remove, host shifts neighbours, the dropped row springs to `host.drop` |
+| spring to the app's value (gauge, counter, progress) | a `set` target `{ "input": "host.x" }` (format 0.17), not `map` |
 | momentum, fling and let it glide, free scroll | `glide` in the state after `dragend` (format 0.16); `momentum` sets how far it carries |
 | hide on scroll, quick return, when it gets loud / past a point | `scrolldown` / `scrollup` events; a crossing such as `host.volume>0.6` or `list.scroll.y<24` in `when` (format 0.15) |
 | long press, hold, press and hold | `target.longpress` (format 0.14), not a `down` state with an `after:` timer; return on `target.up` |

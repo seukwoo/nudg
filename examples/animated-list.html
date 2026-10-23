@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Animated list</title>
+  <style>
+    .list-demo { width: 240px; font: 14px ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; }
+    .list-demo .list { position: relative; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px #e4e4df; }
+    /* nudg owns the height (measured) and the offset; overflow hides a row while it grows. */
+    .list-demo .row { position: relative; overflow: hidden; background: #fff; }
+    .list-demo [data-nudg-state~="order/dragging"].row { z-index: 1; box-shadow: 0 6px 18px rgb(0 0 0 / 0.15); }
+    .list-demo .row-inner { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 8px; border-bottom: 1px solid #f0f0ec; }
+    .list-demo .label { flex: 1; }
+    .list-demo .handle { padding: 4px 6px; color: #9ca3af; cursor: grab; touch-action: none; user-select: none; }
+    .list-demo .delete { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 6px; background: none; color: #9ca3af; font: inherit; cursor: pointer; }
+    .list-demo .add { margin-top: 8px; padding: 6px 12px; border: 0; border-radius: 8px; background: #1c1c1a; color: #fff; font: 13px ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="list-demo">
+    <div class="list" role="list">
+      <div class="row" role="listitem" data-nudg="row"><div class="row-inner"><span class="handle" aria-label="Reorder" data-nudg="handle">⋮⋮</span><span class="label">Milk</span><button class="delete" aria-label="Delete">×</button></div></div>
+      <div class="row" role="listitem"><div class="row-inner"><span class="handle" aria-label="Reorder">⋮⋮</span><span class="label">Bread</span><button class="delete" aria-label="Delete">×</button></div></div>
+      <div class="row" role="listitem"><div class="row-inner"><span class="handle" aria-label="Reorder">⋮⋮</span><span class="label">Eggs</span><button class="delete" aria-label="Delete">×</button></div></div>
+    </div>
+    <button class="add">Add item</button>
+  </div>
+  <!-- Host markup for animated-list.nudg.json, played once per row by list-host.js. The host owns the items and their order, and announces changes to assistive technology. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    import { createAnimatedList } from "./list-host.js";
+    const { program } = await compileUrl("./animated-list.nudg.json");
+    const list = createAnimatedList(document.querySelector(".list"), program, play);
+    document.querySelector(".add").addEventListener("click", () => list.add());
+  </script>
+</body>
+</html>

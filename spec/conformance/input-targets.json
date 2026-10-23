@@ -1,0 +1,138 @@
+{
+  "conformance": "0.17",
+  "name": "Input targets: a state target read from an input, scaled and offset; a new sample retargets with the property's motion",
+  "doc": {
+    "nudg": "0.17",
+    "host": {
+      "events": [
+        "live",
+        "off"
+      ],
+      "inputs": {
+        "level": {
+          "range": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    "targets": [
+      "needle"
+    ],
+    "values": {
+      "needle.rotation": -10
+    },
+    "animate": {
+      "needle.rotation": {
+        "spring": {
+          "duration": 0.4,
+          "bounce": 0.2
+        }
+      }
+    },
+    "initial": "off",
+    "states": {
+      "off": {
+        "when": {
+          "host.live": "live"
+        }
+      },
+      "live": {
+        "set": {
+          "needle.rotation": {
+            "input": "host.level",
+            "times": 180,
+            "plus": -90
+          }
+        },
+        "when": {
+          "host.off": "off"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "off"
+        ],
+        "values": {
+          "needle.rotation": -10
+        }
+      }
+    },
+    {
+      "t": 0.1,
+      "send": "host.live"
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "state": [
+          "live"
+        ],
+        "values": {
+          "needle.rotation": -52.056434507
+        }
+      }
+    },
+    {
+      "t": 0.3,
+      "input": "host.level",
+      "value": 0.5
+    },
+    {
+      "t": 0.4,
+      "expect": {
+        "values": {
+          "needle.rotation": -43.680666879
+        }
+      }
+    },
+    {
+      "t": 0.5,
+      "input": "host.level",
+      "value": 1
+    },
+    {
+      "t": 0.6,
+      "expect": {
+        "values": {
+          "needle.rotation": 48.232720091
+        },
+        "resting": false
+      }
+    },
+    {
+      "t": 2.0,
+      "expect": {
+        "values": {
+          "needle.rotation": 89.999999282
+        }
+      }
+    },
+    {
+      "t": 2.1,
+      "send": "host.off"
+    },
+    {
+      "t": 2.2,
+      "input": "host.level",
+      "value": 0.2
+    },
+    {
+      "t": 2.3,
+      "expect": {
+        "state": [
+          "off"
+        ],
+        "values": {
+          "needle.rotation": -2.231378655
+        }
+      }
+    }
+  ]
+}

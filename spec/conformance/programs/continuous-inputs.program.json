@@ -1,5 +1,5 @@
 {
- "nudgProgram": 6,
+ "nudgProgram": 7,
  "version": "0.5",
  "targets": [
   "ring",
@@ -71,6 +71,7 @@
     "name": "active",
     "set": [],
     "measure": [],
+    "input": [],
     "follow": [
      {
       "key": "card.rotation",

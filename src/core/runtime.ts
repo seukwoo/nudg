@@ -110,6 +110,10 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
   const requiredInputs = new Set<string>();
   for (const prop of program.properties.values()) if (prop.map?.sourceKind === "input") requiredInputs.add(prop.map.source);
   collectFollowInputs(program.machine, requiredInputs);
+  /** Inputs that states read as targets (v0.17): a new sample retargets, like a relayout. */
+  const targetInputs = new Set<string>();
+  collectTargetInputs(program.machine, targetInputs);
+  for (const name of targetInputs) requiredInputs.add(name);
   let order = 0;
   let now = 0;
   const reduced = options.reducedMotion === true;
@@ -275,6 +279,13 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     const resolvedBases = new Map(out);
     walkActive(act, (state) => {
       for (const [key, value] of state.set) {
+        const target = state.input.get(key);
+        if (target) {
+          // The input's latest sample (0 before the first), scaled and offset.
+          const history = inputs.get(target.input);
+          out.set(key, [clamp(key, (history ? history[history.length - 1][1] : 0) * target.times + target.plus)]);
+          continue;
+        }
         const m = state.measure.get(key);
         if (!m) {
           out.set(key, value);
@@ -701,6 +712,9 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       const history = inputs.get(name) ?? [];
       history.push([t, value]);
       inputs.set(name, history);
+      // A target read from this input moves to the new value with its motion, before any
+      // event the sample derives.
+      if (targetInputs.has(name)) settle(t, [], []);
       // Direction first: a scroll that has come back SCROLL_SLOP from its furthest point turns.
       const scroll = scrolls.get(name);
       if (scroll) {
@@ -896,6 +910,17 @@ function handledEventNames(machine: Machine, out = new Set<string>()): Set<strin
     if (state.machine) handledEventNames(state.machine, out);
   }
   return out;
+}
+
+function collectTargetInputs(machine: Machine, out: Set<string>) {
+  if (machine.kind === "regions") {
+    for (const region of machine.regions.values()) collectTargetInputs(region, out);
+    return;
+  }
+  for (const state of machine.states.values()) {
+    for (const target of state.input.values()) out.add(target.input);
+    if (state.machine) collectTargetInputs(state.machine, out);
+  }
 }
 
 function collectFollowInputs(machine: Machine, out: Set<string>) {

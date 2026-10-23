@@ -402,3 +402,11 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Problem:** Accordion, menu and speed dial needed order: content after the panel, items one after another, actions out and back in reverse. The roadmap expected a `sequence` / `stagger` combinator, a list of steps beside the states.
 - **Resolution:** A timeline answers it with less: a start delay per property's motion. A transition's `animate` already overrides motion per property, so a stagger is growing delays there and the reverse order is the closing transition's own. Interruption kept the existing rule plus one line: a pending motion that hasn't started is dropped. Format 0.12; the three recipes got starters.
 - **Lesson:** Look for the smallest timing knob that the existing structure can carry before adding structure. Steps that wait on each other's completion may still need a combinator; nothing in the catalog does yet.
+
+## 2026-10-23: The list was one player per row
+
+### Sending from onSettle ran the clock backwards
+- **Problem:** The animated list commits its new order from `onSettle`, sending `host.commit` to every row. In Chrome the frame loop then threw "Time must not go backwards", which also broke a later demo test.
+- **Cause:** `lifecycle.frame` took its time before calling `onSettle`, then asked `settled()` at that time. The events the host sent from inside the callback had already advanced the runtime to the page's current clock, a fraction of a millisecond later. `changed()` already re-read the runtime's time after `onState`; `frame()` didn't after `onSettle`. Swift swallowed the error with `try?` and reported a wrong settle.
+- **Resolution:** All three lifecycles take the later of the frame time and the runtime's time after `onSettle`. A player test sends from inside `onSettle` with a clock that moves on, and fails without the fix.
+- **Lesson:** Every callback a host can react to is a place where the host may send. A host that coordinates several players (lists, screens) reacts from callbacks as a matter of course, so each one must leave the runtime in a state the caller can continue from.

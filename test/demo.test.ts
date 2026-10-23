@@ -588,6 +588,23 @@ test("bound elements carry the active state, and a loop turns the refreshing spi
   assert.equal(await browser.evaluate(`${spinner}.dataset.nudgState`), "idle", "the demo's app hook sends host.done");
 });
 
+test("a real scroll hides the bar going down and brings it back going up", { skip }, async () => {
+  await go("#example/hide-on-scroll");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent || undefined"), 5_000);
+  const scrollTo = (y: number) =>
+    browser.evaluate(`(() => { const s = document.getElementById("detail-stage").shadowRoot.querySelector("[data-nudg=scroller]"); s.scrollTop = ${y}; s.dispatchEvent(new Event("scroll")); })()`);
+  const state = () => browser.evaluate("document.getElementById('detail-state').textContent");
+  await scrollTo(120);
+  await sleep(100);
+  assert.equal(await state(), "hidden");
+  await scrollTo(115);
+  await sleep(100);
+  assert.equal(await state(), "hidden", "a wobble under 8 units doesn't turn");
+  await scrollTo(90);
+  await sleep(100);
+  assert.equal(await state(), "shown");
+});
+
 test("no page errors were thrown", { skip }, () => {
   assert.deepEqual(errors, []);
 });

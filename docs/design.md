@@ -249,6 +249,15 @@ Status: implemented. Long press and double tap were possible only as a workaroun
 - **No delayed single tap.** Waiting to rule out a double tap would make every tap feel late; the first tap is delivered at once, as on the web and on iOS without failure requirements.
 - **Fling stays `nearest`.** A throw already chooses its state by projected position and momentum; a separate directional fling event would duplicate it.
 
+## Events from continuous inputs (format 0.15)
+
+Status: implemented. Hide-on-scroll needed the scroll's direction, and a voice UI that switches to "speaking" above a level needed an event from a number; maps alone can't change state.
+
+- **A crossing is written where it is used.** `"host.volume>0.6": "speaking"` in a `when`, instead of a declared list of named thresholds elsewhere: the condition is readable at the transition and an AI edits one place. Only `>` and `<`, no expressions.
+- **Inputs only.** Inputs arrive as samples, so "crossed between two samples" is exact and the same in every runtime. A property's value between frames depends on the sampling rate, so crossings on properties would differ between a 60 Hz and a 120 Hz screen.
+- **Fires on entering, re-arms on leaving.** A level that stays loud fires once; a toggling pair (`>0.6` speaking, `<0.3` quiet) gives hysteresis by choosing two values.
+- **Scroll direction is a built-in pair of events**, with an 8-unit turn threshold measured from the furthest point, so a finger's wobble or an elastic bounce doesn't flip a bar. Direction plus a crossing near the top covers hide-on-scroll; velocity was not needed.
+
 ## Type-safe host contracts
 
 Status: implemented as `nudg generate` and the `nudg_generate` MCP tool.

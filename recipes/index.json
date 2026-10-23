@@ -524,15 +524,15 @@
       "id": "hide-on-scroll",
       "aliases": ["quick return", "auto-hiding toolbar", "scroll-away navigation", "hide on scroll bar"],
       "summary": "A top or bottom bar that slides away while content scrolls down and returns as soon as it scrolls up.",
-      "starter": null,
-      "examples": [],
+      "starter": "hide-on-scroll",
+      "examples": ["hide-on-scroll"],
       "parts": { "required": ["scroller", "bar"], "optional": ["fab"] },
       "states": ["shown", "hidden"],
-      "events": [],
+      "events": ["scroller.scrollup", "scroller.scrolldown", "scroller.scroll.y<24"],
       "inputs": ["scroller.scroll.y"],
       "hostResponsibilities": ["Forward scroll position, keep the bar reachable by keyboard and assistive technology, and show it at the top of the content."],
-      "motion": ["Hide the bar on downward scroll and reveal it on upward scroll, settling fully shown or hidden when scrolling stops."],
-      "gaps": [{ "capability": "scroll direction", "status": "missing", "need": "Hiding on down and revealing on up needs direction and velocity derived from scroll input." }]
+      "motion": ["Hide the bar by its measured height on scrolldown and reveal it on scrollup (format 0.15, which ignores wobbles under 8 units), and always show it near the top with a crossing."],
+      "gaps": []
     },
     {
       "id": "stack-navigation",

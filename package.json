@@ -93,6 +93,7 @@
     "prepack": "npm run build",
     "demo": "npm run build && node demo/serve.mjs",
     "media": "node scripts/readme-media.ts",
+    "api": "node scripts/api.ts",
     "nudg": "node src/cli.ts"
   },
   "devDependencies": {

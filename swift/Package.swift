@@ -14,7 +14,10 @@ let package = Package(
   targets: [
     .target(name: "Nudg"),
     .target(name: "NudgSwiftUI", dependencies: ["Nudg"]),
-    .executableTarget(name: "NudgConformance", dependencies: ["Nudg"]),
+    .target(name: "NudgConformanceSuite", dependencies: ["Nudg"]),
+    .executableTarget(name: "NudgConformance", dependencies: ["NudgConformanceSuite"]),
     .executableTarget(name: "NudgSwiftUICheck", dependencies: ["Nudg", "NudgSwiftUI"]),
+    // Runs on an iOS simulator as well as on the Mac: xcodebuild test -scheme Nudg-Package -destination "platform=iOS Simulator,name=…"
+    .testTarget(name: "NudgTests", dependencies: ["Nudg", "NudgSwiftUI", "NudgConformanceSuite"]),
   ]
 )

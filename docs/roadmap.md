@@ -153,7 +153,7 @@ Goal: a format and APIs other people can build on, on the web and natively, with
 - Done: format `"1.0"`: the semantics of 0.18, frozen. Runtimes keep reading every 0.x file; `nudg upgrade` rewrites a file's version after validating it. Schema 1.0; the examples and starters declare 1.0.
 - Done: frozen surface, checked by tests: every validator error code listed with its meaning ([errors](errors.md)); the conformance suite; the schema; the compiled program format; the public API of `@nudg/core` and its entry points, the CLI and MCP tools, the Swift package and the Kotlin modules, each against a committed snapshot in `api/`.
 - Done: one spec. The 0.x "Additions" sections are rewritten into a single [1.0 document](spec.md) organized by topic, with the [format history](spec.md#appendix-format-history) as an appendix.
-- Native checked for real: the Swift package's tests and a SwiftUI render on an iOS simulator; the Compose demo and React Native driven on an Android emulator.
+- Done: native checked for real. The Swift tests (conformance, a pixel-checked SwiftUI render, lifecycle) run on an iOS simulator, in CI too; the Compose demo is driven with real touch on an Android 16 emulator (tap, drag, two-finger pinch); React Native's multi-touch handling has a unit test.
 - Release 1.0.0, with the compatibility policy: within 1.x, files and APIs only gain; anything that breaks waits for 2.0.
 - Revisit semantic role metadata in files only if external recipe metadata proves insufficient; external metadata is the current decision.
 

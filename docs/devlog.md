@@ -415,3 +415,17 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Problem:** The catalog's last gap, the image viewer, needed two pointers: a pinch's scale, turn and centre. Following a ratio by adding its change also zoomed wrongly from anything but 1x.
 - **Resolution:** Format 0.18 adds pinch events and inputs from the shared pointer tracker, checked against the same two-pointer sequence in TypeScript, Swift and Kotlin, and `"multiply": true` on `follow`. The DOM, React Native and Compose adapters track pointers; SwiftUI reports its own magnify and rotate gestures, without the midpoint. A Chrome test pinches the viewer with two emulated touches. Its first version left the emulated pointer over the stage, so the next test's playground counted a stray interaction; the test now moves the pointer away when it ends.
 - **Lesson:** Of the eight gap capabilities registered on 2026-10-22, three turned out to be smaller than their names (screen composition, collection coordination: one player per item with the host coordinating; sequence: a delay), and every one closed with a single format addition shared by three runtimes. Writing the file first is what found the small version each time.
+
+## 2026-10-23: Native, on devices
+
+### The Compose adapter never stopped drawing
+- **Problem:** The first instrumented test on an Android emulator timed out: Compose reported pending recompositions forever.
+- **Cause:** `rememberNudg` ran `while (true) withFrameNanos { ... }`. Its own comment said frames run while something moves, but the loop never checked, so every nudg view redrew every vsync for the app's whole life, whatever moved.
+- **Resolution:** The loop waits on `isMoving` and runs frames only while the lifecycle asks for them (motion, a pending timer or long press, a loop). Because frames stop only when nothing is time-dependent, runtime time stands still while idle and resumes from where it stopped, so the event that wakes the loop starts its motion without skipping the idle time. The emulator tests then passed: a tap, a drag, and a real two-finger pinch to 3x.
+- **Lesson:** The conformance suite checks the runtime, not how an adapter drives it. Each adapter needs at least one test on its platform's own test harness; that is what exposed this.
+
+### The simulator waited on a permission nobody could grant
+- **Problem:** The Swift tests passed on the Mac in milliseconds but hung on an iOS simulator with no output.
+- **Cause:** They read the conformance suite from the repository under `~/Documents`, a folder macOS protects. A process in the simulator asking to read it waits for a permission prompt that a headless run never shows.
+- **Resolution:** `swift/test-ios.sh` copies the suite to the temporary folder and passes its path to the test runner (`TEST_RUNNER_NUDG_CONFORMANCE`); the tests fall back to the repository path on the Mac.
+- **Lesson:** A test that hangs silently is usually waiting on something outside it. Tests that run on simulators should take their fixtures from unprotected paths, given explicitly.

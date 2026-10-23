@@ -525,6 +525,24 @@
       ]
     },
     {
+      "id": "hide-on-scroll",
+      "recipe": "hide-on-scroll",
+      "title": "Hide on scroll",
+      "category": "navigation",
+      "tags": [
+        "scroll",
+        "scroll-direction",
+        "crossing",
+        "measure"
+      ],
+      "html": "hide-on-scroll.html",
+      "summary": "The bottom bar slides away by its measured height while the list scrolls down and returns as soon as it scrolls up, or near the top. The runtime derives the direction from the scroll position.",
+      "prompts": [
+        "Bring the bar back only after a longer scroll up.",
+        "Slide the bar with a little bounce when it returns."
+      ]
+    },
+    {
       "id": "text-field",
       "recipe": "text-field",
       "title": "Text field",

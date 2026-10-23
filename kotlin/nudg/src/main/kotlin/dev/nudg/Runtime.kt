@@ -35,6 +35,29 @@ private class ActiveLoop(val loop: Loop, val owner: State, val t0: Double)
 /** Seconds a press is held before it is a long press, and the most between two taps of a double tap (v0.14). */
 private const val LONG_PRESS = 0.5
 private const val DOUBLE_TAP = 0.3
+/** Logical units a scroll must travel back from its furthest point before its direction changes (v0.15). */
+private const val SCROLL_SLOP = 8.0
+
+/** An event that fires when an input crosses a value (v0.15): "host.volume>0.6". */
+private class Crossing(val event: String, val input: String, val above: Boolean, val value: Double) {
+    var inside = initial()
+    fun initial() = if (above) 0.0 > value else 0.0 < value
+    companion object {
+        fun of(event: String): Crossing? {
+            val i = event.indexOfLast { it == '>' || it == '<' }
+            if (i < 0) return null
+            val value = event.substring(i + 1).toDoubleOrNull() ?: return null
+            return Crossing(event, event.substring(0, i), event[i] == '>', value)
+        }
+    }
+}
+
+/** One scrolled axis: the direction last reported and the furthest point in it. */
+private class ScrollDirection(val back: String, val forth: String) {
+    var dir: Boolean? = null // true: forth (down, right)
+    var ref = 0.0
+}
+
 private const val REST_NUMBER = 1e-3
 private const val REST_COLOR = 1e-4
 private const val VELOCITY_WINDOW = 0.1
@@ -60,6 +83,9 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
     /** Targets whose current press was a long press: the tap that ends it is not a tap. */
     private val longPressed = HashSet<String>()
     private val lastTap = HashMap<String, Double>()
+    // Events derived from inputs (v0.15): crossings in event-name order, and scroll directions.
+    private val crossings: List<Crossing> by lazy { wants.sorted().mapNotNull(Crossing::of) }
+    private val scrolls = HashMap<String, ScrollDirection>()
     private var now = 0.0
 
     init {
@@ -80,6 +106,16 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
             segments[key] = if (f != null) followSegment(key, f, to[0], 0.0) else Segment.MotionSeg(0.0, to, to.map { 0.0 }, to, null)
         }
         if (!reducedMotion) walkActive(active) { s -> for ((key, loop) in s.loop) loops[key] = ActiveLoop(loop, s, 0.0) }
+        for (c in crossings) requiredInputs.add(c.input)
+        for ((axis, back, forth) in listOf(Triple("y", "scrollup", "scrolldown"), Triple("x", "scrollleft", "scrollright"))) {
+            for (event in wants) {
+                val parts = event.split(".")
+                if (parts.size != 2 || (parts[1] != back && parts[1] != forth)) continue
+                val input = "${parts[0]}.scroll.$axis"
+                requiredInputs.add(input)
+                scrolls[input] = ScrollDirection("${parts[0]}.$back", "${parts[0]}.$forth")
+            }
+        }
     }
 
     // machine
@@ -531,6 +567,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         val name = event.substringAfter('.', "")
         if (name == "dragstart") {
             for (axis in listOf("x", "y")) inputs["$target.drag.$axis"] = mutableListOf(t to 0.0)
+            for (c in crossings) if (c.input.startsWith("$target.drag.")) c.inside = c.initial()
         }
         if (name == "down" && "$target.longpress" in wants) {
             pressDue[target] = t + LONG_PRESS
@@ -575,6 +612,24 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         }
         if (name !in requiredInputs) return false
         inputs.getOrPut(name) { ArrayList() }.add(t to value)
+        // Direction first: a scroll that has come back SCROLL_SLOP from its furthest point turns.
+        scrolls[name]?.let { s ->
+            if (s.dir != true && value >= s.ref + SCROLL_SLOP) {
+                s.dir = true; s.ref = value
+                dispatch(s.forth, t)
+            } else if (s.dir != false && value <= s.ref - SCROLL_SLOP) {
+                s.dir = false; s.ref = value
+                dispatch(s.back, t)
+            } else if (s.dir == true) s.ref = maxOf(s.ref, value)
+            else if (s.dir == false) s.ref = minOf(s.ref, value)
+        }
+        // Then crossings: each fires once on entering its side, and again only after leaving it.
+        for (c in crossings) {
+            if (c.input != name) continue
+            val inside = if (c.above) value > c.value else value < c.value
+            if (inside && !c.inside) dispatch(c.event, t)
+            c.inside = inside
+        }
         return true
     }
 

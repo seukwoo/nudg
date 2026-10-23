@@ -1,0 +1,16 @@
+{
+  "nudg": "0.15",
+  "note": "A bottom bar that slides away by its own measured height while the content scrolls down, and comes back as soon as it scrolls up, or near the top. The runtime derives the direction from the scroll position, ignoring wobbles under 8 units.",
+  "targets": ["scroller", "bar"],
+  "values": { "bar.y": 0 },
+  "animate": { "bar.y": { "spring": { "duration": 0.3, "bounce": 0 } } },
+  "initial": "shown",
+  "when": { "scroller.scroll.y<24": "shown" },
+  "states": {
+    "shown": { "when": { "scroller.scrolldown": "hidden" } },
+    "hidden": {
+      "set": { "bar.y": { "measure": "bar.height" } },
+      "when": { "scroller.scrollup": "shown" }
+    }
+  }
+}

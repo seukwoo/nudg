@@ -2046,6 +2046,94 @@ def validation_v14_cases():
     })
 
 
+# --- v0.15: events derived from inputs ---------------------------------------
+
+THRESHOLDS = {
+    "nudg": "0.15",
+    "targets": ["scroller", "bar", "dot"],
+    "values": {"bar.y": 0, "dot.scale": 1},
+    "regions": {
+        "bar": {
+            "initial": "shown",
+            "when": {"scroller.scroll.y<40": "shown"},
+            "states": {
+                "shown": {"when": {"scroller.scrolldown": "hidden"}},
+                "hidden": {"set": {"bar.y": -56}, "when": {"scroller.scrollup": "shown"}},
+            },
+        },
+        "voice": {
+            "initial": "quiet",
+            "states": {
+                "quiet": {"when": {"host.volume>0.6": "speaking"}},
+                "speaking": {"set": {"dot.scale": 1.3}, "when": {"host.volume<0.3": "quiet", "host.volume>0.6": "loud"}},
+                "loud": {"when": {"host.volume<0.3": "quiet"}},
+            },
+        },
+    },
+}
+
+
+def threshold_cases():
+    def scroll(t, y, state=None):
+        out = [{"t": t, "input": "scroller.scroll.y", "value": y}]
+        if state:
+            out.append({"t": t, "expect": {"state": [f"bar/{state[0]}", f"voice/{state[1]}"]}})
+        return out
+
+    def volume(t, v, state):
+        return [{"t": t, "input": "host.volume", "value": v}, {"t": t, "expect": {"state": [f"bar/{state[0]}", f"voice/{state[1]}"]}}]
+
+    steps = []
+    # Under 8 units nothing turns; at 60 the scroll is going down. Inputs start at 0, so a
+    # value already below 40 hasn't crossed into it.
+    steps += scroll(0.1, 5, ("shown", "quiet"))
+    steps += scroll(0.2, 60, ("hidden", "quiet"))
+    # Back 5 from the furthest point is not a turn; back 15 is.
+    steps += scroll(0.3, 55, ("hidden", "quiet"))
+    steps += scroll(0.4, 45, ("shown", "quiet"))
+    steps += scroll(0.5, 120, ("hidden", "quiet"))
+    # Going up past 40: the direction event first, then the crossing.
+    steps += scroll(0.6, 20, ("shown", "quiet"))
+    # A crossing fires once on entering its side, and again only after leaving it.
+    steps += volume(1.0, 0.7, ("shown", "speaking"))
+    steps += volume(1.1, 0.9, ("shown", "speaking"))
+    steps += volume(1.2, 0.5, ("shown", "speaking"))
+    steps += volume(1.3, 0.65, ("shown", "loud"))
+    steps += volume(1.4, 0.2, ("shown", "quiet"))
+    write("thresholds", {
+        "conformance": "0.15",
+        "name": "Thresholds: scroll direction turns after 8 units back from the furthest point; an input crossing fires on entering its side, once until it leaves",
+        "doc": THRESHOLDS,
+        "steps": steps,
+    })
+
+
+def validation_v15_cases():
+    def doc():
+        return json.loads(json.dumps(THRESHOLDS))
+
+    out = []
+    d = doc(); d["nudg"] = "0.14"
+    out.append(("needs-version", d, [
+        ("needs-version", "/regions/bar/when/scroller.scroll.y<40"),
+        ("needs-version", "/regions/bar/states/shown/when/scroller.scrolldown"),
+        ("needs-version", "/regions/bar/states/hidden/when/scroller.scrollup"),
+        ("needs-version", "/regions/voice/states/quiet/when/host.volume>0.6"),
+        ("needs-version", "/regions/voice/states/speaking/when/host.volume<0.3"),
+        ("needs-version", "/regions/voice/states/speaking/when/host.volume>0.6"),
+        ("needs-version", "/regions/voice/states/loud/when/host.volume<0.3"),
+    ]))
+    d = doc(); d["regions"]["voice"]["states"]["quiet"]["when"] = {"host.volume>=0.6": "speaking"}
+    out.append(("operator", d, [("invalid-event", "/regions/voice/states/quiet/when/host.volume>=0.6")]))
+    d = doc(); d["regions"]["voice"]["states"]["quiet"]["when"] = {"dot.scale>1": "speaking"}
+    out.append(("not-an-input", d, [("unknown-input", "/regions/voice/states/quiet/when/dot.scale>1")]))
+    write("validation-0.15", {
+        "conformance": "0.15",
+        "name": "Validator (0.15): crossing and scroll direction events",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 def rest_time(prop, motion, start, limit=5.0, step=1e-3):
     """When a spring comes to rest: its remaining amplitude, position and velocity
     together (sqrt(x^2 + v^2 m/k)), drops below the rest threshold. Energy never grows."""
@@ -2150,5 +2238,7 @@ if __name__ == "__main__":
     validation_v13_cases()
     gesture_cases()
     validation_v14_cases()
+    threshold_cases()
+    validation_v15_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

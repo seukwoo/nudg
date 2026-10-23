@@ -20,7 +20,8 @@ Legend: **yes** supported, with an example; **yes, no example** supported but no
 | Long press, double tap | yes: `longpress`, `doubletap` (0.14) | double-tap like |
 | A continuous value from the app (a microphone level, media progress, a tilt, a download's progress) | yes | voice chat, music player, video player |
 | Scroll position | yes | scroll-header |
-| Scroll direction | no: direction events remain in the [proposal](design.md#proposal-continuous-app-inputs) | |
+| Scroll direction | yes: `scrollup`, `scrolldown` (0.15) | hide-on-scroll |
+| A value crossing a threshold (louder than, scrolled past) | yes: `host.volume>0.6`, `list.scroll.y<24` (0.15) | hide-on-scroll |
 | Pinch, rotate (two fingers) | no: [open question](design.md#open-questions) | |
 
 ## Responses: how values move

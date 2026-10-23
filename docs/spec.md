@@ -516,6 +516,23 @@ Long press and double tap, derived by the runtime from the events a host already
 
 The conformance cases `gestures.json` and `validation-0.14.json` define the behavior across TypeScript, Swift and Kotlin.
 
+## Additions in 0.15 (draft)
+
+Events derived from continuous inputs: crossings and scroll direction. A file that handles them declares `"nudg": "0.15"`; a 0.15 runtime also reads older files.
+
+```json
+"when": { "scroller.scroll.y<24": "shown", "host.volume>0.6": "speaking" },
+"states": { "shown": { "when": { "scroller.scrolldown": "hidden" } } }
+```
+
+- **A crossing** is an event key made of an input, `>` or `<`, and a number: `host.volume>0.6`, `list.scroll.y<40`, `card.drag.x<-80`. The input is an app input, a scroll input or a drag input; properties are not allowed, since their values between frames depend on when they are sampled. The event fires when an input sample makes the condition true while the previous value made it false, and not again until a sample makes it false. Before the first sample the value is 0, as for every input; `dragstart` resets a drag input's crossings to 0.
+- **Scroll direction**: `target.scrolldown` and `target.scrollup` (and `scrollright`, `scrollleft` for x) fire from the target's `scroll.y` (or `scroll.x`) samples. Down means the offset grows. The runtime keeps the direction last reported and the furthest offset reached in it (0 at first); a sample 8 units or more beyond that point in the other direction reports the new direction. Wobbles under 8 units are ignored.
+- On one sample, a direction event is delivered before crossings, and crossings in the order of their event names.
+- Using either makes the runtime require the input, so the DOM adapter reports the scroll position of the bound element. With a declared `host` (0.13), a crossing's app input must be declared.
+- Errors: a key with `>`, `<` or `=` that isn't an input, an operator and a number is `invalid-event` (there is no `>=`); a property on the left is `unknown-input`.
+
+The conformance cases `thresholds.json` and `validation-0.15.json` define the behavior across TypeScript, Swift and Kotlin.
+
 ## Rest and lifecycle
 
 Hosts need to know when motion is over: to move focus once a dialog has opened, to tell a component library its transition has entered, to remove an element once its exit has played. These rules make that moment the same in every runtime and adapter. They add no file syntax.

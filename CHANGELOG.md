@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Format 0.15: events from inputs.** A crossing is an event key such as `host.volume>0.6` or `list.scroll.y<24`: it fires when an input sample crosses into the condition, once until it leaves. `target.scrolldown` / `scrollup` (and `scrollright` / `scrollleft`) report a scroll's direction, turning only after 8 units back from the furthest point. Inputs only, so every runtime agrees; TypeScript, Swift and Kotlin share conformance. Hide-on-scroll has a starter and the scroll-direction gap is gone. Schema 0.15.
 - **Format 0.14: long press and double tap.** The runtime derives `target.longpress` (held 0.5 s; its tap is swallowed) and `target.doubletap` (a second tap within 0.3 s) from the down, up and tap every adapter already sends, only for targets the file uses them on. Deterministic and shared by TypeScript, Swift and Kotlin through conformance; a pending long press keeps the runtime from settling. The DOM adapter suppresses the context menu and touch callout on long-pressable targets. A double-tap-like example joins the reaction recipe. Schema 0.14.
 
 ## 0.12.0

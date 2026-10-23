@@ -119,6 +119,11 @@ Use a number supplied by the app without inventing frame-by-frame events. The ap
 - On the DOM, a referenced `target.scroll.x` or `target.scroll.y` is reported automatically from the bound scrolling element.
 - Before the first sample an input is 0. Only referenced inputs are accepted. Use one descriptive `host.<name>` segment; the app owns microphones, sensors and downloads, while nudg only receives finite numbers.
 
+## Events from numbers (format 0.15)
+
+- A crossing as an event key: `"host.volume>0.6": "speaking"`, `"list.scroll.y<24": "shown"`, `"card.drag.x<-80": "dismissing"`. It fires once when the input crosses into the condition and again only after it leaves. Inputs only (app, scroll, drag), never properties; only `>` and `<`. For hysteresis use two values (`>0.6` in, `<0.3` out).
+- Scroll direction: `scroller.scrolldown` / `scroller.scrollup` (`scrollright` / `scrollleft` for x), turning only after 8 units back. Hide-on-scroll is `scrolldown` → hidden, `scrollup` → shown, plus `"scroller.scroll.y<24": "shown"` near the top.
+
 ## Declare the host (format 0.13)
 
 When a file uses app events or inputs, list them once at the top:
@@ -219,7 +224,7 @@ Libraries in `examples/motion/` carry the platforms' published spring values: `a
 
 When a person describes UI in natural language, call `nudg_recipe` (or `nudg recipe <term>`) before writing the file. It resolves aliases to a versioned mobile-first contract with expected parts, states, events, inputs, host responsibilities, motion, known gaps and a validated starter. Then express any requested variation with ordinary nudg fields.
 
-Some recipes have no starter (`"starter": null`): animated lists, hide-on-scroll bars, image viewers and free-scrolling carousels. Their contract is still the standard answer: use its parts, states and events, write the nudg file for what the format can express (a menu's open and close, a drawer's drag), and tell the person which part the host does and why, from `gaps`. Don't imitate a missing capability with timers or extra states; that is the workaround the gap records.
+Some recipes have no starter (`"starter": null`): animated lists, image viewers and free-scrolling carousels. Their contract is still the standard answer: use its parts, states and events, write the nudg file for what the format can express (a menu's open and close, a drawer's drag), and tell the person which part the host does and why, from `gaps`. Don't imitate a missing capability with timers or extra states; that is the workaround the gap records.
 
 | User says | Prefer |
 |---|---|
@@ -269,6 +274,7 @@ Pattern words live in external recipe metadata, not core syntax. Every shipped e
 | shake on error | format 0.8 `enter` keyframes on `x`; use a kick only for a less-authored physical wobble |
 | one after another, stagger, cascade, in order | growing `delay` per property in that transition's `animate`; reverse the delays on the way back |
 | the content should appear after it opens | `delay` on the content's opacity in the opening transition only |
+| hide on scroll, quick return, when it gets loud / past a point | `scrolldown` / `scrollup` events; a crossing such as `host.volume>0.6` or `list.scroll.y<24` in `when` (format 0.15) |
 | long press, hold, press and hold | `target.longpress` (format 0.14), not a `down` state with an `after:` timer; return on `target.up` |
 | double tap, double-tap to like / zoom | `target.doubletap` (format 0.14); replay the burst by transitioning to the same state |
 | keep it spinning / pulsing while loading | a `loop` in that state (format 0.10); `duration` is one cycle, slower = longer |

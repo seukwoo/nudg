@@ -1,0 +1,156 @@
+{
+ "nudgProgram": 5,
+ "version": "0.15",
+ "targets": [
+  "scroller",
+  "bar",
+  "dot"
+ ],
+ "properties": [
+  {
+   "key": "bar.y",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "dot.scale",
+   "kind": "number",
+   "base": [
+    1
+   ]
+  }
+ ],
+ "animate": [],
+ "machine": {
+  "kind": "regions",
+  "regions": [
+   {
+    "name": "bar",
+    "machine": {
+     "kind": "states",
+     "initial": "shown",
+     "states": [
+      {
+       "name": "shown",
+       "set": [],
+       "measure": [],
+       "follow": [],
+       "enter": [],
+       "loop": [],
+       "when": [
+        {
+         "event": "scroller.scrolldown",
+         "animate": [],
+         "to": "hidden"
+        }
+       ],
+       "timers": []
+      },
+      {
+       "name": "hidden",
+       "set": [
+        {
+         "key": "bar.y",
+         "value": [
+          -56
+         ]
+        }
+       ],
+       "measure": [],
+       "follow": [],
+       "enter": [],
+       "loop": [],
+       "when": [
+        {
+         "event": "scroller.scrollup",
+         "animate": [],
+         "to": "shown"
+        }
+       ],
+       "timers": []
+      }
+     ],
+     "when": [
+      {
+       "event": "scroller.scroll.y<40",
+       "animate": [],
+       "to": "shown"
+      }
+     ]
+    }
+   },
+   {
+    "name": "voice",
+    "machine": {
+     "kind": "states",
+     "initial": "quiet",
+     "states": [
+      {
+       "name": "quiet",
+       "set": [],
+       "measure": [],
+       "follow": [],
+       "enter": [],
+       "loop": [],
+       "when": [
+        {
+         "event": "host.volume>0.6",
+         "animate": [],
+         "to": "speaking"
+        }
+       ],
+       "timers": []
+      },
+      {
+       "name": "speaking",
+       "set": [
+        {
+         "key": "dot.scale",
+         "value": [
+          1.3
+         ]
+        }
+       ],
+       "measure": [],
+       "follow": [],
+       "enter": [],
+       "loop": [],
+       "when": [
+        {
+         "event": "host.volume<0.3",
+         "animate": [],
+         "to": "quiet"
+        },
+        {
+         "event": "host.volume>0.6",
+         "animate": [],
+         "to": "loud"
+        }
+       ],
+       "timers": []
+      },
+      {
+       "name": "loud",
+       "set": [],
+       "measure": [],
+       "follow": [],
+       "enter": [],
+       "loop": [],
+       "when": [
+        {
+         "event": "host.volume<0.3",
+         "animate": [],
+         "to": "quiet"
+        }
+       ],
+       "timers": []
+      }
+     ],
+     "when": []
+    }
+   }
+  ]
+ }
+}

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Hide on scroll</title>
+  <style>
+    .hos { position: relative; width: 240px; height: 176px; overflow: hidden; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #e4e4df; font: 13px ui-sans-serif, system-ui, sans-serif; color: #1c1c1a; }
+    .hos .scroller { height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+    .hos .row { padding: 12px 14px; border-bottom: 1px solid #f0f0ec; }
+    .hos .row span { display: block; color: #8a8a84; font-size: 12px; }
+    .hos .spacer { height: 48px; }
+    /* Rests at the bottom; hidden, nudg moves it down by its own measured height. */
+    .hos .bar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-around; align-items: center; height: 48px; border-top: 1px solid #e4e4df; background: rgb(255 255 255 / 0.96); }
+    .hos .bar button { border: 0; background: none; font: inherit; color: #6b6b66; cursor: pointer; }
+    .hos .bar button[aria-current] { color: #2563eb; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="hos">
+    <div class="scroller" data-nudg="scroller">
+      <div class="row">Morning brief<span>Six updates waiting</span></div>
+      <div class="row">Design review<span>Motion and interaction</span></div>
+      <div class="row">Build status<span>All checks passed</span></div>
+      <div class="row">Release notes<span>Native adapters ready</span></div>
+      <div class="row">Later today<span>Three reminders</span></div>
+      <div class="row">Saved items<span>Five articles</span></div>
+      <div class="row">Team activity<span>Two new comments</span></div>
+      <div class="row">Tomorrow<span>Planning at nine</span></div>
+      <div class="spacer"></div>
+    </div>
+    <nav class="bar" aria-label="Main" data-nudg="bar">
+      <button aria-current="page">Home</button><button>Search</button><button>Profile</button>
+    </nav>
+  </div>
+  <!-- Host markup for hide-on-scroll.nudg.json. The DOM adapter reports the scroll position; the host keeps the bar reachable by keyboard and assistive technology. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./hide-on-scroll.nudg.json");
+    play(program, document.body);
+  </script>
+</body>
+</html>

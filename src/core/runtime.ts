@@ -5,7 +5,7 @@ import { oklabToHex } from "./color.ts";
 import { easeAt, easeSlope } from "./ease.ts";
 import { interpolate } from "./map.ts";
 import { springAt } from "./spring.ts";
-import { DOUBLE_TAP, LONG_PRESS } from "./vocabulary.ts";
+import { CROSSING, DOUBLE_TAP, LONG_PRESS, SCROLL_SLOP } from "./vocabulary.ts";
 import type { Channels, Follow, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, PropertyMap, State, TimerPause, Transition } from "./types.ts";
 
 export type Value = number | string;
@@ -118,6 +118,26 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
   /** Targets whose current press was a long press: the tap that ends it is not a tap. */
   const longPressed = new Set<string>();
   const lastTap = new Map<string, number>();
+  // Events derived from inputs (v0.15): crossings in event-name order, and scroll directions.
+  const crossings = [...wants]
+    .sort()
+    .flatMap((event) => {
+      const m = CROSSING.exec(event);
+      return m ? [{ event, input: m[1], above: m[2] === ">", value: Number(m[3]) }] : [];
+    })
+    .map((c) => ({ ...c, inside: c.above ? 0 > c.value : 0 < c.value }));
+  for (const c of crossings) requiredInputs.add(c.input);
+  /** Per scrolled axis: the direction last reported and the furthest point in it. */
+  const scrolls = new Map<string, { back: string; forth: string; dir?: "back" | "forth"; ref: number }>();
+  for (const [axis, back, forth] of [["y", "scrollup", "scrolldown"], ["x", "scrollleft", "scrollright"]]) {
+    for (const event of wants) {
+      const [target, name] = event.split(".");
+      if (name !== back && name !== forth) continue;
+      const input = `${target}.scroll.${axis}`;
+      requiredInputs.add(input);
+      scrolls.set(input, { back: `${target}.${back}`, forth: `${target}.${forth}`, ref: 0 });
+    }
+  }
 
   for (const [key, prop] of program.properties) if (!prop.map) bases.set(key, prop.base);
   enterMachine(program.machine, active, [], 0);
@@ -599,6 +619,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       if (name === "dragstart") {
         // A drag's inputs count from 0 at dragstart (the host reports travel since down).
         for (const axis of ["x", "y"]) inputs.set(`${target}.drag.${axis}`, [[t, 0]]);
+        for (const c of crossings) if (c.input.startsWith(`${target}.drag.`)) c.inside = c.above ? 0 > c.value : 0 < c.value;
       }
       if (name === "down" && wants.has(`${target}.longpress`)) {
         pressDue.set(target, t + LONG_PRESS);
@@ -634,6 +655,25 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       const history = inputs.get(name) ?? [];
       history.push([t, value]);
       inputs.set(name, history);
+      // Direction first: a scroll that has come back SCROLL_SLOP from its furthest point turns.
+      const scroll = scrolls.get(name);
+      if (scroll) {
+        if (scroll.dir !== "forth" && value >= scroll.ref + SCROLL_SLOP) {
+          [scroll.dir, scroll.ref] = ["forth", value];
+          dispatch(scroll.forth, t);
+        } else if (scroll.dir !== "back" && value <= scroll.ref - SCROLL_SLOP) {
+          [scroll.dir, scroll.ref] = ["back", value];
+          dispatch(scroll.back, t);
+        } else if (scroll.dir === "forth") scroll.ref = Math.max(scroll.ref, value);
+        else if (scroll.dir === "back") scroll.ref = Math.min(scroll.ref, value);
+      }
+      // Then crossings: each fires once on entering its side, and again only after leaving it.
+      for (const c of crossings) {
+        if (c.input !== name) continue;
+        const inside = c.above ? value > c.value : value < c.value;
+        if (inside && !c.inside) dispatch(c.event, t);
+        c.inside = inside;
+      }
       return true;
     },
 

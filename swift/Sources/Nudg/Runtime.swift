@@ -48,6 +48,28 @@ private struct ActiveLoop {
 private let REST_NUMBER = 1e-3, REST_COLOR = 1e-4
 /** Seconds a press is held before it is a long press, and the most between two taps of a double tap (v0.14). */
 private let LONG_PRESS = 0.5, DOUBLE_TAP = 0.3
+/** Logical units a scroll must travel back from its furthest point before its direction changes (v0.15). */
+private let SCROLL_SLOP = 8.0
+
+/** An event that fires when an input crosses a value (v0.15): "host.volume>0.6". */
+private final class Crossing {
+  let event: String, input: String, above: Bool, value: Double
+  var inside: Bool
+  init?(_ event: String) {
+    guard let i = event.lastIndex(where: { $0 == ">" || $0 == "<" }), let value = Double(event[event.index(after: i)...]) else { return nil }
+    self.event = event; input = String(event[..<i]); above = event[i] == ">"; self.value = value
+    inside = above ? 0 > value : 0 < value
+  }
+  func reset() { inside = above ? 0 > value : 0 < value }
+}
+
+/** One scrolled axis: the direction last reported and the furthest point in it. */
+private final class ScrollDirection {
+  let back: String, forth: String
+  var dir: Bool? // true: forth (down, right)
+  var ref = 0.0
+  init(back: String, forth: String) { self.back = back; self.forth = forth }
+}
 private let VELOCITY_WINDOW = 0.1
 private let REDUCED: Motion = .tween(duration: 0.15, ease: .linear)
 private let LAYOUT_NAMES: Set<String> = ["x", "y", "width", "height", "naturalWidth", "naturalHeight"]
@@ -72,6 +94,9 @@ public final class Runtime {
   /** Targets whose current press was a long press: the tap that ends it is not a tap. */
   private var longPressed = Set<String>()
   private var lastTap: [String: Double] = [:]
+  // Events derived from inputs (v0.15): crossings in event-name order, and scroll directions.
+  private var crossings: [Crossing] = []
+  private var scrolls: [String: ScrollDirection] = [:]
   private var now = 0.0
   private let reduced: Bool
 
@@ -95,6 +120,17 @@ public final class Runtime {
       else { segments[key] = .motion(t0: 0, from: to, v0: to.map { _ in 0 }, to: to, motion: nil) }
     }
     if !reduced { walkActive(active) { state in for (key, loop) in state.loop { loops[key] = ActiveLoop(loop: loop, owner: state, t0: 0) } } }
+    crossings = wants.sorted().compactMap(Crossing.init)
+    for c in crossings { requiredInputs.insert(c.input) }
+    for (axis, back, forth) in [("y", "scrollup", "scrolldown"), ("x", "scrollleft", "scrollright")] {
+      for event in wants {
+        let parts = event.split(separator: ".").map(String.init)
+        guard parts.count == 2, parts[1] == back || parts[1] == forth else { continue }
+        let input = "\(parts[0]).scroll.\(axis)"
+        requiredInputs.insert(input)
+        scrolls[input] = ScrollDirection(back: "\(parts[0]).\(back)", forth: "\(parts[0]).\(forth)")
+      }
+    }
   }
 
   // MARK: machine
@@ -550,6 +586,7 @@ public final class Runtime {
     let target = parts[0], name = parts.count > 1 ? parts[1] : ""
     if name == "dragstart" {
       for axis in ["x", "y"] { inputs["\(target).drag.\(axis)"] = [(t, 0)] }
+      for c in crossings where c.input.hasPrefix("\(target).drag.") { c.reset() }
     }
     if name == "down" && wants.contains("\(target).longpress") {
       pressDue[target] = t + LONG_PRESS
@@ -594,6 +631,23 @@ public final class Runtime {
     }
     guard requiredInputs.contains(name) else { return false }
     inputs[name, default: []].append((t, value))
+    // Direction first: a scroll that has come back SCROLL_SLOP from its furthest point turns.
+    if let scroll = scrolls[name] {
+      if scroll.dir != true && value >= scroll.ref + SCROLL_SLOP {
+        scroll.dir = true; scroll.ref = value
+        dispatch(scroll.forth, t)
+      } else if scroll.dir != false && value <= scroll.ref - SCROLL_SLOP {
+        scroll.dir = false; scroll.ref = value
+        dispatch(scroll.back, t)
+      } else if scroll.dir == true { scroll.ref = max(scroll.ref, value) }
+      else if scroll.dir == false { scroll.ref = min(scroll.ref, value) }
+    }
+    // Then crossings: each fires once on entering its side, and again only after leaving it.
+    for c in crossings where c.input == name {
+      let inside = c.above ? value > c.value : value < c.value
+      if inside && !c.inside { dispatch(c.event, t) }
+      c.inside = inside
+    }
     return true
   }
 

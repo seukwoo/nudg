@@ -2,6 +2,8 @@ package dev.nudg
 
 import kotlin.math.abs
 import kotlin.math.ceil
+import kotlin.math.exp
+import kotlin.math.ln
 import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.sqrt
@@ -20,6 +22,8 @@ private sealed interface Segment {
     data class MotionSeg(val t0: Double, val from: List<Double>, val v0: List<Double>, val to: List<Double>, val motion: Motion?) : Segment
     data class KeyframesSeg(val t0: Double, val from: List<Double>, val to: List<Double>, val frames: List<Keyframe>, val duration: Double, val ease: Ease, val owner: State) : Segment
     data class FollowSeg(val key: String, val t0: Double, val anchor: Double, val input0: Double, val follow: Follow, val owner: State) : Segment
+    /** A property slowing down from [v0] (v0.16), and settling at a range bound if it reaches one. */
+    data class GlideSeg(val key: String, val t0: Double, val x0: Double, val v0: Double, val glide: Glide, val owner: State) : Segment
     /** A motion that starts at [t0] (v0.12); until then the property does what [prev] does. */
     data class DelayedSeg(val t0: Double, val prev: Segment, val to: List<Double>, val motion: Motion) : Segment
 }
@@ -27,6 +31,12 @@ private sealed interface Segment {
 private class Pending(var due: Double, val order: Int, val machine: Machine.States, val state: State, val transition: Transition, val pause: List<TimerPause>) {
     val blockers = HashSet<Int>()
     var pausedAt: Double? = null
+}
+
+/** A glide's phase: still slowing down, or settling at a range bound with the property's motion. */
+private sealed interface GlidePhase {
+    data class Gliding(val pos: Double, val vel: Double) : GlidePhase
+    data class Settling(val motion: Segment.MotionSeg) : GlidePhase
 }
 
 /** A loop running since its state was entered at [t0]. */
@@ -257,6 +267,33 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         return out
     }
 
+    private fun activeGlides(act: Map<Machine.States, String>): Map<String, Pair<Glide, State>> {
+        val out = HashMap<String, Pair<Glide, State>>()
+        walkActive(act) { s -> for ((key, g) in s.glide) out[key] = g to s }
+        return out
+    }
+
+    /**
+     * Where a glide is at [t]: x0 + v0·m·(1 − e^(−t/m)), so it travels v0·m in all. If that
+     * would pass a range bound, it reaches the bound and settles there with the property's own
+     * motion, keeping the speed it had; one that starts outside the range goes straight back.
+     */
+    private fun glidePhase(seg: Segment.GlideSeg, t: Double): GlidePhase {
+        val m = seg.glide.momentum
+        val motion = program.animate[seg.key]?.let { if (reducedMotion) REDUCED else it }
+        resolvedRange(seg.key, seg.glide.range)?.let { (lo, hi) ->
+            if (seg.x0 < lo || seg.x0 > hi) return GlidePhase.Settling(Segment.MotionSeg(seg.t0, listOf(seg.x0), listOf(seg.v0), listOf(if (seg.x0 < lo) lo else hi), motion))
+            val end = seg.x0 + seg.v0 * m
+            if (end < lo || end > hi) {
+                val bound = if (end < lo) lo else hi
+                val hit = -m * ln(1 - (bound - seg.x0) / (seg.v0 * m))
+                if (t - seg.t0 >= hit) return GlidePhase.Settling(Segment.MotionSeg(seg.t0 + hit, listOf(bound), listOf(seg.v0 * exp(-hit / m)), listOf(bound), motion))
+            }
+        }
+        val e = exp(-(t - seg.t0) / m)
+        return GlidePhase.Gliding(seg.x0 + seg.v0 * m * (1 - e), seg.v0 * e)
+    }
+
     private fun followSegment(key: String, f: Pair<Follow, State>, anchor: Double, t: Double) = Segment.FollowSeg(key, t, anchor, inputAt(f.first.input, t), f.first, f.second)
 
     // inputs and evaluation
@@ -292,6 +329,10 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         is Segment.MotionSeg -> evaluateMotion(seg, t)
         is Segment.KeyframesSeg -> evaluateKeyframes(seg, t)
         is Segment.DelayedSeg -> if (t < seg.t0) evaluate(seg.prev, t) else evaluateMotion(started(seg), t)
+        is Segment.GlideSeg -> when (val p = glidePhase(seg, t)) {
+            is GlidePhase.Settling -> evaluateMotion(p.motion, t)
+            is GlidePhase.Gliding -> listOf(p.pos) to listOf(p.vel)
+        }
     }
 
     /** The motion a delayed segment becomes: from wherever [Segment.DelayedSeg.prev] is when the delay ends. */
@@ -426,6 +467,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         for (tr in fired) for ((key, m) in tr.animate) overrides[key] = m
         val targets = resolveTargets(active)
         val follows = activeFollows(active)
+        val glides = activeGlides(active)
         val activeStates = LinkedHashSet<State>()
         walkActive(active) { activeStates.add(it) }
         val isEntered = { s: State -> entered.any { it === s } }
@@ -453,6 +495,16 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
             if (f != null) {
                 val keep = seg is Segment.FollowSeg && seg.owner === f.second && !isEntered(f.second) && key !in handoff
                 if (!keep) segments[key] = followSegment(key, f, (handoff[key] ?: evaluate(seg, t)).first[0], t)
+                continue
+            }
+            val g = glides[key]
+            if (g != null) {
+                // Glide on from wherever the value is, with the velocity it has.
+                val keep = seg is Segment.GlideSeg && seg.owner === g.second && !isEntered(g.second) && key !in handoff
+                if (!keep) {
+                    val (pos, vel) = handoff[key] ?: evaluate(seg, t)
+                    segments[key] = Segment.GlideSeg(key, t, pos[0], if (key in committed) 0.0 else vel[0], g.first, g.second)
+                }
                 continue
             }
             val to = targets.getValue(key)
@@ -486,7 +538,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
                     is Segment.MotionSeg -> seg.to
                     is Segment.KeyframesSeg -> seg.to
                     is Segment.DelayedSeg -> seg.to
-                    is Segment.FollowSeg -> continue
+                    is Segment.FollowSeg, is Segment.GlideSeg -> continue
                 }
                 val (pos, v) = evaluate(seg, t)
                 when (effect) {
@@ -687,7 +739,14 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         val current = segments.getValue(source)
         // A pending motion is a change still to come.
         if (current is Segment.DelayedSeg && t < current.t0) return false
-        val seg = if (current is Segment.DelayedSeg) started(current) else current
+        val unwrapped = if (current is Segment.DelayedSeg) started(current) else current
+        val seg = if (unwrapped is Segment.GlideSeg) {
+            when (val p = glidePhase(unwrapped, t)) {
+                // Still gliding: at rest once what is left of its travel is under the threshold.
+                is GlidePhase.Gliding -> return abs(p.vel) * unwrapped.glide.momentum < REST_NUMBER
+                is GlidePhase.Settling -> p.motion
+            }
+        } else unwrapped
         if (seg is Segment.KeyframesSeg) return t - seg.t0 >= seg.duration
         if (seg !is Segment.MotionSeg || seg.motion == null) return true
         return when (val m = seg.motion) {

@@ -6,7 +6,7 @@ import { easeAt, easeSlope } from "./ease.ts";
 import { interpolate } from "./map.ts";
 import { springAt } from "./spring.ts";
 import { CROSSING, DOUBLE_TAP, LONG_PRESS, SCROLL_SLOP } from "./vocabulary.ts";
-import type { Channels, Follow, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, PropertyMap, State, TimerPause, Transition } from "./types.ts";
+import type { Channels, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, PropertyMap, State, TimerPause, Transition } from "./types.ts";
 
 export type Value = number | string;
 
@@ -59,6 +59,8 @@ type Segment =
   | { kind: "motion"; t0: number; from: Channels; v0: Channels; to: Channels; motion?: Motion }
   | { kind: "keyframes"; t0: number; from: Channels; to: Channels; frames: { at: number; value: Channels }[]; duration: number; ease: import("./types.ts").Ease; owner: State }
   | { kind: "follow"; key: string; t0: number; anchor: number; input0: number; follow: Follow; owner: State }
+  /** A property slowing down from `v0` (v0.16), and settling at a range bound if it reaches one. */
+  | { kind: "glide"; key: string; t0: number; x0: number; v0: number; glide: Glide; owner: State }
   /** A motion that starts at `t0` (v0.12); until then the property does what `prev` does. */
   | { kind: "delayed"; t0: number; prev: Segment; to: Channels; motion: Motion; started?: Segment & { kind: "motion" } };
 
@@ -286,6 +288,36 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     return out;
   }
 
+  function activeGlides(act: Map<Machine, string>): Map<string, { glide: Glide; owner: State }> {
+    const out = new Map<string, { glide: Glide; owner: State }>();
+    walkActive(act, (state) => {
+      for (const [key, glide] of state.glide) out.set(key, { glide, owner: state });
+    });
+    return out;
+  }
+
+  /**
+   * Where a glide is at `t`: x0 + v0·m·(1 − e^(−t/m)), so it travels v0·m in all. If that
+   * would pass a range bound, it reaches the bound and settles there with the property's own
+   * motion, keeping the speed it had; one that starts outside the range goes straight back.
+   */
+  function glideState(segment: Segment & { kind: "glide" }, t: number): { motion: Segment & { kind: "motion" } } | { pos: number; vel: number } {
+    const { x0, v0, glide, key, t0 } = segment;
+    const m = glide.momentum;
+    const range = resolvedRange(key, glide.range);
+    const motion = program.animate.get(key);
+    const settleAt = (start: number, from: number, v: number, bound: number) => ({ motion: { kind: "motion" as const, t0: start, from: [from], v0: [v], to: [bound], motion: motion && reduced ? REDUCED : motion } });
+    if (range && (x0 < range[0] || x0 > range[1])) return settleAt(t0, x0, v0, x0 < range[0] ? range[0] : range[1]);
+    const end = x0 + v0 * m;
+    if (range && (end < range[0] || end > range[1])) {
+      const bound = end < range[0] ? range[0] : range[1];
+      const hit = -m * Math.log(1 - (bound - x0) / (v0 * m));
+      if (t - t0 >= hit) return settleAt(t0 + hit, bound, v0 * Math.exp(-hit / m), bound);
+    }
+    const e = Math.exp(-(t - t0) / m);
+    return { pos: x0 + v0 * m * (1 - e), vel: v0 * e };
+  }
+
   function activeFollows(act: Map<Machine, string>): Map<string, { follow: Follow; owner: State }> {
     const out = new Map<string, { follow: Follow; owner: State }>();
     walkActive(act, (state) => {
@@ -339,6 +371,10 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       return [[value], [velocityAt(follow.input, t) * factor]];
     }
     if (segment.kind === "keyframes") return evaluateKeyframes(segment, t);
+    if (segment.kind === "glide") {
+      const s = glideState(segment, t);
+      return "motion" in s ? evaluateMotion(s.motion, t) : [[s.pos], [s.vel]];
+    }
     if (segment.kind === "delayed") return t < segment.t0 ? evaluate(segment.prev, t) : evaluateMotion(started(segment), t);
     return evaluateMotion(segment, t);
   }
@@ -457,6 +493,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     for (const transition of fired) for (const [key, motion] of transition.animate) overrides.set(key, motion);
     const targets = resolveTargets(active);
     const follows = activeFollows(active);
+    const glides = activeGlides(active);
     const activeStates = new Set<State>();
     walkActive(active, (state) => activeStates.add(state));
 
@@ -488,6 +525,15 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
         // Start following from wherever the value is now, so there's no jump.
         if (segment.kind !== "follow" || segment.owner !== f.owner || entered.includes(f.owner) || handoff.has(key)) {
           segments.set(key, followSegment(key, f, (handoff.get(key) ?? evaluate(segment, t))[0][0], t));
+        }
+        continue;
+      }
+      const g = glides.get(key);
+      if (g) {
+        // Glide on from wherever the value is, with the velocity it has.
+        if (segment.kind !== "glide" || segment.owner !== g.owner || entered.includes(g.owner) || handoff.has(key)) {
+          const [pos, vel] = handoff.get(key) ?? evaluate(segment, t);
+          segments.set(key, { kind: "glide", key, t0: t, x0: pos[0], v0: committed.has(key) ? 0 : vel[0], glide: g.glide, owner: g.owner });
         }
         continue;
       }
@@ -523,7 +569,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     for (const state of entered) {
       for (const [key, effect] of state.enter) {
         const segment = segments.get(key)!;
-        if (segment.kind === "follow") continue;
+        if (segment.kind === "follow" || segment.kind === "glide") continue;
         const [pos, vel] = evaluate(segment, t);
         if (effect.kind === "keyframes") {
           segments.set(key, { kind: "keyframes", t0: t, from: pos, to: segment.to, frames: effect.frames, duration: effect.duration, ease: effect.ease, owner: state });
@@ -726,7 +772,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       const resolved = resolveTargets(active);
       for (const [key, prop] of program.properties) {
         const segment = segments.get(key);
-        if (prop.map || !segment || segment.kind === "follow") {
+        if (prop.map || !segment || segment.kind === "follow" || segment.kind === "glide") {
           out[key] = undefined;
           continue;
         }
@@ -779,7 +825,11 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     const current = segments.get(source)!;
     // A pending motion is a change still to come.
     if (current.kind === "delayed" && t < current.t0) return false;
-    const segment = current.kind === "delayed" ? started(current) : current;
+    const unwrapped = current.kind === "delayed" ? started(current) : current;
+    const glide = unwrapped.kind === "glide" ? glideState(unwrapped, t) : undefined;
+    // Still gliding: at rest once what is left of its travel is under the threshold.
+    if (glide && !("motion" in glide)) return Math.abs(glide.vel) * (unwrapped as Segment & { kind: "glide" }).glide.momentum < REST.number;
+    const segment: Exclude<Segment, { kind: "glide" | "delayed" }> = glide && "motion" in glide ? glide.motion : (unwrapped as Exclude<Segment, { kind: "glide" | "delayed" }>);
     // A followed value moves only when its input does; nothing is animating it.
     if (segment.kind === "follow") return true;
     if (segment.kind === "keyframes") return t - segment.t0 >= segment.duration;

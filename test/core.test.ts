@@ -172,7 +172,7 @@ test("cli validate and simulate speak JSON", () => {
   assert.match(run("recipe", "toggle", "--source"), /"track\.dragend"/);
   assert.throws(() => execFileSync(process.execPath, [`${root}src/cli.ts`, "recipe", "pinch zoom", "--source"], { encoding: "utf8", stdio: "pipe" }), /no starter.*multi-pointer/s);
   const { gaps } = JSON.parse(run("recipe", "--gaps", "--json"));
-  assert.ok(gaps.some((gap: { capability: string; missing: string[] }) => gap.capability === "decay" && gap.missing.includes("image-viewer")));
+  assert.ok(gaps.some((gap: { capability: string; missing: string[] }) => gap.capability === "multi-pointer" && gap.missing.includes("image-viewer")));
 });
 
 test("plot draws a labeled graph with overshoot and settle marks", async () => {

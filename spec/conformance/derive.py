@@ -2134,6 +2134,99 @@ def validation_v15_cases():
     })
 
 
+# --- v0.16: glide --------------------------------------------------------------
+
+STRIP = {
+    "nudg": "0.16",
+    "targets": ["strip"],
+    "values": {"strip.x": 0},
+    "animate": {"strip.x": spring_json(0.4, 0)},
+    "initial": "free",
+    "states": {
+        "free": {"glide": {"strip.x": {"momentum": 0.4, "range": [-300, 0]}}, "when": {"strip.dragstart": "dragging"}},
+        "dragging": {
+            "follow": {"strip.x": {"input": "strip.drag.x", "range": [-300, 0], "overdrag": 0.3}},
+            "when": {"strip.dragend": "free"},
+        },
+    },
+}
+
+
+def glide_at(x0, v0, m, t0, t):
+    """Position and velocity of a glide before it reaches a bound."""
+    e = math.exp(-(t - t0) / m)
+    return x0 + v0 * m * (1 - e), v0 * e
+
+
+def glide_hit(x0, v0, m, bound):
+    return -m * math.log(1 - (bound - x0) / (v0 * m))
+
+
+def glide_cases():
+    m = 0.4
+    steps = [{"t": 0, "expect": {"state": ["free"], "values": {"strip.x": 0}, "resting": True}}]
+    # A fling: released at -50 moving left fast enough to pass -300.
+    samples = [(0.1, 0), (0.12, -20), (0.15, -50)]
+    steps.append({"t": 0.1, "send": "strip.dragstart"})
+    for t, v in samples[1:]:
+        steps.append({"t": t, "input": "strip.drag.x", "value": v})
+    steps.append({"t": 0.15, "send": "strip.dragend"})
+    v0 = ls_velocity(samples, 0.15)
+    hit = glide_hit(-50, v0, m, -300)
+    for t in (0.2, 0.3):
+        assert t - 0.15 < hit
+        steps.append({"t": t, "expect": {"state": ["free"], "values": {"strip.x": round(glide_at(-50, v0, m, 0.15, t)[0], 9)}}})
+    x = Prop(-300)
+    x.handoff(-300, glide_at(-50, v0, m, 0.15, 0.15 + hit)[1], -300, spring(0.4, 0), 0.15 + hit)
+    for t in (0.6, 0.8, 1.4):
+        steps.append({"t": t, "expect": {"values": {"strip.x": x.value(t)}}})
+    # A gentle push stays inside the range and comes to rest by itself.
+    samples = [(2.0, 0), (2.05, 5), (2.1, 10)]
+    steps.append({"t": 2.0, "send": "strip.dragstart"})
+    for t, v in samples[1:]:
+        steps.append({"t": t, "input": "strip.drag.x", "value": v})
+    steps.append({"t": 2.1, "send": "strip.dragend"})
+    v1 = ls_velocity(samples, 2.1)
+    x1 = -300 + 10
+    for t in (2.2, 2.5):
+        steps.append({"t": t, "expect": {"values": {"strip.x": round(glide_at(x1, v1, m, 2.1, t)[0], 9)}, "resting": False}})
+    # At rest once what is left of the travel is under 0.001: |v| m e^(-t/m) < 0.001.
+    rest = 2.1 + m * math.log(abs(v1) * m / 0.001)
+    steps.append({"t": round(rest - 0.01, 6), "expect": {"resting": False}})
+    steps.append({"t": round(rest + 0.01, 6), "expect": {"resting": True}})
+    # Grabbing it mid-glide follows from where it is.
+    steps.append({"t": 7.0, "send": "strip.dragstart"})
+    steps.append({"t": 7.0, "expect": {"state": ["dragging"], "values": {"strip.x": round(glide_at(x1, v1, m, 2.1, 7.0)[0], 9)}}})
+    write("glide", {
+        "conformance": "0.16",
+        "name": "Glide: a released value slows down by itself, travelling velocity × momentum; past a bound it settles there with its spring; it rests when what is left is under 0.001",
+        "doc": STRIP,
+        "steps": steps,
+    })
+
+
+def validation_v16_cases():
+    def doc():
+        return json.loads(json.dumps(STRIP))
+
+    out = []
+    d = doc(); d["nudg"] = "0.15"
+    out.append(("needs-version", d, [("needs-version", "/states/free/glide")]))
+    d = doc(); d["states"]["free"]["glide"]["strip.x"]["momentum"] = 0
+    out.append(("momentum", d, [("invalid-value", "/states/free/glide/strip.x/momentum")]))
+    d = doc(); d["states"]["free"]["set"] = {"strip.x": 0}
+    out.append(("set-conflict", d, [("glide-conflict", "/states/free/glide/strip.x")]))
+    d = doc(); d["values"]["strip.color"] = "#000000"; d["states"]["free"]["glide"]["strip.color"] = {}
+    out.append(("color", d, [("glide-not-numeric", "/states/free/glide/strip.color")]))
+    d = doc(); d["states"]["free"]["glide"]["strip.x"]["range"] = [0, 0]
+    out.append(("range", d, [("invalid-value", "/states/free/glide/strip.x/range")]))
+    write("validation-0.16", {
+        "conformance": "0.16",
+        "name": "Validator (0.16): glide",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 def rest_time(prop, motion, start, limit=5.0, step=1e-3):
     """When a spring comes to rest: its remaining amplitude, position and velocity
     together (sqrt(x^2 + v^2 m/k)), drops below the rest threshold. Energy never grows."""
@@ -2240,5 +2333,7 @@ if __name__ == "__main__":
     validation_v14_cases()
     threshold_cases()
     validation_v15_cases()
+    glide_cases()
+    validation_v16_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

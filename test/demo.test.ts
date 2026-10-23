@@ -605,6 +605,26 @@ test("a real scroll hides the bar going down and brings it back going up", { ski
   assert.equal(await state(), "shown");
 });
 
+test("a fling glides the strip on and it stops inside its ends", { skip }, async () => {
+  await go("#example/free-scroll-carousel");
+  await waitFor(() => browser.evaluate("document.getElementById('detail-state').textContent || undefined"), 5_000);
+  const strip = "document.getElementById('detail-stage').shadowRoot.querySelector('[data-nudg=strip]')";
+  const x = () => browser.evaluate(`new DOMMatrix(getComputedStyle(${strip}).transform).m41`) as Promise<number>;
+  const [cx, cy] = await center("detail-stage", ".glide-view");
+  await mouse("mousePressed", cx, cy);
+  for (let i = 1; i <= 6; i++) {
+    await mouse("mouseMoved", cx - i * 12, cy);
+    await sleep(16);
+  }
+  await mouse("mouseReleased", cx - 72, cy);
+  const released = await x();
+  await sleep(1500);
+  const stopped = await x();
+  const width = await browser.evaluate(`${strip}.offsetWidth`);
+  assert.ok(stopped < released - 20, `it glides on past the release (${released} → ${stopped})`);
+  assert.ok(stopped >= 240 - width - 1, "and stops inside the far end");
+});
+
 test("no page errors were thrown", { skip }, () => {
   assert.deepEqual(errors, []);
 });

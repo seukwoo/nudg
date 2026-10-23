@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Free-scrolling carousel</title>
+  <style>
+    .glide-view { width: 240px; overflow: hidden; border-radius: 14px; background: #f6f6f4; font: 13px ui-sans-serif, system-ui, sans-serif; }
+    /* As wide as its cards; nudg moves it, and measures it for the glide's far end. */
+    .glide-view .strip { display: flex; gap: 10px; width: max-content; padding: 12px; cursor: grab; user-select: none; touch-action: none; }
+    .glide-view .card { display: grid; place-items: end start; width: 96px; height: 120px; padding: 10px; box-sizing: border-box; border-radius: 10px; color: #fff; font-weight: 600; }
+    .glide-view .card:nth-child(6n+1) { background: #2563eb; }
+    .glide-view .card:nth-child(6n+2) { background: #7c3aed; }
+    .glide-view .card:nth-child(6n+3) { background: #db2777; }
+    .glide-view .card:nth-child(6n+4) { background: #ea580c; }
+    .glide-view .card:nth-child(6n+5) { background: #16a34a; }
+    .glide-view .card:nth-child(6n) { background: #0891b2; }
+  </style>
+</head>
+<body>
+  <div class="glide-view">
+    <div class="strip" data-nudg="strip">
+      <div class="card">Jazz</div><div class="card">Focus</div><div class="card">Chill</div>
+      <div class="card">Rock</div><div class="card">Indie</div><div class="card">Soul</div>
+      <div class="card">Lo-fi</div><div class="card">Pop</div>
+    </div>
+  </div>
+  <!-- Host markup for free-scroll-carousel.nudg.json. The host keeps the cards reachable by keyboard and screen readers, which scroll it by focus. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./free-scroll-carousel.nudg.json");
+    play(program, document.body);
+  </script>
+</body>
+</html>

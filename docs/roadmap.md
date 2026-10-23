@@ -29,7 +29,7 @@ The order below follows real app needs. Release numbers and dates are assigned w
 | Host declaration | Implemented as format 0.13 in 0.12.0: declared app events and inputs, checked by the validator and used by `nudg generate` | [Design](design.md#the-host-declaration-not-a-store-format-013) |
 | Long press and double tap | Implemented as format 0.14 (unreleased), derived by the runtime | [Spec](spec.md#additions-in-014-draft) |
 | Crossings and scroll direction | Implemented as format 0.15 (unreleased); hide-on-scroll has a starter | [Spec](spec.md#additions-in-015-draft) |
-| Decay | Open design work | [Open questions](design.md#open-questions) |
+| Decay | Implemented as format 0.16 `glide` (unreleased); free-scrolling carousel has a starter | [Design](design.md#glide-decay-with-the-same-momentum-as-nearest-format-016) |
 
 ## Product Stages
 
@@ -38,7 +38,7 @@ The original stage numbers remain useful when reading the spec and changelog. Se
 | Stage | Scope | Examples and needs | Status |
 |---|---|---|---|
 | 0 | Single element | Toggle, button, like; states, transitions, springs, DOM adapter | Implemented |
-| 1 | Component | Tabs, accordion, swipe row, carousel, bottom sheet; coordinated targets, gestures, React adapter | Measurement, arithmetic and measured follow/map bounds implemented; decay remains open for free scrolling |
+| 1 | Component | Tabs, accordion, swipe row, carousel, bottom sheet; coordinated targets, gestures, React adapter | Measurement, arithmetic, measured follow/map bounds and glide (0.16) implemented |
 | 2 | Screens and flows | Onboarding, modals, screen transitions, list/grid coordination; data inputs and machine composition | Planned; nested states and a dialog example already exist |
 | 3 | Native | iOS and Android; React Native, SwiftUI and Compose adapters plus matching runtimes | Initial platform support implemented; 0.10.0 carries format 0.9 and the same lifecycle (exit, settle) across all runtimes |
 | 4 | Standalone content | Physics, canvas, game-like scenes; host rendering and physics integration | Exploratory |
@@ -52,7 +52,7 @@ Status: the first repeated lower-level gaps from the versioned recipe catalog ar
 - Done: format 0.8 entry keyframes with interruption, relayout and reduced-motion rules shared across all three runtimes; validation feedback now uses them.
 - Done: format 0.9 measured `follow.range` and `map.from` endpoints remove the remaining duplicated layout constants from bottom sheet and swipe row.
 - Keep examples as executable evidence for recipes, not as a component-count target; do not widen the catalog without new evidence.
-- Derived scroll direction/velocity and decay remain later motion work; they no longer block the current recipes.
+- Derived scroll direction (0.15) and decay (0.16 `glide`) followed later.
 
 Completion met: the current recipes no longer duplicate essential measured resting points or rely on undocumented timer and multi-beat motion workarounds.
 
@@ -72,7 +72,7 @@ Done when: a TypeScript host cannot misspell its generated target/event/input na
 
 ## Completed: Recipe Coverage for Common App Patterns
 
-Status: complete in 0.12.0 (formats 0.10 to 0.13). Screen composition turned out to need only measured map values (0.11), and sequence/stagger a motion delay (0.12). The declared `host` block followed as format 0.13, and long press and double tap as 0.14. Crossings and scroll direction followed as 0.15. Remaining gaps: decay (image viewer, free-scrolling carousel), collection coordination (animated list) and multi-pointer (image viewer).
+Status: complete in 0.12.0 (formats 0.10 to 0.13). Screen composition turned out to need only measured map values (0.11), and sequence/stagger a motion delay (0.12). The declared `host` block followed as format 0.13, and long press and double tap as 0.14. Crossings and scroll direction followed as 0.15. Decay followed as 0.16 `glide`. Remaining gaps: collection coordination (animated list) and multi-pointer (image viewer).
 
 Goal: let an AI answer the common UI words of app development with a standard contract, and let the gaps decide the next motion primitive. The 22 recipes cover single components and media well; navigation, lists, loading, menus and form controls are missing.
 
@@ -80,7 +80,7 @@ Goal: let an AI answer the common UI words of app development with a standard co
 - Done: register the patterns the format can't express yet as recipe contracts with gaps and no starter, so an AI gives a standard answer ("the host does this part") instead of improvising: dropdown / popover menu and FAB speed dial (sequence, stagger), list insert / remove / reorder (collection coordination), spinner, skeleton shimmer and typing indicator (continuous motion), hide-on-scroll navigation (scroll direction), stack push / pop, full-screen modal, shared-element and drawer transitions (screen composition), pinch-zoom image viewer (multi-pointer), free-scrolling carousel (decay).
 - Done: gap-only contracts use `"starter": null` in catalog version 2, gap capabilities are a fixed list, and `nudg recipe` marks them and refuses `--source` with the gaps. Decisions in [Design](design.md#recipes-without-a-starter).
 - Count gaps across the catalog (`nudg recipe --gaps`) and promote the most needed one into the queue below. After registration: screen composition 4, continuous motion 4 (one a workaround), sequence 3, stagger 3, decay 2, others 1. Sequence and stagger together cover four recipes. The nine starter recipes needed no new capability, so the counts stood.
-- Done: continuous motion was promoted and implemented as format 0.10 loops; with `delay` it also covers the typing indicator's stagger. Then screen composition (4) was tried and needed only measured map values, format 0.11; its four recipes have starters. Then sequence and stagger became a per-property delay, format 0.12. Counts now: decay 2, collection coordination 1, multi-pointer 1, scroll direction 1.
+- Done: continuous motion was promoted and implemented as format 0.10 loops; with `delay` it also covers the typing indicator's stagger. Then screen composition (4) was tried and needed only measured map values, format 0.11; its four recipes have starters. Then sequence and stagger became a per-property delay, format 0.12. Then scroll direction (0.15) and decay (0.16) followed. Counts now: collection coordination 1, multi-pointer 1.
 
 Done when: the catalog names every pattern above, each either with a validated starter or with explicit gaps, and the queue's next primitive is chosen from the gap counts.
 
@@ -121,7 +121,7 @@ Goal: deepen the interaction and motion language where current recipes demonstra
 | Pausable timers | Toast dismissal and video control auto-hide pause for focus, hover, scrubbing or app suspension | Implemented for format 0.7 with deterministic remaining-time semantics |
 | Keyframes | Reaction bursts and authored validation shakes need more than one kick | Implemented for format 0.8 as transient entry effects with deterministic interruption and reduced motion |
 | Sequence | Accordion, menu and speed dial | Implemented as format 0.12 motion delay |
-| Decay | Free-scrolling carousel variants need inertial travel before snapping | Define velocity, bounds and interruption across platforms |
+| Decay | Free-scrolling carousel and image viewer pan | Implemented as format 0.16 `glide`, with the same momentum as `nearest` |
 | Continuous active motion | Spinner, skeleton, typing indicator and pull-to-refresh | Implemented as format 0.10 loops, with wrap on exit and a per-loop delay |
 | Scroll direction and velocity | App bars can map position but cannot hide on down and reveal on up | Generalize as derived continuous inputs, not a header-only feature |
 
@@ -134,7 +134,7 @@ Done when: the highest-value current recipes no longer need duplicated layout co
 Goal: deliver the original stage 2 scope with patterns proven in app workflows.
 
 - Build onboarding, modal flows, screen transitions and collection insertion/removal/reorder examples. Use them to establish requirements for data inputs and composing machines beyond today's nested states.
-- Add decay / inertia for fling and scroll-like motion without snap points.
+- Done in format 0.16: decay as `glide`, for fling and scroll-like motion without snap points.
 - Add small compositional primitives where real patterns need them: `delay`, `sequence`, or `stagger`.
 - Explore reusable behavior composition for patterns such as toast = presence + timer + dismiss + hover pause.
 - Done in format 0.10: loops for spinners, shimmers and typing dots. Marquees and loops that run a fixed number of times wait for a pattern.
@@ -142,7 +142,7 @@ Goal: deliver the original stage 2 scope with patterns proven in app workflows.
 
 Done when: screen-level and collection-level interactions can be expressed without one-off host code for the motion logic.
 
-Other existing candidates remain in [Design's open questions](design.md#open-questions), including cross-level transitions, a final-state marker, per-property reduced motion, discrete commit steps, nonlinear rubber banding, neighbor-limited snapping, multi-pointer gestures, motion overrides and schemes. They are retained design questions; a real pattern determines their priority. Decay may move forward if dogfooding needs it before screen composition.
+Other existing candidates remain in [Design's open questions](design.md#open-questions), including cross-level transitions, a final-state marker, per-property reduced motion, discrete commit steps, nonlinear rubber banding, neighbor-limited snapping, multi-pointer gestures, motion overrides and schemes. They are retained design questions; a real pattern determines their priority.
 
 ## 1.0: Stable Web and React Core
 

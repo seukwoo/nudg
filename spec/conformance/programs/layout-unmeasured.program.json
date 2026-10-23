@@ -1,5 +1,5 @@
 {
- "nudgProgram": 5,
+ "nudgProgram": 6,
  "version": "0.4",
  "targets": [
   "seg1",
@@ -73,6 +73,7 @@
      }
     ],
     "follow": [],
+    "glide": [],
     "enter": [],
     "loop": [],
     "when": [],
@@ -111,6 +112,7 @@
      }
     ],
     "follow": [],
+    "glide": [],
     "enter": [],
     "loop": [],
     "when": [],
@@ -149,6 +151,7 @@
      }
     ],
     "follow": [],
+    "glide": [],
     "enter": [],
     "loop": [],
     "when": [],

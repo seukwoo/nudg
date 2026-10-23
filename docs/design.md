@@ -258,6 +258,15 @@ Status: implemented. Hide-on-scroll needed the scroll's direction, and a voice U
 - **Fires on entering, re-arms on leaving.** A level that stays loud fires once; a toggling pair (`>0.6` speaking, `<0.3` quiet) gives hysteresis by choosing two values.
 - **Scroll direction is a built-in pair of events**, with an 8-unit turn threshold measured from the furthest point, so a finger's wobble or an elastic bounce doesn't flip a bar. Direction plus a crossing near the top covers hide-on-scroll; velocity was not needed.
 
+## Glide: decay with the same momentum as nearest (format 0.16)
+
+Status: implemented. A free-scrolling carousel and an image viewer's pan need a released value to travel on and slow down with no target to settle at. Snapping was already covered: `nearest` projects where a throw is heading as velocity × momentum.
+
+- **Exponential decay with the same constant.** The glide's time constant is the `momentum` that `nearest` uses, so a glide stops exactly where `nearest` would have projected. One number means "how far a throw carries" everywhere, and 0.5 s is close to a native scroll view's normal deceleration.
+- **A state-level `glide`, like `follow`.** The state that follows the finger hands over to the state that glides; the gliding state is where the value rests, so leaving it is a choice the file makes, not something the glide forces.
+- **Bounds settle with the property's spring.** Reaching a bound hands the remaining speed to the same motion that `animate` gives the property, so the end feels like the rest of the component; there is no separate rubber-band parameter.
+- **Not under reduced motion's control.** The travel is the user's own throw; only the settling at a bound becomes the short tween.
+
 ## Type-safe host contracts
 
 Status: implemented as `nudg generate` and the `nudg_generate` MCP tool.
@@ -321,7 +330,6 @@ These are unresolved design choices. Scheduling and completion status live in th
 - Layout: formats 0.4, 0.6 and 0.9 implement measurement, arithmetic and measured follow/map endpoints. Measuring across players remains open.
 - Pattern metadata currently lives in the versioned external recipe catalog. Revisit a file-level role such as `"role": "bottom-sheet"` only if generation or validation needs cannot be met without changing runtime documents.
 - Pattern aliases and locale: how to map common design words such as FAB, snackbar, toast, tabs, tab bar, bottom nav, GNB, LNB and side nav without making the core format depend on one design system's names.
-- Decay (fling, inertia) as a motion of its own, for scroll-like content without snap points. Snapping is covered by `nearest`.
 - Reduced motion inside the format: a way for a file to say which properties must not be reduced (a progress bar's width), beyond the runtime's blanket option.
 - Discrete steps for `commit` (a slider that snaps to 10s), beyond `min`/`max`.
 - Nonlinear rubber banding that depends on the view's size, instead of the linear `overdrag` factor.

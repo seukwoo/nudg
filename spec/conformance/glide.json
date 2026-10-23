@@ -1,0 +1,194 @@
+{
+  "conformance": "0.16",
+  "name": "Glide: a released value slows down by itself, travelling velocity \u00d7 momentum; past a bound it settles there with its spring; it rests when what is left is under 0.001",
+  "doc": {
+    "nudg": "0.16",
+    "targets": [
+      "strip"
+    ],
+    "values": {
+      "strip.x": 0
+    },
+    "animate": {
+      "strip.x": {
+        "spring": {
+          "duration": 0.4,
+          "bounce": 0
+        }
+      }
+    },
+    "initial": "free",
+    "states": {
+      "free": {
+        "glide": {
+          "strip.x": {
+            "momentum": 0.4,
+            "range": [
+              -300,
+              0
+            ]
+          }
+        },
+        "when": {
+          "strip.dragstart": "dragging"
+        }
+      },
+      "dragging": {
+        "follow": {
+          "strip.x": {
+            "input": "strip.drag.x",
+            "range": [
+              -300,
+              0
+            ],
+            "overdrag": 0.3
+          }
+        },
+        "when": {
+          "strip.dragend": "free"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "free"
+        ],
+        "values": {
+          "strip.x": 0
+        },
+        "resting": true
+      }
+    },
+    {
+      "t": 0.1,
+      "send": "strip.dragstart"
+    },
+    {
+      "t": 0.12,
+      "input": "strip.drag.x",
+      "value": -20
+    },
+    {
+      "t": 0.15,
+      "input": "strip.drag.x",
+      "value": -50
+    },
+    {
+      "t": 0.15,
+      "send": "strip.dragend"
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "state": [
+          "free"
+        ],
+        "values": {
+          "strip.x": -97.001238966
+        }
+      }
+    },
+    {
+      "t": 0.3,
+      "expect": {
+        "state": [
+          "free"
+        ],
+        "values": {
+          "strip.x": -175.084288484
+        }
+      }
+    },
+    {
+      "t": 0.6,
+      "expect": {
+        "values": {
+          "strip.x": -308.741019549
+        }
+      }
+    },
+    {
+      "t": 0.8,
+      "expect": {
+        "values": {
+          "strip.x": -301.687755717
+        }
+      }
+    },
+    {
+      "t": 1.4,
+      "expect": {
+        "values": {
+          "strip.x": -300.000453356
+        }
+      }
+    },
+    {
+      "t": 2.0,
+      "send": "strip.dragstart"
+    },
+    {
+      "t": 2.05,
+      "input": "strip.drag.x",
+      "value": 5
+    },
+    {
+      "t": 2.1,
+      "input": "strip.drag.x",
+      "value": 10
+    },
+    {
+      "t": 2.1,
+      "send": "strip.dragend"
+    },
+    {
+      "t": 2.2,
+      "expect": {
+        "values": {
+          "strip.x": -281.152031323
+        },
+        "resting": false
+      }
+    },
+    {
+      "t": 2.5,
+      "expect": {
+        "values": {
+          "strip.x": -264.715177647
+        },
+        "resting": false
+      }
+    },
+    {
+      "t": 6.328654,
+      "expect": {
+        "resting": false
+      }
+    },
+    {
+      "t": 6.348654,
+      "expect": {
+        "resting": true
+      }
+    },
+    {
+      "t": 7.0,
+      "send": "strip.dragstart"
+    },
+    {
+      "t": 7.0,
+      "expect": {
+        "state": [
+          "dragging"
+        ],
+        "values": {
+          "strip.x": -250.000191405
+        }
+      }
+    }
+  ]
+}

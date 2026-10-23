@@ -602,21 +602,21 @@
       "inputs": ["image.drag.x", "image.drag.y"],
       "hostResponsibilities": ["Load the full-resolution image, clamp panning to the image bounds, and restore focus to the thumbnail on close."],
       "motion": ["Scale about the pinch center, pan with momentum inside the bounds, spring back from over-zoom, and follow a downward swipe to dismiss."],
-      "gaps": [{ "capability": "multi-pointer", "status": "missing", "need": "Pinch scale and its center come from two pointers." }, { "capability": "decay", "status": "missing", "need": "A pan released with speed glides before stopping at the bounds." }]
+      "gaps": [{ "capability": "multi-pointer", "status": "missing", "need": "Pinch scale and its center come from two pointers." }]
     },
     {
       "id": "free-scroll-carousel",
       "aliases": ["momentum carousel", "free scrolling carousel", "inertial scroller"],
       "summary": "A horizontal strip that glides after a fling and may settle on an item edge.",
-      "starter": null,
-      "examples": [],
+      "starter": "free-scroll-carousel",
+      "examples": ["free-scroll-carousel"],
       "parts": { "required": ["strip", "item"], "optional": ["page indicator"] },
-      "states": ["idle", "dragging", "gliding"],
+      "states": ["free", "dragging"],
       "events": ["strip.dragstart", "strip.dragend"],
       "inputs": ["strip.drag.x"],
       "hostResponsibilities": ["Provide item content and measurements, and keep keyboard and screen-reader scrolling working."],
-      "motion": ["Follow the drag, then glide with the release velocity, decelerating to a stop or to the nearest item edge."],
-      "gaps": [{ "capability": "decay", "status": "missing", "need": "Inertial travel from the release velocity needs a motion that decelerates without a fixed target." }]
+      "motion": ["Follow the drag, then glide (format 0.16) with the release velocity, travelling velocity × momentum and settling with the spring at either measured end; for stopping on an item edge, use the carousel's nearest with the same momentum."],
+      "gaps": []
     }
   ]
 }

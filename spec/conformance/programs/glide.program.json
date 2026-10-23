@@ -1,0 +1,87 @@
+{
+ "nudgProgram": 6,
+ "version": "0.16",
+ "targets": [
+  "strip"
+ ],
+ "properties": [
+  {
+   "key": "strip.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "strip.x",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 246.74011002723395,
+    "damping": 31.41592653589793,
+    "mass": 1
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "free",
+  "states": [
+   {
+    "name": "free",
+    "set": [],
+    "measure": [],
+    "follow": [],
+    "glide": [
+     {
+      "key": "strip.x",
+      "momentum": 0.4,
+      "range": [
+       -300,
+       0
+      ]
+     }
+    ],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "strip.dragstart",
+      "animate": [],
+      "to": "dragging"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "dragging",
+    "set": [],
+    "measure": [],
+    "follow": [
+     {
+      "key": "strip.x",
+      "input": "strip.drag.x",
+      "overdrag": 0.3,
+      "range": [
+       -300,
+       0
+      ]
+     }
+    ],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "strip.dragend",
+      "animate": [],
+      "to": "free"
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

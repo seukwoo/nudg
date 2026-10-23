@@ -1,5 +1,5 @@
 {
- "nudgProgram": 5,
+ "nudgProgram": 6,
  "version": "0.15",
  "targets": [
   "scroller",
@@ -37,6 +37,7 @@
        "set": [],
        "measure": [],
        "follow": [],
+       "glide": [],
        "enter": [],
        "loop": [],
        "when": [
@@ -60,6 +61,7 @@
        ],
        "measure": [],
        "follow": [],
+       "glide": [],
        "enter": [],
        "loop": [],
        "when": [
@@ -92,6 +94,7 @@
        "set": [],
        "measure": [],
        "follow": [],
+       "glide": [],
        "enter": [],
        "loop": [],
        "when": [
@@ -115,6 +118,7 @@
        ],
        "measure": [],
        "follow": [],
+       "glide": [],
        "enter": [],
        "loop": [],
        "when": [
@@ -136,6 +140,7 @@
        "set": [],
        "measure": [],
        "follow": [],
+       "glide": [],
        "enter": [],
        "loop": [],
        "when": [

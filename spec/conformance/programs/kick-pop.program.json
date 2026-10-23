@@ -1,5 +1,5 @@
 {
- "nudgProgram": 5,
+ "nudgProgram": 6,
  "version": "0.1",
  "targets": [
   "heart"
@@ -49,6 +49,7 @@
     "set": [],
     "measure": [],
     "follow": [],
+    "glide": [],
     "enter": [],
     "loop": [],
     "when": [
@@ -72,6 +73,7 @@
     ],
     "measure": [],
     "follow": [],
+    "glide": [],
     "enter": [
      {
       "key": "heart.scale",

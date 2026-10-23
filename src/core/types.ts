@@ -122,6 +122,17 @@ export interface Follow {
   overdrag: number;
 }
 
+/**
+ * A property that keeps the velocity it had on entering the state and slows down by itself
+ * (v0.16): it travels velocity × momentum in all, like `nearest`'s projection, and settles
+ * at a range bound with its own motion if it reaches one.
+ */
+export interface Glide {
+  /** Seconds: the time constant of the slowdown. Larger glides further. */
+  momentum: number;
+  range?: [MeasuredEndpoint, MeasuredEndpoint];
+}
+
 export interface Transition {
   /** The target state, unless `nearest` picks it, or the transition only steps (v0.3). */
   to?: string;
@@ -154,6 +165,8 @@ export interface State {
   /** Entries of `set` that are measured (v0.4); their `set` value is a placeholder. */
   measure: Map<string, Measure>;
   follow: Map<string, Follow>;
+  /** Properties that glide on with their velocity while the state is active (v0.16). */
+  glide: Map<string, Glide>;
   enter: Map<string, EntryEffect>;
   /** Periodic offsets while the state is active (v0.10). */
   loop: Map<string, Loop>;

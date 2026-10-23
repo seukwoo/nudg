@@ -1,5 +1,5 @@
 {
- "nudgProgram": 5,
+ "nudgProgram": 6,
  "version": "0.6",
  "targets": [
   "sheet",
@@ -57,6 +57,7 @@
     "set": [],
     "measure": [],
     "follow": [],
+    "glide": [],
     "enter": [],
     "loop": [],
     "when": [
@@ -101,6 +102,7 @@
      }
     ],
     "follow": [],
+    "glide": [],
     "enter": [],
     "loop": [],
     "when": [],

@@ -1,5 +1,5 @@
 {
- "nudgProgram": 5,
+ "nudgProgram": 6,
  "version": "0.8",
  "targets": [
   "field"
@@ -33,6 +33,7 @@
     "set": [],
     "measure": [],
     "follow": [],
+    "glide": [],
     "enter": [],
     "loop": [],
     "when": [],
@@ -43,6 +44,7 @@
     "set": [],
     "measure": [],
     "follow": [],
+    "glide": [],
     "enter": [
      {
       "key": "field.x",

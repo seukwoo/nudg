@@ -250,6 +250,24 @@
       ]
     },
     {
+      "id": "free-scroll-carousel",
+      "recipe": "free-scroll-carousel",
+      "title": "Free-scrolling carousel",
+      "category": "lists",
+      "tags": [
+        "drag",
+        "follow",
+        "glide",
+        "measure"
+      ],
+      "html": "free-scroll-carousel.html",
+      "summary": "Fling the strip and it glides on with your finger's speed, slowing to a stop wherever that takes it; at either end it settles with its spring instead of overshooting.",
+      "prompts": [
+        "Make it glide further after a fling.",
+        "Make it stop sooner, like a heavier strip."
+      ]
+    },
+    {
       "id": "pull-to-refresh",
       "recipe": "pull-to-refresh",
       "title": "Pull to refresh",

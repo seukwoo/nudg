@@ -1,0 +1,93 @@
+// compose/src/main/kotlin/dev/nudg/compose/Nudg.kt
+class NudgState internal constructor(program: Program, state: List<String>, reducedMotion: Boolean, exit: List<String>
+    val runtime
+    var values: Map<String, Value> by mutableStateOf(runtime.sample(0.0))
+    var state: List<String> by mutableStateOf(runtime.state())
+    var present: Boolean by mutableStateOf(true)
+    fun send(event: String): Boolean
+    fun input(name: String, value: Double): Boolean
+fun rememberNudg(
+fun Modifier.nudg(state: NudgState, name: String): Modifier
+fun Modifier.nudgPress(state: NudgState, name: String): Modifier
+fun Modifier.nudgKeys(state: NudgState, name: String): Modifier
+fun Modifier.nudgLayout(state: NudgState, name: String): Modifier
+// nudg/src/main/kotlin/dev/nudg/Json.kt
+// nudg/src/main/kotlin/dev/nudg/Lifecycle.kt
+class Lifecycle(private val runtime: Runtime, exit: List<String>
+    var onState: ((List<String>) -> Unit)?
+    var onSettle: ((List<String>) -> Unit)?
+    var onExit: (() -> Unit)?
+    var present
+    fun changed()
+    fun frame(at: Double): Boolean
+// nudg/src/main/kotlin/dev/nudg/Math.kt
+// nudg/src/main/kotlin/dev/nudg/Pointer.kt
+const val DRAG_SLOP
+val Program.handledEvents: Set<String>
+val Program.pinchableTargets: Set<String>
+val Program.draggableTargets: Set<String>
+data class PinchInputs(val scale: Double, val rotation: Double, val x: Double, val y: Double)
+fun nudgPinchInputs(start: List<Pair<Double, Double>>, now: List<Pair<Double, Double>>): PinchInputs
+class PointerTracker(
+fun nudgKeyName(key: String)
+// nudg/src/main/kotlin/dev/nudg/Program.kt
+enum class PropertyKind
+sealed interface Ease
+    data object Linear : Ease
+    data class Bezier(val x1: Double, val y1: Double, val x2: Double, val y2: Double) : Ease
+sealed interface Motion
+    val delay: Double
+    data class Spring(val stiffness: Double, val damping: Double, val mass: Double, val kick: Double?, override val delay: Double
+    data class Tween(val duration: Double, val ease: Ease, override val delay: Double
+data class Keyframe(val at: Double, val value: List<Double>)
+sealed interface EntryEffect
+    data class Kick(val motion: Motion) : EntryEffect
+    data class Keyframes(val frames: List<Keyframe>, val duration: Double, val ease: Ease) : EntryEffect
+data class Measure(val target: String, val of: String, val times: Double, val plus: Double)
+data class InputTarget(val input: String, val times: Double, val plus: Double)
+sealed interface MeasuredEndpoint
+    data class Number(val value: Double) : MeasuredEndpoint
+    data class Measured(val measure: Measure) : MeasuredEndpoint
+data class Loop(val to: MeasuredEndpoint, val frames: List<Pair<Double, MeasuredEndpoint>>, val duration: Double, val ease: Ease, val delay: Double, val wrap: Double?)
+sealed interface MapValue
+    data class Channels(val values: List<Double>) : MapValue
+    data class Measured(val measure: Measure) : MapValue
+data class PropertyMap(val source: String, val sourceKind: String, val from: List<MeasuredEndpoint>, val to: List<MapValue>)
+data class Property(val kind: PropertyKind, val base: List<Double>, val map: PropertyMap?, val measure: Measure?, val min: Double?, val max: Double?)
+data class Follow(val input: String, val range: Pair<MeasuredEndpoint, MeasuredEndpoint>?, val overdrag: Double, val multiply: Boolean
+data class Glide(val momentum: Double, val range: Pair<MeasuredEndpoint, MeasuredEndpoint>?)
+data class Nearest(val states: List<String>, val by: String, val momentum: Double)
+class Transition(val to: String?, val nearest: Nearest?, val animate: List<Pair<String, Motion>>, val step: List<Pair<String, Double>>?, val commit: List<String>?)
+data class TimerPause(val on: String, val off: String)
+class Timer(val key: String, val delay: Double, val transition: Transition, val pause: List<TimerPause>)
+class State(
+val name: String,
+val set: List<Pair<String, List<Double>>>,
+val measure: Map<String, Measure>,
+val input: Map<String, InputTarget>,
+val follow: List<Pair<String, Follow>>,
+val glide: List<Pair<String, Glide>>,
+val enter: List<Pair<String, EntryEffect>>,
+val loop: List<Pair<String, Loop>>,
+val `when`: List<Pair<String, Transition>>,
+val timers: List<Timer>,
+val machine: Machine?,
+sealed class Machine
+    class States(val initial: String, val states: List<State>, val `when`: List<Pair<String, Transition>>) : Machine()
+        fun state(name: String)
+    class Regions(val regions: List<Pair<String, Machine>>) : Machine()
+class Program(val version: String, val targets: List<String>, val properties: List<Pair<String, Property>>, val animate: Map<String, Motion>, val machine: Machine)
+    fun property(key: String): Property
+// nudg/src/main/kotlin/dev/nudg/Runtime.kt
+sealed interface Value
+    data class Number(val value: Double) : Value
+    data class Color(val hex: String) : Value
+class Runtime(val program: Program, state: List<String>
+    fun send(event: String, t: Double): Boolean
+    fun input(name: String, value: Double, t: Double): Boolean
+    fun sample(t: Double): Map<String, Value>
+    fun state(): List<String>
+    fun settled(t: Double, property: String?
+    fun resting(t: Double): Boolean
+    fun time(): Double
+    fun looping(): Boolean

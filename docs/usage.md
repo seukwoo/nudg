@@ -258,7 +258,7 @@ nudg has one contract for anything that writes or edits its files, an AI coding 
 | Part | Where | What it promises |
 |---|---|---|
 | JSON Schema | `@nudg/core/schema.json` (the latest format), `spec/nudg-<format>.schema.json` for each format | Structure and vocabulary for completion and early checks. Put `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.0.schema.json"` in a file to get it in any JSON editor. |
-| Validator | `nudg validate`, `nudg_validate`, `compile()` | The authority: every problem has a stable `code`, a JSON pointer `path` and a `hint` that says how to fix it. Codes are part of the spec and covered by the conformance suite, so an agent can rely on them across releases. |
+| Validator | `nudg validate`, `nudg_validate`, `compile()` | The authority: every problem has a stable `code`, a JSON pointer `path` and a `hint` that says how to fix it. Codes are listed in [the error reference](errors.md), part of the spec and covered by the conformance suite, so an agent can rely on them across releases. |
 | Agent guide | `@nudg/core/guide.md`, `nudg_guide` | The format on one page, and which field each feel word changes ("bouncier" is `bounce`). It is versioned with the package and describes the formats this package accepts. |
 | Recipes | `@nudg/core/recipes.json`, `nudg recipe`, `nudg_recipe` | Interaction contracts for UI words (sheet, toast, video chat): parts, states, events, inputs, host duties, known gaps and a validated starter. |
 | Judge loop | `nudg skill`, the MCP server's instructions | When to validate, critique, compare against `HEAD` and observe the real page, so the person judges by looking. |

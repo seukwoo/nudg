@@ -118,11 +118,13 @@ function swiftSurface(): string {
 /** Top-level and member declarations that aren't private or internal (Kotlin's default is public). */
 function kotlinSurface(): string {
   const lines: string[] = [];
-  const decl = /^(?:(?:public|data|sealed|enum|inline|value|abstract|open|override|operator|const|lateinit|private|internal|protected)\s+)*(fun|class|interface|object|val|var|typealias)\b/;
+  const decl = /^(?:(?:public|data|sealed|enum|inline|value|abstract|open|override|operator|const|lateinit|private|internal|protected|companion)\s+)*(fun|class|interface|object|val|var|typealias)\b/;
   for (const file of ["nudg", "compose"].flatMap((module) => files(join(ROOT, "kotlin", module, "src/main/kotlin"), ".kt")).sort()) {
     lines.push(`// ${relative(join(ROOT, "kotlin"), file)}`);
     // What each open brace opened: a visible type's body holds members; a hidden type's or any other body doesn't.
     const stack: ("type" | "hidden" | "other")[] = [];
+    // A type whose header spans lines (`class X(` … `) {`) opens its body on a later line.
+    let pending: "type" | "hidden" | undefined;
     let comment = false;
     for (const raw of readFileSync(file, "utf8").split("\n")) {
       const line = raw.replace(/"(?:[^"\\]|\\.)*"/g, '""').replace(/\/\/.*$/, "");
@@ -137,9 +139,13 @@ function kotlinSurface(): string {
       if (visible && stack.every((s) => s === "type")) {
         lines.push(`${"    ".repeat(stack.length)}${t.replace(/\s*\{.*$/, "").replace(/\s+=\s+[^=].*$/, "")}`);
       }
+      const isType = kind && ["class", "interface", "object"].includes(kind) && !line.includes("fun ");
+      if (isType && !line.includes("{") && line.trimEnd().endsWith("(")) pending = visible ? "type" : "hidden";
       for (const ch of line) {
-        if (ch === "{") stack.push(kind && ["class", "interface", "object"].includes(kind) && !line.includes("fun ") ? (visible ? "type" : "hidden") : "other");
-        else if (ch === "}") stack.pop();
+        if (ch === "{") {
+          stack.push(isType ? (visible ? "type" : "hidden") : pending ?? "other");
+          pending = undefined;
+        } else if (ch === "}") stack.pop();
       }
     }
   }

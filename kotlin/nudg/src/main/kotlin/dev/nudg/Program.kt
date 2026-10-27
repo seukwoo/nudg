@@ -79,7 +79,10 @@ class Program(val version: String, val targets: List<String>, val properties: Li
         /** Reads `nudg compile` output. */
         fun decode(text: String): Program {
             @Suppress("UNCHECKED_CAST")
-            val j = Json.parse(text) as Map<String, Any?>
+            return fromJson(Json.parse(text) as Map<String, Any?>)
+        }
+
+        internal fun fromJson(j: Map<String, Any?>): Program {
             require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0)) { "Not a compiled nudg program (formats 1 to 8). Compile it with `nudg compile`." }
             val properties = list(j["properties"]).map { p ->
                 obj(p).let { m ->

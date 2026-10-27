@@ -5,7 +5,7 @@
 import Foundation
 import Nudg
 import NudgConformanceSuite
-import NudgSwiftUI
+@testable import NudgSwiftUI
 import SwiftUI
 import XCTest
 
@@ -133,4 +133,114 @@ final class SwiftUITests: XCTestCase {
     XCTAssertEqual(model.state, ["on"])
   }
   #endif
+}
+
+@MainActor
+final class CompareTests: XCTestCase {
+  private var wall = Date(timeIntervalSinceReferenceDate: 1000)
+
+  private func session() throws -> CompareSession {
+    let comparison = try Comparison.decode(Data(contentsOf: conformance.appendingPathComponent("programs/toggle-bouncier.compare.json")))
+    return CompareSession(comparison, wall: { [unowned self] in self.wall })
+  }
+
+  private func at(_ s: CompareSession, _ seconds: Double) {
+    wall = wall.addingTimeInterval(seconds - s.elapsed)
+    s.pump()
+  }
+
+  private func x(_ model: NudgModel) -> Double { model.values(at: model.now)["knob.x"]?.number ?? .nan }
+
+  func testTheBundleFromTheCliDecodes() throws {
+    let c = try session().comparison
+    XCTAssertEqual(c.labels.0, "now")
+    XCTAssertEqual(c.labels.1, "bouncier")
+    XCTAssertTrue(c.headline.hasPrefix("A clear change: knob.x"))
+    XCTAssertEqual(c.steps.count, 1)
+    XCTAssertEqual(c.steps[0].t, 0.1)
+    XCTAssertEqual(c.a.targets, ["knob", "track"])
+  }
+
+  func testBothPlayTheEventsOnOneTimelineAndDifferAsTheVerdictSays() throws {
+    let s = try session()
+    at(s, 0.05)
+    XCTAssertEqual(s.a.state, ["off"])
+    at(s, 0.1)
+    XCTAssertEqual(s.a.state, ["on"])
+    XCTAssertEqual(s.b.state, ["on"])
+    // The verdict: "differs by up to 5.92 units at 0.26s".
+    at(s, 0.26)
+    XCTAssertEqual(x(s.b) - x(s.a), 5.92, accuracy: 0.05)
+    at(s, 1.52)
+    XCTAssertEqual(x(s.a), 20, accuracy: 0.01)
+    XCTAssertEqual(x(s.b), 20, accuracy: 0.05)
+  }
+
+  func testATapOnOneSideHappensOnTheOther() throws {
+    let s = try session()
+    at(s, 0.2)
+    s.b.send("track.tap")
+    XCTAssertEqual(s.a.state, ["off"])
+    XCTAssertEqual(s.b.state, ["off"])
+  }
+
+  func testSlowMotionSlowsTheSharedClock() throws {
+    let s = try session()
+    s.speed = 0.25
+    let before = s.elapsed
+    wall = wall.addingTimeInterval(0.4)
+    XCTAssertEqual(s.elapsed - before, 0.1, accuracy: 1e-9)
+  }
+
+  func testItStartsOverOnceBothHaveRested() throws {
+    let s = try session()
+    at(s, 0.5)
+    let first = s.a
+    at(s, s.comparison.until + CompareSession.pause + 0.01)
+    XCTAssertFalse(first === s.a)
+    XCTAssertEqual(s.a.state, ["off"])
+    XCTAssertEqual(s.elapsed, 0, accuracy: 1e-9)
+  }
+
+  /** The whole view, drawn at the moment the two differ most, for a person (or an agent) to look at. */
+  func testTheViewRendersBothSides() throws {
+    let s = try session()
+    at(s, 0.1)
+    at(s, 0.26)
+    let view = NudgCompare(session: s) { model in
+      ZStack(alignment: .leading) {
+        Capsule().fill(Color.gray.opacity(0.3)).frame(width: 52, height: 32).nudg(model, "track").nudgPress(model, "track")
+        Circle().fill(Color.white).frame(width: 24, height: 24).padding(4).nudg(model, "knob")
+      }
+    }
+    .frame(width: 390)
+    let renderer = ImageRenderer(content: view)
+    renderer.scale = 2
+    let image = try XCTUnwrap(renderer.cgImage)
+    XCTAssertGreaterThan(image.width, 600)
+    // Each side's knob, measured from its own track: the right one overshoots ~5.9 pt further.
+    let w = image.width, h = image.height
+    var px = [UInt8](repeating: 0, count: w * h * 4)
+    let context = try XCTUnwrap(CGContext(data: &px, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+    context.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+    func knob(in xs: Range<Int>) -> Double? {
+      // The track's middle row (the knob's centre); on it, the white run's centre from the track's left edge.
+      let green = { (x: Int, y: Int) in let i = (y * w + x) * 4; return px[i + 1] > 150 && px[i] < 150 && px[i + 2] < 160 }
+      let white = { (x: Int, y: Int) in let i = (y * w + x) * 4; return px[i] > 240 && px[i + 1] > 240 && px[i + 2] > 240 }
+      let rows = (0..<h).filter { y in xs.contains { green($0, y) } }
+      guard let top = rows.first, let bottom = rows.last else { return nil }
+      let y = (top + bottom) / 2
+      guard let left = xs.first(where: { green($0, y) }) else { return nil }
+      let whites = xs.filter { $0 > left && white($0, y) }
+      guard let first = whites.first, let last = whites.last else { return nil }
+      return Double(first + last) / 2 / 2 - Double(left) / 2
+    }
+    let a = try XCTUnwrap(knob(in: 0..<w / 2)), b = try XCTUnwrap(knob(in: w / 2..<w))
+    XCTAssertEqual(b - a, x(s.b) - x(s.a), accuracy: 1.5, "the drawn knobs differ as the runtime says")
+    if let out = ProcessInfo.processInfo.environment["NUDG_RENDER_OUT"] {
+      let dest = try XCTUnwrap(CGImageDestinationCreateWithURL(URL(fileURLWithPath: out) as CFURL, "public.png" as CFString, 1, nil))
+      CGImageDestinationAddImage(dest, image, nil)
+      XCTAssertTrue(CGImageDestinationFinalize(dest))
+    }
+  }
 }

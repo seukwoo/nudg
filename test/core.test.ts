@@ -340,3 +340,25 @@ test("compare frame times include where the versions differ most", async () => {
   assert.ok(times.includes(0.3) && times.includes(0.38), "the event and 80 ms after it are frames");
   assert.deepEqual(times, [...times].sort((x, y) => x - y));
 });
+
+test("compare --bundle writes what NudgCompare plays: both programs, the events, the verdict", () => {
+  const dir = mkdtempSync(join(tmpdir(), "nudg-bundle-"));
+  try {
+    const base = JSON.parse(readFileSync(`${root}examples/toggle.nudg.json`, "utf8"));
+    base.animate["knob.x"].spring.bounce = 0.6;
+    const b = join(dir, "bouncier.nudg.json");
+    writeFileSync(b, JSON.stringify(base));
+    const out = join(dir, "toggle.compare.json");
+    const run = (...args: string[]) => spawnSync(process.execPath, [`${root}src/cli.ts`, "compare", `${root}examples/toggle.nudg.json`, ...args], { encoding: "utf8" });
+    const r = run(b, "--send", "track.tap@0.1", "--labels", "now,bouncier", "--bundle", out);
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /wrote .*toggle\.compare\.json — play it in the app: NudgCompare/);
+    const bundle = JSON.parse(readFileSync(out, "utf8"));
+    assert.match(bundle.headline, /^A clear change/);
+    assert.deepEqual(bundle.events, [{ t: 0.1, event: "track.tap" }]);
+    assert.equal(bundle.b.animate.find((m: any) => m.key === "knob.x").motion.kind, "spring");
+    assert.equal(run(b, "--bundle", out, "--html", "x.html").status, 2, "--bundle stands alone");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

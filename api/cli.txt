@@ -42,6 +42,9 @@ simulate and plot options
   compare <file> --before <rev>
                             The same, against the file as it was at a git revision (HEAD,
                             HEAD~1, a branch): no copy of the "before" to keep around.
+  compare <a> <b> --bundle <x.compare.json>
+                            For SwiftUI and Compose: both versions compiled with the events and
+                            the verdict, for NudgCompare to play side by side in the app.
   render <file>             Draw real frames of the component with headless Chrome, as one
                             filmstrip PNG. Uses the page's markup and styles; its scripts don't run.
   compile <file> [--out x]  The file compiled for a native runtime (Swift, Kotlin): validated,

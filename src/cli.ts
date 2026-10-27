@@ -4,7 +4,7 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, extname, join } from "node:path";
-import { compare, compareFrameTimes } from "./core/compare.ts";
+import { compare, compareBundle, compareFrameTimes } from "./core/compare.ts";
 import { contract, contractModule } from "./core/contract.ts";
 import { critique } from "./core/critique.ts";
 import { programToJson } from "./core/program-json.ts";
@@ -82,6 +82,9 @@ simulate and plot options
   compare <file> --before <rev>
                             The same, against the file as it was at a git revision (HEAD,
                             HEAD~1, a branch): no copy of the "before" to keep around.
+  compare <a> <b> --bundle <x.compare.json>
+                            For SwiftUI and Compose: both versions compiled with the events and
+                            the verdict, for NudgCompare to play side by side in the app.
   render <file>             Draw real frames of the component with headless Chrome, as one
                             filmstrip PNG. Uses the page's markup and styles; its scripts don't run.
   compile <file> [--out x]  The file compiled for a native runtime (Swift, Kotlin): validated,
@@ -378,6 +381,22 @@ async function compareCommand(args: Args, json: boolean): Promise<number> {
   let html = args.flags.get("html")?.at(-1);
   let out = args.flags.get("out")?.at(-1);
   const url = args.flags.get("url")?.at(-1);
+  const bundle = args.flags.get("bundle")?.at(-1);
+  if (bundle) {
+    // For a native app: the comparison as data, played on the app's own views.
+    if (url || html || out) fail("--bundle writes the comparison for a native player on its own; drop --url, --html and --out.");
+    if (extname(bundle).toLowerCase() !== ".json") fail("--bundle writes JSON: use a name like toggle.compare.json.");
+    if (!comparison.identical) writeFileSync(bundle, JSON.stringify(compareBundle(comparison, a.program!, b.program!, options, labels)) + "\n");
+    logged();
+    if (json) {
+      const { a: _a, b: _b, ...rest } = comparison;
+      process.stdout.write(JSON.stringify({ ok: true, ...rest, bundle: comparison.identical ? undefined : bundle }, null, 2) + "\n");
+    } else {
+      process.stdout.write(formatComparison(comparison, labels) + "\n");
+      process.stdout.write(comparison.identical ? "\nNothing written: the two versions behave identically under these events.\n" : `\nwrote ${bundle} — play it in the app: NudgCompare (SwiftUI, Compose) shows ${labels[0]} and ${labels[1]} side by side on your own views, with the same events, replay and slow motion\n`);
+    }
+    return 0;
+  }
   let snapshotHtml: string | undefined;
   const notes: string[] = [];
   if (url) {

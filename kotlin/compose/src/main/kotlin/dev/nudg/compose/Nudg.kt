@@ -58,8 +58,13 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     private val lifecycle = Lifecycle(runtime, exit)
     internal var onSettle: ((List<String>) -> Unit)? = null
     internal var onExit: (() -> Unit)? = null
-    private var startNanos = -1L
+    private var lastNanos = -1L
     private var lastTime = 0.0
+    /** How fast time runs: 1, or slower in NudgCompare's slow motion. */
+    internal var speed = 1.0
+    /** What NudgCompare mirrors into the other version: every event and input sample sent here. */
+    internal var onSend: ((String) -> Unit)? = null
+    internal var onInput: ((String, Double) -> Unit)? = null
 
     /** The values at the last frame. */
     var values: Map<String, Value> by mutableStateOf(runtime.sample(0.0))
@@ -90,11 +95,12 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     internal fun time(nanos: Long): Double {
         // Resuming after idle continues the timeline where it stopped, so a motion started
         // by the event that woke it doesn't skip the time spent idle.
-        if (startNanos < 0 || idle) {
-            startNanos = nanos - (lastTime * 1e9).toLong()
+        if (lastNanos < 0 || idle) {
+            lastNanos = nanos
             idle = false
         }
-        lastTime = maxOf(lastTime, (nanos - startNanos) / 1e9)
+        lastTime += maxOf(0L, nanos - lastNanos) / 1e9 * speed
+        lastNanos = nanos
         return lastTime
     }
 
@@ -110,6 +116,7 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     fun send(event: String): Boolean {
         val handled = runtime.send(event, lastTime)
         changed()
+        onSend?.invoke(event)
         return handled
     }
 
@@ -117,6 +124,7 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     fun input(name: String, value: Double): Boolean {
         val used = runtime.input(name, value, lastTime)
         changed()
+        onInput?.invoke(name, value)
         return used
     }
 
@@ -127,6 +135,14 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     }
 
     internal val isMoving get() = moving
+
+    /** Draws frames while something moves; a send or input wakes it again. Runs until cancelled. */
+    internal suspend fun play() {
+        while (true) {
+            snapshotFlow { isMoving }.first { it }
+            withFrameNanos { frame(it) }
+        }
+    }
 
     internal fun number(name: String, property: String, default: Double) = (values["$name.$property"] as? Value.Number)?.value ?: default
 }
@@ -159,13 +175,7 @@ fun rememberNudg(
     val nudg = remember(program) { NudgState(program, state, reducedMotion, exit) }
     nudg.onSettle = onSettle
     nudg.onExit = onExit
-    LaunchedEffect(nudg) {
-        // Frames run while something moves; a send or input wakes the loop again.
-        while (true) {
-            snapshotFlow { nudg.isMoving }.first { it }
-            withFrameNanos { nudg.frame(it) }
-        }
-    }
+    LaunchedEffect(nudg) { nudg.play() }
     return nudg
 }
 

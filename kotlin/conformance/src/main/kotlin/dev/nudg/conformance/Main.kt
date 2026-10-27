@@ -1,5 +1,6 @@
 package dev.nudg.conformance
 
+import dev.nudg.Comparison
 import dev.nudg.Program
 import dev.nudg.Runtime
 import dev.nudg.Value
@@ -104,6 +105,18 @@ fun main(args: Array<String>) {
         frames(4.0)
         if (once && settles == listOf(listOf("on"), listOf("off")) && exits == 1 && !life.present) { passed++; println("ok    lifecycle: one settle per rest, exit once the exit state settled") }
         else { failures.add("lifecycle"); println("FAIL  lifecycle: settles $settles, exits $exits, present ${life.present}") }
+    }
+
+    // The comparison bundle `nudg compare --bundle` writes: both versions under its events
+    // differ the way its verdict says ("differs by up to 5.92 units at 0.26s").
+    run {
+        val c = Comparison.decode(File(dir, "programs/toggle-bouncier.compare.json").readText())
+        val (a, b) = Runtime(c.a, c.start, c.reducedMotion) to Runtime(c.b, c.start, c.reducedMotion)
+        for (step in c.steps) for (rt in listOf(a, b)) if (step is Comparison.Step.Event) rt.send(step.name, step.t)
+        fun x(rt: Runtime, t: Double) = (rt.sample(t)["knob.x"] as Value.Number).value
+        val gap = x(b, 0.26) - x(a, 0.26)
+        if (c.labels == ("now" to "bouncier") && c.headline.startsWith("A clear change") && kotlin.math.abs(gap - 5.92) < 0.05) { passed++; println("ok    compare bundle: decodes, and B leads A by ${"%.2f".format(gap)} at 0.26 s as its verdict says") }
+        else { failures.add("compare bundle"); println("FAIL  compare bundle: labels ${c.labels}, gap $gap") }
     }
 
     println("\n$passed passed, ${failures.size} failed")

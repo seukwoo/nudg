@@ -7,7 +7,7 @@ import { dirname, extname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { compile, type CompileResult } from "../core/compile.ts";
-import { compare, compareFrameTimes } from "../core/compare.ts";
+import { compare, compareBundle, compareFrameTimes } from "../core/compare.ts";
 import { createRuntime } from "../core/runtime.ts";
 import { actionTarget, actionsToEvents, judgeHost } from "../core/observe.ts";
 import { contract, contractModule } from "../core/contract.ts";
@@ -41,7 +41,7 @@ const PACKAGE_VERSION: string = (() => {
 
 const INSTRUCTIONS = `nudg files (*.nudg.json) describe UI interactions: states, events, and spring or tween motion.
 When the person names a standard UI pattern such as a switch, sheet, video chat, or media player, call nudg_recipe first. It gives the expected parts, states, events, host responsibilities, motion and a validated starter without expanding the runtime vocabulary. If you haven't written a nudg file before, call nudg_guide. After any edit, call nudg_validate and apply its hints until it reports no errors.
-When you change motion for a person to judge, call nudg_compare with the version before and after: it says first whether the difference is perceptible, then shows both side by side (real A/B filmstrips when the host page's HTML is given). Pass its headline on to the person; if it suggests an exaggerated version, offer that. When nudg_compare says a change has taken several rounds, ask the person once whether they'd share what made it hard; if they agree, call nudg_share with their words and give them the link (they submit it; never claim it was sent). After writing or changing a file, call nudg_critique once and fix its warnings: it checks the motion against the platforms' guidelines (too slow, late press feedback, invisible, bouncy fades, slow exits). Use nudg_simulate for numbers, nudg_plot for one version's graph, nudg_render for one version's frames. The file says what should happen; nudg_observe says what the real page showed: after wiring a file into an app, or when the person says it doesn't look right, call it with the running page's URL and the file, and report what it found (a page that never shows the motion, an element that unmounts mid-motion, a CSS transition fighting the spring).`;
+When you change motion for a person to judge, call nudg_compare with the version before and after: it says first whether the difference is perceptible, then shows both side by side (real A/B filmstrips when the host page's HTML is given; in a SwiftUI or Compose app, bundle writes it for NudgCompare to play on the app's own views). Pass its headline on to the person; if it suggests an exaggerated version, offer that. When nudg_compare says a change has taken several rounds, ask the person once whether they'd share what made it hard; if they agree, call nudg_share with their words and give them the link (they submit it; never claim it was sent). After writing or changing a file, call nudg_critique once and fix its warnings: it checks the motion against the platforms' guidelines (too slow, late press feedback, invisible, bouncy fades, slow exits). Use nudg_simulate for numbers, nudg_plot for one version's graph, nudg_render for one version's frames. The file says what should happen; nudg_observe says what the real page showed: after wiring a file into an app, or when the person says it doesn't look right, call it with the running page's URL and the file, and report what it found (a page that never shows the motion, an element that unmounts mid-motion, a CSS transition fighting the spring).`;
 
 type Json = Record<string, unknown>;
 type Content = { type: "text"; text: string } | { type: "image"; data: string; mimeType: string };
@@ -156,6 +156,7 @@ const TOOLS = [
         frames: { type: "integer", minimum: 1, maximum: 60, description: "Evenly spaced frames when `at` is not given. Default 6." },
         ...timing,
         out: { type: "string", description: "Also save the picture here (.png; .svg for the graph)." },
+        bundle: { type: "string", description: "For a SwiftUI or Compose app: write the comparison (both versions compiled, the events, the verdict) to this .compare.json, for NudgCompare to play side by side on the app's own views. Put it in the app's resources or assets. Instead of html, url and out." },
       },
       required: [],
     },
@@ -488,6 +489,18 @@ async function compareToolInner(args: Json, revDirs: string[]): Promise<ToolResu
   const text0 = `${labels[0]}: ${a.label}  ${labels[1]}: ${b.label}\n\n${formatComparison(comparison, labels)}`;
   const { a: _a, b: _b, ...structured } = comparison;
   const out = optionalString(args.out, "out");
+  const bundle = optionalString(args.bundle, "bundle");
+  if (bundle) {
+    // For a native app: the comparison as data, for NudgCompare to play on the app's own views.
+    if (args.url !== undefined || args.html !== undefined) throw new ToolError("bundle is for SwiftUI and Compose apps; drop url and html.");
+    if (!bundle.toLowerCase().endsWith(".json")) throw new ToolError("bundle writes JSON: use a name like toggle.compare.json.");
+    if (comparison.identical) return { content: [text(`${text0}\n\nNothing written: the two versions behave identically under these events, so there is nothing to look at.`)], structuredContent: structured as unknown as Json };
+    writeFileSync(resolve(bundle), JSON.stringify(compareBundle(comparison, a.program, b.program, options, labels)) + "\n");
+    return {
+      content: [text(`${text0}\n\nWrote ${resolve(bundle)}. Tell the person to look at it in the app: NudgCompare (SwiftUI, or Compose) plays ${labels[0]} (before) and ${labels[1]} (the change) side by side on their own views, in a loop, with ¼× and ⅒× slow motion; a tap on either side happens on both. Say what the headline says in one sentence.`)],
+      structuredContent: { ...(structured as unknown as Record<string, Json>), bundle: resolve(bundle) },
+    };
+  }
   const chrome = findChrome();
   let html = optionalString(args.html, "html");
   const url = optionalString(args.url, "url");

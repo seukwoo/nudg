@@ -1,3 +1,24 @@
+// Nudg/Comparison.swift
+public struct Comparison
+public enum Step
+public var t: Double
+public struct PropertyVerdict
+public let property: String
+public let verdict: String
+public let summary: String
+public let labels: (String, String)
+public let headline: String
+public let suggestion: String?
+public let properties: [PropertyVerdict]
+public let steps: [Step]
+public let start: [String]
+public let reducedMotion: Bool
+public let until: Double
+public let a: Program
+public let b: Program
+public enum DecodeError: Error, CustomStringConvertible
+public var description: String
+public static func decode(_ data: Data) throws -> Comparison
 // Nudg/Lifecycle.swift
 public final class Lifecycle
 public var onState: (([String]) -> Void)?
@@ -144,3 +165,7 @@ public struct NudgLayout: ViewModifier
 public func body(content: Content) -> some View
 public extension View
 public extension Color
+// NudgSwiftUI/NudgCompare.swift
+public struct NudgCompare<Content: View>: View
+public init(_ comparison: Comparison, @ViewBuilder content: @escaping (NudgModel) -> Content)
+public var body: some View

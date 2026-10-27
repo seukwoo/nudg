@@ -302,6 +302,15 @@ playsnack's review of 0.12 found the gap: its loading dots pulse opacity, and un
 - **Opted into by version.** 1.0 promised that a 1.0 file's meaning never changes, and the reduced-motion rules are part of that meaning, so a file gets the new rule by declaring 1.1; `nudg upgrade` does that. Compiled programs already carry the file's version, so the program format stays 8, and a 1.0 runtime given a 1.1 program falls back to stopping the fade, the old and safe behavior.
 - **Only loops.** Entry keyframes and kicks on opacity are one-off accents; nothing has needed them under reduced motion. A spinner whose only signal is a turn still shows nothing under reduced motion; its recipe asks the host for a busy label, and a starter that wants a visible signal can add an opacity pulse.
 
+## Judging on native: the comparison travels as data
+
+On the web, `compare` shows the real component by snapshotting it from the running page. A SwiftUI or Compose view can't be snapshotted from outside the app, and the CLI can't compile the app's view code, so the person working on a native app had graphs and numbers but nothing to look at.
+
+- **The app plays it, not the tool.** `nudg compare --bundle` writes the comparison as data: both versions compiled (the same program format runtimes already read), the events, and the verdict. `NudgCompare` takes it and a closure that builds the app's own view for one player, and plays two players side by side. What the person sees is their component, not a stand-in.
+- **The same promises as the web page.** The headline first, before on the left, the change on the right, a loop with a pause at rest, Replay, ¼× and ⅒× (one shared clock that runs slow), and whatever the person does on one side happens on the other. Layout reports stay each side's own.
+- **Where it runs is the host's choice.** A SwiftUI preview or a Compose debug screen; nothing is added to release builds unless the app puts it there. The views take the player as a parameter instead of creating it, which is also what makes them testable.
+- **Verdict from one place.** The sentence is computed by the reference tools and carried in the bundle; native code doesn't reimplement perception thresholds.
+
 ## Type-safe host contracts
 
 Status: implemented as `nudg generate` and the `nudg_generate` MCP tool.

@@ -12,6 +12,26 @@ fun Modifier.nudg(state: NudgState, name: String): Modifier
 fun Modifier.nudgPress(state: NudgState, name: String): Modifier
 fun Modifier.nudgKeys(state: NudgState, name: String): Modifier
 fun Modifier.nudgLayout(state: NudgState, name: String): Modifier
+// compose/src/main/kotlin/dev/nudg/compose/NudgCompare.kt
+fun NudgCompare(comparison: Comparison, modifier: Modifier
+// nudg/src/main/kotlin/dev/nudg/Comparison.kt
+class Comparison(
+val labels: Pair<String, String>,
+val headline: String,
+val suggestion: String?,
+val properties: List<PropertyVerdict>,
+val steps: List<Step>,
+val start: List<String>,
+val reducedMotion: Boolean,
+val until: Double,
+val a: Program,
+val b: Program,
+    sealed class Step(val t: Double)
+        class Event(t: Double, val name: String) : Step(t)
+        class Input(t: Double, val name: String, val value: Double) : Step(t)
+    class PropertyVerdict(val property: String, val verdict: String, val summary: String)
+    companion object
+        fun decode(text: String): Comparison
 // nudg/src/main/kotlin/dev/nudg/Json.kt
 // nudg/src/main/kotlin/dev/nudg/Lifecycle.kt
 class Lifecycle(private val runtime: Runtime, exit: List<String>
@@ -30,6 +50,10 @@ val Program.draggableTargets: Set<String>
 data class PinchInputs(val scale: Double, val rotation: Double, val x: Double, val y: Double)
 fun nudgPinchInputs(start: List<Pair<Double, Double>>, now: List<Pair<Double, Double>>): PinchInputs
 class PointerTracker(
+    fun down(x: Double, y: Double, id: Int
+    fun move(x: Double, y: Double, id: Int
+    fun up(inside: Boolean
+    fun cancel()
 fun nudgKeyName(key: String)
 // nudg/src/main/kotlin/dev/nudg/Program.kt
 enum class PropertyKind
@@ -73,12 +97,15 @@ val loop: List<Pair<String, Loop>>,
 val `when`: List<Pair<String, Transition>>,
 val timers: List<Timer>,
 val machine: Machine?,
+    fun transition(event: String)
 sealed class Machine
     class States(val initial: String, val states: List<State>, val `when`: List<Pair<String, Transition>>) : Machine()
         fun state(name: String)
     class Regions(val regions: List<Pair<String, Machine>>) : Machine()
 class Program(val version: String, val targets: List<String>, val properties: List<Pair<String, Property>>, val animate: Map<String, Motion>, val machine: Machine)
     fun property(key: String): Property
+    companion object
+        fun decode(text: String): Program
 // nudg/src/main/kotlin/dev/nudg/Runtime.kt
 sealed interface Value
     data class Number(val value: Double) : Value

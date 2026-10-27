@@ -97,6 +97,30 @@ nudg compare toggle.nudg.json toggle-bouncier.nudg.json --send track.tap@0.05 --
 
 `compare.html` plays A and B side by side on the real markup, with the same events, in a loop, with the live values under each. Buttons: replay the events, **press both** (a tap on both at once on the first target the file lets you press, with a 0.3 s or 1 s hold), speed 1× / ¼× / ⅒×, pause. The stages also respond to your own taps and drags. The runtime is inlined from the package's build, so the file works offline and from any folder; from a clone, run `npm run build` first, or the page loads the runtime from unpkg.
 
+**In a SwiftUI or Compose app.** There is no page to snapshot, so the comparison travels as data and plays on the app's own view:
+
+```sh
+nudg compare Toggle.nudg.json --before HEAD --send track.tap@0.1 --bundle Resources/Toggle.compare.json
+```
+
+The bundle holds both versions compiled, the events and the verdict. `NudgCompare` plays it in a preview or a debug screen: the headline first, then before and after side by side through your own view, in a loop, a tap or drag on either side happening on both, with Replay and ¼× / ⅒× slow motion.
+
+```swift
+#Preview {
+  NudgCompare(try! Comparison.decode(Data(contentsOf: Bundle.main.url(forResource: "Toggle.compare", withExtension: "json")!))) { model in
+    ToggleView(model: model)   // your view, taking the player instead of creating it
+  }
+}
+```
+
+```kotlin
+NudgCompare(Comparison.decode(assets.open("toggle.compare.json").bufferedReader().readText())) { state ->
+    Toggle(state)
+}
+```
+
+Over MCP the same is `bundle`. Two versions that behave identically write nothing. Checked on an iOS simulator (both sides drawn where the runtime says, a tap mirrored, slow motion, the loop) and on an Android emulator (the same, measured from the drawn pixels).
+
 Each property gets a verdict: **imperceptible** (under a device pixel at 1×, or under about three frames), **subtle**, or **clear**. When nothing crosses the threshold it says so and proposes the next turn: look at an exaggerated version first, then dial it back. With `--html` the picture is real A/B filmstrips in two rows, same markup, same moments; without it, both curves on one graph (solid A, dashed B). `--labels now,bouncier` names the rows.
 
 ### critique
@@ -428,7 +452,7 @@ struct Toggle: View {
 }
 ```
 
-- `.nudg(model, "knob")` applies a target's values (offset, rotation, scale, opacity, size, background color) every frame through `TimelineView`. `.nudgPress(model, "track")` handles press and drag by the same rules as the web (`down`, `up`, `tap`; `dragstart`, `drag.x` / `drag.y`, `dragend` for targets the file drags). When the file handles the target's tap, `.nudgPress` adds its accessibility action, so VoiceOver can activate it (the role and label stay yours). `.nudgKeys(model, "thumb")` sends `target.key.<name>` while focused, for the keys the file listens for. `.nudgLayout(model, "tab2")` reports the view's frame for `measure`.
+- `.nudg(model, "knob")` applies a target's values (offset, rotation, scale, opacity, size, background color) every frame through `TimelineView`. `.nudgPress(model, "track")` handles press and drag by the same rules as the web (`down`, `up`, `tap`; `dragstart`, `drag.x` / `drag.y`, `dragend` for targets the file drags). When the file handles the target's tap, `.nudgPress` adds its accessibility action, so VoiceOver can activate it (the role and label stay yours). `.nudgKeys(model, "thumb")` sends `target.key.<name>` while focused, for the keys the file listens for. `.nudgLayout(model, "tab2")` reports the view's frame for `measure`. `NudgCompare(comparison) { model in ... }` plays a `nudg compare --bundle` side by side ([compare](#compare)).
 - `model.send("host.show")`, `model.state`, and Reduce Motion from the system on iOS. `NudgModel(program, exit: ["hidden"], onSettle: { states in ... }, onExit: { ... })` and `model.present` follow the same lifecycle rules as every adapter; the CI check covers a settle after an interrupted toggle and an exit.
 - The runtime passes the whole conformance suite from `spec/conformance/programs/` (`swift run NudgConformance ../spec/conformance`), and CI also renders a toggle with SwiftUI's `ImageRenderer` and checks the knob is where the runtime says.
 - Checked on an iOS simulator: `swift/test-ios.sh` runs the conformance suite, renders a SwiftUI toggle and reads its pixels before and after a tap, checks one settle per rest and the exit, and activates the toggle the way VoiceOver does; CI runs it on every change. `swift test` runs the same on the Mac.
@@ -452,7 +476,7 @@ Box(Modifier.size(52.dp, 32.dp).nudg(toggle, "track").nudgPress(toggle, "track")
 }
 ```
 
-- `Modifier.nudg(state, "knob")` reads values inside a graphics layer (offset in dp, rotation, scale, opacity), a layout block (width, height) and a draw block (color), so a frame redraws or relayouts what moves and never recomposes. `nudgPress` handles press and drag by the same rules as every adapter (`down`, `up` or `cancel`, `tap`; `dragstart`, `drag.x` / `drag.y` in dp, `dragend` for targets the file drags); `nudgKeys` sends `target.key.<name>` while focused; `nudgLayout` (before `nudg` in the chain) reports the untransformed box for `measure`.
+- `Modifier.nudg(state, "knob")` reads values inside a graphics layer (offset in dp, rotation, scale, opacity), a layout block (width, height) and a draw block (color), so a frame redraws or relayouts what moves and never recomposes. `nudgPress` handles press and drag by the same rules as every adapter (`down`, `up` or `cancel`, `tap`; `dragstart`, `drag.x` / `drag.y` in dp, `dragend` for targets the file drags); `nudgKeys` sends `target.key.<name>` while focused; `nudgLayout` (before `nudg` in the chain) reports the untransformed box for `measure`. `NudgCompare(comparison) { state -> ... }` plays a `nudg compare --bundle` side by side ([compare](#compare)); the demo's `CompareActivity` shows it.
 - `state.send("host.show")`, `state.state`, and `reducedMotion`, by default the system's "Remove animations" setting (`systemReducedMotion()`). When the file handles a target's tap, `nudgPress` gives it a click action, so TalkBack can activate it; the role and label stay yours. `rememberNudg(program, exit = listOf("hidden"), onExit = { ... }, onSettle = { states -> ... })` and `state.present` follow the same lifecycle rules as every adapter.
 - The runtime passes the whole conformance suite (`./gradlew :conformance:run`, also in CI). The `demo` app (`./gradlew :demo:installDebug`, with `sdk.dir` in `kotlin/local.properties`) plays the web examples' toggle and press; checked on an Android emulator.
 - `./gradlew :demo:connectedDebugAndroidTest` drives the demo on a running emulator with real touch input: a tap turns the toggle on, a drag across turns the drag toggle on without a tap, two fingers pinch an image to 3x and the zoom stays, an accessibility click (what TalkBack sends) turns the toggle on, and "Remove animations" reads as reduced motion. Checked on Android 16. Not yet: Maven distribution.

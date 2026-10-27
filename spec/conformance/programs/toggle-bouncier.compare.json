@@ -1,0 +1,248 @@
+{
+ "nudgCompare": 1,
+ "labels": [
+  "now",
+  "bouncier"
+ ],
+ "headline": "A clear change: knob.x moves up to 5.9 units differently, settles 0.68 s later, overshoot 0.6 → 5.1 units.",
+ "properties": [
+  {
+   "property": "knob.x",
+   "verdict": "clear",
+   "summary": "knob.x: differs by up to 5.92 units at 0.26s (clear); overshoot 0.57 → 5.08 units; at rest 0.83s → 1.51s (clear)."
+  },
+  {
+   "property": "track.color",
+   "verdict": "imperceptible",
+   "summary": "track.color: identical."
+  }
+ ],
+ "events": [
+  {
+   "t": 0.1,
+   "event": "track.tap"
+  }
+ ],
+ "reducedMotion": false,
+ "until": 1.525,
+ "a": {
+  "nudgProgram": 8,
+  "version": "0.1",
+  "targets": [
+   "knob",
+   "track"
+  ],
+  "properties": [
+   {
+    "key": "knob.x",
+    "kind": "length",
+    "base": [
+     0
+    ]
+   },
+   {
+    "key": "track.color",
+    "kind": "color",
+    "base": [
+     0.8716813285508724,
+     -0.0018876580530055032,
+     -0.009145881284123858,
+     1
+    ]
+   }
+  ],
+  "animate": [
+   {
+    "key": "knob.x",
+    "motion": {
+     "kind": "spring",
+     "stiffness": 322.27279677026473,
+     "damping": 26.927937030769655,
+     "mass": 1
+    }
+   },
+   {
+    "key": "track.color",
+    "motion": {
+     "kind": "tween",
+     "duration": 0.2,
+     "ease": [
+      0,
+      0,
+      0.58,
+      1
+     ]
+    }
+   }
+  ],
+  "machine": {
+   "kind": "states",
+   "initial": "off",
+   "states": [
+    {
+     "name": "off",
+     "set": [],
+     "measure": [],
+     "input": [],
+     "follow": [],
+     "glide": [],
+     "enter": [],
+     "loop": [],
+     "when": [
+      {
+       "event": "track.tap",
+       "animate": [],
+       "to": "on"
+      }
+     ],
+     "timers": []
+    },
+    {
+     "name": "on",
+     "set": [
+      {
+       "key": "knob.x",
+       "value": [
+        20
+       ]
+      },
+      {
+       "key": "track.color",
+       "value": [
+        0.8003487736930357,
+        -0.16031666057205773,
+        0.08628181815167235,
+        1
+       ]
+      }
+     ],
+     "measure": [],
+     "input": [],
+     "follow": [],
+     "glide": [],
+     "enter": [],
+     "loop": [],
+     "when": [
+      {
+       "event": "track.tap",
+       "animate": [],
+       "to": "off"
+      }
+     ],
+     "timers": []
+    }
+   ],
+   "when": []
+  }
+ },
+ "b": {
+  "nudgProgram": 8,
+  "version": "0.1",
+  "targets": [
+   "knob",
+   "track"
+  ],
+  "properties": [
+   {
+    "key": "knob.x",
+    "kind": "length",
+    "base": [
+     0
+    ]
+   },
+   {
+    "key": "track.color",
+    "kind": "color",
+    "base": [
+     0.8716813285508724,
+     -0.0018876580530055032,
+     -0.009145881284123858,
+     1
+    ]
+   }
+  ],
+  "animate": [
+   {
+    "key": "knob.x",
+    "motion": {
+     "kind": "spring",
+     "stiffness": 322.27279677026473,
+     "damping": 14.361566416410483,
+     "mass": 1
+    }
+   },
+   {
+    "key": "track.color",
+    "motion": {
+     "kind": "tween",
+     "duration": 0.2,
+     "ease": [
+      0,
+      0,
+      0.58,
+      1
+     ]
+    }
+   }
+  ],
+  "machine": {
+   "kind": "states",
+   "initial": "off",
+   "states": [
+    {
+     "name": "off",
+     "set": [],
+     "measure": [],
+     "input": [],
+     "follow": [],
+     "glide": [],
+     "enter": [],
+     "loop": [],
+     "when": [
+      {
+       "event": "track.tap",
+       "animate": [],
+       "to": "on"
+      }
+     ],
+     "timers": []
+    },
+    {
+     "name": "on",
+     "set": [
+      {
+       "key": "knob.x",
+       "value": [
+        20
+       ]
+      },
+      {
+       "key": "track.color",
+       "value": [
+        0.8003487736930357,
+        -0.16031666057205773,
+        0.08628181815167235,
+        1
+       ]
+      }
+     ],
+     "measure": [],
+     "input": [],
+     "follow": [],
+     "glide": [],
+     "enter": [],
+     "loop": [],
+     "when": [
+      {
+       "event": "track.tap",
+       "animate": [],
+       "to": "off"
+      }
+     ],
+     "timers": []
+    }
+   ],
+   "when": []
+  }
+ }
+}

@@ -286,7 +286,7 @@ Status: implemented. The image viewer was the last gap: a pinch's scale, turn an
 
 ## 1.0: what is stable
 
-Status: in progress (see the [roadmap](roadmap.md#now-10-stable-on-every-platform)).
+Status: complete in 1.0.0 (see the [roadmap](roadmap.md#completed-10-stable-on-every-platform)).
 
 - **The format becomes "1.0".** 0.18's semantics are frozen under `"nudg": "1.0"`, so a file says plainly that it uses the stable format. Every 0.x file keeps working unchanged: runtimes read all of them, and `nudg upgrade` only raises the version string once the file validates, since every 0.x addition is a superset of the one before.
 - **Within 1.x, everything only gains.** New fields, events, inputs and error codes may appear with a new 1.x version, as 0.x additions did; nothing a 1.0 file says changes meaning, no error code is renamed, and no exported API is removed or narrowed. A change that breaks waits for 2.0.

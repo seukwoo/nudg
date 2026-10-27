@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 1.0.0
+
+The stable release. Format 1.0 freezes 0.18's semantics, and the public surface is pinned by tests on every platform: validator codes, the conformance suite, the schema, compiled programs, and the APIs of `@nudg/core`, the CLI, the MCP tools, the Swift package and the Kotlin modules. The native runtimes are checked on an iOS simulator and an Android emulator.
+
+**Compatibility.** Within 1.x, files and APIs only gain: a 1.0 file means the same thing to every 1.x runtime, a code or API is never renamed, removed or given a new meaning, and new format features arrive as 1.x versions that a file opts into. Anything that would break waits for 2.0. Every 0.x file keeps working; `nudg upgrade` raises one to 1.0.
 
 - **Format 1.0.** The stable format: 0.18's semantics under `"nudg": "1.0"`. Every 0.x file keeps working; `nudg upgrade <file...>` raises a file to 1.0 once it validates, keeping the rest of its text, and `--check` fails CI on older files. Schema 1.0. The examples, motion libraries and presets declare 1.0; the speed dial gained Escape to close, which the critique asks of overlays from 0.3 on.
 - **Native, checked on devices.** The Swift package gained an XCTest suite (the conformance suite, a SwiftUI render checked pixel by pixel, the lifecycle) that runs on the Mac and, through `swift/test-ios.sh`, on an iOS simulator in CI. The Compose demo has instrumented tests that drive a tap, a drag and a two-finger pinch on an Android emulator. React Native's touch handling moved to a tested module.

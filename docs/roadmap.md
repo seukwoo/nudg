@@ -1,10 +1,10 @@
 # Roadmap
 
-nudg is early. The format can still change before 1.0, but the development direction is clear: make natural-language UI building produce standard, mobile-quality interactions instead of one-off motion guesses.
+nudg 1.0 is stable: within 1.x, files and APIs only gain. The development direction is clear: make natural-language UI building produce standard, mobile-quality interactions instead of one-off motion guesses.
 
 This is the single development plan for priorities, stage status and completion criteria. It consolidates the stages previously listed in the README and design doc, and the next steps previously kept in `CLAUDE.md`. Design rationale and unresolved technical choices stay in [Design](design.md#open-questions); implemented behavior is defined by [the spec](spec.md), and release history stays in the [changelog](../CHANGELOG.md). The [devlog](devlog.md) records findings at the time, not the current queue.
 
-The order below follows real app needs. Release numbers and dates are assigned when scope is established; the earlier 0.6-0.9 headings were provisional. Package and format versions are separate: package 0.14.0 ships format 0.18.
+The order below follows real app needs. Release numbers and dates are assigned when scope is established; the earlier 0.6-0.9 headings were provisional. Package and format versions are separate: package 1.0.0 ships format 1.0.
 
 ## Current Baseline
 
@@ -146,7 +146,7 @@ Done when: screen-level and collection-level interactions can be expressed witho
 
 Other existing candidates remain in [Design's open questions](design.md#open-questions), including cross-level transitions, a final-state marker, per-property reduced motion, discrete commit steps, nonlinear rubber banding, neighbor-limited snapping, gestures beyond a two-pointer pinch, motion overrides and schemes. They are retained design questions; a real pattern determines their priority.
 
-## Now: 1.0, Stable on Every Platform
+## Completed: 1.0, Stable on Every Platform
 
 Goal: a format and APIs other people can build on, on the web and natively, without churn. Decisions in [Design](design.md#10-what-is-stable).
 
@@ -154,12 +154,14 @@ Goal: a format and APIs other people can build on, on the web and natively, with
 - Done: frozen surface, checked by tests: every validator error code listed with its meaning ([errors](errors.md)); the conformance suite; the schema; the compiled program format; the public API of `@nudg/core` and its entry points, the CLI and MCP tools, the Swift package and the Kotlin modules, each against a committed snapshot in `api/`.
 - Done: one spec. The 0.x "Additions" sections are rewritten into a single [1.0 document](spec.md) organized by topic, with the [format history](spec.md#appendix-format-history) as an appendix.
 - Done: native checked for real. The Swift tests (conformance, a pixel-checked SwiftUI render, lifecycle) run on an iOS simulator, in CI too; the Compose demo is driven with real touch on an Android 16 emulator (tap, drag, two-finger pinch); React Native's multi-touch handling has a unit test.
-- Release 1.0.0, with the compatibility policy: within 1.x, files and APIs only gain; anything that breaks waits for 2.0.
+- Done in 1.0.0: the release, with the compatibility policy: within 1.x, files and APIs only gain; anything that breaks waits for 2.0.
 - Revisit semantic role metadata in files only if external recipe metadata proves insufficient; external metadata is the current decision.
 
 Done when: a user can adopt nudg in a production web, React, iOS or Android component and trust that the format and APIs will not churn under them.
 
-## After 1.0: Native and Beyond
+Status: complete in 1.0.0.
+
+## Now: After 1.0, Native and Beyond
 
 Goal: make the same interaction intent portable beyond web.
 

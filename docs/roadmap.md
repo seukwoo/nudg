@@ -167,6 +167,7 @@ Goal: make the same interaction intent portable beyond web.
 
 - Done: activation is a tap on every platform. VoiceOver, TalkBack and React Native screen readers activate a target whose tap the file handles, as keyboards and screen readers do on the web; Compose follows the system's "Remove animations" as reduced motion. Checked on an iOS simulator and an Android emulator. Decisions in [Design](design.md#activation-is-a-tap-on-every-platform).
 - Done: format 1.1, reduced motion keeps fades. Under reduced motion an opacity loop keeps playing, so a loading pulse keeps signalling; loops that move still stop. Found by playsnack's 0.12 review. Decisions in [Design](design.md#reduced-motion-keeps-fades-format-11).
+- Done: judging on native. `nudg compare --bundle` (MCP `bundle`) writes a comparison that `NudgCompare` plays side by side on the app's own SwiftUI or Compose view, with the headline, a loop, mirrored taps and slow motion. Checked on an iOS simulator and an Android emulator. Decisions in [Design](design.md#judging-on-native-the-comparison-travels-as-data).
 - Harden native host guidance and accessibility behavior beyond what 1.0 checks.
 - A portable core, possibly Rust/WASM/FFI, if maintaining multiple runtimes becomes expensive.
 - Native-specific host guidance for focus, accessibility, gesture systems, and reduced motion.

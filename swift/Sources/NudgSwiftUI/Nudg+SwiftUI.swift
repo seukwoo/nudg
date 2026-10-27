@@ -24,6 +24,9 @@ public final class NudgModel: ObservableObject {
   private let lifecycle: Lifecycle
   // Views read values while SwiftUI updates them; what they report is published afterwards.
   private var inFrame = false
+  /** What NudgCompare mirrors into the other version: every event and input sample sent here. */
+  var onSend: ((String) -> Void)?
+  var onInput: ((String, Double) -> Void)?
 
   /**
    * `exit` names the states that mean the component is gone ("hidden"): `present` turns false
@@ -73,6 +76,7 @@ public final class NudgModel: ObservableObject {
     let handled = (try? runtime.send(event, at: time(at: clock()))) ?? false
     changed()
     objectWillChange.send()
+    onSend?(event)
     return handled
   }
 
@@ -82,6 +86,7 @@ public final class NudgModel: ObservableObject {
     let used = (try? runtime.input(name, value, at: time(at: clock()))) ?? false
     changed()
     objectWillChange.send()
+    onInput?(name, value)
     return used
   }
 

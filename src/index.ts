@@ -7,7 +7,7 @@ export type { PointerSink } from "./core/pointer.ts";
 export type { HeadlessOptions, HeadlessPlayer, InitialOptions, PlayerHost } from "./core/player.ts";
 export { programFromJson, programToJson, PROGRAM_FORMAT } from "./core/program-json.ts";
 export type { Runtime, Value } from "./core/runtime.ts";
-export { compare, compareFrameTimes, THRESHOLDS } from "./core/compare.ts";
+export { compare, compareBundle, compareFrameTimes, COMPARE_BUNDLE_FORMAT, THRESHOLDS } from "./core/compare.ts";
 export { contract, contractModule, contractName } from "./core/contract.ts";
 export type { Contract } from "./core/contract.ts";
 export { critique, measureTransitions } from "./core/critique.ts";

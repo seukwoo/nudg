@@ -131,6 +131,30 @@ test("compare returns a verdict and a picture", { skip: chrome ? false : "no Chr
   }
 });
 
+test("compare with bundle writes the comparison for a native player, and nothing when identical", async () => {
+  const base = JSON.parse(readFileSync(`${root}examples/toggle.nudg.json`, "utf8"));
+  const b = JSON.parse(JSON.stringify(base));
+  b.animate["knob.x"].spring.bounce = 0.5;
+  const path = `${root}examples/toggle.tmp.compare.json`;
+  try {
+    const result = await call("nudg_compare", { a: { file: "examples/toggle.nudg.json" }, b: { source: JSON.stringify(b) }, events: [{ event: "track.tap", t: 0.05 }], labels: ["now", "bouncier"], bundle: path });
+    assert.equal(result.isError, undefined, result.content[0].text);
+    assert.match(result.content[0].text, /NudgCompare/);
+    const bundle = JSON.parse(readFileSync(path, "utf8"));
+    assert.equal(bundle.nudgCompare, 1);
+    assert.deepEqual(bundle.labels, ["now", "bouncier"]);
+    assert.equal(bundle.headline, result.structuredContent.headline);
+    assert.deepEqual(bundle.events, [{ t: 0.05, event: "track.tap" }]);
+    assert.equal(bundle.a.nudgProgram, 8);
+    rmSync(path);
+    const same = await call("nudg_compare", { a: { file: "examples/toggle.nudg.json" }, b: { file: "examples/toggle.nudg.json" }, events: [{ event: "track.tap", t: 0.05 }], bundle: path });
+    assert.match(same.content[0].text, /Nothing written/);
+    assert.throws(() => readFileSync(path));
+  } finally {
+    rmSync(path, { force: true });
+  }
+});
+
 test("compare with before: the file at a git revision against the file on disk, no copy", async () => {
   const result = await call("nudg_compare", { file: "examples/toggle.nudg.json", before: "HEAD", events: [{ event: "track.tap", t: 0.05 }] });
   assert.equal(result.isError, undefined, result.content[0].text);

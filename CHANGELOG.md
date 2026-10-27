@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Judge a change on native.** `nudg compare a b --bundle x.compare.json` (MCP `bundle`) writes the comparison as data: both versions compiled, the events, the verdict. `NudgCompare` (SwiftUI and Compose) plays it on the app's own view, in a preview or a debug screen: the headline first, before and after side by side, in a loop, a tap on either side happening on both, Replay and ¼× / ⅒× slow motion. Checked on an iOS simulator and an Android emulator, down to where each knob is drawn. New API: `compareBundle`, `Comparison` (Swift, Kotlin), `NudgCompare`.
+- **The API snapshot sees Kotlin members after a multi-line class header.** `Program.decode` and `PointerTracker`'s methods were public in 1.0 but missing from `api/kotlin.txt`; nothing about them changed.
+
 ## 1.1.0
 
 Accessibility on every platform. Screen readers can activate native targets as they could on the web, Compose follows the system's "Remove animations", and format 1.1 keeps opacity loops under reduced motion so loading indicators keep signalling. Nothing breaks: 1.0 files keep 1.0's rules, and the public API only gains `systemReducedMotion()` on Compose.

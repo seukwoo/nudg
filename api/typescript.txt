@@ -1,6 +1,7 @@
 ## @nudg/core
 
 export interface AppearOptions { target?: string; scale?: number; rise?: number; motion?: SpringOptions; }
+export declare const COMPARE_BUNDLE_FORMAT = 1;
 export type Channels = number[];
 export interface Comparison { a: Simulation; b: Simulation; properties: PropertyDifference[]; verdict: Perceptibility; headline: string; suggestion?: string; identical: boolean; }
 export interface CompileResult { program?: Program; motions: Map<string, Motion>; diagnostics: Diagnostic[]; }
@@ -76,6 +77,7 @@ export declare function actionTarget(program: Program, action: string): string;
 export declare function actionsToEvents(targetOf: string | ((action: string) => string), marks: HostMark[]): { t: number; event: string; }[];
 export declare function appear(options?: AppearOptions): NudgDocument;
 export declare function compare(a: Program, b: Program, options: SimulateOptions): Comparison;
+export declare function compareBundle(c: Comparison, a: Program, b: Program, options: SimulateOptions, labels: [string, string]): Record<string, unknown>;
 export declare function compareFrameTimes(c: Comparison, evenly?: number): { times: number[]; marks: Record<string, string>; };
 export declare function compile(source: Source, readFile?: ReadFile): CompileResult;
 export declare function contract(program: Program): Contract;

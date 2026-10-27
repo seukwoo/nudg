@@ -3,6 +3,7 @@
 // show the change; this tells the judge where to look, or that there is nothing to see.
 
 import { hexToOklab } from "./color.ts";
+import { programToJson } from "./program-json.ts";
 import { simulate, type SimulateOptions, type Simulation } from "./simulate.ts";
 import type { Program } from "./types.ts";
 
@@ -194,4 +195,28 @@ function eventTimesOf(c: Comparison): number[] {
     last = now;
   }
   return out;
+}
+
+/** The format of a comparison bundle; native players read 1. */
+export const COMPARE_BUNDLE_FORMAT = 1;
+
+/**
+ * A comparison for native players (`nudg compare --bundle`): both versions compiled, the
+ * same events, and what the verdict says, so a SwiftUI or Compose view can play A and B
+ * side by side on the app's own views and caption them with the headline.
+ */
+export function compareBundle(c: Comparison, a: Program, b: Program, options: SimulateOptions, labels: [string, string]): Record<string, unknown> {
+  return {
+    nudgCompare: COMPARE_BUNDLE_FORMAT,
+    labels,
+    headline: c.headline,
+    ...(c.suggestion ? { suggestion: c.suggestion } : {}),
+    properties: c.properties.map((p) => ({ property: p.property, verdict: p.verdict, summary: p.summary })),
+    events: options.events.map((e) => ("event" in e ? { t: e.t, event: e.event } : { t: e.t, input: e.input, value: e.value })),
+    ...(options.start ? { start: options.start } : {}),
+    reducedMotion: options.reducedMotion === true,
+    until: Math.max(c.a.samples[c.a.samples.length - 1].t, c.b.samples[c.b.samples.length - 1].t),
+    a: programToJson(a),
+    b: programToJson(b),
+  };
 }

@@ -45,7 +45,7 @@ nudg describes a UI interaction in a small JSON file next to your component: its
 
 Everyday words map to single fields: *bouncier* is `bounce`, *slower* is `duration`. The component code doesn't change.
 
-And it shows you, without being asked. `nudg_compare` plays both versions under the same tap and says first whether you'd even notice (*"A clear change: knob.x moves up to 2.1 units differently, settles 0.23 s later"*, or *"Nothing a person will notice; look at an exaggerated version first"*), then lays real frames of before and after side by side. You judge by looking.
+And it shows you, without being asked. `nudg_compare` plays both versions under the same tap and says first whether you'd even notice (*"A clear change: knob.x moves up to 2.1 units differently, settles 0.23 s later"*, or *"Nothing a person will notice; look at an exaggerated version first"*), then lays real frames of before and after side by side: in the browser for web apps, and in SwiftUI and Compose on the app's own views. You judge by looking.
 
 ## A whole interaction in one file
 

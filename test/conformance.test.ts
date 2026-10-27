@@ -106,6 +106,9 @@ test("programs/ holds every case compiled by the current compiler (run spec/conf
   for (const [name, text] of compiledPrograms()) {
     assert.equal(readFileSync(new URL(`programs/${name}`, dir), "utf8"), text, `programs/${name} is out of date`);
   }
+  // The Compose demo plays the same bundle the Swift and Kotlin tests read.
+  const demo = new URL("../kotlin/demo/src/main/assets/toggle-bouncier.compare.json", import.meta.url);
+  assert.equal(readFileSync(demo, "utf8"), readFileSync(new URL("programs/toggle-bouncier.compare.json", dir), "utf8"), "copy programs/toggle-bouncier.compare.json to the demo's assets");
 });
 
 test("measured endpoints are reported as required layout inputs", () => {

@@ -165,6 +165,7 @@ Status: complete in 1.0.0.
 
 Goal: make the same interaction intent portable beyond web.
 
+- Done: activation is a tap on every platform. VoiceOver, TalkBack and React Native screen readers activate a target whose tap the file handles, as keyboards and screen readers do on the web; Compose follows the system's "Remove animations" as reduced motion. Checked on an iOS simulator and an Android emulator. Decisions in [Design](design.md#activation-is-a-tap-on-every-platform).
 - Harden native host guidance and accessibility behavior beyond what 1.0 checks.
 - A portable core, possibly Rust/WASM/FFI, if maintaining multiple runtimes becomes expensive.
 - Native-specific host guidance for focus, accessibility, gesture systems, and reduced motion.

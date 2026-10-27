@@ -128,3 +128,14 @@ test("React Native's touch lists drive the tracker: a tap, and a second finger t
     "image.up",
   ]);
 });
+
+test("React Native: screen readers activate a target whose tap the file handles, and only that", async () => {
+  const { activation } = await import("../src/native/touches.ts");
+  const sent: string[] = [];
+  const props = activation(new Set(["track.tap"]), "track", (e) => sent.push(e)) as { accessibilityActions: { name: string }[]; onAccessibilityAction: (e: unknown) => void };
+  assert.deepEqual(props.accessibilityActions, [{ name: "activate" }]);
+  props.onAccessibilityAction({ nativeEvent: { actionName: "magicTap" } });
+  props.onAccessibilityAction({ nativeEvent: { actionName: "activate" } });
+  assert.deepEqual(sent, ["track.tap"]);
+  assert.deepEqual(activation(new Set(["sheet.dragend"]), "sheet", () => {}), {});
+});

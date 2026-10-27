@@ -6,6 +6,7 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     var present: Boolean by mutableStateOf(true)
     fun send(event: String): Boolean
     fun input(name: String, value: Double): Boolean
+fun systemReducedMotion(): Boolean
 fun rememberNudg(
 fun Modifier.nudg(state: NudgState, name: String): Modifier
 fun Modifier.nudgPress(state: NudgState, name: String): Modifier

@@ -1,12 +1,14 @@
 package dev.nudg.demo
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pinch
 import androidx.compose.ui.test.swipeRight
@@ -27,6 +29,13 @@ class DemoTest {
     @Test fun aTapTurnsTheToggleOn() {
         rule.onNodeWithTag("state").assertTextEquals("toggle: off")
         rule.onNodeWithTag("track").performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag("state").assertTextEquals("toggle: on")
+    }
+
+    @Test fun anAccessibilityActivationIsATap() {
+        // What TalkBack's double tap does: the node's click action, no touch at all.
+        rule.onNodeWithTag("track").performSemanticsAction(SemanticsActions.OnClick)
         rule.waitForIdle()
         rule.onNodeWithTag("state").assertTextEquals("toggle: on")
     }

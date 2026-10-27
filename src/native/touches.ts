@@ -37,3 +37,18 @@ export function touchSync(tracker: PointerTracker): { sync(touches: Touch[], rel
     },
   };
 }
+
+/**
+ * View props that let screen readers activate a target whose tap the file handles:
+ * activation is a tap, as a click is on the web. Nothing for other targets.
+ */
+export function activation(handled: Set<string>, target: string, send: (event: string) => void): Record<string, unknown> {
+  const tap = `${target}.tap`;
+  if (!handled.has(tap)) return {};
+  return {
+    accessibilityActions: [{ name: "activate" }],
+    onAccessibilityAction: (e: { nativeEvent: { actionName: string } }) => {
+      if (e.nativeEvent.actionName === "activate") send(tap);
+    },
+  };
+}

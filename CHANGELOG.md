@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Screen readers activate native targets.** When a file handles a target's tap, SwiftUI's and Compose's `nudgPress` and React Native's `bind().gesture` add the platform's activation action, so VoiceOver and TalkBack can trigger it; on the web a click was already a tap. The role and label stay the host's. Checked with an accessibility activation on an iOS simulator and an Android emulator.
+- **Compose follows "Remove animations".** `rememberNudg`'s `reducedMotion` now defaults to the system setting (`systemReducedMotion()`) instead of false, as every other adapter does.
+
 ## 1.0.0
 
 The stable release. Format 1.0 freezes 0.18's semantics, and the public surface is pinned by tests on every platform: validator codes, the conformance suite, the schema, compiled programs, and the APIs of `@nudg/core`, the CLI, the MCP tools, the Swift package and the Kotlin modules. The native runtimes are checked on an iOS simulator and an Android emulator.

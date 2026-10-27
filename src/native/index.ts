@@ -7,7 +7,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AccessibilityInfo, Animated, PanResponder, type GestureResponderEvent, type LayoutChangeEvent } from "react-native";
 import { PointerTracker, draggableTargets, pinchableTargets } from "../core/pointer.ts";
-import { touchSync } from "./touches.ts";
+import { activation, touchSync } from "./touches.ts";
+import { handledEvents } from "../core/observe.ts";
 import { createPlayer, initialValues, toProgram, type HeadlessPlayer } from "../core/player.ts";
 import { createRuntime, type Value } from "../core/runtime.ts";
 import type { NudgContract, Program, StateName } from "../core/types.ts";
@@ -37,6 +38,8 @@ export interface Bound {
   /**
    * Spread on any View for press and drag: down, up and tap like `press`, and for targets
    * the file drags, dragstart, drag.x / drag.y and dragend, with the same 4-unit slop as the web.
+   * When the file handles the target's tap, screen readers can activate it: activation is a
+   * tap, as a click is on the web (a Pressable with `press` already does this).
    */
   gesture: Record<string, unknown>;
 }
@@ -115,6 +118,7 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
 
   const draggable = useMemo(() => draggableTargets(program), [program]);
   const pinchable = useMemo(() => pinchableTargets(program), [program]);
+  const handled = useMemo(() => handledEvents(program), [program]);
   const gestureFor = (name: string) => {
     const tracker = new PointerTracker(
       name,
@@ -125,7 +129,7 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
     // Every finger by its identifier, so a second one can pinch (format 0.18).
     const touches = touchSync(tracker);
     const sync = (e: GestureResponderEvent, release: boolean) => touches.sync(e.nativeEvent.touches ?? [], release);
-    return PanResponder.create({
+    const handlers = PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderTerminationRequest: () => !draggable.has(name) && !pinchable.has(name),
@@ -134,6 +138,7 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
       onPanResponderRelease: (e) => sync(e, true),
       onPanResponderTerminate: () => touches.cancel(),
     }).panHandlers;
+    return { ...handlers, ...activation(handled, name, (e) => void player.current?.send(e)) };
   };
   const bound = useRef(new Map<string, Bound>());
   const bind = useCallback(

@@ -28,6 +28,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
 import dev.nudg.DRAG_SLOP
 import dev.nudg.PointerTracker
 import dev.nudg.Program
@@ -129,7 +132,17 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
 }
 
 /**
- * Plays [program]. [exit] names the states that mean the component is gone ("hidden"):
+ * The system's "Remove animations" setting: the animator duration scale is 0. Read when a
+ * player is created, like Reduce Motion on the other platforms.
+ */
+@Composable
+fun systemReducedMotion(): Boolean {
+    val resolver = LocalContext.current.contentResolver
+    return remember { android.provider.Settings.Global.getFloat(resolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }
+}
+
+/**
+ * Plays [program]. [reducedMotion] defaults to the system's "Remove animations" setting. [exit] names the states that mean the component is gone ("hidden"):
  * [NudgState.present] turns false and [onExit] is called once the exit motion has settled.
  * [onSettle] is called with the active states each time every value has come to rest after
  * something moved or the state changed, as in every other adapter.
@@ -138,7 +151,7 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
 fun rememberNudg(
     program: Program,
     state: List<String> = emptyList(),
-    reducedMotion: Boolean = false,
+    reducedMotion: Boolean = systemReducedMotion(),
     exit: List<String> = emptyList(),
     onSettle: ((List<String>) -> Unit)? = null,
     onExit: (() -> Unit)? = null,
@@ -186,9 +199,11 @@ fun Modifier.nudg(state: NudgState, name: String): Modifier = this
  * Press and drag for a target, by the same rules as every other adapter: down, up (or
  * cancel) and tap; for targets the file drags, dragstart, drag.x / drag.y in dp, dragend;
  * for targets the file pinches (format 0.18), a second finger ends the drag and reports
- * pinchstart, pinch.scale / rotation / x / y and pinchend.
+ * pinchstart, pinch.scale / rotation / x / y and pinchend. When the file handles the target's
+ * tap, TalkBack and other accessibility services can activate it: activation is a tap, as a
+ * click is on the web.
  */
-fun Modifier.nudgPress(state: NudgState, name: String): Modifier = pointerInput(state, name) {
+fun Modifier.nudgPress(state: NudgState, name: String): Modifier = activation(state, name).pointerInput(state, name) {
     val draggable = name in state.runtime.program.draggableTargets
     val pinchable = name in state.runtime.program.pinchableTargets
     awaitEachGesture {
@@ -228,6 +243,10 @@ fun Modifier.nudgPress(state: NudgState, name: String): Modifier = pointerInput(
         if (!released) tracker.cancel()
     }
 }
+
+private fun Modifier.activation(state: NudgState, name: String): Modifier =
+    if ("$name.tap" !in state.runtime.program.handledEvents) this
+    else semantics { onClick { state.send("$name.tap") } }
 
 /** Keys while focused: `target.key.<name>` for the keys the file listens for. */
 fun Modifier.nudgKeys(state: NudgState, name: String): Modifier = onKeyEvent { e ->

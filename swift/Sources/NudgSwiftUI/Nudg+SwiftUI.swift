@@ -131,7 +131,9 @@ public struct NudgTarget: ViewModifier {
  * targets the file drags, dragstart, drag.x / drag.y and dragend, with a 4-point slop.
  * For targets the file pinches (format 0.18), the system's magnify and rotate gestures
  * end the press and report pinchstart, pinch.scale, pinch.rotation and pinchend; SwiftUI
- * doesn't report the fingers' centre, so pinch.x and pinch.y stay 0.
+ * doesn't report the fingers' centre, so pinch.x and pinch.y stay 0. When the file handles
+ * the target's tap, VoiceOver and other assistive technologies can activate it: activation
+ * is a tap, as a click is on the web.
  */
 public struct NudgPress: ViewModifier {
   @ObservedObject var model: NudgModel
@@ -140,6 +142,15 @@ public struct NudgPress: ViewModifier {
   @SwiftUI.State private var pinching = false
 
   public func body(content: Content) -> some View {
+    let tap = "\(name).tap"
+    if model.runtime.program.handledEvents.contains(tap) {
+      gestures(content).accessibilityAction { model.send(tap) }
+    } else {
+      gestures(content)
+    }
+  }
+
+  @ViewBuilder private func gestures(_ content: Content) -> some View {
     let drag = DragGesture(minimumDistance: 0)
       .onChanged { g in
         guard !pinching else { return }

@@ -77,7 +77,10 @@ private val LAYOUT_NAMES = setOf("x", "y", "width", "height", "naturalWidth", "n
 class Runtime(val program: Program, state: List<String> = emptyList(), private val reducedMotion: Boolean = false) {
     private val active = HashMap<Machine.States, String>()
     private val segments = HashMap<String, Segment>()
-    /** Loops of the active states, by property (v0.10). Empty under reduced motion. */
+    /** Under reduced motion no loop plays, except (from format 1.1) one that only fades: opacity moves nothing. */
+    private val fades = program.version.split(".").map { it.toIntOrNull() ?: 0 }.let { v -> (v.getOrElse(0) { 0 } to v.getOrElse(1) { 0 }).let { (major, minor) -> major > 1 || (major == 1 && minor >= 1) } }
+    private fun loopPlays(key: String) = !reducedMotion || (fades && key.endsWith(".opacity"))
+    /** Loops of the active states, by property (v0.10). Under reduced motion only opacity loops, from 1.1. */
     private val loops = LinkedHashMap<String, ActiveLoop>()
     private val inputs = HashMap<String, MutableList<Pair<Double, Double>>>()
     private val bases = HashMap<String, List<Double>>()
@@ -117,7 +120,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
             val f = follows[key]
             segments[key] = if (f != null) followSegment(key, f, to[0], 0.0) else Segment.MotionSeg(0.0, to, to.map { 0.0 }, to, null)
         }
-        if (!reducedMotion) walkActive(active) { s -> for ((key, loop) in s.loop) loops[key] = ActiveLoop(loop, s, 0.0) }
+        walkActive(active) { s -> for ((key, loop) in s.loop) if (loopPlays(key)) loops[key] = ActiveLoop(loop, s, 0.0) }
         for (c in crossings) requiredInputs.add(c.input)
         for ((axis, back, forth) in listOf(Triple("y", "scrollup", "scrolldown"), Triple("x", "scrollleft", "scrollright"))) {
             for (event in wants) {
@@ -496,9 +499,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
             handoff[key] = listOf(pos[0] + offset) to listOf(vel[0] + rate)
             loops.remove(key)
         }
-        if (!reducedMotion) {
-            for (s in activeStates) if (isEntered(s)) for ((key, loop) in s.loop) loops[key] = ActiveLoop(loop, s, t)
-        }
+        for (s in activeStates) if (isEntered(s)) for ((key, loop) in s.loop) if (loopPlays(key)) loops[key] = ActiveLoop(loop, s, t)
 
         for ((key, prop) in program.properties) {
             if (prop.map != null) continue

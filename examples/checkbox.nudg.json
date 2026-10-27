@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A checkbox whose box fills and whose check mark pops in. The box sinks a little while pressed, in a parallel region.",
   "targets": ["control", "box", "check"],
   "values": {

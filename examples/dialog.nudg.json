@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A modal dialog (WAI-ARIA dialog pattern). It scales and fades in over a scrim; Escape, the scrim, or the close button dismisses it. The scrim's opacity is mapped from the dialog's, so they always agree.",
   "targets": ["opener", "scrim", "dialog", "close"],
   "values": {

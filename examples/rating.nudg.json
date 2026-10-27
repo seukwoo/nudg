@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A five-star rating. Tapping a star fills it and every star before it, and the tapped star pops; tapping the same star again pops it again. Transitions are listed once on the machine.",
   "targets": ["star1", "star2", "star3", "star4", "star5"],
   "values": {

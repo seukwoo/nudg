@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A slider (WAI-ARIA slider pattern). Drag the thumb and it stays where you leave it (commit); arrow keys move it by one step, Home and End to the ends (step, clamped by the property's bounds). The fill is mapped from the thumb.",
   "targets": ["thumb", "track", "fill"],
   "values": {

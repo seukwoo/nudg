@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "Three radio options. The selected dot grows in while the previous one shrinks away; tapping an option or pressing the arrow keys selects. The app moves focus to the selected option (roving tabindex), as in the WAI-ARIA radio group pattern.",
   "targets": ["option1", "option2", "option3", "dot1", "dot2", "dot3"],
   "values": { "dot1.scale": 0, "dot2.scale": 0, "dot3.scale": 0 },

@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "An accordion section that opens to exactly its content's height, measured by the host, so a longer answer needs no edit. The panel's height springs without overshoot and the chevron turns; opening, the content fades in once there is room for it, and closing, it fades out at once.",
   "targets": [
     "header",

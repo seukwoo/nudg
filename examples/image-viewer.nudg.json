@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A photo you can zoom. Double-tap toggles 2.5x; two fingers pinch it between 1x and 4x (rubber-banding a little past either), moving it with the fingers' centre; once zoomed, one finger pans it and a fling glides on. Released below 1x, the commit's bounds bring it back. The host closes the viewer and loads the full-resolution image.",
   "targets": ["viewer", "image"],
   "values": {

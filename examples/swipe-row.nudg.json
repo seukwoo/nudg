@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A list row that swipes left to reveal a delete action. A short or slow swipe snaps back; a long or quick one stays open. The action fades in with the swipe.",
   "targets": ["row", "content", "action"],
   "values": {

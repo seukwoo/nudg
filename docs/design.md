@@ -293,6 +293,15 @@ Status: complete in 1.0.0 (see the [roadmap](roadmap.md#completed-10-stable-on-e
 - **Native is in scope.** The format and conformance are already shared by the TypeScript, Swift and Kotlin runtimes; 1.0 also freezes the Swift package's and the Kotlin modules' public APIs and the React Native hook, and checks them on an iOS simulator and an Android emulator rather than only in their conformance runners.
 - **What is not frozen:** the examples site, the recipe catalog's contents (recipes may be added and improved; the catalog schema is versioned separately), the motion libraries' values, and anything documented as experimental.
 
+## Reduced motion keeps fades (format 1.1)
+
+playsnack's review of 0.12 found the gap: its loading dots pulse opacity, and under reduced motion 0.10's rule ("loops don't play") turned them into three still dots, so the indicator stopped saying "still working". An opacity pulse moves nothing; it is exactly what reduced motion leaves alone.
+
+- **The rule follows what reduced motion is for.** WCAG 2.3.3 is about motion animation (movement, scaling, rotation, parallax), and the platforms' guidance replaces movement with fades rather than removing feedback. So from 1.1 a loop on `opacity` keeps playing under reduced motion; loops on position, size, scale and rotation still stop. Colors can't loop, so opacity is the only property that fades.
+- **By property, not by a field.** A file could mark loops "keep under reduced motion", but then every author decides what reduced motion means, and a spinner marked to keep turning would defeat the setting. The property already says whether a loop moves.
+- **Opted into by version.** 1.0 promised that a 1.0 file's meaning never changes, and the reduced-motion rules are part of that meaning, so a file gets the new rule by declaring 1.1; `nudg upgrade` does that. Compiled programs already carry the file's version, so the program format stays 8, and a 1.0 runtime given a 1.1 program falls back to stopping the fade, the old and safe behavior.
+- **Only loops.** Entry keyframes and kicks on opacity are one-off accents; nothing has needed them under reduced motion. A spinner whose only signal is a turn still shows nothing under reduced motion; its recipe asks the host for a busy label, and a starter that wants a visible signal can add an opacity pulse.
+
 ## Type-safe host contracts
 
 Status: implemented as `nudg generate` and the `nudg_generate` MCP tool.
@@ -365,7 +374,7 @@ These are unresolved design choices. Scheduling and completion status live in th
 - Pattern metadata currently lives in the versioned external recipe catalog. Revisit a file-level role such as `"role": "bottom-sheet"` only if generation or validation needs cannot be met without changing runtime documents.
 - Pattern aliases and locale: how to map common design words such as FAB, snackbar, toast, tabs, tab bar, bottom nav, GNB, LNB and side nav without making the core format depend on one design system's names.
 - Reduced motion that changes while a player runs. Adapters read the system setting when the player is created; switching mid-session would need the runtime to change its motion source without a jump, in every runtime.
-- Reduced motion inside the format: a way for a file to say which properties must not be reduced (a progress bar's width), beyond the runtime's blanket option.
+- Reduced motion inside the format: a way for a file to say which properties must not be reduced (a progress bar's width), beyond the runtime's blanket option and 1.1's opacity loops.
 - Discrete steps for `commit` (a slider that snaps to 10s), beyond `min`/`max`.
 - Nonlinear rubber banding that depends on the view's size, instead of the linear `overdrag` factor.
 - Loops that run a fixed number of times, and loops on colors; see [loops](#loops-while-a-state-is-active-format-010) for what 0.10 settled.

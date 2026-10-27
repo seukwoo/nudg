@@ -53,7 +53,7 @@ This is the toggle above, complete:
 
 ```json
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "targets": ["knob", "track"],
   "values": { "knob.x": 0, "track.color": "#D1D5DB" },
   "animate": {
@@ -212,7 +212,7 @@ The nudg core never draws anything. Events go in, property values come out, and 
 
 - **Deterministic.** The same events at the same times always give the same values, so motion can be tested like any other code.
 - **Portable.** Any platform that can set a property and send an event can run nudg. The spec and a language-neutral [conformance suite](spec/conformance/) define the behavior, not one implementation.
-- **Just JSON.** No new syntax, no studio, readable diffs. The current [JSON Schema](spec/nudg-1.0.schema.json) gives editors completion, and the package exports its latest version as `@nudg/core/schema.json`.
+- **Just JSON.** No new syntax, no studio, readable diffs. The current [JSON Schema](spec/nudg-1.1.schema.json) gives editors completion, and the package exports its latest version as `@nudg/core/schema.json`.
 
 ## Why
 

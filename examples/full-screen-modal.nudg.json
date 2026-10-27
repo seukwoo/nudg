@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A full-screen modal for a self-contained task. It slides up over the screen that presented it, which shrinks back and dims; Close, or a drag down, dismisses it. Distances come from the modal's measured height.",
   "targets": ["modal", "presenting", "shade", "open", "close"],
   "values": {

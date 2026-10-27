@@ -1,0 +1,85 @@
+{
+ "nudgProgram": 8,
+ "version": "1.0",
+ "targets": [
+  "dot",
+  "spinner"
+ ],
+ "properties": [
+  {
+   "key": "dot.opacity",
+   "kind": "number",
+   "base": [
+    1
+   ]
+  },
+  {
+   "key": "spinner.rotation",
+   "kind": "number",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [],
+ "machine": {
+  "kind": "states",
+  "initial": "busy",
+  "states": [
+   {
+    "name": "busy",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [
+     {
+      "key": "dot.opacity",
+      "to": 0,
+      "frames": [
+       {
+        "at": 0.5,
+        "value": -0.75
+       }
+      ],
+      "duration": 0.9,
+      "ease": "linear",
+      "delay": 0
+     },
+     {
+      "key": "spinner.rotation",
+      "to": 360,
+      "frames": [],
+      "duration": 1,
+      "ease": "linear",
+      "delay": 0,
+      "wrap": 360
+     }
+    ],
+    "when": [
+     {
+      "event": "host.done",
+      "animate": [],
+      "to": "idle"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "idle",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

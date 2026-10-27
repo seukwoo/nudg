@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A bottom sheet with three resting points derived from its measured height: closed, half and full. Drag it between them; on release it settles at the nearest one, judged by where the throw was heading.",
   "targets": ["sheet", "scrim", "opener"],
   "values": {

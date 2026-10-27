@@ -80,7 +80,7 @@ public final class Runtime {
   public let program: Program
   private var active: [ObjectIdentifier: String] = [:]
   private var segments: [String: Segment] = [:]
-  /** Loops of the active states, by property (v0.10). Empty under reduced motion. */
+  /** Loops of the active states, by property (v0.10). Under reduced motion only opacity loops, from 1.1. */
   private var loops: [String: ActiveLoop] = [:]
   private var inputs: [String: [(Double, Double)]] = [:]
   private var bases: [String: [Double]] = [:]
@@ -103,10 +103,15 @@ public final class Runtime {
   private var scrolls: [String: ScrollDirection] = [:]
   private var now = 0.0
   private let reduced: Bool
+  /** Under reduced motion no loop plays, except (from format 1.1) one that only fades: opacity moves nothing. */
+  private let fades: Bool
+  private func loopPlays(_ key: String) -> Bool { !reduced || (fades && key.hasSuffix(".opacity")) }
 
   public init(_ program: Program, state: [String] = [], reducedMotion: Bool = false) throws {
     self.program = program
     self.reduced = reducedMotion
+    let version = program.version.split(separator: ".").map { Int($0) ?? 0 }
+    self.fades = (version.first ?? 0, version.count > 1 ? version[1] : 0) >= (1, 1)
     for (key, prop) in program.properties {
       if let m = prop.measure { measuredBases[key] = m }
       if prop.map == nil { bases[key] = prop.base }
@@ -123,7 +128,7 @@ public final class Runtime {
       if let f = follows[key] { segments[key] = followSegment(key, f, to[0], 0) }
       else { segments[key] = .motion(t0: 0, from: to, v0: to.map { _ in 0 }, to: to, motion: nil) }
     }
-    if !reduced { walkActive(active) { state in for (key, loop) in state.loop { loops[key] = ActiveLoop(loop: loop, owner: state, t0: 0) } } }
+    walkActive(active) { state in for (key, loop) in state.loop where loopPlays(key) { loops[key] = ActiveLoop(loop: loop, owner: state, t0: 0) } }
     crossings = wants.sorted().compactMap(Crossing.init)
     for c in crossings { requiredInputs.insert(c.input) }
     for (axis, back, forth) in [("y", "scrollup", "scrolldown"), ("x", "scrollleft", "scrollright")] {
@@ -506,10 +511,8 @@ public final class Runtime {
       handoff[key] = ([pos[0] + offset], [vel[0] + rate])
       loops[key] = nil
     }
-    if !reduced {
-      for state in activeList where isEntered(state) {
-        for (key, loop) in state.loop { loops[key] = ActiveLoop(loop: loop, owner: state, t0: t) }
-      }
+    for state in activeList where isEntered(state) {
+      for (key, loop) in state.loop where loopPlays(key) { loops[key] = ActiveLoop(loop: loop, owner: state, t0: t) }
     }
 
     for (key, prop) in program.properties where prop.map == nil {

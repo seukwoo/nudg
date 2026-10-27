@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A like button whose heart pops when liked.",
   "import": ["./motion/brand.nudg.json"],
   "targets": ["heart"],

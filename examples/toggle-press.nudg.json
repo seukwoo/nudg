@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "The toggle, plus a knob that shrinks slightly while the track is pressed. Two regions run in parallel.",
   "targets": ["knob", "track"],
   "values": {

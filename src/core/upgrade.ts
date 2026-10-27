@@ -1,6 +1,7 @@
-// `nudg upgrade`: a file's format version raised to the current one. Every 0.x format is a
-// superset of the one before and 1.0 freezes 0.18, so a file that validates only needs
-// its version string changed; the rest of the text is kept as written.
+// `nudg upgrade`: a file's format version raised to the current one. Every format is a
+// superset of the one before (1.0 freezes 0.18; 1.1 only keeps opacity loops under reduced
+// motion), so a file that validates only needs its version string changed; the rest of the
+// text is kept as written.
 
 import { VERSION } from "./vocabulary.ts";
 

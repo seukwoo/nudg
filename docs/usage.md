@@ -119,7 +119,13 @@ NudgCompare(Comparison.decode(assets.open("toggle.compare.json").bufferedReader(
 }
 ```
 
-Over MCP the same is `bundle`. Two versions that behave identically write nothing. Checked on an iOS simulator (both sides drawn where the runtime says, a tap mirrored, slow motion, the loop) and on an Android emulator (the same, measured from the drawn pixels).
+```tsx
+import { NudgCompare } from "@nudg/core/native";
+
+<NudgCompare comparison={require("./toggle.compare.json")}>{(nudg) => <Toggle nudg={nudg} />}</NudgCompare>
+```
+
+Over MCP the same is `bundle`. Two versions that behave identically write nothing. Checked on an iOS simulator (both sides drawn where the runtime says, and live in a window: both knobs measured every frame, the bouncier one overshooting further, both resting at the target, the loop coming round), on an Android emulator with Compose (the same, from captured pixels, plus a tap mirrored) and with React Native through Expo Go (the same from screenshots, a tap mirrored, ⅒× slowing it down). Not checked inside Xcode's preview canvas itself, which can't be driven from a script; the view it hosts is the one tested.
 
 Each property gets a verdict: **imperceptible** (under a device pixel at 1×, or under about three frames), **subtle**, or **clear**. When nothing crosses the threshold it says so and proposes the next turn: look at an exaggerated version first, then dial it back. With `--html` the picture is real A/B filmstrips in two rows, same markup, same moments; without it, both curves on one graph (solid A, dashed B). `--labels now,bouncier` names the rows.
 
@@ -392,6 +398,7 @@ function Toggle() {
 - `bind(name)` gives a target its animated `style` (x, y, rotation and scale as a transform; opacity, width, height; color as background), `press` handlers for a `Pressable` (`down`, `up`, `tap`), and `onLayout`, which reports its box for `measure` (0.4).
 - `send("host.show")`, `input("host.volume", 0.7)`, `state`, `present` and the `exit` / `onExit` / `onSettle` / `inputs` options work as in React; `inputs` sets the first frame's app values. Reduce Motion follows the system setting unless `reducedMotion` is passed.
 - `bind(name).gesture` (spread on any `View`) handles press and drag: `down`, `up`, `tap`, and for targets the file drags, `dragstart`, `drag.x` / `drag.y` and `dragend`, with the same 4-unit slop as the web. When the file handles the target's tap, it also carries the `activate` accessibility action, so screen readers can activate the view (a `Pressable` with `press` already can). Checked on the Android emulator with the drag toggle.
+- `NudgCompare` plays a `nudg compare --bundle` side by side on your own view ([compare](#compare)).
 - Not yet: keys (rare on phones), and the native driver; values are written from JavaScript each frame, which is fine for UI motion and is the next thing to move to Reanimated for heavy screens.
 - Checked on an Android emulator through Expo Go: the toggle springs and recolors, and a held button scales to 0.96.
 

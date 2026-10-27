@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **NudgCompare on React Native.** `<NudgCompare comparison={bundle}>{(nudg) => <YourView nudg={nudg} />}</NudgCompare>` from `@nudg/core/native`, with the same rules as SwiftUI's and Compose's: headline first, a loop, mirrored taps, Replay and ¼× / ⅒×. Its timeline is platform-free code in the core, unit tested. Checked through Expo Go on an Android emulator.
+- **SwiftUI's NudgCompare checked live.** A test hosts it in a real window on the iOS simulator and measures both knobs every frame on real time: the bouncier one peaks ~4 pt further, both rest at the target, and the run starts over after rest plus the pause.
+
 ## 1.2.0
 
 Judge a change on native: `nudg compare --bundle` and `NudgCompare` bring the side-by-side before and after to SwiftUI and Compose apps, on their own views. The format stays 1.1; the API only gains.

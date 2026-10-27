@@ -202,6 +202,26 @@ final class CompareTests: XCTestCase {
     XCTAssertEqual(s.elapsed, 0, accuracy: 1e-9)
   }
 
+  /** The test toggle's knob.x on each half of an image: its left edge from the track's, less the 4 pt padding. */
+  private func knobs(in image: CGImage, scale: Double) throws -> (Double?, Double?) {
+    let w = image.width, h = image.height
+    var px = [UInt8](repeating: 0, count: w * h * 4)
+    let context = try XCTUnwrap(CGContext(data: &px, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+    context.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+    func knob(in xs: Range<Int>) -> Double? {
+      // The track's middle row (the knob's centre); on it, the first white after the track begins.
+      let green = { (x: Int, y: Int) in let i = (y * w + x) * 4; return px[i + 1] > 150 && px[i] < 150 && px[i + 2] < 160 }
+      let white = { (x: Int, y: Int) in let i = (y * w + x) * 4; return px[i] > 240 && px[i + 1] > 240 && px[i + 2] > 240 }
+      let rows = (0..<h).filter { y in xs.contains { green($0, y) } }
+      guard let top = rows.first, let bottom = rows.last else { return nil }
+      let y = (top + bottom) / 2
+      guard let left = xs.first(where: { green($0, y) }) else { return nil }
+      guard let first = xs.first(where: { $0 > left && white($0, y) }) else { return nil }
+      return Double(first - left) / scale - 4
+    }
+    return (knob(in: 0..<w / 2), knob(in: w / 2..<w))
+  }
+
   /** The whole view, drawn at the moment the two differ most, for a person (or an agent) to look at. */
   func testTheViewRendersBothSides() throws {
     let s = try session()
@@ -219,28 +239,62 @@ final class CompareTests: XCTestCase {
     let image = try XCTUnwrap(renderer.cgImage)
     XCTAssertGreaterThan(image.width, 600)
     // Each side's knob, measured from its own track: the right one overshoots ~5.9 pt further.
-    let w = image.width, h = image.height
-    var px = [UInt8](repeating: 0, count: w * h * 4)
-    let context = try XCTUnwrap(CGContext(data: &px, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
-    context.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
-    func knob(in xs: Range<Int>) -> Double? {
-      // The track's middle row (the knob's centre); on it, the white run's centre from the track's left edge.
-      let green = { (x: Int, y: Int) in let i = (y * w + x) * 4; return px[i + 1] > 150 && px[i] < 150 && px[i + 2] < 160 }
-      let white = { (x: Int, y: Int) in let i = (y * w + x) * 4; return px[i] > 240 && px[i + 1] > 240 && px[i + 2] > 240 }
-      let rows = (0..<h).filter { y in xs.contains { green($0, y) } }
-      guard let top = rows.first, let bottom = rows.last else { return nil }
-      let y = (top + bottom) / 2
-      guard let left = xs.first(where: { green($0, y) }) else { return nil }
-      let whites = xs.filter { $0 > left && white($0, y) }
-      guard let first = whites.first, let last = whites.last else { return nil }
-      return Double(first + last) / 2 / 2 - Double(left) / 2
-    }
-    let a = try XCTUnwrap(knob(in: 0..<w / 2)), b = try XCTUnwrap(knob(in: w / 2..<w))
-    XCTAssertEqual(b - a, x(s.b) - x(s.a), accuracy: 1.5, "the drawn knobs differ as the runtime says")
+    let (a, b) = try knobs(in: image, scale: 2)
+    XCTAssertEqual(try XCTUnwrap(b) - XCTUnwrap(a), x(s.b) - x(s.a), accuracy: 1.5, "the drawn knobs differ as the runtime says")
     if let out = ProcessInfo.processInfo.environment["NUDG_RENDER_OUT"] {
       let dest = try XCTUnwrap(CGImageDestinationCreateWithURL(URL(fileURLWithPath: out) as CFURL, "public.png" as CFString, 1, nil))
       CGImageDestinationAddImage(dest, image, nil)
       XCTAssertTrue(CGImageDestinationFinalize(dest))
     }
   }
+
+  #if os(iOS)
+  /** In a real window on the device, on real time: the timer pumps, both play, the loop comes round. */
+  func testItPlaysLiveInAWindow() throws {
+    let comparison = try Comparison.decode(Data(contentsOf: conformance.appendingPathComponent("programs/toggle-bouncier.compare.json")))
+    // On: the track turns green, which is what the measurement finds.
+    let view = NudgCompare(comparison) { model in
+      ZStack(alignment: .leading) {
+        Capsule().fill(Color.gray.opacity(0.3)).frame(width: 52, height: 32).nudg(model, "track").nudgPress(model, "track")
+        Circle().fill(Color.white).frame(width: 24, height: 24).padding(4).nudg(model, "knob")
+      }
+    }
+    let host = UIHostingController(rootView: view)
+    let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 400))
+    window.rootViewController = host
+    window.makeKeyAndVisible()
+    // Capture now, measure later, so measuring doesn't slow the run it watches.
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1
+    let renderer = UIGraphicsImageRenderer(bounds: host.view.bounds, format: format)
+    let start = Date()
+    var frames: [(t: Double, image: UIImage)] = []
+    while Date().timeIntervalSince(start) < 5 {
+      RunLoop.main.run(until: Date().addingTimeInterval(0.03))
+      host.view.layoutIfNeeded()
+      frames.append((Date().timeIntervalSince(start), renderer.image { c in host.view.layer.render(in: c.cgContext) }))
+    }
+    if let out = ProcessInfo.processInfo.environment["NUDG_RENDER_OUT"], let png = frames[frames.count / 4].image.pngData() { try png.write(to: URL(fileURLWithPath: out)) }
+    let samples = try frames.map { f -> (t: Double, a: Double?, b: Double?) in
+      let (a, b) = try knobs(in: try XCTUnwrap(f.image.cgImage), scale: 1)
+      return (f.t, a, b)
+    }
+    let on = samples.filter { $0.a != nil && $0.b != nil }
+    XCTAssertFalse(on.isEmpty, "the tap played: both tracks turned on")
+    // The change overshoots further: its knob goes past where the other one ever goes.
+    let maxA = on.compactMap(\.a).max() ?? 0, maxB = on.compactMap(\.b).max() ?? 0
+    XCTAssertGreaterThan(maxB - maxA, 2.5, "B overshoots further (A max \(maxA), B max \(maxB))")
+    // Both come to rest at the runtime's 20.
+    let firstOn = try XCTUnwrap(on.first).t
+    let rested = try XCTUnwrap(on.last { $0.t < firstOn + 1.8 })
+    XCTAssertEqual(try XCTUnwrap(rested.a), 20, accuracy: 1)
+    XCTAssertEqual(try XCTUnwrap(rested.b), 20, accuracy: 1)
+    // The loop: after a run (1.5 s to rest + 0.8 s) both start over, off, and turn on again.
+    let offAfterOn = samples.drop { $0.a == nil }.first { $0.a == nil }
+    XCTAssertNotNil(offAfterOn, "it started over")
+    // Timed from the run's first frame on, so a slow start doesn't count: the tap at 0.1 s turns
+    // the tracks green within a frame or two, and the run ends at 1.525 s to rest + 0.8 s.
+    if let restart = offAfterOn?.t { XCTAssertEqual(restart - firstOn, 2.2, accuracy: 0.35, "a run lasts until rest plus the pause") }
+  }
+  #endif
 }

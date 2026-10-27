@@ -15,6 +15,9 @@ declare module "react-native" {
   export interface LayoutChangeEvent {
     nativeEvent: { layout: { x: number; y: number; width: number; height: number } };
   }
+  export const View: import("react").ComponentType<any>;
+  export const Text: import("react").ComponentType<any>;
+  export const Pressable: import("react").ComponentType<any>;
   export const AccessibilityInfo: { isReduceMotionEnabled(): Promise<boolean> };
   export interface PanResponderGestureState { dx: number; dy: number }
   /** A responder event; `touches` lists every finger on the screen. */

@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A filled text field. The label floats while the field is focused or has text, the active line grows from the center on focus, and the app's validation turns the field red and shows a message. Three regions: focus, label and validity.",
   "host": { "events": ["filled", "empty", "invalid", "valid"] },
   "targets": ["field", "label", "line", "message"],

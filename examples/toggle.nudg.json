@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A switch whose knob springs across the track on tap.",
   "targets": ["knob", "track"],
   "values": {

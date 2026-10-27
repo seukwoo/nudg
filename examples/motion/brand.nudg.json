@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "Brand motion library. Components import it, so changing a value here changes every component that uses it.",
   "motions": {
     "snappy": { "spring": { "duration": 0.3, "bounce": 0.15 } },

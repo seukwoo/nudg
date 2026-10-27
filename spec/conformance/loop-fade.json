@@ -1,0 +1,52 @@
+{
+  "conformance": "1.1",
+  "name": "Loop: without reduced motion an opacity loop and a turn both play",
+  "doc": {
+    "nudg": "1.1",
+    "targets": [
+      "dot",
+      "spinner"
+    ],
+    "values": {
+      "dot.opacity": 1,
+      "spinner.rotation": 0
+    },
+    "initial": "busy",
+    "states": {
+      "busy": {
+        "loop": {
+          "dot.opacity": {
+            "keyframes": [
+              {
+                "at": 0.5,
+                "value": -0.75
+              }
+            ],
+            "duration": 0.9
+          },
+          "spinner.rotation": {
+            "to": 360,
+            "duration": 1,
+            "wrap": 360
+          }
+        },
+        "when": {
+          "host.done": "idle"
+        }
+      },
+      "idle": {}
+    }
+  },
+  "steps": [
+    {
+      "t": 0.45,
+      "expect": {
+        "values": {
+          "dot.opacity": 0.25,
+          "spinner.rotation": 162
+        },
+        "looping": true
+      }
+    }
+  ]
+}

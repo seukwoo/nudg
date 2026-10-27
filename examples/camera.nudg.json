@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A mobile camera host owns permission, MediaStream, canvas capture and MediaRecorder. nudg expresses the familiar photo/video modes, recording feedback and review flow without taking over media APIs.",
   "targets": ["preview", "start", "capture-controls", "mode-indicator", "shutter", "recording", "review"],
   "values": {

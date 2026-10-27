@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A quantity stepper. The app owns the number and its limits: it sends host.increment or host.decrement when the value changes, host.refused when a press would pass a limit, and host.min, host.max or host.between to dim the button that can't go further.",
   "host": { "events": ["increment", "decrement", "refused", "min", "max", "between"] },
   "targets": ["minus", "plus", "value"],

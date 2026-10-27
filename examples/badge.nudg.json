@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "An unread-count badge on a bell. It scales in with the first message and pops each time the app reports another; opening the bell clears it.",
   "targets": ["bell", "badge"],
   "values": { "badge.scale": 0, "badge.opacity": 0 },

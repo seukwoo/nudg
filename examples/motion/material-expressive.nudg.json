@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "Material 3 Expressive motion scheme, from the token constants in androidx.compose.material3 (ExpressiveMotionTokens, v0.14). Spatial springs move position, size, orientation and shape and may overshoot; effects springs change color, opacity and elevation and are critically damped, so they never bounce. Each comes at three speeds. The common names (standard, quick, gentle, playful, fade) have the same meaning in every platform library: standard = spatial-default, quick = spatial-fast, gentle = spatial-slow, playful = spatial-fast (the scheme's bounciest spring), fade = effects-default.",
   "motions": {
     "spatial-default": { "spring": { "stiffness": 380, "dampingRatio": 0.8 } },

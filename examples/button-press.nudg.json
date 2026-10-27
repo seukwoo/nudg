@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A button that sinks while pressed. Pressing is quick and flat; releasing springs back with a little bounce, so the two directions feel different.",
   "targets": ["button"],
   "values": { "button.scale": 1 },

@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "Apple's spring presets, as documented for SwiftUI's Spring type (iOS 17+): a perceptual duration of 0.5 s and a bounce of 0 (smooth), 0.15 (snappy) or 0.3 (bouncy). nudg's duration + bounce form is the same model, so the values are written as published. The common names (standard, quick, gentle, playful, fade) have the same meaning in every platform library, so swapping the import swaps the feel: standard = snappy, gentle = smooth, playful = bouncy; quick is snappy at a shorter duration (the documented duration parameter); fade is a quick, non-bouncing spring for color and opacity. Source: developer.apple.com/documentation/swiftui/spring.",
   "motions": {
     "smooth": { "spring": { "duration": 0.5, "bounce": 0 } },

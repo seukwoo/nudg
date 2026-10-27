@@ -51,7 +51,7 @@ simulate and plot options
                             its targets, events, inputs and state paths (imports included), for
                             useNudg<XContract>(x). --check writes nothing and exits 1 if a module
                             is missing or stale (for CI). --out <file.ts> with one file.
-  upgrade <file...>         Raise each file's "nudg" version to the current format (1.0) once it
+  upgrade <file...>         Raise each file's "nudg" version to the current format (1.1) once it
                             validates; everything else in the file is kept as written.
                             --check writes nothing and exits 1 if a file is older (for CI).
   critique <file...>        Whether the motion is good, not only valid: each transition checked

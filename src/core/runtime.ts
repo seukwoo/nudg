@@ -5,7 +5,7 @@ import { oklabToHex } from "./color.ts";
 import { easeAt, easeSlope } from "./ease.ts";
 import { interpolate } from "./map.ts";
 import { springAt } from "./spring.ts";
-import { CROSSING, DOUBLE_TAP, LONG_PRESS, SCROLL_SLOP } from "./vocabulary.ts";
+import { CROSSING, DOUBLE_TAP, LONG_PRESS, SCROLL_SLOP, VERSIONS } from "./vocabulary.ts";
 
 /** Where a pinch's inputs start (v0.18): the ratio at 1, rotation and travel at 0. */
 const PINCH_START: [string, number][] = [["scale", 1], ["rotation", 0], ["x", 0], ["y", 0]];
@@ -99,7 +99,7 @@ const REDUCED: Motion = { kind: "tween", duration: 0.15, ease: "linear" };
 export function createRuntime(program: Program, options: RuntimeOptions = {}): Runtime {
   const active = new Map<Machine, string>();
   const segments = new Map<string, Segment>();
-  /** Loops of the active states, by property (v0.10). Empty under reduced motion. */
+  /** Loops of the active states, by property (v0.10). Under reduced motion only opacity loops, from 1.1. */
   const loops = new Map<string, ActiveLoop>();
   const inputs = new Map<string, [number, number][]>();
   /** Base values, which `step` and `commit` change for good. */
@@ -120,6 +120,9 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
   let order = 0;
   let now = 0;
   const reduced = options.reducedMotion === true;
+  // Under reduced motion no loop plays, except (from format 1.1) one that only fades: opacity moves nothing.
+  const fades = VERSIONS.indexOf(program.version) >= VERSIONS.indexOf("1.1");
+  const loopPlays = (key: string) => !reduced || (fades && key.endsWith(".opacity"));
   // Gestures derived from down, up and tap (v0.14), only for targets whose events the file handles.
   const wants = handledEventNames(program.machine);
   /** When each pressed target becomes a long press, until up, cancel or dragstart. */
@@ -160,8 +163,8 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       const f = follows.get(key);
       segments.set(key, f ? followSegment(key, f, to[0], 0) : { kind: "motion", t0: 0, from: to, v0: to.map(() => 0), to });
     }
-    if (!reduced) walkActive(active, (state) => {
-      for (const [key, loop] of state.loop) loops.set(key, { loop, owner: state, t0: 0 });
+    walkActive(active, (state) => {
+      for (const [key, loop] of state.loop) if (loopPlays(key)) loops.set(key, { loop, owner: state, t0: 0 });
     });
   }
 
@@ -527,11 +530,9 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       handoff.set(key, [[pos[0] + offset], [vel[0] + rate]]);
       loops.delete(key);
     }
-    if (!reduced) {
-      for (const state of activeStates) {
-        if (!entered.includes(state)) continue;
-        for (const [key, loop] of state.loop) loops.set(key, { loop, owner: state, t0: t });
-      }
+    for (const state of activeStates) {
+      if (!entered.includes(state)) continue;
+      for (const [key, loop] of state.loop) if (loopPlays(key)) loops.set(key, { loop, owner: state, t0: t });
     }
 
     for (const [key, prop] of program.properties) {

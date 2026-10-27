@@ -6,7 +6,7 @@ nudg files describe a UI interaction: states, the events that move between them,
 
 ```json
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "What this interaction is for.",
   "targets": ["knob", "track"],
   "values": { "knob.x": 0, "track.color": "#D1D5DB" },
@@ -25,7 +25,7 @@ nudg files describe a UI interaction: states, the events that move between them,
 }
 ```
 
-- Write new files as `"nudg": "1.0"`, the stable format: every feature in this guide is in it. Older files keep working; `nudg upgrade file.nudg.json` raises one to 1.0.
+- Write new files as `"nudg": "1.1"`, the current stable format: every feature in this guide is in it. Older files keep working; `nudg upgrade file.nudg.json` raises one to 1.1.
 - **States say where** (`set`), **`animate` says how** each property travels there. A change mid-flight retargets from the current value; springs keep their velocity.
 - `targets` are names the host binds to its views (`data-nudg="knob"` on the web).
 - Every property used anywhere needs a base value in `values`.
@@ -65,7 +65,7 @@ A motion is an object with exactly one of `spring` or `tween`, or the name of a 
 
 ## Drag and derived values (format 0.2)
 
-Available from format 0.2; new files declare `"nudg": "1.0"`, which includes everything here.
+Available from format 0.2; new files declare `"nudg": "1.1"`, which includes everything here.
 
 ```json
 "values": {
@@ -97,7 +97,7 @@ Available from format 0.3.
 - **Timers:** `"after:3s": "hidden"` in a state's `when` fires that long after the state was entered, if it's still active; re-entering restarts it. Not on a machine's `when`.
 - **`step` and `commit`** change a property's base value for good: `{ "step": { "thumb.x": 10 } }` adds (no `to` needed: stay in the state); `{ "to": "idle", "commit": ["thumb.x"] }` keeps the current value when leaving a `follow`. Both clamp to the property's bounds.
 - **Bounds:** `"thumb.x": { "base": 0, "min": 0, "max": 200 }`. They clamp `step`/`commit`, default a `follow`'s `range`, and make an out-of-range `set` an error.
-- **Reduced motion** is a runtime option (`reducedMotion: true`; the DOM adapter follows `prefers-reduced-motion`; CLI/MCP `--reduced-motion`): springs and tweens become 0.15 s linear tweens; kicks and entry keyframes are skipped. Don't put it in the file.
+- **Reduced motion** is a runtime option (`reducedMotion: true`; the DOM adapter follows `prefers-reduced-motion`; CLI/MCP `--reduced-motion`): springs and tweens become 0.15 s linear tweens; kicks, entry keyframes and loops are skipped, except (from 1.1) loops on opacity, which fade without moving. So a loading indicator that must keep signalling under reduced motion should pulse `opacity`, alone or beside its movement. Don't put it in the file.
 
 ## Layout: measured values (formats 0.4 and 0.6)
 

@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "The toggle, draggable: the knob follows the finger, and on release springs to whichever side the throw was heading. The color is mapped from the knob's position, so it blends while dragging.",
   "targets": ["knob", "track"],
   "values": {

@@ -70,7 +70,7 @@ export interface ToastOptions { target?: string; duration?: number; rise?: numbe
 export interface ToggleOptions { knob?: string; track?: string; travel?: number; colors?: [string, string]; motion?: SpringOptions; initial?: "off" | "on"; }
 export interface Transition { to?: string; nearest?: { states: string[]; by: string; momentum: number; }; animate: Map<string, Motion>; step?: Map<string, number>; commit?: string[]; }
 export interface TweenMotion { kind: "tween"; duration: number; ease: Ease; delay?: number; }
-export declare const VERSION = "1.0";
+export declare const VERSION = "1.1";
 export type Value = number | string;
 export declare function actionTarget(program: Program, action: string): string;
 export declare function actionsToEvents(targetOf: string | ((action: string) => string), marks: HostMark[]): { t: number; event: string; }[];

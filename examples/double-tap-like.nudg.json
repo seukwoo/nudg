@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A photo you double-tap to like: a heart bursts over it and fades, every time. Holding it for half a second lifts it a little to peek, until you let go. The runtime derives both gestures from the presses, so a long press never also counts as a tap.",
   "targets": ["photo", "heart"],
   "values": { "photo.scale": 1, "heart.scale": 0, "heart.opacity": 0 },

@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A skeleton card. While loading, a highlight sweeps across the placeholders' measured width on a loop; when the app has the content, the placeholders fade out and the content fades in.",
   "targets": ["card", "highlight", "placeholder", "content"],
   "values": { "highlight.x": 0, "placeholder.opacity": 1, "content.opacity": 0 },

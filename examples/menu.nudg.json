@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A dropdown menu. The surface grows down from the anchor, then the items arrive one after another, 30 ms apart; choosing an item, tapping outside or Escape closes it faster than it opened, all at once.",
   "targets": ["anchor", "scrim", "menu", "item1", "item2", "item3", "item4"],
   "values": {

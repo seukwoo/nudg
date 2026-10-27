@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A floating action button that fans out three actions. The plus turns into a close mark at once, and the actions rise one after another from the nearest; closing, they leave in the reverse order.",
   "targets": ["fab", "icon", "scrim", "action1", "action2", "action3"],
   "values": {

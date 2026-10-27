@@ -1,0 +1,56 @@
+{
+  "conformance": "1.0",
+  "name": "Loop: a 1.0 file keeps 1.0's rule, reduced motion runs no loops at all",
+  "doc": {
+    "nudg": "1.0",
+    "targets": [
+      "dot",
+      "spinner"
+    ],
+    "values": {
+      "dot.opacity": 1,
+      "spinner.rotation": 0
+    },
+    "initial": "busy",
+    "states": {
+      "busy": {
+        "loop": {
+          "dot.opacity": {
+            "keyframes": [
+              {
+                "at": 0.5,
+                "value": -0.75
+              }
+            ],
+            "duration": 0.9
+          },
+          "spinner.rotation": {
+            "to": 360,
+            "duration": 1,
+            "wrap": 360
+          }
+        },
+        "when": {
+          "host.done": "idle"
+        }
+      },
+      "idle": {}
+    }
+  },
+  "reducedMotion": true,
+  "steps": [
+    {
+      "t": 0.45,
+      "expect": {
+        "state": [
+          "busy"
+        ],
+        "values": {
+          "dot.opacity": 1,
+          "spinner.rotation": 0
+        },
+        "looping": false
+      }
+    }
+  ]
+}

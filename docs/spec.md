@@ -1,12 +1,12 @@
-# The nudg format, version 1.0
+# The nudg format, version 1.1
 
-The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [conformance suite](../spec/conformance/), the [JSON Schema](../spec/nudg-1.0.schema.json) describes the structure for editors, and every validator code is listed in the [error reference](errors.md). For the reasoning behind the format, see [Design](design.md).
+The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [conformance suite](../spec/conformance/), the [JSON Schema](../spec/nudg-1.1.schema.json) describes the structure for editors, and every validator code is listed in the [error reference](errors.md). For the reasoning behind the format, see [Design](design.md).
 
-**Stability.** Format 1.0 is stable. Within 1.x, files only gain: new fields, events, inputs and error codes may appear in a later 1.x version, but nothing a 1.0 file says changes meaning. Runtimes read every earlier version (0.1 to 0.18) unchanged; each was a superset of the one before, and `nudg upgrade` raises a file to 1.0. The [appendix](#appendix-format-history) lists what each version added.
+**Stability.** Format 1.0 is stable. Within 1.x, files only gain: new fields, events, inputs and error codes may appear in a later 1.x version, but nothing a 1.0 file says changes meaning; a file opts into a 1.x version's rules by declaring it. Runtimes read every earlier version (0.1 to 1.0) unchanged; each was a superset of the one before, and `nudg upgrade` raises a file to the current version, 1.1. The [appendix](#appendix-format-history) lists what each version added.
 
 ```json
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "targets": ["knob", "track"],
   "values": { "knob.x": 0, "track.color": "#D1D5DB" },
   "animate": {
@@ -30,13 +30,13 @@ The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [
 
 A nudg file is strict JSON with the extension `.nudg.json`. Every platform already parses it, JSON Schema describes it, and LLMs write it reliably, so there is no parser to maintain and nothing new to learn. A friendlier syntax can be added later as sugar that compiles to the same model, but JSON stays the source of truth.
 
-A file may start with `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.0.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
+A file may start with `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.1.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
 
 JSON has no comments. Instead, any object may carry a `note` string. Runtimes ignore it. Unlike a comment, a note survives tools rewriting the file, and an AI can read it as part of the data.
 
 ### Top level
 
-- `nudg`: the format version, a string (`"1.0"`).
+- `nudg`: the format version, a string (`"1.1"`).
 - `host`: the app events and inputs the file uses ([below](#the-host-declaration)).
 - `import`: motion libraries, by path.
 - `targets`: the names a host binds to its views.
@@ -72,7 +72,7 @@ Identical motion on every platform is the default: explicit parameters and named
 
 ```json
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "motions": {
     "snappy": { "spring": { "duration": 0.3, "bounce": 0.15 } },
     "pop": { "kick": 6, "spring": { "duration": 0.4, "bounce": 0.5 } }
@@ -82,7 +82,7 @@ Identical motion on every platform is the default: explicit parameters and named
 
 ```json
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "import": ["./motion/brand.nudg.json"],
   "targets": ["heart"],
   "values": { "heart.scale": 1 },
@@ -393,6 +393,7 @@ Periodic motion while a state is active, for spinners, shimmers and typing dots:
 Some people ask the system to reduce motion (`prefers-reduced-motion`; WCAG 2.3.3). The format says nothing about it; the runtime does, as an option: `createRuntime(program, { reducedMotion: true })`.
 
 - Every spring and tween becomes a short linear tween (0.15 s), and delays are ignored. Kicks, entry keyframes and loops don't play.
+- **From 1.1, a loop on `opacity` still plays.** It fades; nothing moves, scales or turns, which is what reduced motion is for (WCAG 2.3.3 names motion animation; the platforms' guidance replaces movement with fades). A loading indicator therefore keeps signalling progress. A file declaring 1.0 or older keeps the earlier rule, so its meaning doesn't change.
 - A glide keeps going: it is the user's own throw. Settling at a bound uses the short tween.
 - States, transitions, timers and followed values are unchanged, so nothing functional depends on the setting.
 - The DOM adapter follows the system setting unless the option is passed explicitly; `simulate`, `plot` and `render` take `--reduced-motion`.
@@ -425,11 +426,11 @@ Settle is reported from the frame loop, never from inside the call that sent the
 
 ## Compiled programs
 
-`nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 8`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms. Program format 8 is frozen with format 1.0; runtimes read every earlier program format.
+`nudg compile` writes a file's compiled form as JSON (`"nudgProgram": 8`): validated, imports and named motions resolved, spring forms reduced to stiffness, damping and mass, colors as OKLab channels, and every map written as an array of entries so order survives any JSON reader. Runtimes in other languages read this instead of porting the validator; the reference implementation stays the one that explains errors. `spec/conformance/programs/` holds every behavior case compiled this way, and the conformance suite is run against both forms. Program format 8 is frozen with format 1.0; runtimes read every earlier program format. A program carries its file's `version`, and a runtime applies that version's rules (1.1's reduced-motion loops); a 1.0 runtime given a 1.1 program plays it by 1.0's rules, which only differ under reduced motion.
 
 ## Appendix: format history
 
-Each version added to the one before and kept everything it had. A 1.0 runtime reads them all; `nudg upgrade` raises a file to 1.0. The conformance cases named here define each addition across TypeScript, Swift and Kotlin; compiled programs gained a format when they needed new fields.
+Each version added to the one before and kept everything it had. A 1.1 runtime reads them all; `nudg upgrade` raises a file to 1.1. The conformance cases named here define each addition across TypeScript, Swift and Kotlin; compiled programs gained a format when they needed new fields.
 
 | Format | Added | Conformance | Program |
 |---|---|---|---|
@@ -452,5 +453,6 @@ Each version added to the one before and kept everything it had. A 1.0 runtime r
 | 0.17 | Targets read from inputs | `input-targets`, `validation-0.17` | 7 |
 | 0.18 | Pinch events and inputs, multiplying `follow` | `pinch`, `validation-0.18` | 8 |
 | 1.0 | Nothing new: 0.18, frozen and declared stable | the whole suite | 8 |
+| 1.1 | Under reduced motion, opacity loops keep playing | `loop-fade`, `loop-reduced-fade`, `loop-reduced-fade-1.0` | 8 |
 
 The `rest` case defines rest and lifecycle across all of them. Before 0.5, `map` and `follow` read only properties and drag inputs; before 0.9, ranges and map points were numbers; and so on: a feature used in a file that declares an older version is a `needs-version` error whose hint names the version that added it.

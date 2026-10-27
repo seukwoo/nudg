@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Format 1.1: reduced motion keeps fades.** Under reduced motion a loop on `opacity` keeps playing, so a pulsing loading indicator keeps saying "still working"; loops that move, scale or turn still stop. Files opt in by declaring 1.1 (`nudg upgrade`); a 1.0 file keeps 1.0's rule. TypeScript, Swift and Kotlin share conformance; compiled programs stay format 8. Schema 1.1; the examples, motion libraries and presets declare 1.1.
 - **Screen readers activate native targets.** When a file handles a target's tap, SwiftUI's and Compose's `nudgPress` and React Native's `bind().gesture` add the platform's activation action, so VoiceOver and TalkBack can trigger it; on the web a click was already a tap. The role and label stay the host's. Checked with an accessibility activation on an iOS simulator and an Android emulator.
 - **Compose follows "Remove animations".** `rememberNudg`'s `reducedMotion` now defaults to the system setting (`systemReducedMotion()`) instead of false, as every other adapter does.
 

@@ -1711,6 +1711,66 @@ def loop_cases():
     })
 
 
+# --- v1.1: reduced motion keeps fading loops ---------------------------------
+
+BLINK = {
+    "nudg": "1.1",
+    "targets": ["dot", "spinner"],
+    "values": {"dot.opacity": 1, "spinner.rotation": 0},
+    "initial": "busy",
+    "states": {
+        "busy": {
+            "loop": {
+                "dot.opacity": {"keyframes": [{"at": 0.5, "value": -0.75}], "duration": 0.9},
+                "spinner.rotation": {"to": 360, "duration": 1, "wrap": 360},
+            },
+            "when": {"host.done": "idle"},
+        },
+        "idle": {},
+    },
+}
+
+
+def reduced_loop_cases():
+    blink = [(0.5, -0.75), (1.0, 0)]
+    at = lambda t: round(1 + loop_offset(blink, 0.9, 0, 0, t)[0], 9)
+    write("loop-reduced-fade", {
+        "conformance": "1.1",
+        "name": "Loop: from 1.1, reduced motion keeps an opacity loop (it fades, nothing moves) and stops the rest",
+        "doc": BLINK,
+        "reducedMotion": True,
+        "steps": [
+            {"t": 0, "expect": {"state": ["busy"], "values": {"dot.opacity": 1, "spinner.rotation": 0}, "looping": True}},
+            {"t": 0.225, "expect": {"values": {"dot.opacity": at(0.225), "spinner.rotation": 0}}},
+            {"t": 0.45, "expect": {"values": {"dot.opacity": 0.25, "spinner.rotation": 0}, "looping": True}},
+            {"t": 1.2, "expect": {"values": {"dot.opacity": at(1.2), "spinner.rotation": 0}}},
+            {"t": 1.3, "send": "host.done"},
+            # Leaving fades back with the reduced tween, as any reduced motion does.
+            {"t": 1.5, "expect": {"state": ["idle"], "values": {"dot.opacity": 1, "spinner.rotation": 0}, "looping": False, "resting": True}},
+        ],
+    })
+    v10 = json.loads(json.dumps(BLINK))
+    v10["nudg"] = "1.0"
+    write("loop-reduced-fade-1.0", {
+        "conformance": "1.0",
+        "name": "Loop: a 1.0 file keeps 1.0's rule, reduced motion runs no loops at all",
+        "doc": v10,
+        "reducedMotion": True,
+        "steps": [
+            {"t": 0.45, "expect": {"state": ["busy"], "values": {"dot.opacity": 1, "spinner.rotation": 0}, "looping": False}},
+        ],
+    })
+    # Without reduced motion both loop, in either version.
+    write("loop-fade", {
+        "conformance": "1.1",
+        "name": "Loop: without reduced motion an opacity loop and a turn both play",
+        "doc": BLINK,
+        "steps": [
+            {"t": 0.45, "expect": {"values": {"dot.opacity": 0.25, "spinner.rotation": 162}, "looping": True}},
+        ],
+    })
+
+
 def validation_v10_cases():
     def doc():
         return json.loads(json.dumps(SPINNER))
@@ -2444,6 +2504,7 @@ if __name__ == "__main__":
     step_commit_cases()
     commit_moving_case()
     reduced_motion_cases()
+    reduced_loop_cases()
     validation_v03_cases()
     layout_cases()
     validation_v04_cases()

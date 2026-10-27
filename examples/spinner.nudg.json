@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "An indeterminate spinner. It fades and grows in when the app starts work, turns at a constant rate while the work runs, and stops by the shortest turn as it fades out. Reduced motion holds it still; the label says it's busy.",
   "targets": ["spinner"],
   "values": { "spinner.rotation": 0, "spinner.opacity": 0, "spinner.scale": 0.6 },

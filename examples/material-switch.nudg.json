@@ -1,5 +1,5 @@
 {
-  "nudg": "1.0",
+  "nudg": "1.1",
   "note": "A Material 3 switch with the Expressive motion scheme: the handle grows from 16 to 24 dp and slides with the spatial spring; the colors change with the effects spring, which never bounces. Only the import differs from ios-toggle.nudg.json.",
   "import": ["./motion/material-expressive.nudg.json"],
   "targets": ["knob", "track"],

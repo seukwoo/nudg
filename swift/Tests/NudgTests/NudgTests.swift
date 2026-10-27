@@ -113,6 +113,11 @@ final class SwiftUITests: XCTestCase {
   }
 
   func testAnAccessibilityActivationIsATap() throws {
+    // SwiftUI builds its accessibility tree only while assistive technology runs; turn the
+    // app's accessibility on in this process (test-only; the setting persists in the simulator).
+    let ax = try XCTUnwrap(dlopen("/usr/lib/libAccessibility.dylib", RTLD_NOW))
+    let enable = try XCTUnwrap(dlsym(ax, "_AXSApplicationAccessibilitySetEnabled"))
+    unsafeBitCast(enable, to: (@convention(c) (Bool) -> Void).self)(true)
     let model = NudgModel(try program("toggle-tap"), reducedMotion: false)
     let host = UIHostingController(rootView: Capsule().fill(Color.gray).frame(width: 52, height: 32).nudg(model, "track").nudgPress(model, "track").accessibilityLabel("Wi-Fi"))
     let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 200, height: 200))

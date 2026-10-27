@@ -284,17 +284,15 @@ final class CompareTests: XCTestCase {
     // The change overshoots further: its knob goes past where the other one ever goes.
     let maxA = on.compactMap(\.a).max() ?? 0, maxB = on.compactMap(\.b).max() ?? 0
     XCTAssertGreaterThan(maxB - maxA, 2.5, "B overshoots further (A max \(maxA), B max \(maxB))")
-    // Both come to rest at the runtime's 20.
-    let firstOn = try XCTUnwrap(on.first).t
-    let rested = try XCTUnwrap(on.last { $0.t < firstOn + 1.8 })
+    // The loop: after a run (1.5 s to rest + 0.8 s) both start over, off, and turn on again. How
+    // long a run lasts is checked on a fixed clock (testItStartsOverOnceBothHaveRested); on a loaded
+    // CI machine frames come too unevenly to time it here, so this checks that it comes round.
+    let restart = try XCTUnwrap(samples.drop { $0.a == nil }.first { $0.a == nil }, "it started over").t
+    XCTAssertTrue(samples.contains { $0.t > restart && $0.a != nil }, "and plays again")
+    // Before starting over, both rested at the runtime's 20.
+    let rested = try XCTUnwrap(on.last { $0.t < restart })
     XCTAssertEqual(try XCTUnwrap(rested.a), 20, accuracy: 1)
     XCTAssertEqual(try XCTUnwrap(rested.b), 20, accuracy: 1)
-    // The loop: after a run (1.5 s to rest + 0.8 s) both start over, off, and turn on again.
-    let offAfterOn = samples.drop { $0.a == nil }.first { $0.a == nil }
-    XCTAssertNotNil(offAfterOn, "it started over")
-    // Timed from the run's first frame on, so a slow start doesn't count: the tap at 0.1 s turns
-    // the tracks green within a frame or two, and the run ends at 1.525 s to rest + 0.8 s.
-    if let restart = offAfterOn?.t { XCTAssertEqual(restart - firstOn, 2.2, accuracy: 0.35, "a run lasts until rest plus the pause") }
   }
   #endif
 }

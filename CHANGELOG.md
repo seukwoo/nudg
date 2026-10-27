@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.2.0
+
+Judge a change on native: `nudg compare --bundle` and `NudgCompare` bring the side-by-side before and after to SwiftUI and Compose apps, on their own views. The format stays 1.1; the API only gains.
 
 - **Judge a change on native.** `nudg compare a b --bundle x.compare.json` (MCP `bundle`) writes the comparison as data: both versions compiled, the events, the verdict. `NudgCompare` (SwiftUI and Compose) plays it on the app's own view, in a preview or a debug screen: the headline first, before and after side by side, in a loop, a tap on either side happening on both, Replay and ¼× / ⅒× slow motion. Checked on an iOS simulator and an Android emulator, down to where each knob is drawn. New API: `compareBundle`, `Comparison` (Swift, Kotlin), `NudgCompare`.
 - **The API snapshot sees Kotlin members after a multi-line class header.** `Program.decode` and `PointerTracker`'s methods were public in 1.0 but missing from `api/kotlin.txt`; nothing about them changed.

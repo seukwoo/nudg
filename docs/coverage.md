@@ -62,6 +62,8 @@ Legend: **yes** supported, with an example; **yes, no example** supported but no
 |---|---|---|---|
 | DOM | yes | yes | Chrome, every test run |
 | React (and MUI, Radix, shadcn/ui, Headless UI, React Aria) | yes | yes | Chrome, with real MUI and Radix |
-| React Native | press, drag and pinch | `onLayout` | Android emulator (press and drag, through Expo Go); the touch-list handling in a unit test |
-| SwiftUI | yes | `.nudgLayout` | conformance suite and a pixel-checked SwiftUI render, on the Mac and an iOS simulator (CI) |
-| Jetpack Compose | yes | `nudgLayout` | conformance suite; tap, drag and two-finger pinch driven on an Android 16 emulator |
+| React Native | press, drag and pinch | `onLayout` | Android emulator (press and drag, through Expo Go; `NudgCompare` playing, mirroring and slowing down); the touch-list handling in a unit test |
+| SwiftUI | yes | `.nudgLayout` | conformance suite and a pixel-checked SwiftUI render, on the Mac and an iOS simulator (CI); `NudgCompare` measured live in a window |
+| Jetpack Compose | yes | `nudgLayout` | conformance suite; tap, drag and two-finger pinch driven on an Android 16 emulator; `NudgCompare` measured from captured pixels |
+
+Every native host also plays a `nudg compare --bundle` side by side with `NudgCompare` ([compare](usage.md#compare)).

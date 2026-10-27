@@ -163,3 +163,28 @@ test("onSettle: a state change with nothing to move settles on the next frame; a
   h.advance(1 / 60);
   assert.deepEqual(settles, [["two"]]);
 });
+
+test("a comparison's timeline: steps when due, a shared clock that slows, a fresh run after the pause", async () => {
+  const { compareTimeline, readCompareBundle, COMPARE_PAUSE } = await import("../src/core/compare-session.ts");
+  const data = readCompareBundle(JSON.parse(readFileSync(new URL("../spec/conformance/programs/toggle-bouncier.compare.json", import.meta.url), "utf8")));
+  assert.deepEqual(data.labels, ["now", "bouncier"]);
+  assert.equal(data.a.targets.join(), "knob,track");
+  let wall = 100;
+  const t = compareTimeline(data, () => wall);
+  wall += 0.05;
+  assert.deepEqual(t.due(), { steps: [], restarted: false });
+  wall += 0.06;
+  assert.deepEqual(t.due().steps, [{ t: 0.1, event: "track.tap" }]);
+  assert.deepEqual(t.due().steps, [], "each step once");
+  t.speed = 0.25;
+  const before = t.elapsed();
+  wall += 0.4;
+  assert.ok(Math.abs(t.elapsed() - before - 0.1) < 1e-9, "a quarter of the wall clock");
+  t.speed = 1;
+  wall += data.until + COMPARE_PAUSE;
+  assert.equal(t.due().restarted, true);
+  assert.ok(t.elapsed() < 1e-9);
+  wall += 0.11;
+  assert.equal(t.due().steps.length, 1, "the next run plays the steps again");
+  assert.throws(() => readCompareBundle({ nudgCompare: 2 }), /comparison bundle/);
+});

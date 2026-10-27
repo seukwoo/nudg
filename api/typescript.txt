@@ -145,6 +145,8 @@ export declare function useNudg<C extends NudgContract = NudgContract>(source: P
 ## @nudg/core/native
 
 export interface Bound { style: Record<string, unknown>; onLayout: (e: LayoutChangeEvent) => void; press: { onPressIn: () => void; onPressOut: () => void; onPress: () => void; }; gesture: Record<string, unknown>; }
+export declare function NudgCompare({ comparison, children }: NudgCompareProps): import("react").ReactElement<any, string | import("react").JSXElementConstructor<any>>;
+export interface NudgCompareProps { comparison: object; children: (nudg: NudgNative) => ReactNode; }
 export interface NudgContract { targets: string; events: string; inputs: string; states: string; }
 export interface NudgNative<C extends NudgContract = NudgContract> { bind(name: C["targets"]): Bound; send(event: C["events"]): boolean; input(name: C["inputs"], value: number): boolean; state: C["states"][]; present: boolean; }
 export type StateName<C extends NudgContract> = C["states"] | LastName<C["states"]>;

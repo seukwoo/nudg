@@ -429,3 +429,10 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Cause:** They read the conformance suite from the repository under `~/Documents`, a folder macOS protects. A process in the simulator asking to read it waits for a permission prompt that a headless run never shows.
 - **Resolution:** `swift/test-ios.sh` copies the suite to the temporary folder and passes its path to the test runner (`TEST_RUNNER_NUDG_CONFORMANCE`); the tests fall back to the repository path on the Mac.
 - **Lesson:** A test that hangs silently is usually waiting on something outside it. Tests that run on simulators should take their fixtures from unprotected paths, given explicitly.
+
+## 2026-10-27: Activation on native
+
+### Screen readers couldn't activate native targets
+- **Problem:** On the web a keyboard or screen reader activating a nudg target taps it, because the DOM adapter turns `click` into `tap`. Native adapters only listened for touches: a SwiftUI or Compose view with `nudgPress`, or a React Native view with `bind().gesture`, did nothing under VoiceOver or TalkBack, which ask an element to activate instead of touching it. Compose also ignored the system's "Remove animations" setting; its `reducedMotion` defaulted to false.
+- **Resolution:** When a file handles a target's tap, each adapter adds the platform's activation action and sends the tap; nothing else about the element's semantics changes. Compose reads the animator duration scale. Tests activate the toggle as VoiceOver does on an iOS simulator and as TalkBack does on an Android emulator, and fail without the change.
+- **Lesson:** SwiftUI builds no accessibility tree until something asks: `accessibilityElementCount()` on the hosting view returned nothing, but reading its `accessibilityElements` produced the node, and activating it ran the action. Parity checks across adapters should include input that isn't touch.

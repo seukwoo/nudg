@@ -1,6 +1,6 @@
 # Contributing to nudg
 
-Thanks for your interest. nudg is early, and the most useful contributions right now are real interactions that the format can't express yet, and bugs in the reference runtime.
+Thanks for your interest. nudg 1.0 is stable, and the most useful contributions are real interactions that the format can't express yet, and bugs in the reference runtime.
 
 The easiest contribution of all: if you use nudg, run `npx @nudg/core log --share` now and then. It sends a counts-only summary of how many rounds your motion changes took (nothing about your app), as an issue you read and submit yourself.
 

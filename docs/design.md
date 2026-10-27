@@ -347,6 +347,14 @@ Common UI words such as menu, spinner, drawer or shared-element transition need 
 - **Variants that need a missing capability get their own recipe.** Hide-on-scroll and the free-scrolling carousel moved out of `app-bar` and `carousel`, whose starters do the expressible variant, so each gap is counted once, against the pattern that needs it.
 - **The count chooses the next primitive.** `nudg recipe --gaps` lists each capability with the recipes that need it. Ties are broken by how many more recipes the primitive would turn into starters, not by the count alone.
 
+## Activation is a tap on every platform
+
+On the web an adapter turns `click` into `tap`, so a keyboard or a screen reader activating a button taps it without anything extra. Native adapters listened for touches only: a SwiftUI or Compose target driven by `nudgPress`, or a React Native view with `bind().gesture`, couldn't be activated by VoiceOver or TalkBack at all, because those don't touch; they ask the element to activate.
+
+- **Activation is the target's tap.** When the file handles `target.tap`, `nudgPress` adds an accessibility action (SwiftUI's default action, Compose's click action) and React Native's `gesture` the `activate` action, each sending the tap. A target whose tap the file doesn't handle gets nothing, so the adapters never claim an action they can't perform.
+- **Only the action, not the semantics.** Role, label, value and state stay the host's (principle 13): the adapter adds no traits. A host that already makes the view a button keeps working; its own action and the adapter's are the same tap.
+- **Reduced motion is the system's, on every platform.** Compose read no setting; it now follows "Remove animations" (an animator duration scale of 0), as SwiftUI follows Reduce Motion and React Native and the web their own settings. Each adapter reads it when the player is created; a change while a player runs applies to the next one (see the open questions).
+
 ## Open questions
 
 These are unresolved design choices. Scheduling and completion status live in the [roadmap](roadmap.md); examples of possible syntax below are proposals.
@@ -356,6 +364,7 @@ These are unresolved design choices. Scheduling and completion status live in th
 - Layout: formats 0.4, 0.6 and 0.9 implement measurement, arithmetic and measured follow/map endpoints. Measuring across players remains open.
 - Pattern metadata currently lives in the versioned external recipe catalog. Revisit a file-level role such as `"role": "bottom-sheet"` only if generation or validation needs cannot be met without changing runtime documents.
 - Pattern aliases and locale: how to map common design words such as FAB, snackbar, toast, tabs, tab bar, bottom nav, GNB, LNB and side nav without making the core format depend on one design system's names.
+- Reduced motion that changes while a player runs. Adapters read the system setting when the player is created; switching mid-session would need the runtime to change its motion source without a jump, in every runtime.
 - Reduced motion inside the format: a way for a file to say which properties must not be reduced (a progress bar's width), beyond the runtime's blanket option.
 - Discrete steps for `commit` (a slider that snaps to 10s), beyond `min`/`max`.
 - Nonlinear rubber banding that depends on the view's size, instead of the linear `overdrag` factor.

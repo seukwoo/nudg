@@ -102,4 +102,30 @@ final class SwiftUITests: XCTestCase {
     XCTAssertEqual(exits, 1)
     XCTAssertFalse(model.present)
   }
+
+  #if os(iOS)
+  /** Every accessibility element under `object`, depth first, each once. */
+  private func elements(_ object: NSObject, _ seen: inout Set<ObjectIdentifier>) -> [NSObject] {
+    guard seen.insert(ObjectIdentifier(object)).inserted, seen.count < 500 else { return [] }
+    let count = object.accessibilityElementCount()
+    let children = (object.accessibilityElements as? [NSObject] ?? []) + (count > 0 && count != NSNotFound ? (0..<count).compactMap { object.accessibilityElement(at: $0) as? NSObject } : [])
+    return [object] + (children + ((object as? UIView)?.subviews ?? [])).flatMap { elements($0, &seen) }
+  }
+
+  func testAnAccessibilityActivationIsATap() throws {
+    let model = NudgModel(try program("toggle-tap"), reducedMotion: false)
+    let host = UIHostingController(rootView: Capsule().fill(Color.gray).frame(width: 52, height: 32).nudg(model, "track").nudgPress(model, "track").accessibilityLabel("Wi-Fi"))
+    let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 200, height: 200))
+    window.rootViewController = host
+    window.makeKeyAndVisible()
+    host.view.layoutIfNeeded()
+    RunLoop.main.run(until: Date().addingTimeInterval(1))
+    // What VoiceOver's double tap does: activate the element, no touch at all.
+    var seen = Set<ObjectIdentifier>()
+    let all = elements(host.view, &seen)
+    let track = try XCTUnwrap(all.first { $0.accessibilityLabel == "Wi-Fi" }, "the track is an accessibility element")
+    XCTAssertTrue(track.accessibilityActivate())
+    XCTAssertEqual(model.state, ["on"])
+  }
+  #endif
 }

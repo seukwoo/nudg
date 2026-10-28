@@ -1,5 +1,6 @@
 {
   "name": "@nudg/core",
+  "mcpName": "io.github.seukwoo/nudg",
   "version": "1.4.0",
   "description": "Standard interaction recipes and portable motion your AI can nudge.",
   "keywords": [
@@ -10,6 +11,15 @@
     "spring",
     "state-machine",
     "ui",
+    "react",
+    "react-native",
+    "swiftui",
+    "jetpack-compose",
+    "gestures",
+    "accessibility",
+    "mcp",
+    "mcp-server",
+    "claude-code",
     "ai",
     "llm"
   ],

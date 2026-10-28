@@ -280,6 +280,8 @@ Pattern words live in external recipe metadata, not core syntax. Every shipped e
 
 `presets.press()`, `hover()`, `toggle()`, `toast()` (in `@nudg/core` and `@nudg/core/react`) return ready-made documents for the common cases, so a plain press needs no file: `useNudg(presets.press({ scale: 0.96 }))`. When a user wants more than the options cover, write the file: `nudg preset press > press.nudg.json` prints the same document, and then edit it like any nudg file.
 
+In a Vite web app, add `nudg()` from `@nudg/core/vite` to the config's plugins when you first wire nudg in: files are compiled at build time (errors fail the build), and the bundle is half the size. Presets keep working with it.
+
 ## Words to edits
 
 | Request | Edit |

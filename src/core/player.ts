@@ -3,7 +3,6 @@
 // scheduler, so the core still never reads a platform API; values go out through
 // onFrame, events and inputs come in through send and input.
 
-import { compile } from "./compile.ts";
 import { createLifecycle } from "./lifecycle.ts";
 import { createRuntime, type Runtime, type Value } from "./runtime.ts";
 import type { NudgContract, Program, StateName } from "./types.ts";
@@ -114,16 +113,4 @@ export function initialValues(program: Program, options: InitialOptions = {}): R
   return runtime.sample(0);
 }
 
-/** Compiles a document (with the files it imports) or passes a Program through; throws with every error. */
-export function toProgram(source: Program | object, files: Record<string, unknown> = {}): Program {
-  if ("machine" in source && (source as Program).properties instanceof Map) return source as Program;
-  const byPath = new Map(Object.entries(files).map(([key, value]) => [key.replace(/^(\.\/)+/, ""), value]));
-  const { program, diagnostics } = compile({ path: "main.nudg.json", text: JSON.stringify(source) }, (path) =>
-    byPath.has(path) ? JSON.stringify(byPath.get(path)) : undefined,
-  );
-  if (!program) {
-    const lines = diagnostics.filter((d) => d.severity === "error").map((d) => `${d.code} at ${d.path}: ${d.message}${d.hint ? ` (${d.hint})` : ""}`);
-    throw new Error(`nudg: the file has errors:\n${lines.join("\n")}`);
-  }
-  return program;
-}
+export { toProgram } from "./to-program.ts";

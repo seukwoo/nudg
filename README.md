@@ -93,7 +93,7 @@ function Toggle() {
 }
 ```
 
-The look is yours (size, shape, the knob's resting place); the file moves it. Values go straight to the elements' styles, so the component doesn't re-render while things move. Not using React? The DOM adapter binds `data-nudg="knob"` attributes instead; see [Using nudg](docs/usage.md#dom-adapter).
+The look is yours (size, shape, the knob's resting place); the file moves it. Values go straight to the elements' styles, so the component doesn't re-render while things move. With Vite, add `nudg()` from `@nudg/core/vite` to the plugins: files are compiled at build time, a file with errors fails the build, and nudg adds about 14 kB gzipped instead of 28. Not using React? The DOM adapter binds `data-nudg="knob"` attributes instead; see [Using nudg](docs/usage.md#dom-adapter).
 
 ## Native feel, one import
 

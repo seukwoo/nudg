@@ -2,7 +2,7 @@
 // nudg events and inputs, and applies sampled values to styles. All motion math stays
 // in the core.
 
-import { compile } from "../core/compile.ts";
+import { toProgram } from "../core/to-program.ts";
 import { handledEvents } from "../core/observe.ts";
 import { pinchInputs, pinchableTargets } from "../core/pointer.ts";
 import { createLifecycle } from "../core/lifecycle.ts";
@@ -93,14 +93,7 @@ export interface Player<C extends NudgContract = NudgContract> {
  * inside, it is bound to the document's first target. Throws if the document has errors.
  */
 export function playDoc<C extends NudgContract = NudgContract>(doc: object, root: ParentNode | null = document, options: PlayOptions<C> & { files?: Record<string, unknown> } = {}): Player<C> {
-  const files = new Map(Object.entries(options.files ?? {}).map(([k, v]) => [k.replace(/^(\.\/)+/, ""), v]));
-  const { program, diagnostics } = compile({ path: "main.nudg.json", text: JSON.stringify(doc) }, (path) =>
-    files.has(path) ? JSON.stringify(files.get(path)) : undefined,
-  );
-  if (!program) {
-    const lines = diagnostics.filter((d) => d.severity === "error").map((d) => `${d.code} at ${d.path}: ${d.message}${d.hint ? ` (${d.hint})` : ""}`);
-    throw new Error(`nudg: the document has errors:\n${lines.join("\n")}`);
-  }
+  const program = toProgram(doc, options.files);
   const bare = root instanceof Element && !root.querySelector("[data-nudg]") && !root.hasAttribute("data-nudg");
   const { files: _files, ...rest } = options;
   return play(program, bare ? null : root, bare ? { ...rest, bind: { [program.targets[0]]: root, ...rest.bind } } : rest);

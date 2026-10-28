@@ -311,6 +311,15 @@ On the web, `compare` shows the real component by snapshotting it from the runni
 - **Where it runs is the host's choice.** A SwiftUI preview or a Compose debug screen; nothing is added to release builds unless the app puts it there. The views take the player as a parameter instead of creating it, which is also what makes them testable.
 - **Verdict from one place.** The sentence is computed by the reference tools and carried in the bundle; native code doesn't reimplement perception thresholds.
 
+## Web apps compile at build time
+
+A first run from an empty Vite project measured nudg at about 28 kB gzipped for one press preset; 51 kB of its 87 kB minified was the compiler and validator, bundled because the web adapters compile documents in the browser. Native apps never paid this: they ship compiled programs.
+
+- **The bundler compiles, as on native.** `nudg()` from `@nudg/core/vite` turns a `.nudg.json` import into the compiled program, so errors fail the build where the developer looks, and the browser gets data, not a compiler.
+- **One seam.** Every adapter reaches the compiler through `core/to-program`; the plugin resolves that one module to a version without the compiler. The adapters' API doesn't change, and without the plugin nothing changes at all.
+- **Presets stay one line.** They are documents built at run time from options, so they can't be compiled at build time. A small converter reads exactly the part of the format presets use; a test holds it to the compiler's output, program for program, across their options. Anything outside that part throws and names the way back: `nudg({ compiler: true })`.
+- **Measured:** nudg in a React app went from about 28 kB to 14 kB gzipped with a file or a preset; the build of a file with an unknown event fails with `unknown-event` and its pointer.
+
 ## Type-safe host contracts
 
 Status: implemented as `nudg generate` and the `nudg_generate` MCP tool.
@@ -382,7 +391,6 @@ These are unresolved design choices. Scheduling and completion status live in th
 - Layout: formats 0.4, 0.6 and 0.9 implement measurement, arithmetic and measured follow/map endpoints. Measuring across players remains open.
 - Pattern metadata currently lives in the versioned external recipe catalog. Revisit a file-level role such as `"role": "bottom-sheet"` only if generation or validation needs cannot be met without changing runtime documents.
 - Pattern aliases and locale: how to map common design words such as FAB, snackbar, toast, tabs, tab bar, bottom nav, GNB, LNB and side nav without making the core format depend on one design system's names.
-- Bundle size on the web. A press preset adds about 28 kB gzipped to a React app, and 51 kB of the 87 kB minified is the compiler and validator (`compile.js`), which the adapters import because they accept a document and compile it in the browser. Native apps already ship compiled programs. Options: a build-time step (a bundler plugin, or `nudg compile`) plus adapter entry points that take only compiled programs, so the compiler is never bundled; or a smaller runtime-only compile for presets. It changes how files reach a web app, so it waits for a decision.
 - Reduced motion that changes while a player runs. Adapters read the system setting when the player is created; switching mid-session would need the runtime to change its motion source without a jump, in every runtime.
 - Reduced motion inside the format: a way for a file to say which properties must not be reduced (a progress bar's width), beyond the runtime's blanket option and 1.1's opacity loops.
 - Discrete steps for `commit` (a slider that snaps to 10s), beyond `min`/`max`.

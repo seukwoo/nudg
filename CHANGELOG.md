@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.4.0
+
+A first run that works, from an empty project, and half the web bundle. Following the README in a new Vite app found what got in the way; the fixes are below, and `@nudg/core/vite` compiles files at build time so nudg adds about 14 kB gzipped instead of 28. The format stays 1.1; the API only gains.
 
 - **A first run that works.** From a fresh project, the README now starts from a recipe (`nudg recipe toggle --source`), and its React snippet carries the minimum styles; pasted as it was, the toggle had no size and nothing showed. `compare --before` outside git says how to go on.
 - **The compare page mirrors taps,** as the playground and NudgCompare do: a tap or drag on either stage happens on both.

@@ -95,7 +95,7 @@ Stills can't show motion. For the person, write a page instead:
 nudg compare toggle.nudg.json toggle-bouncier.nudg.json --send track.tap@0.05 --html toggle.html --out compare.html
 ```
 
-`compare.html` plays A and B side by side on the real markup, with the same events, in a loop, with the live values under each. Buttons: replay the events, **press both** (a tap on both at once on the first target the file lets you press, with a 0.3 s or 1 s hold), speed 1× / ¼× / ⅒×, pause. The stages also respond to your own taps and drags. The runtime is inlined from the package's build, so the file works offline and from any folder; from a clone, run `npm run build` first, or the page loads the runtime from unpkg.
+`compare.html` plays A and B side by side on the real markup, with the same events, in a loop, with the live values under each. Buttons: replay the events, **press both** (a tap on both at once on the first target the file lets you press, with a 0.3 s or 1 s hold), speed 1× / ¼× / ⅒×, pause. A tap or drag on either stage happens on both, as in the playground and the native NudgCompare. The runtime is inlined from the package's build, so the file works offline and from any folder; from a clone, run `npm run build` first, or the page loads the runtime from unpkg.
 
 **In a SwiftUI or Compose app.** There is no page to snapshot, so the comparison travels as data and plays on the app's own view:
 
@@ -313,7 +313,7 @@ function Toggle({ checked }: { checked: boolean }) {
 }
 ```
 
-With the contract from [`nudg generate`](#generate), `useNudg<ToggleContract>(toggle)` checks target, event, input and state names at compile time. `bind(name)` returns a stable ref callback. Values go straight to the elements' styles, so the component doesn't re-render while things move; `state` updates only when the state changes. The hook takes a JSON object (compiled once, with `files` for its imports) or a compiled program. React 18 or later is an optional peer dependency.
+With the contract from [`nudg generate`](#generate), `useNudg<ToggleContract>(toggle)` checks target, event, input and state names at compile time. `bind(name)` returns a stable ref callback. nudg moves and colors the elements; their size, shape and resting place are your CSS (the toggle's in [examples/toggle.html](../examples/toggle.html)), and without it a `<span>` knob is 0 × 0 and nothing shows. Values go straight to the elements' styles, so the component doesn't re-render while things move; `state` updates only when the state changes. The hook takes a JSON object (compiled once, with `files` for its imports) or a compiled program. React 18 or later is an optional peer dependency.
 
 **App values.** `input(name, value)` supplies a continuous value the file reads with `map` or `follow` (format 0.5), such as a microphone level or playback progress. It writes styles without re-rendering, and returns false for names the file doesn't read. The latest value carries over when the program changes, and a value given before the hook's player starts (a child's layout effect, for example) applies when it does:
 

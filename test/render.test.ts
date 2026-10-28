@@ -92,6 +92,36 @@ test("compare page plays both versions offline, with press-both and slow motion"
   }
 });
 
+test("compare page: a tap on one stage happens on both", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const { comparePage, readWithImports } = await import("../src/node/compare-page.ts");
+  const { launchBrowser, waitFor } = await import("../src/node/cdp.ts");
+  const a = readWithImports(join(root, "examples/toggle.nudg.json"));
+  const b = { ...a, text: a.text.replace('"bounce": 0.25', '"bounce": 0.6') };
+  assert.notEqual(a.text, b.text);
+  const page = comparePage({ html: readFileSync(join(root, "examples/toggle.html"), "utf8"), a, b, labels: ["now", "bouncier"], events: [], until: 1, headline: "x" });
+  const dir = mkdtempSync(join(tmpdir(), "nudg-page-"));
+  const file = join(dir, "compare.html");
+  const { writeFileSync } = await import("node:fs");
+  writeFileSync(file, page);
+  const browser = await launchBrowser(chrome!);
+  try {
+    await browser.send("Page.navigate", { url: `file://${file}` });
+    const state = (stage: string) => browser.evaluate(`document.querySelector("#${stage} [data-nudg=track]")?.getAttribute("data-nudg-state") ?? ""`);
+    await waitFor(async () => (await state("stage-b")) || undefined, 15_000);
+    assert.equal(await state("stage-b"), "off");
+    // A click is a tap; it comes from the page on A, and B gets it too.
+    await browser.evaluate(`document.querySelector("#stage-a [data-nudg=track]").click()`);
+    await waitFor(async () => ((await state("stage-b")) === "on" ? true : undefined), 5_000);
+    assert.equal(await state("stage-a"), "on");
+    await browser.evaluate(`document.querySelector("#stage-b [data-nudg=track]").click()`);
+    await waitFor(async () => ((await state("stage-a")) === "off" ? true : undefined), 5_000);
+    assert.equal(await state("stage-b"), "off", "no echo: B toggled once");
+  } finally {
+    await browser.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("compare page survives </script> in a note and presses the target the file lets you press", async () => {
   const { comparePage, readWithImports } = await import("../src/node/compare-page.ts");
   const a = readWithImports(join(root, "examples/toggle.nudg.json"));

@@ -470,3 +470,18 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Cause:** Two things. The live test timed the loop from frames that a loaded CI simulator delivers unevenly, so the moment it saw "on" drifted. And only the TypeScript and package jobs are required for merging, so a pending Swift job didn't block it; the merge step read the checks before Swift had finished.
 - **Resolution:** The live test checks that the loop comes round and that both sides rest at 20 before it does; how long a run lasts stays with the fixed-clock test. Merges now wait until every job has a result, required or not. The released code was unaffected (the same test passed on main).
 - **Lesson:** A live check should assert what it can see reliably (positions, order) and leave durations to the deterministic tests. And "required" is a property of branch protection, not of what matters: wait for every job.
+
+## 2026-10-28: A first run, from nothing
+
+### Following the README in an empty project
+- **Problem:** Nobody had followed the README from scratch since the 0.x days. The question was how many steps it takes a new person, or a new agent, to get from `npm install` to judging a change.
+- **What happened,** in a new Vite + React + TypeScript app with the 1.3.0 package (installed from a package built at the tag, because a supply-chain firewall on this machine holds back releases younger than 24 hours), SwiftPM from the GitHub tag, and JitPack:
+  1. "Get started" told the reader to validate `toggle.nudg.json` before saying where one comes from; `recipe toggle --source` was two sections further down.
+  2. The README's React snippet, pasted as is, typechecked, built, and showed nothing that looked like a toggle: an unstyled button and a 0 × 0 knob. `observe` said the knob moved to 20, so the motion was right and the page was invisible.
+  3. `compare --before HEAD` in a project without git explained why it couldn't, but not what to do instead.
+  4. The web compare page let you tap each stage on its own, while the playground and the native NudgCompare mirror a tap to both.
+  5. One press preset adds about 28 kB gzipped to the app; 51 kB of nudg's 87 kB minified is the compiler, which the web adapters bundle because they compile in the browser.
+  6. JitPack had never built a release: the first request for 1.3.0 started the build, so the first Android user would wait minutes.
+  7. SwiftPM resolved 1.3.0 from the tag and the bundle decoded; once styled, the toggle, `observe` and `compare --url` all worked on the first try.
+- **Resolution:** The README starts from a recipe and its React snippet carries the minimum styles; usage says the look is the host's CSS; the git message names the two ways forward; the compare page mirrors taps (a browser test fails without it); the release workflow asks JitPack to build each tag. Bundle size is an open question in the design doc, since fixing it changes how files reach a web app.
+- **Lesson:** Every tool worked and the first run still failed at step two, on the part nudg doesn't own: the host's CSS. A quickstart is checked by pasting it into an empty project and looking at the screen, not by the tests of the pieces it uses.

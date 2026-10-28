@@ -177,7 +177,7 @@ ${noScripts(head)}
     <span class="nudg-time" id="time">0.00s</span>
   </div>
   <div class="nudg-bar"><i id="bar"></i></div>
-  <p class="nudg-note">Both play the same events (${esc(describeEvents(events))}) and loop. Slow it down to see the difference. The stages also respond to your own taps and drags, each on its own.</p>
+  <p class="nudg-note">Both play the same events (${esc(describeEvents(events))}) and loop. Slow it down to see the difference. A tap or drag on either stage happens on both.</p>
 </div>
 <script type="module">
   const { playDoc } = await import("@nudg/core/dom");
@@ -195,9 +195,16 @@ ${noScripts(head)}
   function mount(withScript) {
     script = withScript; loopUntil = withScript === events ? until : hold + 1.2;
     for (const p of players) p.destroy();
-    players = [["stage-a", A], ["stage-b", B]].map(([id, v]) => {
+    players = [["stage-a", A], ["stage-b", B]].map(([id, v], i) => {
+      // What a person does on one stage happens on the other too (onEvent reports only what came from the page, so nothing echoes).
+      const onEvent = (item) => {
+        const other = players[1 - i];
+        if (!other) return;
+        if ("event" in item) other.send(item.event);
+        else other.input(item.input, item.value);
+      };
       try {
-        return playDoc(JSON.parse(v.text), document.getElementById(id), { clock: "manual", files: v.files, state: start ?? undefined, reducedMotion });
+        return playDoc(JSON.parse(v.text), document.getElementById(id), { clock: "manual", files: v.files, state: start ?? undefined, reducedMotion, onEvent });
       } catch (e) {
         document.getElementById(id).innerHTML = '<pre style="white-space:pre-wrap;font:12px ui-monospace,Menlo,monospace;color:#b91c1c;margin:0">' + String(e.message).replace(/</g, "&lt;") + "</pre>";
         return { render() {}, send() {}, input() {}, values: () => ({}), destroy() {} };

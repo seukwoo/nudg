@@ -86,14 +86,14 @@ import toggle from "./toggle.nudg.json";
 function Toggle() {
   const { bind } = useNudg(toggle);
   return (
-    <button ref={bind("track")}>
-      <span ref={bind("knob")} />
+    <button ref={bind("track")} aria-label="Wi-Fi" style={{ position: "relative", width: 52, height: 32, padding: 0, border: 0, borderRadius: 16 }}>
+      <span ref={bind("knob")} style={{ position: "absolute", top: 4, left: 4, width: 24, height: 24, borderRadius: "50%", background: "#fff" }} />
     </button>
   );
 }
 ```
 
-Values go straight to the elements' styles, so the component doesn't re-render while things move. Not using React? The DOM adapter binds `data-nudg="knob"` attributes instead; see [Using nudg](docs/usage.md#dom-adapter).
+The look is yours (size, shape, the knob's resting place); the file moves it. Values go straight to the elements' styles, so the component doesn't re-render while things move. Not using React? The DOM adapter binds `data-nudg="knob"` attributes instead; see [Using nudg](docs/usage.md#dom-adapter).
 
 ## Native feel, one import
 
@@ -124,6 +124,7 @@ human UI words
 
 ```sh
 npm install @nudg/core
+npx nudg recipe toggle --source > toggle.nudg.json   # a validated starter; `npx nudg recipe` lists them all
 ```
 
 Give your AI agent the nudg tools over MCP. This is for Claude Code; any MCP client can run the same command:
@@ -132,7 +133,7 @@ Give your AI agent the nudg tools over MCP. This is for Claude Code; any MCP cli
 claude mcp add nudg -- npx -y @nudg/core mcp
 ```
 
-Or use the CLI yourself:
+Or use the CLI yourself on the file:
 
 ```sh
 npx nudg validate toggle.nudg.json

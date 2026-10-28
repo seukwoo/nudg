@@ -67,7 +67,7 @@ function repoRoot(from: string): string {
   try {
     return execFileSync("git", ["-C", from, "rev-parse", "--show-toplevel"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
   } catch {
-    throw new Error(`${from} is not inside a git repository, so there is no revision to compare against.`);
+    throw new Error(`${from} is not inside a git repository, so there is no revision to compare against. Commit the file first (git init, git add, git commit), or compare two files: nudg compare before.nudg.json after.nudg.json.`);
   }
 }
 

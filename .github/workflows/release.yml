@@ -41,3 +41,18 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm publish --access public
+  jitpack:
+    # JitPack builds the Kotlin modules on the first request for a tag, which makes the first
+    # person to add the release wait minutes. Ask for it now, so it's built when they come.
+    needs: npm
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - name: Build the Kotlin modules on JitPack
+        run: |
+          v="${TAG#v}"
+          for m in nudg compose; do
+            curl -sSf --retry 3 --max-time 900 -o /dev/null "https://jitpack.io/com/github/seukwoo/nudg/$m/$v/$m-$v.pom"
+          done
+          curl -s "https://jitpack.io/api/builds/com.github.seukwoo/nudg/$v" | grep -Eq '"status" ?: ?"ok"'

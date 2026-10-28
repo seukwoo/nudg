@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **A first run that works.** From a fresh project, the README now starts from a recipe (`nudg recipe toggle --source`), and its React snippet carries the minimum styles; pasted as it was, the toggle had no size and nothing showed. `compare --before` outside git says how to go on.
+- **The compare page mirrors taps,** as the playground and NudgCompare do: a tap or drag on either stage happens on both.
+- **Releases build on JitPack right away,** so the first person to add a new Kotlin version doesn't wait for the build.
+
 ## 1.3.0
 
 NudgCompare on every native host: React Native joins SwiftUI and Compose, and SwiftUI's is checked live in a window on the iOS simulator. The format stays 1.1; the API only gains.

@@ -2,7 +2,7 @@
 // written to styles directly, so React doesn't re-render on every frame.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { compile } from "../core/compile.ts";
+import { toProgram } from "../core/to-program.ts";
 import { createRuntime } from "../core/runtime.ts";
 import type { NudgContract, Program, StateName } from "../core/types.ts";
 import { play, type Player } from "../dom/play.ts";
@@ -163,16 +163,3 @@ function isProgram(source: Program | object): source is Program {
   return "machine" in source && (source as Program).properties instanceof Map;
 }
 
-function toProgram(source: Program | object, files: Record<string, unknown> = {}): Program {
-  if (isProgram(source)) return source;
-  // The compiler asks for normalized paths ("motion/brand.nudg.json"); accept keys as people write imports.
-  const byPath = new Map(Object.entries(files).map(([key, value]) => [key.replace(/^(\.\/)+/, ""), value]));
-  const { program, diagnostics } = compile({ path: "main.nudg.json", text: JSON.stringify(source) }, (path) =>
-    byPath.has(path) ? JSON.stringify(byPath.get(path)) : undefined,
-  );
-  if (!program) {
-    const lines = diagnostics.filter((d) => d.severity === "error").map((d) => `${d.code} at ${d.path}: ${d.message}${d.hint ? ` (${d.hint})` : ""}`);
-    throw new Error(`nudg: the file has errors:\n${lines.join("\n")}`);
-  }
-  return program;
-}

@@ -4,6 +4,7 @@
 
 - **A first run that works.** From a fresh project, the README now starts from a recipe (`nudg recipe toggle --source`), and its React snippet carries the minimum styles; pasted as it was, the toggle had no size and nothing showed. `compare --before` outside git says how to go on.
 - **The compare page mirrors taps,** as the playground and NudgCompare do: a tap or drag on either stage happens on both.
+- **Half the web bundle: `@nudg/core/vite`.** The Vite (and Rollup) plugin compiles `.nudg.json` imports at build time, fails the build on a file with errors, and keeps the compiler out of the bundle: nudg in a React app drops from about 28 kB to 14 kB gzipped, presets included. Presets are built by a small converter held by a test to the compiler's exact output. `nudg({ compiler: true })` keeps the compiler for documents made at run time. The adapters also accept compiled programs (`nudg compile` output) directly, and the package is marked side-effect free.
 - **Releases build on JitPack right away,** so the first person to add a new Kotlin version doesn't wait for the build.
 
 ## 1.3.0

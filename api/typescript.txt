@@ -142,6 +142,11 @@ export declare function toast(options?: ToastOptions): NudgDocument;
 export declare function toggle(options?: ToggleOptions): NudgDocument;
 export declare function useNudg<C extends NudgContract = NudgContract>(source: Program | object, options?: UseNudgOptions<C>): Nudg<C>;
 
+## @nudg/core/vite
+
+export interface NudgPluginOptions { compiler?: boolean; }
+export declare function nudg(options?: NudgPluginOptions): { name: string; enforce: "pre"; config: () => { optimizeDeps: { exclude: string[]; }; }; resolveId(this: Context, source: string, importer?: string): Promise<string | null>; load(this: Context, id: string): string | null; };
+
 ## @nudg/core/native
 
 export interface Bound { style: Record<string, unknown>; onLayout: (e: LayoutChangeEvent) => void; press: { onPressIn: () => void; onPressOut: () => void; onPress: () => void; }; gesture: Record<string, unknown>; }

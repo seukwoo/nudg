@@ -350,6 +350,16 @@ The first frame is the starting states (`state`), app inputs from `inputs` (othe
 
 `present` turns false once the machine has entered an `exit` state and every value has come to rest; `onExit` fires then, once. For a list of toasts, the parent removes the item in `onExit`, not when it decides to dismiss: dismissing is an event (`send("host.hide")`, or the file's own timer), removal is the consequence. Showing the component again (an event that leaves the exit state) makes `present` true again.
 
+### Vite plugin
+
+```ts
+// vite.config.ts
+import { nudg } from "@nudg/core/vite";
+export default defineConfig({ plugins: [react(), nudg()] });
+```
+
+`import toggle from "./toggle.nudg.json"` then gives the compiled program instead of the document, so the validator and compiler stay out of the bundle: about 14 kB gzipped for nudg in a React app instead of 28. A file with errors fails the build (and the dev server) with the validator's messages, and editing the file or one it imports reloads it. Presets keep working: the adapters build them with a small converter, tested to give exactly what the compiler gives. A document made at run time some other way (an editor, a file fetched from a server) needs the compiler back: `nudg({ compiler: true })`. The adapters (React, DOM, React Native) also accept a compiled program from `nudg compile` directly. Rollup takes the same plugin.
+
 ## With component libraries
 
 nudg doesn't replace your components; it gives the ones you already use their motion. Two bridges cover most libraries:

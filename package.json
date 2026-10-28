@@ -37,6 +37,10 @@
       "types": "./dist/react/index.d.ts",
       "default": "./dist/react/index.js"
     },
+    "./vite": {
+      "types": "./dist/vite/index.d.ts",
+      "default": "./dist/vite/index.js"
+    },
     "./native": {
       "types": "./dist/native/index.d.ts",
       "default": "./dist/native/index.js"
@@ -59,6 +63,7 @@
   "engines": {
     "node": ">=22.4"
   },
+  "sideEffects": false,
   "files": [
     "dist",
     "spec/guide.md",

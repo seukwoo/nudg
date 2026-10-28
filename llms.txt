@@ -1,0 +1,23 @@
+# nudg
+
+> nudg describes a UI interaction in a small JSON file next to a component: its states, the events that move between them, and the motion in between (springs, tweens, gestures, timers, loops). An AI coding tool edits the file, nudg validates the edit and shows before and after, and a small runtime plays it the same way on the web (DOM, React), iOS (SwiftUI), Android (Compose) and React Native. npm package: @nudg/core; CLI: nudg; MCP server: `npx -y @nudg/core mcp`.
+
+Start from a recipe (`npx nudg recipe <name> --source`) rather than writing a file from scratch, and run `nudg validate` after every edit.
+
+## Docs
+
+- [Agent guide](https://raw.githubusercontent.com/seukwoo/nudg/main/spec/guide.md): how to write and edit .nudg.json files, recipes and presets, for AI agents
+- [Usage](https://raw.githubusercontent.com/seukwoo/nudg/main/docs/usage.md): the CLI, the MCP tools and the adapters for DOM, React, React Native, SwiftUI and Compose
+- [Spec](https://raw.githubusercontent.com/seukwoo/nudg/main/docs/spec.md): the format 1.x grammar and semantics
+- [Validator errors](https://raw.githubusercontent.com/seukwoo/nudg/main/docs/errors.md): every error code with its meaning and fix
+
+## Reference
+
+- [Recipe catalog](https://raw.githubusercontent.com/seukwoo/nudg/main/recipes/index.json): standard interactions (toggle, bottom sheet, toast, carousel and more) with validated starters
+- [JSON Schema](https://seukwoo.github.io/nudg/schema.json): the file format
+- [Examples](https://github.com/seukwoo/nudg/tree/main/examples): every recipe as a working file
+
+## Optional
+
+- [Design](https://github.com/seukwoo/nudg/blob/main/docs/design.md): principles, decisions and open questions
+- [Live demo](https://seukwoo.github.io/nudg/demo/): all examples playing in the browser

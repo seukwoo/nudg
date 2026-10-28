@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.seukwoo/nudg",
+  "title": "nudg",
+  "description": "Write, check and compare UI interactions (springs, gestures, states) for web, iOS and Android.",
+  "repository": { "url": "https://github.com/seukwoo/nudg", "source": "github" },
+  "websiteUrl": "https://seukwoo.github.io/nudg/demo/",
+  "version": "1.4.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@nudg/core",
+      "version": "1.4.0",
+      "transport": { "type": "stdio" },
+      "packageArguments": [{ "type": "positional", "value": "mcp" }]
+    }
+  ]
+}

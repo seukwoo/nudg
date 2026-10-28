@@ -176,6 +176,17 @@ Goal: make the same interaction intent portable beyond web.
 - Flutter or React Native if dogfooding points there.
 - Standalone / canvas / game-like scenes only after the UI pattern story is strong; this is where a future relationship with bite can become concrete.
 
+## Next: Adoption Before More Features
+
+Status: started. The format has no open recipe gaps and runs on five platforms, but nobody outside this project uses it yet; each new feature costs three runtimes. Until real use asks for more, effort goes to being found and to proving where nudg is better.
+
+- Being found: package keywords and repository topics in the words people search, the MCP registry, `llms.txt` on the demo site. Done, except the registry listing, which waits for the release that carries `mcpName`.
+- Proving the difference: the same interactions (bottom sheet, toggle, swipe row, toast) built with nudg and with each platform's usual library, compared on code size, parity across platforms, AI rounds per judged change, and accessibility by default. Where nudg loses becomes the development queue; where it wins becomes the message.
+- React Native performance: with 60 looping views, the per-frame JS path drops to a fraction of a frame per second on a loaded emulator, as React Native's own JS-driven Animated does, while the native driver keeps running. Measure on an idle machine, then decide in [Design](design.md#open-questions) whether time-driven motion moves to the native driver.
+- Then announcements (a comparison page, posts), written from what the comparison shows.
+
+Done when: someone outside the project uses nudg and reports back, and the README can state the difference with evidence.
+
 ## Guardrails
 
 - Update priorities and completion status here; other documents link here instead of maintaining their own queues. Keep technical questions in Design and release details in the changelog.

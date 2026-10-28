@@ -138,4 +138,10 @@ test("React Native: screen readers activate a target whose tap the file handles,
   props.onAccessibilityAction({ nativeEvent: { actionName: "activate" } });
   assert.deepEqual(sent, ["track.tap"]);
   assert.deepEqual(activation(new Set(["sheet.dragend"]), "sheet", () => {}), {});
+  // A slider's arrow keys: increment and decrement, for an adjustable view.
+  const slider = activation(new Set(["thumb.key.arrowup", "thumb.key.arrowright", "thumb.key.arrowleft"]), "thumb", (e) => sent.push(e)) as typeof props;
+  assert.deepEqual(slider.accessibilityActions, [{ name: "increment" }, { name: "decrement" }]);
+  slider.onAccessibilityAction({ nativeEvent: { actionName: "increment" } });
+  slider.onAccessibilityAction({ nativeEvent: { actionName: "decrement" } });
+  assert.deepEqual(sent.slice(-2), ["thumb.key.arrowright", "thumb.key.arrowleft"]);
 });

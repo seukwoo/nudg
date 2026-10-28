@@ -29,6 +29,8 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import dev.nudg.DRAG_SLOP
@@ -254,12 +256,27 @@ fun Modifier.nudgPress(state: NudgState, name: String): Modifier = activation(st
     }
 }
 
+private fun Modifier.adjustable(state: NudgState, name: String): Modifier {
+    val handled = state.runtime.program.handledEvents
+    fun first(vararg keys: String) = keys.map { "$name.key.$it" }.firstOrNull { it in handled }
+    val actions = listOfNotNull(
+        first("arrowright", "arrowup")?.let { e -> CustomAccessibilityAction("Increase") { state.send(e) } },
+        first("arrowleft", "arrowdown")?.let { e -> CustomAccessibilityAction("Decrease") { state.send(e) } },
+    )
+    return if (actions.isEmpty()) this else semantics { customActions = actions }
+}
+
 private fun Modifier.activation(state: NudgState, name: String): Modifier =
     if ("$name.tap" !in state.runtime.program.handledEvents) this
     else semantics { onClick { state.send("$name.tap") } }
 
-/** Keys while focused: `target.key.<name>` for the keys the file listens for. */
-fun Modifier.nudgKeys(state: NudgState, name: String): Modifier = onKeyEvent { e ->
+/**
+ * Keys while focused: `target.key.<name>` for the keys the file listens for. When the file
+ * steps the target with arrow keys, TalkBack offers Increase and Decrease actions that send
+ * them: arrowright (or arrowup) and arrowleft (or arrowdown), as a slider's keys are on the
+ * web. The value and label stay the host's.
+ */
+fun Modifier.nudgKeys(state: NudgState, name: String): Modifier = adjustable(state, name).onKeyEvent { e ->
     if (e.type != KeyEventType.KeyDown) return@onKeyEvent false
     val key = when (e.key) {
         Key.DirectionLeft -> "arrowleft"; Key.DirectionRight -> "arrowright"; Key.DirectionUp -> "arrowup"; Key.DirectionDown -> "arrowdown"

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Screen readers adjust sliders and steppers on native.** When a file steps a target with arrow keys, SwiftUI's `nudgKeys` makes it adjustable (VoiceOver's swipe up and down), Compose's `nudgKeys` adds Increase and Decrease actions for TalkBack, and React Native's `gesture` adds `increment` and `decrement`; each sends the arrow key a slider takes on the web. Checked on an iOS simulator and an Android emulator, failing without the change.
+- The Compose demo app draws below the status bar on Android 16 and has a slider.
+
 ## 1.4.0
 
 A first run that works, from an empty project, and half the web bundle. Following the README in a new Vite app found what got in the way; the fixes are below, and `@nudg/core/vite` compiles files at build time so nudg adds about 14 kB gzipped instead of 28. The format stays 1.1; the API only gains.

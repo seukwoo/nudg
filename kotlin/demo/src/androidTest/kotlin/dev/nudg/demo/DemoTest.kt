@@ -2,12 +2,14 @@ package dev.nudg.demo
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performCustomAccessibilityActionWithLabel
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pinch
@@ -38,6 +40,17 @@ class DemoTest {
         rule.onNodeWithTag("track").performSemanticsAction(SemanticsActions.OnClick)
         rule.waitForIdle()
         rule.onNodeWithTag("state").assertTextEquals("toggle: on")
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test fun talkBacksIncreaseAndDecreaseAreTheArrowKeys() {
+        // The custom actions TalkBack lists for the thumb: two steps of 10 right, one back.
+        val thumb = rule.onNodeWithTag("thumb")
+        thumb.performCustomAccessibilityActionWithLabel("Increase")
+        thumb.performCustomAccessibilityActionWithLabel("Increase")
+        thumb.performCustomAccessibilityActionWithLabel("Decrease")
+        rule.mainClock.advanceTimeBy(2000)
+        rule.onNodeWithTag("slidervalue").assertTextEquals("slider: 10")
     }
 
     @Test fun aDragAcrossTurnsTheDragToggleOnWithoutATap() {

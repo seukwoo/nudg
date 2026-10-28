@@ -195,12 +195,34 @@ public struct NudgPress: ViewModifier {
   }
 }
 
-/** Keys while the view has focus: `target.key.<name>` for the keys the file listens for. */
+/**
+ * Keys while the view has focus: `target.key.<name>` for the keys the file listens for.
+ * When the file steps the target with arrow keys, VoiceOver's adjust gestures send them too:
+ * increment is arrowright (or arrowup), decrement arrowleft (or arrowdown), as a slider's
+ * keys are on the web. The value and label stay the host's.
+ */
 public struct NudgKeys: ViewModifier {
   @ObservedObject var model: NudgModel
   let name: String
 
   public func body(content: Content) -> some View {
+    let handled = model.runtime.program.handledEvents
+    let first = { (keys: [String]) in keys.map { "\(name).key.\($0)" }.first(where: handled.contains) }
+    let (increment, decrement) = (first(["arrowright", "arrowup"]), first(["arrowleft", "arrowdown"]))
+    if increment != nil || decrement != nil {
+      keys(content).accessibilityAdjustableAction { direction in
+        switch direction {
+        case .increment: if let increment { model.send(increment) }
+        case .decrement: if let decrement { model.send(decrement) }
+        @unknown default: break
+        }
+      }
+    } else {
+      keys(content)
+    }
+  }
+
+  private func keys(_ content: Content) -> some View {
     content.focusable().onKeyPress { press in
       let key: String
       switch press.key {

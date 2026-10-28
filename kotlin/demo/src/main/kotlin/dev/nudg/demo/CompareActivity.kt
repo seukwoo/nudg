@@ -3,6 +3,7 @@ package dev.nudg.demo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +34,7 @@ import dev.nudg.compose.nudgPress
 class CompareActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge() // dark status bar icons on the light background
         val comparison = Comparison.decode(assets.open("toggle-bouncier.compare.json").bufferedReader().readText())
         setContent {
             Column(Modifier.fillMaxSize().background(Color(0xFFFAFAF9)).safeDrawingPadding().semantics { testTagsAsResourceId = true }) {

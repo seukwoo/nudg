@@ -3,12 +3,14 @@ package dev.nudg.demo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.nudg.Program
 import dev.nudg.compose.nudg
+import dev.nudg.compose.nudgKeys
 import dev.nudg.compose.nudgPress
 import dev.nudg.compose.rememberNudg
 
@@ -31,17 +34,20 @@ import dev.nudg.compose.rememberNudg
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge() // dark status bar icons on the light background
         val toggleProgram = Program.decode(assets.open("toggle.program.json").bufferedReader().readText())
         val pressProgram = Program.decode(assets.open("press.program.json").bufferedReader().readText())
         val dragProgram = Program.decode(assets.open("toggle-drag.program.json").bufferedReader().readText())
         val pinchProgram = Program.decode(assets.open("pinch.program.json").bufferedReader().readText())
+        val stepProgram = Program.decode(assets.open("step-keys.program.json").bufferedReader().readText())
         setContent {
             val toggle = rememberNudg(toggleProgram)
             val press = rememberNudg(pressProgram)
             val drag = rememberNudg(dragProgram)
             val pinch = rememberNudg(pinchProgram)
+            val slider = rememberNudg(stepProgram)
             Column(
-                Modifier.fillMaxSize().background(Color(0xFFFAFAF9)).semantics { testTagsAsResourceId = true },
+                Modifier.fillMaxSize().background(Color(0xFFFAFAF9)).safeDrawingPadding().semantics { testTagsAsResourceId = true },
                 verticalArrangement = Arrangement.spacedBy(40.dp, Alignment.CenterVertically),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -70,6 +76,8 @@ class MainActivity : ComponentActivity() {
                     Modifier.testTag("image").size(160.dp).nudgPress(pinch, "image").nudg(pinch, "image")
                         .background(Color(0xFF7C3AED), RoundedCornerShape(12.dp)),
                 )
+                Text("slider: ${"%.0f".format((slider.values["thumb.x"] as? dev.nudg.Value.Number)?.value ?: 0.0)}", fontSize = 18.sp, modifier = Modifier.testTag("slidervalue"))
+                Box(Modifier.testTag("thumb").size(28.dp).nudg(slider, "thumb").nudgKeys(slider, "thumb").background(Color(0xFF2563EB), CircleShape))
             }
         }
     }

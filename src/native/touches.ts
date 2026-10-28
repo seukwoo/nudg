@@ -39,16 +39,24 @@ export function touchSync(tracker: PointerTracker): { sync(touches: Touch[], rel
 }
 
 /**
- * View props that let screen readers activate a target whose tap the file handles:
- * activation is a tap, as a click is on the web. Nothing for other targets.
+ * View props that let screen readers act on a target as keyboards and pointers do on the
+ * web: activation is its tap; increment and decrement (an adjustable view) are its arrow
+ * keys, arrowright or arrowup and arrowleft or arrowdown. Only what the file handles.
  */
 export function activation(handled: Set<string>, target: string, send: (event: string) => void): Record<string, unknown> {
-  const tap = `${target}.tap`;
-  if (!handled.has(tap)) return {};
+  const first = (...names: string[]) => names.map((n) => `${target}.${n}`).find((e) => handled.has(e));
+  const events: Record<string, string | undefined> = {
+    activate: first("tap"),
+    increment: first("key.arrowright", "key.arrowup"),
+    decrement: first("key.arrowleft", "key.arrowdown"),
+  };
+  const actions = Object.keys(events).filter((name) => events[name]);
+  if (!actions.length) return {};
   return {
-    accessibilityActions: [{ name: "activate" }],
+    accessibilityActions: actions.map((name) => ({ name })),
     onAccessibilityAction: (e: { nativeEvent: { actionName: string } }) => {
-      if (e.nativeEvent.actionName === "activate") send(tap);
+      const event = events[e.nativeEvent.actionName];
+      if (event) send(event);
     },
   };
 }

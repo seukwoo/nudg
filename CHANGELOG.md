@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **One call after an edit.** `nudg compare` (and MCP `nudg_compare`) also lists the critique findings the change brings, so an agent no longer needs separate validate and critique calls before showing the person; the skill and the MCP instructions say so. Found by measuring agents at work: the skill's loop took about twice the turns of a plain edit.
+- **A misspelled event says so.** When the app sends an event the file can never act on (`send("close")` for a file that handles `host.close`), the DOM and React players and the React Native hook warn once in the console and name the file's host events; before, nothing happened and nothing was said.
+- Starters from `nudg recipe --source` link their schema (`"$schema"`), and `nudg upgrade` keeps that link on the file's new version.
 - **Screen readers adjust sliders and steppers on native.** When a file steps a target with arrow keys, SwiftUI's `nudgKeys` makes it adjustable (VoiceOver's swipe up and down), Compose's `nudgKeys` adds Increase and Decrease actions for TalkBack, and React Native's `gesture` adds `increment` and `decrement`; each sends the arrow key a slider takes on the web. Checked on an iOS simulator and an Android emulator, failing without the change.
 - The Compose demo app draws below the status bar on Android 16 and has a slider.
 - Easier to find: the package names its platforms and MCP in its keywords and declares `mcpName` for the MCP registry (`server.json`, kept in step with the package version by a test), and the demo site serves `llms.txt` and the current schema at `/schema.json`.

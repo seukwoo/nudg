@@ -60,6 +60,36 @@ test("present() and onExit: once per exit, not on mount in the exit state, true 
   }
 });
 
+test("the DOM player warns once when the host sends an event the file can't act on", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const { launchBrowser, waitFor } = await import("../src/node/cdp.ts");
+  const { serveIfLocal } = await import("../src/node/observe.ts");
+  const { url, close } = await serveIfLocal("test/fixtures/host/presence.html");
+  const browser = await launchBrowser(chrome!);
+  try {
+    await browser.send("Page.navigate", { url });
+    await waitFor(() => browser.evaluate("window.__player ? 'ready' : ''"), 15_000);
+    const warnings = await browser.evaluate(`(async () => {
+      const { compileUrl, play } = await import("../../../dist/dom/index.js");
+      const { program } = await compileUrl("../../../examples/toast.nudg.json");
+      const warned = [];
+      const warn = console.warn;
+      console.warn = (m) => warned.push(m);
+      const p = play(program, null, { bind: { toast: document.createElement("div") } });
+      p.send("show");
+      p.send("show");
+      p.send("host.show");
+      p.destroy();
+      console.warn = warn;
+      return warned.filter((m) => m.includes("does nothing"));
+    })()`);
+    assert.equal(warnings.length, 1, JSON.stringify(warnings));
+    assert.match(warnings[0], /host\.show/);
+  } finally {
+    await browser.close();
+    close();
+  }
+});
+
 test("bind() marks the element with data-nudg so a snapshot can find ref-bound targets", { skip: chrome ? false : "no Chrome found" }, async () => {
   const { launchBrowser, waitFor } = await import("../src/node/cdp.ts");
   const { serveIfLocal } = await import("../src/node/observe.ts");

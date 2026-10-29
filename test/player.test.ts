@@ -188,3 +188,14 @@ test("a comparison's timeline: steps when due, a shared clock that slows, a fres
   assert.equal(t.due().steps.length, 1, "the next run plays the steps again");
   assert.throws(() => readCompareBundle({ nudgCompare: 2 }), /comparison bundle/);
 });
+
+test("an event the file can never act on gets a message; target events and handled ones don't", async () => {
+  const { handledEvents, unknownEventMessage } = await import("../src/core/observe.ts");
+  const program = toProgram(JSON.parse(readFileSync("examples/toast.nudg.json", "utf8")));
+  const handled = handledEvents(program);
+  const message = (event: string) => unknownEventMessage(program, handled, event);
+  assert.match(message("show") ?? "", /send\("show"\) does nothing.*host\.show/);
+  assert.match(message("host.open") ?? "", /host\.show/);
+  assert.equal(message("host.show"), undefined);
+  assert.equal(message(`${program.targets[0]}.down`), undefined, "gestures are derived from target events");
+});

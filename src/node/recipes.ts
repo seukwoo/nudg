@@ -46,8 +46,15 @@ export function findRecipe(name: string): Recipe | undefined {
 
 /** The starter file, or undefined for a gap-only recipe. */
 export function recipeSource(recipe: Recipe): string | undefined {
-  return recipe.starter ? readFileSync(join(ROOT, "examples", `${recipe.starter}.nudg.json`), "utf8") : undefined;
+  if (!recipe.starter) return undefined;
+  const source = readFileSync(join(ROOT, "examples", `${recipe.starter}.nudg.json`), "utf8");
+  // A starter links its schema, so editors check it and an agent that hasn't seen nudg can read what each field means.
+  const version = /"nudg":\s*"([^"]+)"/.exec(source)?.[1];
+  return version ? source.replace(/^\{\n/, `{\n  "$schema": "${schemaUrl(version)}",\n`) : source;
 }
+
+/** Where a format version's schema is published (its `$id`). */
+export const schemaUrl = (version: string) => `https://unpkg.com/@nudg/core/spec/nudg-${version}.schema.json`;
 
 export const noStarter = (recipe: Recipe) =>
   `${recipe.id} has no starter: the format can't express its essential motion yet (${recipe.gaps.filter((gap) => gap.status === "missing").map((gap) => gap.capability).join(", ")}). Build what the contract allows and leave the gaps to the host.`;

@@ -176,7 +176,11 @@ test("cli validate and simulate speak JSON", () => {
   assert.ok(simulated.summary["heart.scale"].max > 1.1);
   const recipe = JSON.parse(run("recipe", "video chat", "--json"));
   assert.equal(recipe.id, "video-call");
-  assert.match(run("recipe", "toggle", "--source"), /"track\.dragend"/);
+  const starter = run("recipe", "toggle", "--source");
+  assert.match(starter, /"track\.dragend"/);
+  // The starter links the schema of its own version, at the address the package's schema declares as its $id.
+  const schema = JSON.parse(starter).$schema;
+  assert.equal(schema, JSON.parse(readFileSync(`${root}spec/nudg-${JSON.parse(starter).nudg}.schema.json`, "utf8")).$id);
   assert.match(run("recipe", "pinch zoom", "--source"), /"image\.pinchstart"/);
   assert.deepEqual(JSON.parse(run("recipe", "--gaps", "--json")).gaps, []);
   assert.match(run("recipe", "--gaps"), /No gaps/);
@@ -187,6 +191,7 @@ test("upgrade raises a valid file to the latest format and keeps the rest of its
   const text = '{\n  "nudg":  "0.3",\n  "note": "keep  this",\n  "targets": []\n}\n';
   assert.deepEqual(upgradeText(text), { from: "0.3", text: '{\n  "nudg":  "1.1",\n  "note": "keep  this",\n  "targets": []\n}\n' });
   assert.equal(upgradeText('{ "nudg": "1.1" }')?.text, '{ "nudg": "1.1" }');
+  assert.equal(upgradeText('{ "$schema": "https://unpkg.com/@nudg/core/spec/nudg-0.18.schema.json", "nudg": "0.18" }')?.text, '{ "$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.1.schema.json", "nudg": "1.1" }');
   assert.equal(upgradeText('{ "targets": [] }'), undefined);
   assert.equal(upgradeText("not json"), undefined);
 

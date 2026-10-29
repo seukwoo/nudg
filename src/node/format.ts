@@ -48,6 +48,10 @@ export function formatComparison(c: Comparison, labels: [string, string] = ["A",
   if (c.suggestion) lines.push("", `Next: ${c.suggestion}`);
   if (c.a.unhandled.length) lines.push(`unhandled in ${labels[0]}: ${c.a.unhandled.map(describeEvent).join(", ")}`);
   if (c.b.unhandled.length) lines.push(`unhandled in ${labels[1]}: ${c.b.unhandled.map(describeEvent).join(", ")}`);
+  if (c.critique?.length) {
+    lines.push("", `${labels[1]} brings ${c.critique.length} critique finding${c.critique.length === 1 ? "" : "s"} against the platforms' motion guidelines:`);
+    for (const f of c.critique) lines.push(`  ${f.severity} ${f.code} at ${f.path}: ${f.message}`, `    fix: ${f.hint}`);
+  }
   return lines.join("\n");
 }
 

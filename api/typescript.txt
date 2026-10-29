@@ -3,7 +3,7 @@
 export interface AppearOptions { target?: string; scale?: number; rise?: number; motion?: SpringOptions; }
 export declare const COMPARE_BUNDLE_FORMAT = 1;
 export type Channels = number[];
-export interface Comparison { a: Simulation; b: Simulation; properties: PropertyDifference[]; verdict: Perceptibility; headline: string; suggestion?: string; identical: boolean; }
+export interface Comparison { a: Simulation; b: Simulation; properties: PropertyDifference[]; verdict: Perceptibility; headline: string; suggestion?: string; identical: boolean; critique?: CritiqueFinding[]; }
 export interface CompileResult { program?: Program; motions: Map<string, Motion>; diagnostics: Diagnostic[]; }
 export interface Contract { targets: string[]; events: string[]; inputs: string[]; states: string[]; }
 export interface CritiqueFinding { code: string; severity: CritiqueSeverity; path: string; message: string; hint: string; source: string; }

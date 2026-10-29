@@ -3,7 +3,7 @@
 // in the core.
 
 import { toProgram } from "../core/to-program.ts";
-import { handledEvents } from "../core/observe.ts";
+import { handledEvents, unknownEventMessage } from "../core/observe.ts";
 import { pinchInputs, pinchableTargets } from "../core/pointer.ts";
 import { createLifecycle } from "../core/lifecycle.ts";
 import { propertiesByTarget, styleOf } from "./style.ts";
@@ -177,8 +177,16 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   }
 
   let destroyed = false;
+  const handledByFile = handledEvents(program);
+  const warned = new Set<string>();
   function send(event: string, fromDom = false): boolean {
     if (destroyed) return false;
+    // A misspelled event from the host would otherwise do nothing, silently; say so once per name.
+    const unknown = fromDom || warned.has(event) ? undefined : unknownEventMessage(program, handledByFile, event);
+    if (unknown) {
+      warned.add(event);
+      console.warn(unknown);
+    }
     const t = now();
     const handled = runtime.send(event, t);
     if (fromDom) options.onEvent?.({ event }, t);

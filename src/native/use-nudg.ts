@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AccessibilityInfo, Animated, PanResponder, type GestureResponderEvent, type LayoutChangeEvent } from "react-native";
 import { PointerTracker, draggableTargets, pinchableTargets } from "../core/pointer.ts";
 import { activation, touchSync } from "./touches.ts";
-import { handledEvents } from "../core/observe.ts";
+import { handledEvents, unknownEventMessage } from "../core/observe.ts";
 import { createPlayer, initialValues, toProgram, type HeadlessPlayer } from "../core/player.ts";
 import { createRuntime, type Value } from "../core/runtime.ts";
 import type { NudgContract, Program, StateName } from "../core/types.ts";
@@ -79,8 +79,16 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
   const [state, setState] = useState<string[]>(() => createRuntime(program, { state: options.state }).state());
   const [present, setPresent] = useState(true);
   const player = useRef<HeadlessPlayer | null>(null);
+  const handledByFile = useMemo(() => handledEvents(program), [program]);
+  const warned = useRef(new Set<string>());
   // Everything sent to the player goes through these, so NudgCompare can mirror it.
-  const emit = (event: string) => {
+  const emit = (event: string, fromHost = false) => {
+    // A misspelled event from the app would otherwise do nothing, silently; say so once per name.
+    const unknown = fromHost && !warned.current.has(event) ? unknownEventMessage(program, handledByFile, event) : undefined;
+    if (unknown) {
+      warned.current.add(event);
+      console.warn(unknown);
+    }
     const handled = player.current?.send(event) ?? false;
     extra.current.onSend?.(event);
     return handled;
@@ -137,7 +145,7 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
 
   const draggable = useMemo(() => draggableTargets(program), [program]);
   const pinchable = useMemo(() => pinchableTargets(program), [program]);
-  const handled = useMemo(() => handledEvents(program), [program]);
+  const handled = handledByFile;
   const gestureFor = (name: string) => {
     const tracker = new PointerTracker(
       name,
@@ -180,7 +188,7 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
     },
     [styles],
   );
-  const send = useCallback((event: string) => emit(event), []);
+  const send = useCallback((event: string) => emit(event, true), []);
   const input = useCallback((name: string, value: number) => {
     const used = player.current ? emitInput(name, value) : reads.has(name) && Number.isFinite(value);
     if (used) inputs.current.set(name, value);

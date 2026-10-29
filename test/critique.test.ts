@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { readdirSync } from "node:fs";
 import { test } from "node:test";
 import { compile } from "../src/core/compile.ts";
+import { compare } from "../src/core/compare.ts";
 import { critique } from "../src/core/critique.ts";
 import { compilePath } from "../src/node/load.ts";
 
@@ -112,6 +113,15 @@ test("parallel regions are exercised as complete state configurations", () => {
   const result = critique(program!);
   assert.deepEqual(result.transitions.map((transition) => transition.event).sort(), ["button.down", "panel.tap"]);
   assert.ok(result.transitions.every((transition) => transition.to.split(" ").length === 2));
+});
+
+test("compare reports the findings a change brings, not the ones it kept", () => {
+  const program = (spring: object) => compile({ path: "main.nudg.json", text: JSON.stringify(toggle(spring)) }).program!;
+  const events = [{ t: 0.1, event: "track.tap" }];
+  const slowed = compare(program({ duration: 0.35, bounce: 0.25 }), program({ duration: 1.4, bounce: 0.3 }), { events });
+  assert.deepEqual(slowed.critique?.map((f) => `${f.code} ${f.path}`), ["slow-transition /states/off/when/track.tap", "slow-transition /states/on/when/track.tap"]);
+  const kept = compare(program({ duration: 1.4, bounce: 0.3 }), program({ duration: 1.5, bounce: 0.3 }), { events });
+  assert.deepEqual(kept.critique, [], "already slow before the change");
 });
 
 test("the curated examples are clean", () => {

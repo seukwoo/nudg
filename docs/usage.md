@@ -71,6 +71,8 @@ A clear change: knob.x moves up to 2.1 units differently, settles 0.23 s later, 
   track.color: identical.
 ```
 
+It also checks the change against the platforms' motion guidelines, as `critique` does, and lists only the findings the change brings (a toggle slowed past a second, a fade made bouncy), so one call after an edit covers it. A file with errors isn't compared; the validator's messages come back instead.
+
 With `--html`, the frames aren't only evenly spaced: the moments the verdict talks about are always included and captioned (where each property differs most, each event and 80 ms after it), so the side-by-side shows what the sentence says.
 
 **Against the last commit.** The "before" is usually what git already has:
@@ -223,7 +225,7 @@ nudg recipe toggle --source > toggle.nudg.json
 nudg recipe --gaps
 ```
 
-With no name, lists the semantic interaction contracts. A name or alias returns the recipe's parts, states, events, inputs, host responsibilities, motion, starter and known format gaps. `--source` prints the validated starter `.nudg.json` instead. Recipes the format can't express yet have no starter: they still give the contract, and their gaps say which part the host does. `--gaps` counts those gaps across the catalog, most needed first, which is how the next motion primitive is chosen. The same lookup is available to agents as `nudg_recipe`; the package exports the raw catalog as `@nudg/core/recipes.json` and its schema as `@nudg/core/recipes.schema.json`.
+With no name, lists the semantic interaction contracts. A name or alias returns the recipe's parts, states, events, inputs, host responsibilities, motion, starter and known format gaps. `--source` prints the validated starter `.nudg.json` instead, with a `"$schema"` link to its version's schema so editors check it and an agent can look up what each field means (`nudg upgrade` moves the link along with the version). Recipes the format can't express yet have no starter: they still give the contract, and their gaps say which part the host does. `--gaps` counts those gaps across the catalog, most needed first, which is how the next motion primitive is chosen. The same lookup is available to agents as `nudg_recipe`; the package exports the raw catalog as `@nudg/core/recipes.json` and its schema as `@nudg/core/recipes.schema.json`.
 
 ### Layout without a page
 

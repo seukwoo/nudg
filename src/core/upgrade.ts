@@ -8,7 +8,7 @@ import { VERSION } from "./vocabulary.ts";
 export interface Upgrade {
   /** The version the file declared. */
   from: string;
-  /** The file's text with "nudg" set to the current version, or the text unchanged when it already is. */
+  /** The file's text with "nudg" (and a "$schema" link to a nudg schema) set to the current version, or the text unchanged when it already is. */
   text: string;
 }
 
@@ -25,5 +25,7 @@ export function upgradeText(text: string): Upgrade | undefined {
   // Replace the first "nudg" key, once it is known to hold the declared version.
   const match = /("nudg"\s*:\s*)"([^"\\]*)"/.exec(text);
   if (!match || match[2] !== from) return undefined;
-  return { from, text: text.slice(0, match.index) + `${match[1]}"${VERSION}"` + text.slice(match.index + match[0].length) };
+  const raised = text.slice(0, match.index) + `${match[1]}"${VERSION}"` + text.slice(match.index + match[0].length);
+  // A "$schema" link to the old version's schema follows the file to the new one.
+  return { from, text: raised.replace(/("\$schema"\s*:\s*"[^"]*\/nudg-)[0-9.]+(\.schema\.json")/, (_, head, tail) => head + VERSION + tail) };
 }

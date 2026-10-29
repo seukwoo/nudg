@@ -3,6 +3,8 @@
 // show the change; this tells the judge where to look, or that there is nothing to see.
 
 import { hexToOklab } from "./color.ts";
+import { critique, type CritiqueFinding } from "./critique.ts";
+import { THRESHOLDS } from "./perception.ts";
 import { programToJson } from "./program-json.ts";
 import { simulate, type SimulateOptions, type Simulation } from "./simulate.ts";
 import type { Program } from "./types.ts";
@@ -36,21 +38,11 @@ export interface Comparison {
   suggestion?: string;
   /** True when nothing differs under these events: nothing to show a person. */
   identical: boolean;
+  /** Critique findings the change brings: in b and not in a, so one call after an edit also checks it against the guidelines. */
+  critique?: CritiqueFinding[];
 }
 
-/**
- * Perception thresholds, in logical units and seconds. Below them a change is lost in the
- * display: under a device pixel at 1×, or under about three frames at 60 Hz. Rough, on
- * purpose: the point is to stop a judge from staring at a change nobody can see.
- */
-export const THRESHOLDS = {
-  position: { imperceptible: 1, subtle: 3 },
-  /** Fractions of 1 for scale and opacity. */
-  fraction: { imperceptible: 0.02, subtle: 0.06 },
-  /** OKLab distance ×100. */
-  color: { imperceptible: 2, subtle: 6 },
-  time: { imperceptible: 0.05, subtle: 0.15 },
-};
+export { THRESHOLDS } from "./perception.ts";
 
 const FRACTIONAL = new Set(["scale", "scaleX", "scaleY", "opacity"]);
 
@@ -117,7 +109,9 @@ export function compare(a: Program, b: Program, options: SimulateOptions): Compa
   } else {
     headline = `A clear change: ${describeLargest(clear)}.`;
   }
-  return { a: simA2, b: simB, properties, verdict, headline, suggestion, identical: changed.length === 0 };
+    const before = new Set(critique(a).findings.map((f) => `${f.code} ${f.path}`));
+  const introduced = critique(b).findings.filter((f) => !before.has(`${f.code} ${f.path}`));
+  return { a: simA2, b: simB, properties, verdict, headline, suggestion, identical: changed.length === 0, critique: introduced };
 }
 
 /** The property that decides the verdict, as a clause: what moves differently and what settles later. */

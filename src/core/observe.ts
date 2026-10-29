@@ -3,7 +3,8 @@
 // whether it was still there), summarized the way `simulate` summarizes a file, and
 // held against the file's own prediction under the same events.
 
-import { THRESHOLDS, type Perceptibility } from "./compare.ts";
+import type { Perceptibility } from "./compare.ts";
+import { THRESHOLDS } from "./perception.ts";
 import type { PropertySummary, Simulation } from "./simulate.ts";
 import type { Machine, Program } from "./types.ts";
 
@@ -66,6 +67,19 @@ export function actionsToEvents(targetOf: string | ((action: string) => string),
     else if (a.startsWith("key:")) out.push({ t: m.t, event: `${target}.key.${a.slice(4) === " " ? "space" : a.slice(4).toLowerCase()}` });
   }
   return out;
+}
+
+/**
+ * What to tell the host when it sends an event the file can never act on: a `host.` event
+ * the file doesn't handle, or a name that isn't any target's. Events on a target pass,
+ * since gestures are derived from them. Undefined when there is nothing to say.
+ */
+export function unknownEventMessage(program: Program, handled: Set<string>, event: string): string | undefined {
+  if (handled.has(event)) return undefined;
+  const target = event.split(".")[0];
+  if (target !== "host" && program.targets.includes(target)) return undefined;
+  const host = [...handled].filter((e) => e.startsWith("host."));
+  return `nudg: send("${event}") does nothing: the file handles no such event.${host.length ? ` Its host events: ${host.join(", ")}.` : ""}`;
 }
 
 /** Every event name the program handles, in any state. */

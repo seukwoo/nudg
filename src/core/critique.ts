@@ -3,7 +3,7 @@
 // change is visible; this says whether the motion is good. Every finding names its
 // source and says how to fix it, like a validator error, but none of them is an error.
 
-import { THRESHOLDS } from "./compare.ts";
+import { THRESHOLDS } from "./perception.ts";
 import { createRuntime } from "./runtime.ts";
 import type { Machine, Motion, Program, State } from "./types.ts";
 

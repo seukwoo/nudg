@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.5.0
+
+What measuring agents at work changed, easier finding, and screen readers that adjust sliders on native. Claude edited the same bottom sheet built with nudg and with Motion: both came out correct, so correctness isn't the difference; showing the person what changed is, and nudg's loop now does it in one call after an edit. The format stays 1.1; the API only gains.
 
 - **One call after an edit.** `nudg compare` (and MCP `nudg_compare`) also lists the critique findings the change brings, so an agent no longer needs separate validate and critique calls before showing the person; the skill and the MCP instructions say so. Found by measuring agents at work: the skill's loop took about twice the turns of a plain edit.
 - **A misspelled event says so.** When the app sends an event the file can never act on (`send("close")` for a file that handles `host.close`), the DOM and React players and the React Native hook warn once in the console and name the file's host events; before, nothing happened and nothing was said.

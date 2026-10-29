@@ -5,12 +5,12 @@
   "description": "Write, check and compare UI interactions (springs, gestures, states) for web, iOS and Android.",
   "repository": { "url": "https://github.com/seukwoo/nudg", "source": "github" },
   "websiteUrl": "https://seukwoo.github.io/nudg/demo/",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@nudg/core",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "transport": { "type": "stdio" },
       "packageArguments": [{ "type": "positional", "value": "mcp" }]
     }

@@ -1,7 +1,7 @@
 {
   "name": "@nudg/core",
   "mcpName": "io.github.seukwoo/nudg",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Standard interaction recipes and portable motion your AI can nudge.",
   "keywords": [
     "animation",

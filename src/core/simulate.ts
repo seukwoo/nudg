@@ -207,3 +207,9 @@ function pick(values: Record<string, Value>, keys: string[]): Record<string, Val
 function round(t: number): number {
   return Math.round(t * 1e6) / 1e6;
 }
+
+/** Layout inputs the program reads that these events never report: measured values fall back to their base. */
+export function unmeasuredIn(program: Program, events: TimedEvent[]): string[] {
+  const reported = new Set(events.flatMap((e) => ("input" in e ? [e.input] : [])));
+  return createRuntime(program).measurements().filter((n) => !reported.has(n));
+}

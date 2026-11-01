@@ -2,7 +2,9 @@
 
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { after, before, test } from "node:test";
 import { findChrome } from "../src/node/chrome.ts";
@@ -234,4 +236,51 @@ test("render returns a filmstrip", { skip: chrome ? false : "no Chrome found" },
   assert.equal(result.isError, undefined, result.content[0].text);
   assert.deepEqual(result.structuredContent.frames.map((f: any) => f.t), [0, 0.1]);
   assert.ok(result.content.some((c: any) => c.type === "image"));
+});
+
+test("compare keeps its verdict when Chrome can't draw the graph", async () => {
+  // A browser that logs display noise and fails, as a headless Chrome on a busy machine can.
+  const dir = mkdtempSync(join(tmpdir(), "nudg-chrome-"));
+  const fake = join(dir, "chrome");
+  writeFileSync(fake, "#!/bin/sh\necho 'ERROR:cv_display_link_mac.mm CVDisplayLinkCreateWithCGDisplay failed' >&2\necho 'renderer timed out' >&2\nexit 1\n");
+  chmodSync(fake, 0o755);
+  const other = spawn(process.execPath, [`${root}src/cli.ts`, "mcp"], { cwd: root, stdio: ["pipe", "pipe", "inherit"], env: { ...process.env, NUDG_OPEN: "false", NUDG_LOG: "off", NUDG_CHROME: fake } });
+  try {
+    const replies = new Map<number, (m: any) => void>();
+    let buffer = "";
+    other.stdout!.on("data", (chunk) => {
+      buffer += chunk;
+      for (let i; (i = buffer.indexOf("\n")) >= 0; buffer = buffer.slice(i + 1)) {
+        const m = JSON.parse(buffer.slice(0, i));
+        replies.get(m.id)?.(m);
+      }
+    });
+    const ask = (id: number, method: string, params: object) => new Promise<any>((resolve) => {
+      replies.set(id, resolve);
+      other.stdin!.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n");
+    });
+    await ask(1, "initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "0" } });
+    const b = JSON.parse(readFileSync(`${root}examples/toggle.nudg.json`, "utf8"));
+    b.animate["knob.x"].spring.bounce = 0.5;
+    const { result } = await ask(2, "tools/call", { name: "nudg_compare", arguments: { a: { file: "examples/toggle.nudg.json" }, b: { source: JSON.stringify(b) }, events: [{ event: "track.tap", t: 0.05 }] } });
+    assert.equal(result.isError, undefined, result.content[0].text);
+    assert.equal(result.structuredContent.verdict, "clear");
+    assert.match(result.content[0].text, /No picture: Chrome could not render the PNG: renderer timed out\./);
+    assert.doesNotMatch(result.content[0].text, /CVDisplayLink/);
+    assert.ok(!result.content.some((c: any) => c.type === "image"));
+  } finally {
+    other.kill();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("compare says when an unmeasured size can hide the change", async () => {
+  const b = JSON.parse(readFileSync(`${root}examples/bottom-sheet.nudg.json`, "utf8"));
+  b.animate["sheet.y"].spring.bounce = 0.45;
+  const args = { a: { file: "examples/bottom-sheet.nudg.json" }, b: { source: JSON.stringify(b) }, events: [{ event: "opener.tap", t: 0.1 }] };
+  const blind = await call("nudg_compare", args);
+  assert.match(blind.content[0].text, /^.*\n\nNot measured, so falling back to base values: sheet\.layout\.height\. Pass layout .*call again with layout\.\n\nA and B behave identically/);
+  const seen = await call("nudg_compare", { ...args, layout: { "sheet.height": 150 } });
+  assert.equal(seen.structuredContent.verdict, "clear");
+  assert.doesNotMatch(seen.content[0].text, /Not measured/);
 });

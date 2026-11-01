@@ -69,7 +69,9 @@ export function svgToPng(svg: string, width: number, height: number, outPath: st
       { encoding: "utf8", timeout: 30_000 },
     );
     if (result.status !== 0 || !existsSync(outPath)) {
-      throw new Error(`Chrome could not render the PNG: ${result.stderr || result.error?.message || "unknown error"}`);
+      // Headless Chrome logs harmless display warnings on stderr; the last line is the one that says why.
+      const why = result.error?.message ?? result.stderr?.trim().split("\n").at(-1) ?? `exit code ${result.status}`;
+      throw new Error(`Chrome could not render the PNG: ${why}`);
     }
   } finally {
     rmSync(dir, { recursive: true, force: true });

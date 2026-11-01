@@ -8,12 +8,11 @@ import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { compile, type CompileResult } from "../core/compile.ts";
 import { compare, compareBundle, compareFrameTimes } from "../core/compare.ts";
-import { createRuntime } from "../core/runtime.ts";
 import { actionTarget, actionsToEvents, judgeHost } from "../core/observe.ts";
 import { contract, contractModule } from "../core/contract.ts";
 import { critique } from "../core/critique.ts";
 import { plot } from "../core/plot.ts";
-import { dragGesture, simulate, type SimulateOptions, type TimedEvent } from "../core/simulate.ts";
+import { dragGesture, simulate, unmeasuredIn, type SimulateOptions, type TimedEvent } from "../core/simulate.ts";
 import type { Program } from "../core/types.ts";
 import { VERSION } from "../core/vocabulary.ts";
 import { CHROME_HINT, findChrome, openInBrowser, svgToPng } from "./chrome.ts";
@@ -40,7 +39,7 @@ const PACKAGE_VERSION: string = (() => {
 })();
 
 const INSTRUCTIONS = `nudg files (*.nudg.json) describe UI interactions: states, events, and spring or tween motion.
-When the person names a standard UI pattern such as a switch, sheet, video chat, or media player, call nudg_recipe first. It gives the expected parts, states, events, host responsibilities, motion and a validated starter without expanding the runtime vocabulary. If you haven't written a nudg file before, call nudg_guide. After any edit, call nudg_validate and apply its hints until it reports no errors.
+When the person names a standard UI pattern such as a switch, sheet, video chat, or media player, call nudg_recipe first. It gives the expected parts, states, events, host responsibilities, motion and a validated starter without expanding the runtime vocabulary. Before writing a new file, or using fields the file in front of you doesn't show, call nudg_guide. After writing a new file, call nudg_validate and apply its hints until it reports no errors; after editing an existing one, nudg_compare (below) does that check.
 When you change motion for a person to judge, call nudg_compare with the version before and after: it says first whether the difference is perceptible, then shows both side by side (real A/B filmstrips when the host page's HTML is given; in a SwiftUI or Compose app, bundle writes it for NudgCompare to play on the app's own views). It also checks the changed version: errors come back with the validator's hints, and guideline warnings the change brings are listed under the headline, so after an edit it replaces separate validate and critique calls. Pass its headline on to the person; if it suggests an exaggerated version, offer that. When nudg_compare says a change has taken several rounds, ask the person once whether they'd share what made it hard; if they agree, call nudg_share with their words and give them the link (they submit it; never claim it was sent). After writing a new file, call nudg_critique once and fix its warnings: it checks the motion against the platforms' guidelines (too slow, late press feedback, invisible, bouncy fades, slow exits). Use nudg_simulate for numbers, nudg_plot for one version's graph, nudg_render for one version's frames. The file says what should happen; nudg_observe says what the real page showed: after wiring a file into an app, or when the person says it doesn't look right, call it with the running page's URL and the file, and report what it found (a page that never shows the motion, an element that unmounts mid-motion, a CSS transition fighting the spring).`;
 
 type Json = Record<string, unknown>;
@@ -400,14 +399,16 @@ function validateTool(args: Json): ToolResult {
   return { content: [text(lines.join("\n"))], structuredContent: { ok, diagnostics: result.diagnostics } };
 }
 
+const unmeasuredNote = (names: string[]) =>
+  `Not measured, so falling back to base values: ${names.join(", ")}. Pass layout with the real sizes (from the host's CSS), e.g. { ${names.map((n) => `"${n.replace(".layout.", ".")}": …`).join(", ")} }.`;
+
 function simulateTool(args: Json): ToolResult {
   const { program, label } = loadProgram(args);
   const options = { ...timingOptions(args, program), every: optionalTime(args.every, "every") };
   const sim = simulate(program, options);
   const keys = options.properties ?? [...program.properties.keys()];
-  const reported = new Set(options.events.flatMap((e) => ("input" in e ? [e.input] : [])));
-  const unmeasured = createRuntime(program).measurements().filter((n) => !reported.has(n));
-  const note = unmeasured.length ? `\n\nNot measured, so falling back to base values: ${unmeasured.join(", ")}. Pass layout, e.g. { ${unmeasured.map((n) => `"${n.replace(".layout.", ".")}": …`).join(", ")} }.` : "";
+  const unmeasured = unmeasuredIn(program, options.events);
+  const note = unmeasured.length ? `\n\n${unmeasuredNote(unmeasured)}` : "";
   const body = `${label}\n\nsummary\n${formatSummary(sim, keys)}${note}\n\n${formatSamples(sim, keys)}`;
   return { content: [text(body)], structuredContent: { summary: sim.summary, unhandled: sim.unhandled, samples: sim.samples, unmeasured } };
 }
@@ -429,16 +430,31 @@ async function plotTool(args: Json): Promise<ToolResult> {
       structuredContent: { summary: result.simulation.summary, unhandled: result.simulation.unhandled },
     };
   }
-  const png = withTempFile("plot.png", (path) => {
-    svgToPng(result.svg, result.width, result.height, path, chrome);
-    return readFileSync(path);
-  });
+  const png = drawPng(result.svg, result.width, result.height, chrome);
+  if (png instanceof Error) {
+    return { content: [text(`${summary}\n\n(${pictureFailed(png, out)})`)], structuredContent: { summary: result.simulation.summary, unhandled: result.simulation.unhandled } };
+  }
   if (out && extname(out).toLowerCase() === ".png") writeFileSync(out, png);
   return {
     content: [text(summary + (out ? `\nsaved ${out}` : "")), { type: "image", data: png.toString("base64"), mimeType: "image/png" }],
     structuredContent: { summary: result.simulation.summary, unhandled: result.simulation.unhandled },
   };
 }
+
+/** A graph as PNG bytes, or the reason Chrome couldn't draw it (a busy machine can time it out). */
+function drawPng(svg: string, width: number, height: number, chrome: string): Buffer | Error {
+  try {
+    return withTempFile("graph.png", (path) => {
+      svgToPng(svg, width, height, path, chrome);
+      return readFileSync(path);
+    });
+  } catch (e) {
+    return e as Error;
+  }
+}
+
+const pictureFailed = (e: Error, out: string | undefined) =>
+  `No picture: ${e.message}. The numbers above are complete without it${out && extname(out).toLowerCase() === ".png" ? `, but ${out} was not written` : ""}; don't retry for the picture, pass the result on.`;
 
 /** Pages this server already opened in the person's browser: one tab per page, not one per call. */
 const openedPages = new Set<string>();
@@ -486,7 +502,10 @@ async function compareToolInner(args: Json, revDirs: string[]): Promise<ToolResu
   const labels = (Array.isArray(args.labels) && args.labels.length === 2 ? args.labels.map(String) : revA || revB ? [revA ?? "A", revB ?? "now"] : ["A", "B"]) as [string, string];
   const options = timingOptions(args, a.program);
   const comparison = compare(a.program, b.program, options);
-  const text0 = `${labels[0]}: ${a.label}  ${labels[1]}: ${b.label}\n\n${formatComparison(comparison, labels)}`;
+  // A measured sheet with no layout rests at 0 in both versions, so the change can look like none.
+  const unmeasured = [...new Set([...unmeasuredIn(a.program, options.events), ...unmeasuredIn(b.program, options.events)])];
+  const verdict = !unmeasured.length ? formatComparison(comparison, labels) : comparison.identical ? `${unmeasuredNote(unmeasured)} The versions may differ once measured; call again with layout.\n\n${formatComparison(comparison, labels)}` : `${formatComparison(comparison, labels)}\n\n${unmeasuredNote(unmeasured)}`;
+  const text0 = `${labels[0]}: ${a.label}  ${labels[1]}: ${b.label}\n\n${verdict}`;
   const { a: _a, b: _b, ...structured } = comparison;
   const out = optionalString(args.out, "out");
   const bundle = optionalString(args.bundle, "bundle");
@@ -559,10 +578,9 @@ async function compareToolInner(args: Json, revDirs: string[]): Promise<ToolResu
   if (!chrome) {
     return { content: [text(`${text0}\n\n(No Chrome found, so here is the SVG graph. ${CHROME_HINT})\n\n${graph.svg}`)], structuredContent: structured as unknown as Json };
   }
-  const png = withTempFile("compare.png", (path) => {
-    svgToPng(graph.svg, graph.width, graph.height, path, chrome);
-    return readFileSync(path);
-  });
+  const png = drawPng(graph.svg, graph.width, graph.height, chrome);
+  // The verdict is the answer; a graph Chrome couldn't draw shouldn't take it away.
+  if (png instanceof Error) return { content: [text(`${text0}\n\n(${pictureFailed(png, out)})`)], structuredContent: structured as unknown as Json };
   if (out && extname(out).toLowerCase() === ".png") writeFileSync(out, png);
   return { content: [text(text0 + (out ? `\nsaved ${out}` : "")), { type: "image", data: png.toString("base64"), mimeType: "image/png" }], structuredContent: structured as unknown as Json };
 }

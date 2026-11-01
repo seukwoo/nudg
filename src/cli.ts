@@ -8,10 +8,9 @@ import { compare, compareBundle, compareFrameTimes } from "./core/compare.ts";
 import { contract, contractModule } from "./core/contract.ts";
 import { critique } from "./core/critique.ts";
 import { programToJson } from "./core/program-json.ts";
-import { createRuntime } from "./core/runtime.ts";
 import { plot } from "./core/plot.ts";
 import { presets, type PresetName } from "./core/presets.ts";
-import { describeEvent, dragGesture, simulate, type SimulateOptions, type TimedEvent } from "./core/simulate.ts";
+import { describeEvent, dragGesture, simulate, unmeasuredIn, type SimulateOptions, type TimedEvent } from "./core/simulate.ts";
 import type { Diagnostic, Program } from "./core/types.ts";
 import { CHROME_HINT, findChrome, openInBrowser, svgToPng } from "./node/chrome.ts";
 import { snapshotElement } from "./node/snapshot.ts";
@@ -283,12 +282,6 @@ function runSimulate(args: Args, json: boolean): number {
   return 0;
 }
 
-/** Layout inputs the program reads that the events never report. */
-function unmeasuredIn(program: Program, events: TimedEvent[]): string[] {
-  const reported = new Set(events.flatMap((e) => ("input" in e ? [e.input] : [])));
-  return createRuntime(program).measurements().filter((n) => !reported.has(n));
-}
-
 function runPlot(args: Args, json: boolean): number {
   const { file, program, diagnostics } = loadProgram("plot", args, json);
   if (!program) return 1;
@@ -377,6 +370,10 @@ async function compareCommand(args: Args, json: boolean): Promise<number> {
   const options = simulationOptions(args, a.program!);
   const labels = (args.flags.get("labels")?.at(-1)?.split(",").map((s) => s.trim()) ?? (before ? [before, "now"] : ["A", "B"])) as [string, string];
   const comparison = compare(a.program!, b.program!, options);
+  // A measured sheet with no layout rests at 0 in both versions, so the change can look like none.
+  const missing = [...new Set([...unmeasuredIn(a.program!, options.events), ...unmeasuredIn(b.program!, options.events)])];
+  const note = `note: not measured, so falling back to base values: ${missing.join(", ")}. Pass --layout ${missing.map((n) => n.replace(".layout.", ".") + "=…").join(",")}`;
+  const verdict = !missing.length ? formatComparison(comparison, labels) : comparison.identical ? `${note}; the versions may differ once measured.\n\n${formatComparison(comparison, labels)}` : `${formatComparison(comparison, labels)}\n${note}.`;
   const logged = (opened = false) => record({ via: "cli", tool: "compare", files: [...new Set(args.positional)], before, url, verdict: comparison.identical ? "identical" : comparison.verdict, headline: comparison.headline, opened });
   let html = args.flags.get("html")?.at(-1);
   let out = args.flags.get("out")?.at(-1);
@@ -392,7 +389,7 @@ async function compareCommand(args: Args, json: boolean): Promise<number> {
       const { a: _a, b: _b, ...rest } = comparison;
       process.stdout.write(JSON.stringify({ ok: true, ...rest, bundle: comparison.identical ? undefined : bundle }, null, 2) + "\n");
     } else {
-      process.stdout.write(formatComparison(comparison, labels) + "\n");
+      process.stdout.write(verdict + "\n");
       process.stdout.write(comparison.identical ? "\nNothing written: the two versions behave identically under these events.\n" : `\nwrote ${bundle} — play it in the app: NudgCompare (SwiftUI, Compose) shows ${labels[0]} and ${labels[1]} side by side on your own views, with the same events, replay and slow motion\n`);
     }
     return 0;
@@ -421,7 +418,7 @@ async function compareCommand(args: Args, json: boolean): Promise<number> {
 
   if (comparison.identical && url) {
     // Nothing to show a person; say so instead of opening a page with two identical stages.
-    process.stdout.write(formatComparison(comparison, labels) + "\n");
+    process.stdout.write(verdict + "\n");
     for (const n of notes) process.stdout.write(`note: ${n}\n`);
     logged();
     return 0;
@@ -456,7 +453,7 @@ async function compareCommand(args: Args, json: boolean): Promise<number> {
       writeFileSync(out, graph.svg + "\n");
       picture = out;
     } else if (!json) {
-      process.stdout.write(formatComparison(comparison, labels) + "\n\n" + graph.svg + "\n");
+      process.stdout.write(verdict + "\n\n" + graph.svg + "\n");
       logged();
       return 0;
     }
@@ -468,7 +465,7 @@ async function compareCommand(args: Args, json: boolean): Promise<number> {
     const { a: _a, b: _b, ...rest } = comparison;
     process.stdout.write(JSON.stringify({ ok: true, ...rest, summaryA: comparison.a.summary, summaryB: comparison.b.summary, picture, opened, notes }, null, 2) + "\n");
   } else {
-    process.stdout.write(formatComparison(comparison, labels) + "\n");
+    process.stdout.write(verdict + "\n");
     for (const n of notes) process.stdout.write(`note: ${n}\n`);
     if (picture) process.stdout.write(`\nwrote ${picture}${picture.endsWith(".html") ? (opened ? ` — opened in your browser: left is ${labels[0]} (before), right is ${labels[1]} (the change)` : " — open it in a browser: both versions play side by side, with slow motion") : ""}\n`);
     if (picture?.endsWith(".html") && !lastRuntimeInlined) process.stdout.write("note: the runtime isn't built here, so the page loads @nudg/core from unpkg; run npm run build for an offline page\n");

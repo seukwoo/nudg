@@ -31,6 +31,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - run: npm run messenger
       - name: Assemble the site
         # The demo loads ../dist and ../examples, so they keep their places.
         run: |

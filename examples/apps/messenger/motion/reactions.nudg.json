@@ -1,0 +1,166 @@
+{
+  "nudg": "1.1",
+  "note": "The reaction picker a long press opens over a message. The bar grows from the bubble, then the six reactions pop in one after another, 30 ms apart; picking one, tapping outside or Escape (the host focuses the bar when it opens) closes it all at once, faster than it opened.",
+  "host": {
+    "events": [
+      "open",
+      "close"
+    ]
+  },
+  "targets": [
+    "scrim",
+    "bar",
+    "r1",
+    "r2",
+    "r3",
+    "r4",
+    "r5",
+    "r6"
+  ],
+  "values": {
+    "scrim.opacity": 0,
+    "bar.opacity": 0,
+    "bar.scale": 0.6,
+    "r1.scale": 0,
+    "r2.scale": 0,
+    "r3.scale": 0,
+    "r4.scale": 0,
+    "r5.scale": 0,
+    "r6.scale": 0
+  },
+  "animate": {
+    "scrim.opacity": {
+      "tween": {
+        "duration": 0.15,
+        "ease": "out"
+      }
+    },
+    "bar.opacity": {
+      "tween": {
+        "duration": 0.1,
+        "ease": "out"
+      }
+    },
+    "bar.scale": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0.2
+      }
+    },
+    "r1.scale": {
+      "spring": {
+        "duration": 0.15,
+        "bounce": 0
+      }
+    },
+    "r2.scale": {
+      "spring": {
+        "duration": 0.15,
+        "bounce": 0
+      }
+    },
+    "r3.scale": {
+      "spring": {
+        "duration": 0.15,
+        "bounce": 0
+      }
+    },
+    "r4.scale": {
+      "spring": {
+        "duration": 0.15,
+        "bounce": 0
+      }
+    },
+    "r5.scale": {
+      "spring": {
+        "duration": 0.15,
+        "bounce": 0
+      }
+    },
+    "r6.scale": {
+      "spring": {
+        "duration": 0.15,
+        "bounce": 0
+      }
+    }
+  },
+  "initial": "closed",
+  "states": {
+    "closed": {
+      "when": {
+        "host.open": {
+          "to": "open",
+          "note": "The stagger: each reaction waits 30 ms longer than the one before it, and lands with a bounce.",
+          "animate": {
+            "r1.scale": {
+              "spring": {
+                "duration": 0.3,
+                "bounce": 0.35
+              },
+              "delay": 0.04
+            },
+            "r2.scale": {
+              "spring": {
+                "duration": 0.3,
+                "bounce": 0.35
+              },
+              "delay": 0.07
+            },
+            "r3.scale": {
+              "spring": {
+                "duration": 0.3,
+                "bounce": 0.35
+              },
+              "delay": 0.1
+            },
+            "r4.scale": {
+              "spring": {
+                "duration": 0.3,
+                "bounce": 0.35
+              },
+              "delay": 0.13
+            },
+            "r5.scale": {
+              "spring": {
+                "duration": 0.3,
+                "bounce": 0.35
+              },
+              "delay": 0.16
+            },
+            "r6.scale": {
+              "spring": {
+                "duration": 0.3,
+                "bounce": 0.35
+              },
+              "delay": 0.19
+            }
+          }
+        }
+      }
+    },
+    "open": {
+      "set": {
+        "scrim.opacity": 0.2,
+        "bar.opacity": 1,
+        "bar.scale": 1,
+        "r1.scale": 1,
+        "r2.scale": 1,
+        "r3.scale": 1,
+        "r4.scale": 1,
+        "r5.scale": 1,
+        "r6.scale": 1
+      },
+      "when": {
+        "scrim.tap": "closed",
+        "host.close": "closed",
+        "r1.tap": "closed",
+        "r2.tap": "closed",
+        "r3.tap": "closed",
+        "r4.tap": "closed",
+        "r5.tap": "closed",
+        "r6.tap": "closed",
+        "bar.key.escape": "closed"
+      }
+    }
+  }
+}

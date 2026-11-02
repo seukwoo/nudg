@@ -104,11 +104,12 @@
   ],
   "scripts": {
     "test": "NUDG_LOG=off NUDG_OPEN=false node --test --test-force-exit --test-concurrency=3 \"test/*.test.ts\"",
-    "typecheck": "tsc && tsc -p tsconfig.core.json",
+    "typecheck": "tsc && tsc -p tsconfig.core.json && tsc -p examples/apps/messenger",
     "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
     "prepack": "npm run build",
     "demo": "npm run build && node demo/serve.mjs",
     "media": "node scripts/readme-media.ts",
+    "messenger": "esbuild examples/apps/messenger/main.tsx --bundle --format=esm --minify --jsx=automatic --alias:@nudg/core=./src --define:process.env.NODE_ENV='\"production\"' --outfile=examples/apps/messenger/app.js --log-level=warning",
     "api": "node scripts/api.ts",
     "nudg": "node src/cli.ts"
   },

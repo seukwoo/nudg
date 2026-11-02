@@ -1,0 +1,57 @@
+{
+  "nudg": "1.1",
+  "note": "The jump-to-latest button. It appears once the reader has scrolled well up from the newest message and hides again near the bottom; the two thresholds differ so it doesn't flicker at one point. The host reports host.fromBottom, the distance from the bottom of the list in logical units.",
+  "host": {
+    "inputs": {
+      "fromBottom": {
+        "note": "Distance from the bottom of the message list: scrollHeight - clientHeight - scrollTop."
+      }
+    }
+  },
+  "targets": [
+    "jump"
+  ],
+  "values": {
+    "jump.opacity": 0,
+    "jump.scale": 0.6,
+    "jump.y": 12
+  },
+  "animate": {
+    "jump.opacity": {
+      "tween": {
+        "duration": 0.15,
+        "ease": "out"
+      }
+    },
+    "jump.scale": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0.25
+      }
+    },
+    "jump.y": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0
+      }
+    }
+  },
+  "initial": "hidden",
+  "states": {
+    "hidden": {
+      "when": {
+        "host.fromBottom>240": "shown"
+      }
+    },
+    "shown": {
+      "set": {
+        "jump.opacity": 1,
+        "jump.scale": 1,
+        "jump.y": 0
+      },
+      "when": {
+        "host.fromBottom<80": "hidden"
+      }
+    }
+  }
+}

@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.5.1
+
+React Native keeps up with its own Animated, and agents show a change in fewer turns. Both came from measuring: a release build on an idle machine, and transcripts of agents editing the same bottom sheet. The format stays 1.1; the API only gains.
 
 - **React Native keeps up with its own Animated.** The hook set every property on every frame, and React Native updates a view on each set, so a spinner (rotation, opacity, scale) cost three view updates a frame where React Native's JS-driven Animated costs one. Values that haven't changed are now skipped: in a release build with 60 spinners, nudg went from 13 to 25.5 JS frames a second, against Animated's 26.2.
 - **Fewer turns for an agent to show a change.** Measured on the same four bottom-sheet edits, Claude with the skill went from 14.2 turns and $0.36 a change (1.4) to 11.0 and $0.25, all passing. The MCP instructions no longer tell the agent to validate after every edit (compare does it) or to read the whole guide before a small change; the skill says how an app's event reaches a file (`host.events` and `send`), and to pass the sizes a file measures.

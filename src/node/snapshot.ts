@@ -8,6 +8,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { launchBrowser, waitFor } from "./cdp.ts";
 import { serveIfLocal } from "./observe.ts";
+import { measureElement } from "../dom/measure.ts";
 
 export interface SnapshotOptions {
   /** An http(s) URL of the running app, or a local .html path (served from the working directory). */
@@ -20,6 +21,14 @@ export interface SnapshotOptions {
   viewport?: { width: number; height: number };
   /** Seconds to let the page's scripts start first. Default 0.5. */
   warmup?: number;
+  /** Layout inputs to measure on the page while it is open (`sheet.layout.height`). */
+  measure?: string[];
+}
+
+/** Layout inputs measured on a page, as the DOM adapter would report them, and the window they were measured in. */
+export interface Measured {
+  layout: Record<string, number>;
+  viewport: { width: number; height: number };
 }
 
 export interface Snapshot {
@@ -36,6 +45,8 @@ export interface Snapshot {
   fidelity: { elements: number; declarations: number; pseudoElements: number; webFonts: string[] };
   /** One line per thing the person should know. */
   notes: string[];
+  /** With `measure`: what the page measured. */
+  measured?: Measured;
 }
 
 export async function snapshotElement(options: SnapshotOptions): Promise<Snapshot> {
@@ -51,6 +62,7 @@ export async function snapshotElement(options: SnapshotOptions): Promise<Snapsho
     await new Promise((r) => setTimeout(r, (options.warmup ?? 0.5) * 1000));
     const result = await browser.evaluate(`(${snapshotInPage.toString()})(${JSON.stringify(options.selector ?? null)}, ${JSON.stringify(options.targets ?? [])})`);
     if (result.error) throw new Error(`${result.error} (${options.url})`);
+    const measured: Measured | undefined = options.measure?.length ? await browser.evaluate(measureExpression(options.measure)) : undefined;
     const notes: string[] = [...result.notes];
     if (result.unbound.length) notes.push(`not on the page: ${result.unbound.map((t: string) => `[data-nudg="${t}"]`).join(", ")}; the adapter marks bound elements with data-nudg, so the app may not be running this file, or binds under another name`);
     if (result.fidelity.pseudoElements) notes.push(`${result.fidelity.pseudoElements} ::before/::after with content were dropped (a snapshot can't carry pseudo-elements)`);
@@ -65,11 +77,60 @@ export async function snapshotElement(options: SnapshotOptions): Promise<Snapsho
       base = pathToFileURL(resolve(options.url)).href;
     }
     const html = `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<base href="${escapeAttr(base)}">\n<title>Snapshot of ${escapeAttr(result.selector)}</title>\n<style>body { margin: 16px; }</style>\n</head>\n<body>\n${markup}\n</body>\n</html>\n`;
-    return { html, markup, selector: result.selector, bound: result.bound, unbound: result.unbound, fidelity: result.fidelity, notes };
+    return { html, markup, selector: result.selector, bound: result.bound, unbound: result.unbound, fidelity: result.fidelity, notes, measured };
   } finally {
     await browser.close();
     close();
   }
+}
+
+/** Opens a page (an http(s) URL or a local .html path) and measures the given layout inputs on it. */
+export async function measureLayout(options: { url: string; names: string[]; chrome: string; viewport?: { width: number; height: number }; warmup?: number }): Promise<Measured> {
+  const { url, close } = await serveIfLocal(options.url);
+  const browser = await launchBrowser(options.chrome);
+  try {
+    if (options.viewport) await browser.send("Emulation.setDeviceMetricsOverride", { ...options.viewport, deviceScaleFactor: 1, mobile: false });
+    await browser.send("Page.enable");
+    const nav = await browser.send("Page.navigate", { url });
+    if (nav?.errorText) throw new Error(`Could not load ${options.url}: ${nav.errorText}`);
+    await waitFor(() => browser.evaluate(`document.readyState === "complete" ? "ready" : ""`), 20_000);
+    await new Promise((r) => setTimeout(r, (options.warmup ?? 0.5) * 1000));
+    return await browser.evaluate(measureExpression(options.names));
+  } finally {
+    await browser.close();
+    close();
+  }
+}
+
+/** One line for the verdict: what was measured, and in what window, since sizes can depend on it. */
+export function measuredNote(m: Measured, from: string): string {
+  const values = Object.entries(m.layout).map(([name, v]) => `${name.replace(".layout.", ".")}=${Math.round(v * 100) / 100}`);
+  return `Measured on ${from} (a ${m.viewport.width}×${m.viewport.height} window): ${values.join(", ")}.`;
+}
+
+function measureExpression(names: string[]): string {
+  return `(${measureInPage.toString()})(${JSON.stringify(names)}, ${measureElement.toString()})`;
+}
+
+/** Runs inside the page: each `target.layout.what` measured on the first [data-nudg="target"], shadow roots included. */
+function measureInPage(names: string[], measure: (el: Element, what: string) => number | undefined) {
+  const find = (root: Document | ShadowRoot, sel: string): Element | null => {
+    const hit = root.querySelector(sel);
+    if (hit) return hit;
+    for (const el of root.querySelectorAll("*")) {
+      const inner = el.shadowRoot ? find(el.shadowRoot, sel) : null;
+      if (inner) return inner;
+    }
+    return null;
+  };
+  const layout: Record<string, number> = {};
+  for (const name of names) {
+    const [target, , what] = name.split(".");
+    const el = find(document, `[data-nudg="${target}"]`);
+    const value = el ? measure(el, what) : undefined;
+    if (typeof value === "number" && Number.isFinite(value)) layout[name] = value;
+  }
+  return { layout, viewport: { width: innerWidth, height: innerHeight } };
 }
 
 function escapeAttr(s: string): string {

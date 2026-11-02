@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **compare measures sizes on the page it shows.** With `url` (the running app) or `html`, the sizes a file measures and `layout` doesn't give are measured on that page, as the DOM adapter would, so a sheet's verdict uses its real height instead of 0. The result says what was measured and in what window. `measureLayout` and `Measured` are exported from `@nudg/core/node`.
+
 ## 1.5.1
 
 React Native keeps up with its own Animated, and agents show a change in fewer turns. Both came from measuring: a release build on an idle machine, and transcripts of agents editing the same bottom sheet. The format stays 1.1; the API only gains.

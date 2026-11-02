@@ -16,7 +16,7 @@ import { dragGesture, simulate, unmeasuredIn, type SimulateOptions, type TimedEv
 import type { Program } from "../core/types.ts";
 import { VERSION } from "../core/vocabulary.ts";
 import { CHROME_HINT, findChrome, openInBrowser, svgToPng } from "./chrome.ts";
-import { snapshotElement } from "./snapshot.ts";
+import { measureLayout, measuredNote, snapshotElement, type Measured } from "./snapshot.ts";
 import { materializeRevision } from "./git.ts";
 import { readLog, record, shareableSummary, shareUrl, struggle, summarize, logPath } from "./log.ts";
 import { formatComparison, formatCritique, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./format.ts";
@@ -80,7 +80,7 @@ const timing = {
     },
   },
   start: { type: "array", items: { type: "string" }, description: "Start in these states instead of initial, e.g. [\"on\"]." },
-  layout: { type: "object", additionalProperties: { type: "number" }, description: "What the host would measure (0.4), reported at time 0: { \"tab2.x\": 96, \"tab2.width\": 88, \"underline.x\": 8 }. Measured values without it fall back to their base." },
+  layout: { type: "object", additionalProperties: { type: "number" }, description: "What the host would measure (0.4), reported at time 0: { \"tab2.x\": 96, \"tab2.width\": 88, \"underline.x\": 8 }. Measured values without it fall back to their base; compare with url or html measures them on that page." },
   reducedMotion: { type: "boolean", description: "Play as a reduced-motion user would see it: short linear tweens, no kicks (0.3)." },
   until: { type: ["number", "string"], description: "Last time to look at. Default: when everything has come to rest." },
   properties: { type: "array", items: { type: "string" }, description: "Properties to report, e.g. [\"knob.x\"]. Default: all." },
@@ -146,10 +146,10 @@ const TOOLS = [
         labels: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 2, description: "Names for the two versions, default [\"A\", \"B\"]." },
         before: { type: "string", description: "Shorthand with `file`: compare the file at this git revision (HEAD, HEAD~1, a branch) with the file on disk; a and b are then not needed. Labels default to the revision and \"now\"." },
         file: { type: "string", description: "With `before`: the file to compare across revisions." },
-        url: { type: "string", description: "The running app's URL (or a local page). The component is snapshotted from it, styles and all, so no html file is needed: real A/B filmstrips, and the side-by-side page, on the real thing. Needs Chrome; a and b as files." },
+        url: { type: "string", description: "The running app's URL (or a local page). The component is snapshotted from it, styles and all, so no html file is needed: real A/B filmstrips, and the side-by-side page, on the real thing. Sizes the file measures and `layout` doesn't give are measured there, so the verdict uses the real ones. Needs Chrome; a and b as files." },
         selector: { type: "string", description: "With url: which element to snapshot. Default: the smallest element holding every bound target (a toggle's track with its knob)." },
         open: { type: "boolean", description: "Open the side-by-side page in the person's browser. Default: once per session; later calls rewrite the same page and the open tab shows it after a reload. true forces a new tab, false never opens (NUDG_OPEN=false also turns it off)." },
-        html: { type: "string", description: "The host page with the component's markup, when there is no running app. Gives real A/B filmstrips (needs Chrome) and writes a page the person should open: both versions playing side by side in a loop, with slow motion. Stills can't show feel; that page can. With html, a and b must both be files on disk (write the edited version first)." },
+        html: { type: "string", description: "The host page with the component's markup, when there is no running app. Gives real A/B filmstrips (needs Chrome) and writes a page the person should open: both versions playing side by side in a loop, with slow motion. Stills can't show feel; that page can. With html, a and b must both be files on disk (write the edited version first). Sizes `layout` doesn't give are measured on this page." },
         page: { type: "string", description: "Where to write that page. Default: next to `out` as .html, else in the temp folder." },
         at: { type: "array", items: { type: ["number", "string"] }, description: "Frame times for the filmstrips." },
         frames: { type: "integer", minimum: 1, maximum: 60, description: "Evenly spaced frames when `at` is not given. Default 6." },
@@ -400,7 +400,7 @@ function validateTool(args: Json): ToolResult {
 }
 
 const unmeasuredNote = (names: string[]) =>
-  `Not measured, so falling back to base values: ${names.join(", ")}. Pass layout with the real sizes (from the host's CSS), e.g. { ${names.map((n) => `"${n.replace(".layout.", ".")}": …`).join(", ")} }.`;
+  `Not measured, so falling back to base values: ${names.join(", ")}. Pass layout with the real sizes (from the host's CSS), e.g. { ${names.map((n) => `"${n.replace(".layout.", ".")}": …`).join(", ")} }, or the page as url or html to measure them there.`;
 
 function simulateTool(args: Json): ToolResult {
   const { program, label } = loadProgram(args);
@@ -501,17 +501,46 @@ async function compareToolInner(args: Json, revDirs: string[]): Promise<ToolResu
   if (typeof (args.b as Json).label === "string") b.label = (args.b as Json).label as string;
   const labels = (Array.isArray(args.labels) && args.labels.length === 2 ? args.labels.map(String) : revA || revB ? [revA ?? "A", revB ?? "now"] : ["A", "B"]) as [string, string];
   const options = timingOptions(args, a.program);
+  const out = optionalString(args.out, "out");
+  const bundle = optionalString(args.bundle, "bundle");
+  if (bundle && (args.url !== undefined || args.html !== undefined)) throw new ToolError("bundle is for SwiftUI and Compose apps; drop url and html.");
+  const chrome = bundle ? undefined : findChrome();
+  let html = optionalString(args.html, "html");
+  const url = optionalString(args.url, "url");
+  const notes: string[] = [];
+  // Sizes the caller didn't pass are measured on the page the person will look at.
+  const missing = () => [...new Set([...unmeasuredIn(a.program, options.events), ...unmeasuredIn(b.program, options.events)])];
+  const toMeasure = url || html ? missing() : [];
+  const useMeasured = (m: Measured | undefined, from: string) => {
+    if (!m || !Object.keys(m.layout).length) return;
+    options.events.unshift(...Object.entries(m.layout).map(([input, value]) => ({ input, value, t: 0 })));
+    notes.push(measuredNote(m, from));
+  };
+  let snapshotPath: string | undefined;
+  if (url) {
+    // From the running app: snapshot the component into a temp host page, then it's the html case.
+    if (!chrome) throw new ToolError(`url needs a browser to snapshot the page. ${CHROME_HINT}`);
+    const snap = await snapshotElement({ url, selector: optionalString(args.selector, "selector"), targets: [...new Set([...a.program.targets, ...b.program.targets])], chrome, measure: toMeasure });
+    snapshotPath = sessionPath("snapshot.html");
+    writeFileSync(snapshotPath, snap.html);
+    html = snapshotPath;
+    notes.push(`Snapshot of ${snap.selector} from ${url}: ${snap.fidelity.elements} elements, ${snap.fidelity.declarations} style declarations inlined.`, ...snap.notes);
+    useMeasured(snap.measured, url);
+  } else if (html && chrome && toMeasure.length) {
+    try {
+      useMeasured(await measureLayout({ url: html, names: toMeasure, chrome }), html);
+    } catch (e) {
+      notes.push(`Couldn't measure ${html}: ${(e as Error).message}`);
+    }
+  }
   const comparison = compare(a.program, b.program, options);
   // A measured sheet with no layout rests at 0 in both versions, so the change can look like none.
-  const unmeasured = [...new Set([...unmeasuredIn(a.program, options.events), ...unmeasuredIn(b.program, options.events)])];
+  const unmeasured = missing();
   const verdict = !unmeasured.length ? formatComparison(comparison, labels) : comparison.identical ? `${unmeasuredNote(unmeasured)} The versions may differ once measured; call again with layout.\n\n${formatComparison(comparison, labels)}` : `${formatComparison(comparison, labels)}\n\n${unmeasuredNote(unmeasured)}`;
   const text0 = `${labels[0]}: ${a.label}  ${labels[1]}: ${b.label}\n\n${verdict}`;
   const { a: _a, b: _b, ...structured } = comparison;
-  const out = optionalString(args.out, "out");
-  const bundle = optionalString(args.bundle, "bundle");
   if (bundle) {
     // For a native app: the comparison as data, for NudgCompare to play on the app's own views.
-    if (args.url !== undefined || args.html !== undefined) throw new ToolError("bundle is for SwiftUI and Compose apps; drop url and html.");
     if (!bundle.toLowerCase().endsWith(".json")) throw new ToolError("bundle writes JSON: use a name like toggle.compare.json.");
     if (comparison.identical) return { content: [text(`${text0}\n\nNothing written: the two versions behave identically under these events, so there is nothing to look at.`)], structuredContent: structured as unknown as Json };
     writeFileSync(resolve(bundle), JSON.stringify(compareBundle(comparison, a.program, b.program, options, labels)) + "\n");
@@ -519,20 +548,6 @@ async function compareToolInner(args: Json, revDirs: string[]): Promise<ToolResu
       content: [text(`${text0}\n\nWrote ${resolve(bundle)}. Tell the person to look at it in the app: NudgCompare (SwiftUI, or Compose) plays ${labels[0]} (before) and ${labels[1]} (the change) side by side on their own views, in a loop, with ¼× and ⅒× slow motion; a tap on either side happens on both. Say what the headline says in one sentence.`)],
       structuredContent: { ...(structured as unknown as Record<string, Json>), bundle: resolve(bundle) },
     };
-  }
-  const chrome = findChrome();
-  let html = optionalString(args.html, "html");
-  const url = optionalString(args.url, "url");
-  const notes: string[] = [];
-  let snapshotPath: string | undefined;
-  if (url) {
-    // From the running app: snapshot the component into a temp host page, then it's the html case.
-    if (!chrome) throw new ToolError(`url needs a browser to snapshot the page. ${CHROME_HINT}`);
-    const snap = await snapshotElement({ url, selector: optionalString(args.selector, "selector"), targets: [...new Set([...a.program.targets, ...b.program.targets])], chrome });
-    snapshotPath = sessionPath("snapshot.html");
-    writeFileSync(snapshotPath, snap.html);
-    html = snapshotPath;
-    notes.push(`Snapshot of ${snap.selector} from ${url}: ${snap.fidelity.elements} elements, ${snap.fidelity.declarations} style declarations inlined.`, ...snap.notes);
   }
 
   if (html && comparison.identical) {

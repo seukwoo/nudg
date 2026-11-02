@@ -169,6 +169,7 @@ export declare function useNudg<C extends NudgContract = NudgContract>(source: P
 export declare const ACTIONS = "down, up, tap (down, held 80 ms, up), hover, leave, or key:<name> (a letter, or escape, enter, space, tab, arrow keys, home, end, pageup, pagedown, backspace, delete, f1-f12: every key the format names)";
 export interface ComparePageOptions { html: string; a: { text: string; files: Record<string, string>; }; b: { text: string; files: Record<string, string>; }; labels: [string, string]; events: TimedEvent[]; until: number; start?: string[]; reducedMotion?: boolean; headline: string; }
 export interface HostAction { t: number; action: string; }
+export interface Measured { layout: Record<string, number>; viewport: { width: number; height: number; }; }
 export interface Observation { url: string; selector: string; series: HostSeries; summary: HostSummary; errors: string[]; }
 export interface ObserveOptions { url: string; selector: string; actions: HostAction[]; settle?: number; warmup?: number; chrome: string; viewport?: { width: number; height: number; }; }
 export interface Recipe { id: string; aliases: string[]; summary: string; starter: string | null; examples: string[]; parts: { required: string[]; optional: string[]; }; states: string[]; events: string[]; inputs: string[]; hostResponsibilities: string[]; motion: string[]; gaps: RecipeGap[]; }
@@ -176,8 +177,8 @@ export interface RecipeGap { capability: string; status: "missing" | "workaround
 export interface RenderOptions { file: string; variants?: { file: string; label: string; }[]; label?: string; html: string; events: TimedEvent[]; start?: string[]; reducedMotion?: boolean; times: number[]; marks?: Record<string, string>; out: string; chrome: string; roots?: string[]; scale?: number; }
 export interface RenderResult { out: string; frames: RenderedFrame[]; unbound: string[]; unknown: string[]; }
 export interface RenderedFrame { t: number; state: string[]; }
-export interface Snapshot { html: string; markup: string; selector: string; bound: string[]; unbound: string[]; fidelity: { elements: number; declarations: number; pseudoElements: number; webFonts: string[]; }; notes: string[]; }
-export interface SnapshotOptions { url: string; selector?: string; targets?: string[]; chrome: string; viewport?: { width: number; height: number; }; warmup?: number; }
+export interface Snapshot { html: string; markup: string; selector: string; bound: string[]; unbound: string[]; fidelity: { elements: number; declarations: number; pseudoElements: number; webFonts: string[]; }; notes: string[]; measured?: Measured; }
+export interface SnapshotOptions { url: string; selector?: string; targets?: string[]; chrome: string; viewport?: { width: number; height: number; }; warmup?: number; measure?: string[]; }
 export declare function checkAction(action: string): string | undefined;
 export declare function comparePage(o: ComparePageOptions): string;
 export declare function compilePath(path: string): CompileResult;
@@ -186,6 +187,7 @@ export declare function findRecipe(name: string): Recipe | undefined;
 export declare function formatRecipe(recipe: Recipe): string;
 export declare function frameTimes(program: Program, options: SimulateOptions, frames?: number): number[];
 export declare function materializeRevision(file: string, rev: string, dir: string): string;
+export declare function measureLayout(options: { url: string; names: string[]; chrome: string; viewport?: { width: number; height: number; }; warmup?: number; }): Promise<Measured>;
 export declare function observe(options: ObserveOptions): Promise<Observation>;
 export declare function openInBrowser(target: string): boolean;
 export declare function readWithImports(file: string): { text: string; files: Record<string, string>; };

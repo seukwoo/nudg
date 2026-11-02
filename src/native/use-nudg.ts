@@ -197,11 +197,16 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
   return { bind, send, input, state, present };
 }
 
+/** The value each Animated value last showed. React Native updates the view on every setValue, so unchanged ones are skipped. */
+const shown = new WeakMap<Animated.Value | Animated.Color, Value>();
+
 function write(animated: Map<string, Animated.Value | Animated.Color>, values: Record<string, Value>) {
   for (const [k, v] of Object.entries(values)) {
     const a = animated.get(k);
+    if (!a || shown.get(a) === v) continue;
+    shown.set(a, v);
     if (a instanceof Animated.Color) a.setValue(v as string);
-    else (a as Animated.Value | undefined)?.setValue(v as number);
+    else a.setValue(v as number);
   }
 }
 

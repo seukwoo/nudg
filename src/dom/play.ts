@@ -407,6 +407,13 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   // are untransformed (offsets), so nudg's own motion is never part of what it measures.
   const needed = runtime.measurements();
   let observer: ResizeObserver | undefined;
+  // A natural size changes with the content, not the box nudg sizes: watch the children too.
+  const natural = new Set(needed.filter((n) => /\.natural(Width|Height)$/.test(n)).map((n) => n.split(".")[0]));
+  let contents: MutationObserver | undefined;
+  const watchContent = (el: Element) => {
+    for (const child of el.children) observer?.observe(child);
+    contents?.observe(el, { childList: true });
+  };
   let measureFrame = 0;
   const measureNow = () => {
     measureFrame = 0;
@@ -416,7 +423,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
       const [target, , what] = name.split(".");
       const el = elements.get(target)?.values().next().value;
       if (!el) continue;
-      const v = measureElement(el, what);
+      const v = what.startsWith("natural") ? withoutOwnMotion(el, () => measureElement(el, what)) : measureElement(el, what);
       if (v !== undefined && runtime.input(name, v, now())) changedAny = true;
     }
     if (changedAny) changed();
@@ -424,11 +431,36 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   const remeasure = () => {
     if (!measureFrame) measureFrame = requestAnimationFrame(measureNow);
   };
+  // A scroll size includes overflow from transformed children, such as a bubble still rising
+  // into its row: measure without the transforms this player writes inside the element.
+  const withoutOwnMotion = <T,>(el: Element, read: () => T): T => {
+    const moved: [HTMLElement, string][] = [];
+    for (const set of elements.values()) {
+      for (const inner of set) {
+        if (inner !== el && el.contains(inner) && inner instanceof HTMLElement && inner.style.transform) {
+          moved.push([inner, inner.style.transform]);
+          inner.style.transform = "none";
+        }
+      }
+    }
+    try {
+      return read();
+    } finally {
+      for (const [inner, transform] of moved) inner.style.transform = transform;
+    }
+  };
   if (needed.length) {
     measureNow();
     if (typeof ResizeObserver === "function") {
       observer = new ResizeObserver(remeasure);
       for (const name of needed) for (const el of elements.get(name.split(".")[0]) ?? []) observer.observe(el);
+      if (natural.size && typeof MutationObserver === "function") {
+        contents = new MutationObserver((records) => {
+          for (const r of records) for (const node of r.addedNodes) if (node instanceof Element) observer?.observe(node);
+          remeasure();
+        });
+        for (const target of natural) for (const el of elements.get(target) ?? []) watchContent(el);
+      }
     }
     window.addEventListener("resize", remeasure);
     (document as Document & { fonts?: FontFaceSet }).fonts?.ready.then(remeasure).catch(() => {});
@@ -436,6 +468,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     onLayoutBind = (name, el) => {
       if (!measuredTargets.has(name)) return;
       observer?.observe(el);
+      if (natural.has(name)) watchContent(el);
       remeasure();
     };
   }
@@ -470,6 +503,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
       cancelAnimationFrame(frame);
       cancelAnimationFrame(measureFrame);
       observer?.disconnect();
+      contents?.disconnect();
       window.removeEventListener("resize", remeasure);
       for (const unbind of [...cleanups.values()]) unbind();
       window.removeEventListener("pointermove", onMove, true);

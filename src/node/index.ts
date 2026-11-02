@@ -1,7 +1,7 @@
 export { findChrome, openInBrowser, svgToPng } from "./chrome.ts";
-export { snapshotElement } from "./snapshot.ts";
+export { measureLayout, snapshotElement } from "./snapshot.ts";
 export { materializeRevision } from "./git.ts";
-export type { Snapshot, SnapshotOptions } from "./snapshot.ts";
+export type { Measured, Snapshot, SnapshotOptions } from "./snapshot.ts";
 export { compilePath } from "./load.ts";
 export { serveMcp } from "./mcp.ts";
 export { ACTIONS, checkAction, observe } from "./observe.ts";

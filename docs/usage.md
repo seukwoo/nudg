@@ -235,7 +235,7 @@ With no name, lists the semantic interaction contracts. A name or alias returns 
 nudg simulate tabs.nudg.json --send tab2.tap@0.1 --layout underline.x=8,tab1.x=8,tab1.width=74,tab2.x=86,tab2.width=88
 ```
 
-Each `target.measurement=value` is reported at time 0. Without it, measured values fall back to their base, and the output lists what's missing. `render`, `observe` and `compare --url` measure the real page instead. Over MCP the same is `layout: { "tab2.x": 86, ... }`.
+Each `target.measurement=value` is reported at time 0. Without it, measured values fall back to their base, and the output lists what's missing. `render` and `observe` measure the real page instead, and `compare --url` or `--html` measures there the sizes `--layout` doesn't give, so the verdict uses the page's real ones. Over MCP the same is `layout: { "tab2.x": 86, ... }`.
 ### log
 
 ```sh

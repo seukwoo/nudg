@@ -13,7 +13,7 @@ import { presets, type PresetName } from "./core/presets.ts";
 import { describeEvent, dragGesture, simulate, unmeasuredIn, type SimulateOptions, type TimedEvent } from "./core/simulate.ts";
 import type { Diagnostic, Program } from "./core/types.ts";
 import { CHROME_HINT, findChrome, openInBrowser, svgToPng } from "./node/chrome.ts";
-import { snapshotElement } from "./node/snapshot.ts";
+import { measureLayout, measuredNote, snapshotElement, type Measured } from "./node/snapshot.ts";
 import { materializeRevision } from "./node/git.ts";
 import { clearLog, formatSummary as formatLogSummary, logPath, readLog, record, shareableSummary, shareTip, shareUrl, struggle, summarize } from "./node/log.ts";
 import { installSkill, SKILL } from "./node/skill.ts";
@@ -112,13 +112,15 @@ plot options
 compare options
   --url <url|page.html>     The running app (or a local page, served from the working directory):
                             the component is snapshotted from it, styles and all, and the
-                            side-by-side page is written from that. No --html needed.
+                            side-by-side page is written from that. No --html needed. Sizes the
+                            file measures and --layout doesn't give are measured there too.
   --select <css>            Which element to snapshot. Default: the smallest element holding
                             every bound target (a toggle's track with its knob).
   --open                    Open the page in the browser once written.
   --html <page.html>        Real markup. With --out x.html: a page that plays A and B side by side
                             in a loop with slow motion, for a person to judge (needs a browser, not
-                            Chrome). With --out x.png: A/B filmstrip rows (needs Chrome).
+                            Chrome). With --out x.png: A/B filmstrip rows (needs Chrome). With
+                            Chrome, sizes --layout doesn't give are measured on it.
   --out <file.html|png|svg> Where to write. Default: graph as SVG to stdout, or compare.png with --html.
   --at / --frames           Frame times, as for render.
   --labels <A,B>            Names for the two versions.
@@ -369,19 +371,56 @@ async function compareCommand(args: Args, json: boolean): Promise<number> {
   }
   const options = simulationOptions(args, a.program!);
   const labels = (args.flags.get("labels")?.at(-1)?.split(",").map((s) => s.trim()) ?? (before ? [before, "now"] : ["A", "B"])) as [string, string];
-  const comparison = compare(a.program!, b.program!, options);
-  // A measured sheet with no layout rests at 0 in both versions, so the change can look like none.
-  const missing = [...new Set([...unmeasuredIn(a.program!, options.events), ...unmeasuredIn(b.program!, options.events)])];
-  const note = `note: not measured, so falling back to base values: ${missing.join(", ")}. Pass --layout ${missing.map((n) => n.replace(".layout.", ".") + "=…").join(",")}`;
-  const verdict = !missing.length ? formatComparison(comparison, labels) : comparison.identical ? `${note}; the versions may differ once measured.\n\n${formatComparison(comparison, labels)}` : `${formatComparison(comparison, labels)}\n${note}.`;
-  const logged = (opened = false) => record({ via: "cli", tool: "compare", files: [...new Set(args.positional)], before, url, verdict: comparison.identical ? "identical" : comparison.verdict, headline: comparison.headline, opened });
   let html = args.flags.get("html")?.at(-1);
   let out = args.flags.get("out")?.at(-1);
   const url = args.flags.get("url")?.at(-1);
   const bundle = args.flags.get("bundle")?.at(-1);
+  if (bundle && (url || html || out)) fail("--bundle writes the comparison for a native player on its own; drop --url, --html and --out.");
+  if (url && html) fail("--url snapshots the component from the page; drop --html.");
+  // Sizes not given with --layout are measured on the page the person will look at.
+  const unmeasured = () => [...new Set([...unmeasuredIn(a.program!, options.events), ...unmeasuredIn(b.program!, options.events)])];
+  const toMeasure = url || html ? unmeasured() : [];
+  let snapshotHtml: string | undefined;
+  const notes: string[] = [];
+  const useMeasured = (m: Measured | undefined, from: string) => {
+    if (!m || !Object.keys(m.layout).length) return;
+    options.events.unshift(...Object.entries(m.layout).map(([input, value]) => ({ input, value, t: 0 })));
+    notes.push(measuredNote(m, from));
+  };
+  if (url) {
+    // From the running app: snapshot the component, then it's the --html case with a page as the deliverable.
+    const chrome = findChrome();
+    if (!chrome) fail(`--url needs a browser to snapshot the page. ${CHROME_HINT}`);
+    let snap;
+    try {
+      snap = await snapshotElement({ url, selector: args.flags.get("select")?.at(-1), targets: a.program!.targets, chrome, measure: toMeasure });
+    } catch (e) {
+      fail(`couldn't snapshot ${url}: ${(e as Error).message}`);
+    }
+    snapshotHtml = snap.html;
+    html = url;
+    out ??= join(tmpdir(), "nudg-compare.html");
+    if (extname(out).toLowerCase() !== ".html") fail("With --url the deliverable is the side-by-side page; use --out <file.html> or leave --out out.");
+    notes.push(`snapshot of ${snap.selector}: ${snap.fidelity.elements} elements, ${snap.fidelity.declarations} style declarations inlined`, ...snap.notes);
+    useMeasured(snap.measured, url);
+  } else if (html && toMeasure.length && existsSync(html)) {
+    const chrome = findChrome();
+    if (chrome) {
+      try {
+        useMeasured(await measureLayout({ url: html, names: toMeasure, chrome }), html);
+      } catch (e) {
+        notes.push(`couldn't measure ${html}: ${(e as Error).message}`);
+      }
+    }
+  }
+  const comparison = compare(a.program!, b.program!, options);
+  // A measured sheet with no layout rests at 0 in both versions, so the change can look like none.
+  const missing = unmeasured();
+  const note = `note: not measured, so falling back to base values: ${missing.join(", ")}. Pass --layout ${missing.map((n) => n.replace(".layout.", ".") + "=…").join(",")}`;
+  const verdict = !missing.length ? formatComparison(comparison, labels) : comparison.identical ? `${note}; the versions may differ once measured.\n\n${formatComparison(comparison, labels)}` : `${formatComparison(comparison, labels)}\n${note}.`;
+  const logged = (opened = false) => record({ via: "cli", tool: "compare", files: [...new Set(args.positional)], before, url, verdict: comparison.identical ? "identical" : comparison.verdict, headline: comparison.headline, opened });
   if (bundle) {
     // For a native app: the comparison as data, played on the app's own views.
-    if (url || html || out) fail("--bundle writes the comparison for a native player on its own; drop --url, --html and --out.");
     if (extname(bundle).toLowerCase() !== ".json") fail("--bundle writes JSON: use a name like toggle.compare.json.");
     if (!comparison.identical) writeFileSync(bundle, JSON.stringify(compareBundle(comparison, a.program!, b.program!, options, labels)) + "\n");
     logged();
@@ -393,25 +432,6 @@ async function compareCommand(args: Args, json: boolean): Promise<number> {
       process.stdout.write(comparison.identical ? "\nNothing written: the two versions behave identically under these events.\n" : `\nwrote ${bundle} — play it in the app: NudgCompare (SwiftUI, Compose) shows ${labels[0]} and ${labels[1]} side by side on your own views, with the same events, replay and slow motion\n`);
     }
     return 0;
-  }
-  let snapshotHtml: string | undefined;
-  const notes: string[] = [];
-  if (url) {
-    // From the running app: snapshot the component, then it's the --html case with a page as the deliverable.
-    if (html) fail("--url snapshots the component from the page; drop --html.");
-    const chrome = findChrome();
-    if (!chrome) fail(`--url needs a browser to snapshot the page. ${CHROME_HINT}`);
-    let snap;
-    try {
-      snap = await snapshotElement({ url, selector: args.flags.get("select")?.at(-1), targets: a.program!.targets, chrome });
-    } catch (e) {
-      fail(`couldn't snapshot ${url}: ${(e as Error).message}`);
-    }
-    snapshotHtml = snap.html;
-    html = url;
-    out ??= join(tmpdir(), "nudg-compare.html");
-    if (extname(out).toLowerCase() !== ".html") fail("With --url the deliverable is the side-by-side page; use --out <file.html> or leave --out out.");
-    notes.push(`snapshot of ${snap.selector}: ${snap.fidelity.elements} elements, ${snap.fidelity.declarations} style declarations inlined`, ...snap.notes);
   }
   if (out && extname(out).toLowerCase() === ".html" && !html) fail("--out x.html writes the side-by-side page and needs --html <page.html> with the component's markup, or --url <the running app>. For a graph, write .svg or .png.");
   let picture: string | undefined;

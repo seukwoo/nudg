@@ -73,13 +73,15 @@ plot options
 compare options
   --url <url|page.html>     The running app (or a local page, served from the working directory):
                             the component is snapshotted from it, styles and all, and the
-                            side-by-side page is written from that. No --html needed.
+                            side-by-side page is written from that. No --html needed. Sizes the
+                            file measures and --layout doesn't give are measured there too.
   --select <css>            Which element to snapshot. Default: the smallest element holding
                             every bound target (a toggle's track with its knob).
   --open                    Open the page in the browser once written.
   --html <page.html>        Real markup. With --out x.html: a page that plays A and B side by side
                             in a loop with slow motion, for a person to judge (needs a browser, not
-                            Chrome). With --out x.png: A/B filmstrip rows (needs Chrome).
+                            Chrome). With --out x.png: A/B filmstrip rows (needs Chrome). With
+                            Chrome, sizes --layout doesn't give are measured on it.
   --out <file.html|png|svg> Where to write. Default: graph as SVG to stdout, or compare.png with --html.
   --at / --frames           Frame times, as for render.
   --labels <A,B>            Names for the two versions.

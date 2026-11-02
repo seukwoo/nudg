@@ -7,6 +7,7 @@ import { handledEvents, unknownEventMessage } from "../core/observe.ts";
 import { pinchInputs, pinchableTargets } from "../core/pointer.ts";
 import { createLifecycle } from "../core/lifecycle.ts";
 import { propertiesByTarget, styleOf } from "./style.ts";
+import { measureElement } from "./measure.ts";
 import { createRuntime, type Runtime, type Value } from "../core/runtime.ts";
 import type { Machine, NudgContract, Program, StateName } from "../core/types.ts";
 
@@ -526,34 +527,6 @@ function dragTargets(program: Program): Set<string> {
   };
   walk(program.machine);
   return out;
-}
-
-/**
- * One layout measurement of an element, in CSS pixels (logical units): the untransformed
- * box from offsets, summed up to the page, or the natural size from the scroll size.
- */
-function measureElement(el: Element, what: string): number | undefined {
-  if (!(el instanceof HTMLElement)) {
-    const r = el.getBoundingClientRect();
-    return what === "x" ? r.left + scrollX : what === "y" ? r.top + scrollY : what === "width" || what === "naturalWidth" ? r.width : r.height;
-  }
-  switch (what) {
-    case "x":
-    case "y": {
-      let sum = 0;
-      for (let node: HTMLElement | null = el; node; node = node.offsetParent as HTMLElement | null) sum += what === "x" ? node.offsetLeft : node.offsetTop;
-      return sum;
-    }
-    case "width":
-      return el.offsetWidth;
-    case "height":
-      return el.offsetHeight;
-    case "naturalWidth":
-      return el.scrollWidth;
-    case "naturalHeight":
-      return el.scrollHeight;
-  }
-  return undefined;
 }
 
 /** The attributes component libraries use to show state, and the app events they become. */

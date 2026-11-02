@@ -284,3 +284,19 @@ test("compare says when an unmeasured size can hide the change", async () => {
   assert.equal(seen.structuredContent.verdict, "clear");
   assert.doesNotMatch(seen.content[0].text, /Not measured/);
 });
+
+test("compare measures the sizes it wasn't given on the page it shows", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const b = JSON.parse(readFileSync(`${root}examples/bottom-sheet.nudg.json`, "utf8"));
+  b.animate["sheet.y"].spring.bounce = 0.45;
+  const dir = mkdtempSync(join(tmpdir(), "nudg-measure-"));
+  try {
+    const bFile = join(dir, "b.nudg.json");
+    writeFileSync(bFile, JSON.stringify(b));
+    const result = await call("nudg_compare", { a: { file: "examples/bottom-sheet.nudg.json" }, b: { file: bFile }, html: "examples/bottom-sheet.html", events: [{ event: "opener.tap", t: 0.1 }], out: join(dir, "compare.png"), open: false });
+    assert.equal(result.structuredContent.verdict, "clear");
+    assert.match(result.content[0].text, /Measured on examples\/bottom-sheet\.html \(a \d+×\d+ window\): sheet\.height=\d+/);
+    assert.doesNotMatch(result.content[0].text, /Not measured/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

@@ -148,7 +148,7 @@ Status: implemented in stages: format 0.4 added `measure` in `values` and `set`,
 - **Before the first report** a measured value is its property's base value, and the runtime reports which measurements it is still waiting for, the same way it reports unbound targets.
 - **`%`-like values** use `{ "measure": "parent.width", "times": 0.5 }`; there is no separate unit system.
 
-**Tools.** `simulate`, `plot`, `compare` and the conformance suite take a layout table (`--layout seg2.x=72,seg2.width=88`, or `layout` in the MCP tools); `render` and `observe` measure the real page. The validator checks the target exists, the measurement name, and that `x`/`y` only measure into position properties.
+**Tools.** `simulate`, `plot`, `compare` and the conformance suite take a layout table (`--layout seg2.x=72,seg2.width=88`, or `layout` in the MCP tools); `render` and `observe` measure the real page, and `compare` with a page (`url` or `html`) measures there the sizes the table doesn't give. The validator checks the target exists, the measurement name, and that `x`/`y` only measure into position properties.
 
 **Adapters.** The DOM adapter measures with offsets (untransformed) and natural size with scroll size, and reports again from a `ResizeObserver`. React needs nothing new. A native adapter reports the view frame.
 

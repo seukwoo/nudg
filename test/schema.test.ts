@@ -44,6 +44,8 @@ for (const [version, older] of [["0.1", schema01], ["0.2", schema02], ["0.4", sc
 
 test("schema accepts every example", () => {
   for (const url of filesIn(new URL("../examples/", import.meta.url))) {
+    // The example apps keep their own config (tsconfig.json) next to their motion files.
+    if (!url.pathname.endsWith(".nudg.json")) continue;
     assert.ok(valid(read(url)), `${url.pathname}: ${JSON.stringify(validate.errors, null, 2)}`);
   }
 });

@@ -1,0 +1,81 @@
+{
+  "nudg": "1.1",
+  "note": "The composer's action button. With nothing typed it is a microphone; once there is text the microphone turns away and the send arrow turns in, and clearing the field turns it back. The host sends typed and cleared as the field changes.",
+  "host": {
+    "events": [
+      "typed",
+      "cleared"
+    ]
+  },
+  "targets": [
+    "mic",
+    "send"
+  ],
+  "values": {
+    "mic.scale": 1,
+    "mic.opacity": 1,
+    "mic.rotation": 0,
+    "send.scale": 0.4,
+    "send.opacity": 0,
+    "send.rotation": -90
+  },
+  "animate": {
+    "mic.scale": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0.2
+      }
+    },
+    "send.scale": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0.3
+      }
+    },
+    "mic.rotation": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0
+      }
+    },
+    "send.rotation": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0.15
+      }
+    },
+    "mic.opacity": {
+      "tween": {
+        "duration": 0.12,
+        "ease": "out"
+      }
+    },
+    "send.opacity": {
+      "tween": {
+        "duration": 0.12,
+        "ease": "out"
+      }
+    }
+  },
+  "initial": "empty",
+  "states": {
+    "empty": {
+      "when": {
+        "host.typed": "filled"
+      }
+    },
+    "filled": {
+      "set": {
+        "mic.scale": 0.4,
+        "mic.opacity": 0,
+        "mic.rotation": 90,
+        "send.scale": 1,
+        "send.opacity": 1,
+        "send.rotation": 0
+      },
+      "when": {
+        "host.cleared": "empty"
+      }
+    }
+  }
+}

@@ -1,0 +1,180 @@
+{
+  "nudg": "1.1",
+  "note": "One message in a chat. A new one opens its row to the bubble's height and rises into place. Dragged left, the bubble follows the finger and the reply arrow grows in; past the reply point the state is armed, and letting go there replies (the host starts a reply on entering replied). Pressed, the bubble sinks a little; held, it pops back as the host opens reactions; the host sends release when they close.",
+  "host": {
+    "events": [
+      "insert",
+      "release"
+    ]
+  },
+  "targets": [
+    "row",
+    "bubble",
+    "reply"
+  ],
+  "values": {
+    "row.height": 0,
+    "bubble.opacity": 0,
+    "bubble.y": 16,
+    "bubble.x": 0,
+    "bubble.scale": 1,
+    "reply.opacity": {
+      "map": "bubble.x",
+      "from": [
+        -16,
+        -56
+      ],
+      "to": [
+        0,
+        1
+      ]
+    },
+    "reply.scale": {
+      "map": "bubble.x",
+      "from": [
+        -16,
+        -56
+      ],
+      "to": [
+        0.4,
+        1
+      ]
+    }
+  },
+  "animate": {
+    "row.height": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0
+      }
+    },
+    "bubble.opacity": {
+      "tween": {
+        "duration": 0.15,
+        "ease": "out"
+      }
+    },
+    "bubble.y": {
+      "spring": {
+        "duration": 0.35,
+        "bounce": 0.15
+      }
+    },
+    "bubble.x": {
+      "spring": {
+        "duration": 0.35,
+        "bounce": 0
+      }
+    },
+    "bubble.scale": {
+      "spring": {
+        "duration": 0.25,
+        "bounce": 0.3
+      }
+    }
+  },
+  "regions": {
+    "presence": {
+      "initial": "hidden",
+      "states": {
+        "hidden": {
+          "when": {
+            "host.insert": "shown"
+          }
+        },
+        "shown": {
+          "set": {
+            "row.height": {
+              "measure": "row.naturalHeight"
+            },
+            "bubble.opacity": 1,
+            "bubble.y": 0
+          }
+        }
+      }
+    },
+    "swipe": {
+      "initial": "rest",
+      "states": {
+        "rest": {
+          "when": {
+            "bubble.dragstart": "dragging"
+          }
+        },
+        "dragging": {
+          "follow": {
+            "bubble.x": {
+              "input": "bubble.drag.x",
+              "range": [
+                -72,
+                0
+              ],
+              "overdrag": 0.2
+            }
+          },
+          "when": {
+            "bubble.drag.x<-56": "armed",
+            "bubble.dragend": "rest"
+          }
+        },
+        "armed": {
+          "follow": {
+            "bubble.x": {
+              "input": "bubble.drag.x",
+              "range": [
+                -72,
+                0
+              ],
+              "overdrag": 0.2
+            }
+          },
+          "when": {
+            "bubble.drag.x>-56": "dragging",
+            "bubble.dragend": "replied"
+          }
+        },
+        "replied": {
+          "when": {
+            "bubble.dragstart": "dragging"
+          }
+        }
+      }
+    },
+    "hold": {
+      "initial": "idle",
+      "states": {
+        "idle": {
+          "when": {
+            "bubble.down": {
+              "to": "pressing",
+              "animate": {
+                "bubble.scale": {
+                  "spring": {
+                    "duration": 0.15,
+                    "bounce": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "pressing": {
+          "set": {
+            "bubble.scale": 0.97
+          },
+          "when": {
+            "bubble.up": "idle",
+            "bubble.cancel": "idle",
+            "bubble.dragstart": "idle",
+            "bubble.longpress": "held"
+          }
+        },
+        "held": {
+          "when": {
+            "host.release": "idle"
+          }
+        }
+      }
+    }
+  }
+}

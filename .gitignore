@@ -13,3 +13,6 @@ swift/.swiftpm/
 
 .build/
 .swiftpm/
+
+# Built by npm run messenger
+examples/apps/messenger/app.js

@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **compare measures sizes on the page it shows.** With `url` (the running app) or `html`, the sizes a file measures and `layout` doesn't give are measured on that page, as the DOM adapter would, so a sheet's verdict uses its real height instead of 0. The result says what was measured and in what window. `measureLayout` and `Measured` are exported from `@nudg/core/node`.
+- **A list of swipeable rows scrolls on touch screens.** The DOM adapter set `touch-action: none` on every target a file drags, so a finger on a row that swipes sideways couldn't scroll its list. A target the file drags along one axis now leaves the other to the page (`pan-y` for a sideways swipe). `dragAxes(program)` says which axis each dragged target uses, for other hosts. React Native, SwiftUI and Compose still take every touch on a dragged target; they follow next.
 
 ## 1.5.1
 

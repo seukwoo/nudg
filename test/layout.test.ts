@@ -99,3 +99,10 @@ test("a referenced scroll input is reported by the DOM adapter", { skip: chrome 
     assert.equal(after, 40);
   });
 });
+
+test("a target dragged along one axis leaves the other to the page's scroll", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const touchAction = (page: string, target: string) => onPage(page, (evaluate) => evaluate(`document.querySelector("[data-nudg=${target}]").style.touchAction`));
+  assert.equal(await touchAction("examples/swipe-row.html", "content"), "pan-y");
+  assert.equal(await touchAction("examples/bottom-sheet.html", "sheet"), "pan-x");
+  assert.equal(await touchAction("examples/image-viewer.html", "image"), "none");
+});

@@ -514,3 +514,12 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Resolution:** The hook remembers the value each Animated value last showed and skips unchanged ones. Same build otherwise: 25.5 at 60 (Animated 26.2) and 6.3 at 150 (Animated 8.2); the native driver held 30, the emulator's ceiling, at 150. Rebuilding needed the generated JS bundle deleted first; Gradle had kept the old one.
 - **Lesson:** Compare against the platform's own equivalent before blaming the approach. The gap to JS-driven Animated was a bug; the gap to the native driver is the approach, and only matters when dozens of views move at once.
 
+
+## 2026-11-02: Swipeable rows in a list that couldn't scroll
+
+### Found while planning the messenger example
+- **Problem:** A chat screen is a scrolling list of bubbles that each swipe sideways to reply. The DOM adapter set `touch-action: none` on every target a file drags, so on a phone a finger that lands on a bubble could never scroll the list. The swipe-row and carousel examples have the same problem as soon as they sit in a list; each example page has a single row, so it never showed.
+- **Cause:** "Draggable" was one bit per target. The file already says more: a swipe row reads only `content.drag.x`, a bottom sheet only `sheet.drag.y`.
+- **Resolution:** `dragAxes(program)` derives the one axis each dragged target uses from the inputs the file reads, and the DOM adapter leaves the other to the page (`pan-y` for a sideways swipe, `pan-x` for a vertical one, `none` for both, as in the image viewer). The browser then scrolls a vertical move and cancels the press, which the adapter already handles.
+- **Not yet fixed:** React Native, SwiftUI and Compose take every touch on a dragged target too. A first React Native fix (yield to the scroll view while the drag hasn't started) didn't hold up: the shared pointer tracker starts a drag after 4 units in any direction, before a scroll view asks for the touch. The tracker itself has to learn the axis, in all three runtimes.
+- **Lesson:** Examples that show one component alone hide the bugs of composing them. An app that puts them together is a test, not just a showcase.

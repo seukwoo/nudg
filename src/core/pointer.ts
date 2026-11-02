@@ -8,6 +8,7 @@
 // tap. The Swift and Kotlin adapters implement the same rules.
 
 import { handledEvents } from "./observe.ts";
+import { createRuntime } from "./runtime.ts";
 import type { Program } from "./types.ts";
 
 /** Logical units the pointer must travel before a press becomes a drag. */
@@ -24,6 +25,22 @@ export function draggableTargets(program: Program): Set<string> {
   for (const e of handledEvents(program)) {
     const [target, event] = e.split(".");
     if (event === "dragstart" || event === "dragend") out.add(target);
+  }
+  return out;
+}
+
+/**
+ * The one axis each dragged target moves along, from the drag inputs the file reads
+ * (`row.drag.x` only: "x"). A host leaves the other axis to scrolling, so a list of rows
+ * that swipe sideways still scrolls. Targets that read both axes, or neither, are absent.
+ */
+export function dragAxes(program: Program): Map<string, "x" | "y"> {
+  const reads = new Set(createRuntime(program).requiredInputs());
+  const out = new Map<string, "x" | "y">();
+  for (const target of draggableTargets(program)) {
+    const x = reads.has(`${target}.drag.x`);
+    const y = reads.has(`${target}.drag.y`);
+    if (x !== y) out.set(target, x ? "x" : "y");
   }
   return out;
 }

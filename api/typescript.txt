@@ -88,6 +88,7 @@ export declare function createRuntime(program: Program, options?: RuntimeOptions
 export declare function critique(program: Program): { findings: CritiqueFinding[]; transitions: MeasuredTransition[]; };
 export declare function decomposeMatrix(m: [number, number, number, number, number, number]): { x: number; y: number; scaleX: number; scaleY: number; rotation: number; };
 export declare function didYouMean(input: string, candidates: string[]): string | undefined;
+export declare function dragAxes(program: Program): Map<string, "x" | "y">;
 export declare function draggableTargets(program: Program): Set<string>;
 export declare function handledEvents(program: Program): Set<string>;
 export declare function hover(options?: HoverOptions): NudgDocument;

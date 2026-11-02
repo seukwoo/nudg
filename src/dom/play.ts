@@ -4,7 +4,7 @@
 
 import { toProgram } from "../core/to-program.ts";
 import { handledEvents, unknownEventMessage } from "../core/observe.ts";
-import { pinchInputs, pinchableTargets } from "../core/pointer.ts";
+import { dragAxes, pinchInputs, pinchableTargets } from "../core/pointer.ts";
 import { createLifecycle } from "../core/lifecycle.ts";
 import { propertiesByTarget, styleOf } from "./style.ts";
 import { measureElement } from "./measure.ts";
@@ -120,6 +120,9 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   const manual = options.clock === "manual";
   const start = performance.now();
   const draggable = dragTargets(program);
+  // A target dragged along one axis leaves the other to the page, so a list of swipeable rows still scrolls.
+  const axes = dragAxes(program);
+  const touchActionOf = (name: string) => (pinchable.has(name) || !axes.has(name) ? "none" : axes.get(name) === "x" ? "pan-y" : "pan-x");
   // Two pointers on these targets pinch (v0.18).
   const pinchable = pinchableTargets(program);
   // A long press is the file's (v0.14), not the browser's context menu or text callout.
@@ -297,7 +300,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     const style = (el as HTMLElement).style;
     const touchAction = style?.touchAction;
     // Let a drag reach us instead of scrolling the page.
-    if ((draggable.has(name) || pinchable.has(name)) && style) style.touchAction = "none";
+    if ((draggable.has(name) || pinchable.has(name)) && style) style.touchAction = touchActionOf(name);
     const callout = style?.getPropertyValue("-webkit-touch-callout");
     if (longPressable.has(name) && style) style.setProperty("-webkit-touch-callout", "none");
     if (scrollAxes) reportScroll();

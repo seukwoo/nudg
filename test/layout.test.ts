@@ -106,3 +106,16 @@ test("a target dragged along one axis leaves the other to the page's scroll", { 
   assert.equal(await touchAction("examples/bottom-sheet.html", "sheet"), "pan-x");
   assert.equal(await touchAction("examples/image-viewer.html", "image"), "none");
 });
+
+test("a natural size follows the content: an open accordion grows when its panel gains a paragraph", { skip: chrome ? false : "no Chrome found" }, async () => {
+  await onPage("examples/accordion.html", async (evaluate) => {
+    await settle();
+    await evaluate(`document.querySelector("[data-nudg=header]").click()`);
+    await settle();
+    const before = await evaluate(`document.querySelector("[data-nudg=panel]").offsetHeight`);
+    await evaluate(`(() => { const p = document.createElement("p"); p.textContent = "One more answer, added after it opened."; p.style.margin = "12px 0"; document.querySelector("[data-nudg=panel]").append(p); })()`);
+    await settle();
+    const [h, natural] = await evaluate(`[document.querySelector("[data-nudg=panel]").offsetHeight, document.querySelector("[data-nudg=panel]").scrollHeight]`);
+    assert.ok(h > before + 10 && Math.abs(h - natural) <= 1, `grew from ${before} to ${h}, natural ${natural}`);
+  });
+});

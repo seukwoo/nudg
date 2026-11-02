@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createPlayer, toProgram } from "../src/core/player.ts";
-import { PointerTracker, draggableTargets } from "../src/core/pointer.ts";
+import { PointerTracker, dragAxes, draggableTargets } from "../src/core/pointer.ts";
 import { readFileSync } from "node:fs";
 
 const toggleDrag = toProgram(JSON.parse(readFileSync("examples/toggle-drag.nudg.json", "utf8")));
@@ -41,6 +41,14 @@ test("non-draggable targets never drag; draggableTargets reads the file", () => 
   t.move(40, 0);
   t.up();
   assert.deepEqual(log, ["knob.down", "knob.up", "knob.tap"]);
+});
+
+test("dragAxes: the one axis a target is dragged along, so the host can leave the other to scrolling", () => {
+  const axes = (name: string) => [...dragAxes(toProgram(JSON.parse(readFileSync(`examples/${name}.nudg.json`, "utf8"))))];
+  assert.deepEqual(axes("swipe-row"), [["content", "x"]]);
+  assert.deepEqual(axes("bottom-sheet"), [["sheet", "y"]]);
+  assert.deepEqual(axes("animated-list"), [["handle", "y"]]);
+  assert.deepEqual(axes("image-viewer"), [], "pans both ways, so it takes every touch");
 });
 
 test("dragging the toggle's track 30 units to the right turns it on, through the player", () => {

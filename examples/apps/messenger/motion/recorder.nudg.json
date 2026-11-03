@@ -1,0 +1,412 @@
+{
+  "nudg": "1.1",
+  "note": "Recording from the composer's microphone. A quick tap switches between voice and round video (the host sends toggle when the recorder enters tapped). Held, it records: a circle grows under the finger and follows it, the bar over the field shows the time and 'slide to cancel', and a lock rises above. Slid left past the cancel point it discards; slid up past the lock it keeps recording hands-free, and a tap sends. Letting go sends. The host records while the recorder is in recording or locked, sends the message on entering sent and discards it on entering cancelled. It reports the microphone level as volume and, for video, how much of the minute is used as progress; a full minute sends.",
+  "host": {
+    "events": [
+      "toggle"
+    ],
+    "inputs": {
+      "volume": {
+        "range": [
+          0,
+          1
+        ],
+        "note": "Microphone level, normalized."
+      },
+      "progress": {
+        "range": [
+          0,
+          1
+        ],
+        "note": "Share of the longest recording (a minute) used so far."
+      }
+    }
+  },
+  "targets": [
+    "mic",
+    "micIcon",
+    "camIcon",
+    "blob",
+    "halo",
+    "blobIcon",
+    "blobSend",
+    "panel",
+    "dot",
+    "hint",
+    "slide",
+    "stop",
+    "lock",
+    "lockArrow",
+    "round",
+    "arcR",
+    "arcL"
+  ],
+  "values": {
+    "micIcon.opacity": 1,
+    "micIcon.scale": 1,
+    "micIcon.rotation": 0,
+    "camIcon.opacity": 0,
+    "camIcon.scale": 0.4,
+    "camIcon.rotation": -90,
+    "blob.scale": 0,
+    "blob.x": 0,
+    "blob.y": 0,
+    "halo.scale": {
+      "map": "host.volume",
+      "from": [
+        0,
+        1
+      ],
+      "to": [
+        1,
+        1.7
+      ]
+    },
+    "blobIcon.opacity": 1,
+    "blobSend.opacity": 0,
+    "blobSend.scale": 0.4,
+    "panel.opacity": 0,
+    "panel.x": 48,
+    "dot.opacity": 1,
+    "hint.opacity": 1,
+    "stop.opacity": 0,
+    "slide.x": {
+      "map": "blob.x",
+      "from": [
+        0,
+        -140
+      ],
+      "to": [
+        0,
+        -56
+      ]
+    },
+    "slide.opacity": {
+      "map": "blob.x",
+      "from": [
+        -40,
+        -140
+      ],
+      "to": [
+        1,
+        0.2
+      ]
+    },
+    "lock.opacity": 0,
+    "lock.y": 24,
+    "lockArrow.y": {
+      "map": "blob.y",
+      "from": [
+        0,
+        -100
+      ],
+      "to": [
+        0,
+        -10
+      ]
+    },
+    "round.scale": 0.2,
+    "round.opacity": 0,
+    "arcR.rotation": {
+      "map": "host.progress",
+      "from": [
+        0,
+        0.5
+      ],
+      "to": [
+        -135,
+        45
+      ]
+    },
+    "arcL.rotation": {
+      "map": "host.progress",
+      "from": [
+        0.5,
+        1
+      ],
+      "to": [
+        45,
+        225
+      ]
+    }
+  },
+  "animate": {
+    "micIcon.opacity": {
+      "tween": {
+        "duration": 0.12,
+        "ease": "out"
+      }
+    },
+    "micIcon.scale": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0.2
+      }
+    },
+    "micIcon.rotation": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0
+      }
+    },
+    "camIcon.opacity": {
+      "tween": {
+        "duration": 0.12,
+        "ease": "out"
+      }
+    },
+    "camIcon.scale": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0.2
+      }
+    },
+    "camIcon.rotation": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0
+      }
+    },
+    "blob.scale": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0.3
+      }
+    },
+    "blob.x": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0.2
+      }
+    },
+    "blob.y": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0.2
+      }
+    },
+    "blobIcon.opacity": {
+      "tween": {
+        "duration": 0.12,
+        "ease": "out"
+      }
+    },
+    "blobSend.opacity": {
+      "tween": {
+        "duration": 0.12,
+        "ease": "out"
+      }
+    },
+    "blobSend.scale": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0.3
+      }
+    },
+    "panel.opacity": {
+      "tween": {
+        "duration": 0.15,
+        "ease": "out"
+      }
+    },
+    "panel.x": {
+      "spring": {
+        "duration": 0.35,
+        "bounce": 0
+      }
+    },
+    "hint.opacity": {
+      "tween": {
+        "duration": 0.15,
+        "ease": "out"
+      }
+    },
+    "stop.opacity": {
+      "tween": {
+        "duration": 0.15,
+        "ease": "out"
+      }
+    },
+    "lock.opacity": {
+      "tween": {
+        "duration": 0.15,
+        "ease": "out"
+      }
+    },
+    "lock.y": {
+      "spring": {
+        "duration": 0.35,
+        "bounce": 0.2
+      }
+    },
+    "round.scale": {
+      "spring": {
+        "duration": 0.4,
+        "bounce": 0.2
+      }
+    },
+    "round.opacity": {
+      "tween": {
+        "duration": 0.15,
+        "ease": "out"
+      }
+    }
+  },
+  "regions": {
+    "mode": {
+      "initial": "voice",
+      "states": {
+        "voice": {
+          "when": {
+            "host.toggle": "video"
+          }
+        },
+        "video": {
+          "set": {
+            "micIcon.opacity": 0,
+            "micIcon.scale": 0.4,
+            "micIcon.rotation": 90,
+            "camIcon.opacity": 1,
+            "camIcon.scale": 1,
+            "camIcon.rotation": 0
+          },
+          "when": {
+            "host.toggle": "voice"
+          }
+        }
+      }
+    },
+    "record": {
+      "initial": "idle",
+      "states": {
+        "idle": {
+          "when": {
+            "mic.down": "arming",
+            "mic.key.enter": "locked"
+          }
+        },
+        "arming": {
+          "note": "A press shorter than this is a tap.",
+          "when": {
+            "after:150ms": "recording",
+            "mic.dragstart": "recording",
+            "mic.up": "tapped",
+            "mic.cancel": "idle"
+          }
+        },
+        "tapped": {
+          "when": {
+            "mic.down": "arming",
+            "mic.key.enter": "locked"
+          }
+        },
+        "recording": {
+          "set": {
+            "blob.scale": 1,
+            "panel.opacity": 1,
+            "panel.x": 0,
+            "round.scale": 1,
+            "round.opacity": 1,
+            "lock.opacity": 1,
+            "lock.y": 0
+          },
+          "loop": {
+            "dot.opacity": {
+              "keyframes": [
+                {
+                  "at": 0.5,
+                  "value": -0.85
+                }
+              ],
+              "duration": 1,
+              "ease": "in-out"
+            }
+          },
+          "follow": {
+            "blob.x": {
+              "input": "mic.drag.x",
+              "range": [
+                -140,
+                0
+              ]
+            },
+            "blob.y": {
+              "input": "mic.drag.y",
+              "range": [
+                -100,
+                0
+              ]
+            }
+          },
+          "when": {
+            "mic.drag.x<-120": "cancelled",
+            "mic.drag.y<-80": "locked",
+            "mic.up": "sent",
+            "mic.cancel": "sent",
+            "host.progress>0.99": "sent"
+          }
+        },
+        "locked": {
+          "set": {
+            "blob.scale": 1,
+            "panel.opacity": 1,
+            "panel.x": 0,
+            "round.scale": 1,
+            "round.opacity": 1,
+            "blobIcon.opacity": 0,
+            "blobSend.opacity": 1,
+            "blobSend.scale": 1,
+            "hint.opacity": 0,
+            "stop.opacity": 1,
+            "lock.y": -24
+          },
+          "loop": {
+            "dot.opacity": {
+              "keyframes": [
+                {
+                  "at": 0.5,
+                  "value": -0.85
+                }
+              ],
+              "duration": 1,
+              "ease": "in-out"
+            }
+          },
+          "when": {
+            "mic.tap": "sent",
+            "mic.key.enter": "sent",
+            "mic.key.escape": "cancelled",
+            "stop.tap": "cancelled",
+            "host.progress>0.99": "sent"
+          }
+        },
+        "sent": {
+          "when": {
+            "mic.down": "arming",
+            "mic.key.enter": "locked"
+          }
+        },
+        "cancelled": {
+          "note": "The bar leaves to the left, the way the finger went.",
+          "set": {
+            "panel.x": -48
+          },
+          "when": {
+            "mic.down": {
+              "to": "arming",
+              "note": "Back to the right while hidden, so the next bar comes in from the right again.",
+              "animate": {
+                "panel.x": {
+                  "tween": {
+                    "duration": 0
+                  }
+                }
+              }
+            },
+            "mic.key.enter": "locked"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,5 +1,7 @@
 // The messenger example (examples/apps/messenger), built and used in headless Chrome the
-// way a person would: open a chat, swipe to reply, send, react, scroll up, archive.
+// way a person would: open a chat, swipe to reply, send, react, scroll up, archive; then
+// record, cancel, lock and send voice and round video messages, and play them. Headless
+// Chrome has no microphone or camera, so the app records along its stand-in.
 // Skipped without a local Chrome.
 
 import assert from "node:assert/strict";
@@ -63,7 +65,7 @@ test("messenger: open a chat, reply by swiping, send, get an answer, react, arch
   await drag(".bubble", before - 2, -80);
   await sleep(400);
   assert.equal(await count(".reply-bar"), 1);
-  assert.equal(await browser.evaluate(`document.querySelector(".reply-text").textContent`), await browser.evaluate(`document.querySelectorAll(".bubble span")[${before - 2}].textContent`));
+  assert.equal(await browser.evaluate(`document.querySelector(".reply-text").textContent`), await browser.evaluate(`document.querySelectorAll(".bubble")[${before - 2}].querySelector(":scope > span").textContent`));
 
   // Typing turns the microphone into send; sending adds the message with its quote.
   await browser.evaluate(`(() => { const i = document.querySelector(".composer input"); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(i, "Sounds good"); i.dispatchEvent(new Event("input", { bubbles: true })); })()`);
@@ -107,5 +109,80 @@ test("messenger: open a chat, reply by swiping, send, get an answer, react, arch
   await browser.evaluate(`document.querySelectorAll(".archive")[1].click()`);
   await sleep(1200);
   assert.equal(await count(".chat-row"), chats - 1);
+  assert.deepEqual(errors, []);
+});
+
+const voices = () => count(".voice");
+const rounds = () => count(".round");
+const hold = async (ms: number, path: [number, number][] = []) => {
+  const [x, y] = await center(".record-hit", 0);
+  await mouse("mousePressed", x, y);
+  await sleep(ms);
+  for (const [dx, dy] of path) {
+    await mouse("mouseMoved", x + dx, y + dy);
+    await sleep(16);
+  }
+  const [dx, dy] = path.at(-1) ?? [0, 0];
+  await mouse("mouseReleased", x + dx, y + dy);
+};
+const steps = (dx: number, dy: number) => Array.from({ length: 12 }, (_, k): [number, number] => [(dx * (k + 1)) / 12, (dy * (k + 1)) / 12]);
+
+test("messenger: hold to record, slide to cancel, slide up to lock, round video, playback", { skip }, async () => {
+  await browser.evaluate(`document.querySelector(".chat-content").click()`);
+  await sleep(800);
+  const [v, r] = [await voices(), await rounds()];
+
+  // Held and let go: a voice message.
+  await hold(900);
+  await sleep(900);
+  assert.equal(await voices(), v + 1, "held and released, it sends");
+
+  // Slid left past the cancel point: nothing is sent, and the bar leaves.
+  await hold(400, steps(-160, 0));
+  await sleep(600);
+  assert.equal(await voices(), v + 1, "slid left, it is discarded");
+  assert.ok((await opacity(".record-panel")) < 0.1);
+
+  // Slid up past the lock: recording goes on after the finger lifts; Cancel shows, and a tap sends.
+  await hold(400, steps(0, -110));
+  await sleep(600);
+  assert.ok((await opacity(".record-panel")) > 0.9 && (await opacity(".record-stop")) > 0.9, "locked: still recording, with Cancel");
+  await browser.evaluate(`document.querySelector(".record-hit").click()`);
+  await sleep(900);
+  assert.equal(await voices(), v + 2, "a tap sends the locked recording");
+
+  // A quick tap switches to round video; held, the round preview grows, and it sends a round.
+  await hold(30);
+  await sleep(400);
+  assert.ok((await opacity(".mode-icon:nth-child(2)")) > 0.9, "the camera shows");
+  await hold(1200);
+  await sleep(1200);
+  assert.equal(await rounds(), r + 1, "a round video message");
+
+  // Playing the round grows it and fills its ring; at the end it shrinks back.
+  const size = () => browser.evaluate(`[...document.querySelectorAll(".row.me .round")].at(-1).offsetWidth`);
+  await browser.evaluate(`[...document.querySelectorAll(".row.me .round")].at(-1).click()`);
+  await sleep(600);
+  assert.ok((await size()) > 240, `playing, it grows: ${await size()}`);
+  await sleep(2000);
+  assert.ok((await size()) < 210, `ended, it shrinks back: ${await size()}`);
+
+  // Swiping a round left replies to it without playing it.
+  await browser.evaluate(`document.querySelector(".messages").scrollTop = 0`);
+  await sleep(300);
+  const first = await browser.evaluate(`[...document.querySelectorAll(".bubble")].findIndex((b) => b.querySelector(".round"))`);
+  await browser.evaluate(`document.querySelectorAll(".bubble")[${first}].scrollIntoView({ block: "center" })`);
+  await sleep(300);
+  await drag(".bubble", first, -80);
+  await sleep(600);
+  assert.equal(await browser.evaluate(`document.querySelector(".reply-text").textContent`), "Video message");
+  assert.ok((await browser.evaluate(`document.querySelectorAll(".bubble")[${first}].querySelector(".round").offsetWidth`)) < 210, "and doesn't play it");
+
+  // The unheard voice message plays: the dot goes, the waveform fills.
+  await browser.evaluate(`document.querySelector(".row.them .voice-toggle").click()`);
+  await sleep(1500);
+  assert.ok((await opacity(".row.them .unheard")) < 0.1);
+  const filled = await browser.evaluate(`document.querySelector(".row.them .wave-fill").offsetWidth`);
+  assert.ok(filled > 20 && filled < 138, `the waveform fills as it plays: ${filled}`);
   assert.deepEqual(errors, []);
 });

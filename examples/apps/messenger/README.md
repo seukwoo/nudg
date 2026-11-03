@@ -22,7 +22,13 @@ npm run demo        # then open http://127.0.0.1:8787/examples/apps/messenger/
 | Typing… | [typing-indicator](../../typing-indicator.nudg.json) inside a row of [animated-list](../../animated-list.nudg.json) | `host.typing` / `host.idle`, `host.insert` / `host.remove` |
 | Microphone turns into send | [composer](motion/composer.nudg.json) | `host.typed` / `host.cleared` as the field fills and empties |
 | Jump to the latest message | [jump](motion/jump.nudg.json) | reports `host.fromBottom` on scroll |
+| Hold to record, slide left to cancel, slide up to lock | [recorder](motion/recorder.nudg.json) | records while the recorder is in `recording` or `locked`, sends on entering `sent`, discards on `cancelled`; reports `host.volume` and, for video, `host.progress` |
+| Tap the microphone to switch to round video | [recorder](motion/recorder.nudg.json) | sends `host.toggle` when the recorder enters `tapped` |
+| Play a voice message | [voice](motion/voice.nudg.json) | plays and pauses as the file enters `playing` and `paused`; reports `host.progress`, sends `host.ended` |
+| Play a round video message | [round](motion/round.nudg.json) | the same, for the video |
 
 Two patterns repeat. A component that needs a height to open and close is put inside a row of the animated list, so two small files compose instead of one file growing. And the app learns what the person did from the state a file enters (`useEntered` in [use-entered.ts](use-entered.ts)), so the gesture's thresholds stay in the file.
 
-Next: voice messages (hold to record, slide to cancel, slide up to lock), then calls.
+Recording uses the microphone and camera when the browser allows them (it asks on the first hold). Without them, the app records along a stand-in: a made-up level and a silent clock, so every gesture still works. [media.ts](media.ts) holds that part; it moves nothing.
+
+Next: calls.

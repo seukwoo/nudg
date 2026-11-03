@@ -1,5 +1,7 @@
 // Made-up chats for the example. Nothing here moves; the motion is in ./motion and ../../.
 
+import type { Clip } from "./media.ts";
+
 export interface Message {
   id: string;
   from: "me" | "them";
@@ -8,6 +10,10 @@ export interface Message {
   reactions: string[];
   /** The message this one answers, by id. */
   replyTo?: string;
+  /** A voice message: the text is what the chat list shows. */
+  voice?: Clip;
+  /** A round video message. */
+  video?: Clip;
   /** Arrived while the chat was open: it animates in instead of being there already. */
   fresh?: boolean;
 }
@@ -26,6 +32,10 @@ let next = 0;
 export const newId = () => `m${++next}`;
 
 const m = (from: Message["from"], text: string, time: string): Message => ({ id: newId(), from, text, time, reactions: [] });
+// Recorded elsewhere: a length and a waveform, played along a silent clock.
+const bars = (seed: number) => Array.from({ length: 28 }, (_, i) => 0.2 + 0.8 * Math.abs(Math.sin(i * 0.7 + seed) * Math.cos(i * 0.23 + seed * 2)));
+const voice = (from: Message["from"], seconds: number, time: string): Message => ({ ...m(from, "Voice message", time), voice: { duration: seconds, bars: bars(seconds) } });
+const video = (from: Message["from"], seconds: number, time: string): Message => ({ ...m(from, "Video message", time), video: { duration: seconds, bars: [] } });
 
 export const CHATS: Chat[] = [
   {
@@ -37,6 +47,7 @@ export const CHATS: Chat[] = [
       m("them", "Morning! Did you see the photos from Saturday?", "09:12"),
       m("me", "Yes, the one on the ridge is amazing", "09:20"),
       m("them", "Sora took that one", "09:21"),
+      voice("them", 6, "09:21"),
       m("me", "Tell her to send the full size", "09:21"),
       m("them", "Will do", "09:22"),
       m("them", "Are you free for lunch?", "11:48"),
@@ -46,6 +57,7 @@ export const CHATS: Chat[] = [
       m("them", "How did the deadline go?", "16:30"),
       m("me", "Shipped it, finally", "16:41"),
       m("them", "🎉🎉", "16:41"),
+      video("them", 5, "16:41"),
       m("me", "I need to climb something", "16:42"),
       m("them", "Are we still on for climbing tonight?", "18:02"),
       m("me", "Yes! 7 at the usual place", "18:04"),

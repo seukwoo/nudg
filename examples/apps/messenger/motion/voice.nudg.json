@@ -1,0 +1,151 @@
+{
+  "nudg": "1.1",
+  "note": "A voice message. Tapping the button plays it: the play icon turns into pause, the played part of the waveform fills from the left as the host reports progress, and the dot for an unheard message goes away. Tapping again pauses; the host sends ended when it reaches the end. The host plays and pauses the audio as the file enters playing and paused.",
+  "host": {
+    "events": [
+      "ended"
+    ],
+    "inputs": {
+      "progress": {
+        "range": [
+          0,
+          1
+        ],
+        "note": "Share of the message played."
+      }
+    }
+  },
+  "targets": [
+    "toggle",
+    "play",
+    "pause",
+    "wave",
+    "fill",
+    "unheard"
+  ],
+  "values": {
+    "play.opacity": 1,
+    "play.scale": 1,
+    "pause.opacity": 0,
+    "pause.scale": 0.4,
+    "fill.width": {
+      "map": "host.progress",
+      "from": [
+        0,
+        1
+      ],
+      "to": [
+        0,
+        {
+          "measure": "wave.width"
+        }
+      ]
+    },
+    "toggle.scale": 1,
+    "unheard.opacity": 1,
+    "unheard.scale": 1
+  },
+  "animate": {
+    "play.opacity": {
+      "tween": {
+        "duration": 0.12,
+        "ease": "out"
+      }
+    },
+    "play.scale": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0.3
+      }
+    },
+    "pause.opacity": {
+      "tween": {
+        "duration": 0.12,
+        "ease": "out"
+      }
+    },
+    "pause.scale": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0.3
+      }
+    },
+    "toggle.scale": {
+      "spring": {
+        "duration": 0.2,
+        "bounce": 0
+      }
+    },
+    "unheard.opacity": {
+      "tween": {
+        "duration": 0.2,
+        "ease": "out"
+      }
+    },
+    "unheard.scale": {
+      "spring": {
+        "duration": 0.3,
+        "bounce": 0
+      }
+    }
+  },
+  "regions": {
+    "playback": {
+      "initial": "paused",
+      "states": {
+        "paused": {
+          "when": {
+            "toggle.tap": "playing"
+          }
+        },
+        "playing": {
+          "set": {
+            "play.opacity": 0,
+            "play.scale": 0.4,
+            "pause.opacity": 1,
+            "pause.scale": 1
+          },
+          "when": {
+            "toggle.tap": "paused",
+            "host.ended": "paused"
+          }
+        }
+      }
+    },
+    "press": {
+      "initial": "up",
+      "states": {
+        "up": {
+          "when": {
+            "toggle.down": "down"
+          }
+        },
+        "down": {
+          "set": {
+            "toggle.scale": 0.9
+          },
+          "when": {
+            "toggle.up": "up",
+            "toggle.cancel": "up"
+          }
+        }
+      }
+    },
+    "heard": {
+      "initial": "new",
+      "states": {
+        "new": {
+          "when": {
+            "toggle.tap": "heard"
+          }
+        },
+        "heard": {
+          "set": {
+            "unheard.opacity": 0,
+            "unheard.scale": 0
+          }
+        }
+      }
+    }
+  }
+}

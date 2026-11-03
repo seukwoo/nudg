@@ -69,6 +69,11 @@ function App() {
               update(chat.id, (c) => ({ ...c, messages: [...c.messages, { id: newId(), from: "me", text, time: now(), reactions: [], replyTo, fresh: true }] }));
               answer(chat);
             }}
+            onSendClip={(kind, clip, replyTo) => {
+              const text = kind === "voice" ? "Voice message" : "Video message";
+              update(chat.id, (c) => ({ ...c, messages: [...c.messages, { id: newId(), from: "me", text, [kind]: clip, time: now(), reactions: [], replyTo, fresh: true }] }));
+              answer(chat);
+            }}
             onReact={(id, emoji) =>
               update(chat.id, (c) => ({ ...c, messages: c.messages.map((m) => (m.id === id ? { ...m, reactions: m.reactions.includes(emoji) ? m.reactions : [...m.reactions, emoji] } : m)) }))
             }

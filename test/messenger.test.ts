@@ -71,7 +71,10 @@ test("messenger: open a chat, reply by swiping, send, get an answer, react, arch
   await browser.evaluate(`(() => { const i = document.querySelector(".composer input"); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(i, "Sounds good"); i.dispatchEvent(new Event("input", { bubbles: true })); })()`);
   await sleep(400);
   assert.ok((await opacity(".composer button[type=submit]")) > 0.9 && (await opacity(".composer-action button[type=button]")) < 0.1, "send is showing, not the microphone");
-  await browser.evaluate(`document.querySelector(".composer button[type=submit]").click()`);
+  // A real click where the send button shows, so whatever covers it would take the click instead.
+  const [sx, sy] = await center(".composer button[type=submit]", 0);
+  await mouse("mousePressed", sx, sy);
+  await mouse("mouseReleased", sx, sy);
   await sleep(1200);
   assert.equal(await count(".bubble .quote"), 1);
   assert.equal(await count(".typing"), 1, "the other side is typing");
@@ -150,6 +153,16 @@ test("messenger: hold to record, slide to cancel, slide up to lock, round video,
   await browser.evaluate(`document.querySelector(".record-hit").click()`);
   await sleep(900);
   assert.equal(await voices(), v + 2, "a tap sends the locked recording");
+
+  // After recording, typed text still sends from the send button.
+  const texts = await count(".bubble > span");
+  await browser.evaluate(`(() => { const i = document.querySelector(".composer input"); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(i, "And text"); i.dispatchEvent(new Event("input", { bubbles: true })); })()`);
+  await sleep(400);
+  const [sx, sy] = await center(".composer button[type=submit]", 0);
+  await mouse("mousePressed", sx, sy);
+  await mouse("mouseReleased", sx, sy);
+  await sleep(900);
+  assert.equal(await count(".bubble > span"), texts + 1, "the send button sends");
 
   // A quick tap switches to round video; held, the round preview grows, and it sends a round.
   await hold(30);

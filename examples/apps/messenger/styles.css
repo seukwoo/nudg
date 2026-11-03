@@ -81,6 +81,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .composer-action > button[aria-hidden] { pointer-events: none; }
 .mode-icon { position: absolute; inset: 0; display: grid; place-items: center; }
 .record-hit { position: absolute; inset: 0; z-index: 2; border-radius: 50%; touch-action: none; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.record-hit[hidden] { display: none; }
 .record-hit:focus-visible { outline: 2px solid var(--accent); }
 
 /* Recording */

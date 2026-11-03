@@ -102,6 +102,13 @@ export function playDoc<C extends NudgContract = NudgContract>(doc: object, root
 /** Logical units the pointer must travel before a press becomes a drag. */
 const DRAG_SLOP = 4;
 
+/**
+ * Set from a release that ended a drag or pinch until the browser's click for it has passed.
+ * Shared by every player, so a target of another player nested in the dragged one (a play
+ * button in a swipeable message) doesn't tap either.
+ */
+let releasedFromDrag = false;
+
 export function play<C extends NudgContract = NudgContract>(program: Program, root: ParentNode | null = document, options: PlayOptions<C> = {}): Player<C> {
   const elements = new Map<string, Set<Element>>();
   const cleanups = new Map<Element, () => void>();
@@ -224,7 +231,6 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   const pressed = new Map<string, Press>();
   /** Each pinching target's two pointers, where they started and where they are. */
   const pinches = new Map<string, { ids: [number, number]; start: [number, number][]; at: Map<number, [number, number]> }>();
-  const suppressTap = new Set<string>();
 
   /** Set once layout reporting starts: elements bound later (React refs) are measured too. */
   let onLayoutBind: ((name: string, el: Element) => void) | undefined;
@@ -260,7 +266,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
       [
         "click",
         () => {
-          if (suppressTap.delete(name)) return;
+          if (releasedFromDrag) return;
           emit(`${name}.tap`);
         },
       ],
@@ -375,11 +381,11 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
       const inside = [...(elements.get(name) ?? [])].some((el) => el.contains(released));
       emit(`${name}.${!cancelled && inside ? "up" : "cancel"}`);
       if (press.dragging) emit(`${name}.dragend`);
-      if (dragged) {
-        // The browser may still fire a click for this press; it isn't a tap.
-        suppressTap.add(name);
-        setTimeout(() => suppressTap.delete(name), 0);
-      }
+    }
+    if (dragged) {
+      // The browser may still fire a click for this press; it isn't a tap, here or in any player.
+      releasedFromDrag = true;
+      setTimeout(() => (releasedFromDrag = false), 0);
     }
   };
   const onUp = (e: Event) => onRelease(e, false);

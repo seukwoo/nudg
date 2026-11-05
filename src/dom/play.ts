@@ -422,12 +422,14 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     contents?.observe(el, { childList: true });
   };
   let measureFrame = 0;
-  const measureNow = () => {
-    measureFrame = 0;
+  /** Measures every target the file reads, or only `only`. */
+  const measureNow = (only?: string) => {
+    if (only === undefined) measureFrame = 0;
     if (destroyed) return;
     let changedAny = false;
     for (const name of needed) {
       const [target, , what] = name.split(".");
+      if (only !== undefined && target !== only) continue;
       const el = elements.get(target)?.values().next().value;
       if (!el) continue;
       const v = what.startsWith("natural") ? withoutOwnMotion(el, () => measureElement(el, what)) : measureElement(el, what);
@@ -436,7 +438,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     if (changedAny) changed();
   };
   const remeasure = () => {
-    if (!measureFrame) measureFrame = requestAnimationFrame(measureNow);
+    if (!measureFrame) measureFrame = requestAnimationFrame(() => measureNow());
   };
   // A scroll size includes overflow from transformed children, such as a bubble still rising
   // into its row: measure without the transforms this player writes inside the element.
@@ -476,6 +478,10 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
       if (!measuredTargets.has(name)) return;
       observer?.observe(el);
       if (natural.has(name)) watchContent(el);
+      // Now, not on the next frame: an app that sends an event right after mounting (a sheet
+      // opened on mount) must find the measured value already there, or there's nothing to move.
+      measureNow(name);
+      apply(runtime.sample(now()));
       remeasure();
     };
   }

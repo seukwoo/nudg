@@ -1,7 +1,7 @@
 // The messenger example (examples/apps/messenger), built and used in headless Chrome the
 // way a person would: open a chat, swipe to reply, send, react, scroll up, archive; then
 // record, cancel, lock and send voice and round video messages, and play them. Headless
-// Chrome has no microphone or camera, so the app records along its stand-in.
+// Chrome has no microphone or camera, so the app records along its stand-in and says so.
 // Skipped without a local Chrome.
 
 import assert from "node:assert/strict";
@@ -139,6 +139,20 @@ test("messenger: hold to record, slide to cancel, slide up to lock, round video,
   await hold(900);
   await sleep(900);
   assert.equal(await voices(), v + 1, "held and released, it sends");
+  const notice = () => browser.evaluate(`(() => { const n = document.querySelector(".record-notice"); return n.hidden ? "" : n.textContent; })()`);
+  assert.match(await notice(), /stand-in/, "without a microphone, it says it records a stand-in");
+
+  // Let go while the browser is still asking for the microphone: nothing is sent, and it says why.
+  await browser.evaluate(`(() => {
+    const md = navigator.mediaDevices;
+    window.__gum = md.getUserMedia;
+    md.getUserMedia = () => new Promise((_, no) => setTimeout(() => no(new DOMException("denied", "NotAllowedError")), 700));
+  })()`);
+  await hold(300);
+  await sleep(1000);
+  assert.equal(await voices(), v + 1, "a hold that ended at the prompt records nothing");
+  assert.match(await notice(), /blocked/);
+  await browser.evaluate(`navigator.mediaDevices.getUserMedia = window.__gum`);
 
   // Slid left past the cancel point: nothing is sent, and the bar leaves.
   await hold(400, steps(-160, 0));
@@ -168,6 +182,7 @@ test("messenger: hold to record, slide to cancel, slide up to lock, round video,
   await hold(30);
   await sleep(400);
   assert.ok((await opacity(".mode-icon:nth-child(2)")) > 0.9, "the camera shows");
+  assert.match(await notice(), /Round video: hold to record/, "and it says how to record");
   await hold(1200);
   await sleep(1200);
   assert.equal(await rounds(), r + 1, "a round video message");

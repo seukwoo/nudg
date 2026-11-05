@@ -25,23 +25,58 @@ export interface Recording {
 
 export const BARS = 28;
 
-export async function record(video: boolean): Promise<Recording> {
+// One audio context for the level meter. Safari starts it suspended unless it is created or
+// resumed in a person's gesture, which recording (after a hold) is not; wakeAudio is called on the press.
+let audio: AudioContext | undefined;
+export function wakeAudio() {
+  audio ??= new AudioContext();
+  void audio.resume().catch(() => {});
+}
+
+export interface Devices {
+  /** The microphone, and the camera for a round video; nothing when the browser said no. */
+  stream?: MediaStream;
+  /** Why there is no stream, in words for the person. */
+  problem?: string;
+}
+
+/**
+ * Asks for the microphone (and the camera). Called on the press itself, so a browser that has
+ * to ask shows its prompt right away, not halfway through a recording.
+ */
+export async function openDevices(video: boolean): Promise<Devices> {
+  const what = video ? "camera and microphone" : "microphone";
+  if (!navigator.mediaDevices?.getUserMedia) return { problem: `This page can't use the ${what} here (it needs https). Recording a stand-in.` };
+  try {
+    return { stream: await navigator.mediaDevices.getUserMedia({ audio: true, video: video ? { facingMode: "user", width: 480, height: 480 } : false }) };
+  } catch (e) {
+    const name = e instanceof DOMException ? e.name : "";
+    if (name === "NotAllowedError" || name === "SecurityError")
+      return { problem: `The ${what} ${video ? "are" : "is"} blocked for this site (in the browser's site settings, or the system's privacy settings). Recording a stand-in.` };
+    if (name === "NotFoundError" || name === "OverconstrainedError") return { problem: `No ${what} found. Recording a stand-in.` };
+    return { problem: `The ${what} didn't start (${name || "unknown error"}). Recording a stand-in.` };
+  }
+}
+
+/** Lets go of devices that were opened for a press that didn't become a recording. */
+export function closeDevices(devices: Devices) {
+  devices.stream?.getTracks().forEach((t) => t.stop());
+}
+
+/** Records from opened devices, or along a stand-in when there are none. */
+export function record(devices: Devices): Recording {
   const start = performance.now();
   const elapsed = () => (performance.now() - start) / 1000;
-  let stream: MediaStream | undefined;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: video ? { facingMode: "user", width: 480, height: 480 } : false });
-  } catch {
-    stream = undefined;
-  }
+  const { stream } = devices;
 
   let level = () => Math.max(0, Math.min(1, 0.35 + 0.25 * Math.sin(elapsed() * 7) + 0.2 * Math.sin(elapsed() * 17)));
-  let context: AudioContext | undefined;
+  let source: MediaStreamAudioSourceNode | undefined;
   if (stream) {
-    context = new AudioContext();
-    const analyser = context.createAnalyser();
+    wakeAudio();
+    const analyser = audio!.createAnalyser();
     analyser.fftSize = 512;
-    context.createMediaStreamSource(stream).connect(analyser);
+    source = audio!.createMediaStreamSource(stream);
+    source.connect(analyser);
     const samples = new Float32Array(analyser.fftSize);
     level = () => {
       analyser.getFloatTimeDomainData(samples);
@@ -60,7 +95,7 @@ export async function record(video: boolean): Promise<Recording> {
   const release = () => {
     clearInterval(sampler);
     stream?.getTracks().forEach((t) => t.stop());
-    void context?.close();
+    source?.disconnect();
   };
   return {
     stream,

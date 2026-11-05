@@ -14,7 +14,7 @@ import recorderFile from "./motion/recorder.nudg.json";
 import voiceFile from "./motion/voice.nudg.json";
 import roundFile from "./motion/round.nudg.json";
 import { REACTIONS, type Chat, type Message } from "./data.ts";
-import { clock, playback, record, type Clip, type Recording } from "./media.ts";
+import { clock, closeDevices, openDevices, playback, record, wakeAudio, type Clip, type Devices, type Recording } from "./media.ts";
 import { Avatar } from "./avatar.tsx";
 import { useEntered } from "./use-entered.ts";
 
@@ -341,6 +341,9 @@ function Composer({ replyTo, onCancelReply, onSend, onSendClip }: { replyTo?: Me
       }}
     >
       {replyTo && <ReplyBar text={replyTo.text} onCancel={onCancelReply} />}
+      <p className="record-notice" role="status" hidden={!rec.notice || !!text}>
+        {rec.notice}
+      </p>
       <div className="composer-row">
         <input ref={input} value={text} onChange={(e) => change(e.target.value)} placeholder="Message" aria-label="Message" />
         <div ref={rec.n.bind("panel")} className="record-panel" aria-hidden={!rec.active}>
@@ -382,7 +385,11 @@ function Composer({ replyTo, onCancelReply, onSend, onSendClip }: { replyTo?: Me
             ref={rec.n.bind("mic")}
             className="record-hit"
             type="button"
+            // The press asks for the devices, and is the gesture Safari needs before the level meter can hear.
+            onPointerDown={rec.open}
+            onKeyDown={(e) => e.key === "Enter" && rec.open()}
             hidden={!!text}
+            title={rec.locked ? "Tap to send" : `Hold to record, tap for ${rec.video ? "voice" : "video"}`}
             aria-label={rec.locked ? "Send the recording" : `Hold to record a ${rec.video ? "video" : "voice"} message, tap to switch to ${rec.video ? "voice" : "video"}; Enter records hands-free`}
           />
         </div>
@@ -404,47 +411,78 @@ function Composer({ replyTo, onCancelReply, onSend, onSendClip }: { replyTo?: Me
 
 /**
  * The recorder file drives the gesture; this records while it is in recording or locked, and
- * keeps or drops the recording as it enters sent or cancelled.
+ * keeps or drops the recording as it enters sent or cancelled. The devices are asked for on the
+ * press, so a browser's permission prompt comes up at once; a press that let go before they were
+ * ready (the person was answering the prompt) records nothing.
  */
 function useRecorder(onSendClip: (kind: "voice" | "video", clip: Clip) => void) {
   const n = useNudg(recorderFile);
   const video = n.state.includes("mode/video");
   const [elapsed, setElapsed] = useState(0);
   const [stream, setStream] = useState<MediaStream>();
-  const session = useRef<{ recording: Promise<Recording>; frame: number; video: boolean }>(undefined);
+  const [notice, setNotice] = useState<string>();
+  const press = useRef<{ devices: Promise<Devices>; video: boolean; started: boolean; recording?: Recording; frame: number }>(undefined);
 
+  /** On the press: wake the audio and ask for the devices. A tap that sends a locked recording keeps the press it has. */
+  const open = () => {
+    wakeAudio();
+    if (press.current) return;
+    press.current = { devices: openDevices(video), video, started: false, frame: 0 };
+  };
+  /** The press became a tap or was cancelled before recording. */
+  const drop = () => {
+    const p = press.current;
+    if (!p || p.started) return;
+    press.current = undefined;
+    void p.devices.then(closeDevices);
+  };
   const start = () => {
-    if (session.current) return;
-    const recording = record(video);
-    const s = { recording, frame: 0, video };
-    session.current = s;
+    if (!press.current) open();
+    const p = press.current!;
+    if (p.started) return;
+    p.started = true;
     setElapsed(0);
-    void recording.then((r) => {
-      if (session.current !== s) return;
-      setStream(r.stream);
+    void p.devices.then((devices) => {
+      if (press.current !== p) return;
+      const r = record(devices);
+      p.recording = r;
+      setNotice(devices.problem);
+      setStream(devices.stream);
       const tick = () => {
         n.input("host.volume", r.level());
-        if (s.video) n.input("host.progress", r.elapsed() / 60);
+        if (p.video) n.input("host.progress", r.elapsed() / 60);
         setElapsed(r.elapsed());
-        s.frame = requestAnimationFrame(tick);
+        p.frame = requestAnimationFrame(tick);
       };
       tick();
     });
   };
   const finish = (keep: boolean) => {
-    const s = session.current;
-    if (!s) return;
-    session.current = undefined;
-    void s.recording.then(async (r) => {
-      cancelAnimationFrame(s.frame);
+    const p = press.current;
+    if (!p) return;
+    press.current = undefined;
+    void p.devices.then(async (devices) => {
+      const r = p.recording;
+      if (!r) {
+        // Let go before the devices were ready: nothing was recorded.
+        closeDevices(devices);
+        if (keep) setNotice(devices.problem ?? "Ready. Hold to record.");
+        return;
+      }
+      cancelAnimationFrame(p.frame);
       n.input("host.volume", 0);
       n.input("host.progress", 0);
       setStream(undefined);
-      if (keep) onSendClip(s.video ? "video" : "voice", await r.stop());
+      if (keep) onSendClip(p.video ? "video" : "voice", await r.stop());
       else r.cancel();
     });
   };
-  useEntered(n.state, "record/tapped", () => n.send("host.toggle"));
+  useEntered(n.state, "record/tapped", () => {
+    drop();
+    n.send("host.toggle");
+    setNotice(video ? "Voice message: hold to record, tap for video." : "Round video: hold to record, tap for voice.");
+  });
+  useEntered(n.state, "record/idle", drop);
   useEntered(n.state, "record/recording", start);
   useEntered(n.state, "record/locked", start);
   useEntered(n.state, "record/sent", () => finish(true));
@@ -452,7 +490,7 @@ function useRecorder(onSendClip: (kind: "voice" | "video", clip: Clip) => void) 
   useEffect(() => () => finish(false), []);
 
   const active = n.state.includes("record/recording") || n.state.includes("record/locked");
-  return { n, video, elapsed, stream, active, locked: n.state.includes("record/locked") };
+  return { n, video, elapsed, stream, active, locked: n.state.includes("record/locked"), open, notice, setNotice };
 }
 
 function ReplyBar({ text, onCancel }: { text: string; onCancel: () => void }): ReactNode {

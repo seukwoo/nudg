@@ -540,3 +540,13 @@ Each entry: **Problem**, **Cause**, **Resolution**, and where useful **Lesson**.
 - **Lesson:** Composition by nesting players is the pattern this app leans on most, and gesture rules written per player don't automatically hold across players. Rules about a whole press (a drag means no tap) belong to the pointer, not to the player.
 - **Second bug the user found:** "voice and video don't work": no permission prompt, no camera, no recording UI that made sense. The app asked for the microphone only once the hold had become a recording, so on a first hold the prompt came up mid-gesture, letting go to answer it ended the recording, and the clip was empty. Where the browser refused (blocked earlier, or in the system's privacy settings), the app fell back to its stand-in without a word, so a working fallback looked like a broken feature. And a short press switches to video, which nothing explained. Now the press itself asks for the devices, a hold released before they're ready records nothing and says "Ready", a refusal is shown over the composer with what to change, and a tap says how to record in the new mode.
 - **Lesson:** A silent fallback is only friendly while it's visible as a fallback. An example that hides its failures teaches nothing about where the motion ends and the platform begins.
+
+## 2026-11-05: What PlaySnack's first day found
+
+PlaySnack began applying nudg across its whole app (an exaggerated version first, to dial down later) and reported eight issues in a day: two bugs, two adapter gaps, and four feature requests.
+
+### A sheet opened on mount never rose ([#120](https://github.com/seukwoo/nudg/issues/120))
+- **Problem:** A bottom sheet whose closed position is its measured height, opened from `useEffect` on mount, appeared in place without its entrance. The exit played fine.
+- **Cause:** React binds elements through refs after the player starts. The DOM adapter measured such an element on the next animation frame, but the app's effect sent the event before that. The sheet moved from 0 toward an end computed from a height of 0, and nothing moved.
+- **Resolution:** An element is measured as it is bound and the values are applied at once, before the first paint. React Native, SwiftUI and Compose only know a size after their first layout pass, so they still have the gap; it is now an open question in design.md.
+- **Lesson:** Every example opened its sheet after a tap, so a measurement a frame late never showed. Real apps open things on mount: from a route, a deep link, a first-run tip.

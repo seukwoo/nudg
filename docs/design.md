@@ -381,7 +381,44 @@ On the web an adapter turns `click` into `tap`, so a keyboard or a screen reader
 - **Activation is the target's tap.** When the file handles `target.tap`, `nudgPress` adds an accessibility action (SwiftUI's default action, Compose's click action) and React Native's `gesture` the `activate` action, each sending the tap. A target whose tap the file doesn't handle gets nothing, so the adapters never claim an action they can't perform.
 - **Adjusting is the arrow keys.** When the file steps a target with arrow keys (a slider, a stepper), VoiceOver's swipe up and down (`nudgKeys`, which makes the view adjustable, as iOS requires for those gestures), TalkBack's Increase and Decrease actions, and React Native's `increment` and `decrement` send them: increment is arrowright or else arrowup, decrement arrowleft or else arrowdown, the keys a slider takes on the web.
 - **Only the action, not the semantics.** Role, label, value and state stay the host's (principle 13): the adapter adds no traits. A host that already makes the view a button keeps working; its own action and the adapter's are the same tap.
-- **Reduced motion is the system's, on every platform.** Compose read no setting; it now follows "Remove animations" (an animator duration scale of 0), as SwiftUI follows Reduce Motion and React Native and the web their own settings. Each adapter reads it when the player is created; a change while a player runs applies to the next one (see the open questions).
+- **Reduced motion is the system's, on every platform.** Compose read no setting; it now follows "Remove animations" (an animator duration scale of 0), as SwiftUI follows Reduce Motion and React Native and the web their own settings. Every adapter follows it as it changes, through the runtime's `setReducedMotion` (see [Reduced motion keeps fades](#reduced-motion-keeps-fades-format-11) and the spec).
+
+## Proposal: players that share an element, and a stagger from the host's index
+
+Status: proposed, not decided. PlaySnack's first day of whole-app use ([devlog](devlog.md#2026-11-05-what-playsnacks-first-day-found)) hit three limits that are one question: what happens when more than one thing moves the same element.
+
+- [#122](https://github.com/seukwoo/nudg/issues/122): the shared press file and a list's rise-in can't both play on one card. Each DOM player writes the whole `transform`, so the last writer wins.
+- [#125](https://github.com/seukwoo/nudg/issues/125): an element placed by its own transform (a badge centred with `translate(-50%, -50%)`, a rotated sticker) loses its placement when a player binds it, so PlaySnack skips such elements and they don't press.
+- [#124](https://github.com/seukwoo/nudg/issues/124): cards rising one after another need a delay per index; today that means one generated document per card and a timer per tag.
+
+**What the platforms already do.** SwiftUI and Compose don't have the first two problems. Two `.nudg` modifiers on one view stack like any modifiers: the offsets and rotations compose, the scales and opacities multiply, and the view's own modifiers stay where the author put them. The DOM adapter writes final inline properties, and React Native's style arrays let a later `transform` replace an earlier one. So #122 and #125 are adapter gaps on two platforms, not a missing idea in the format.
+
+### Recommended: compose on the element, like modifiers (#122, #125)
+
+- **Each element has one composer, shared by the players bound to it.** A DOM player hands its target's values to the element's composer instead of writing `style.transform` itself, and the composer writes once per frame.
+- **The author's transform is the outermost layer.** The element's own transform at bind time (inline, or from a stylesheet) stays first in the composed `transform`, and each player's `translate() rotate() scale()` follows it, in bind order. A badge centred with `translate(-50%, -50%)` therefore presses about its own centre. The composer restores the element's own transform when the last player lets go. (This builds on #121's restore.)
+- **Opacity multiplies, as nested views' opacity does. Size and color can't be combined:** a second player writing the same one is an error the adapter reports once, naming both files; the last writer keeps it.
+- **React Native gets a helper, not a rule change:** `compose(a.bind("card"), b.bind("button"))` returns one style, with the transform arrays concatenated and the opacities multiplied with `Animated.multiply`.
+- **The format doesn't change.** The runtimes and conformance cases stay as they are. The adapter tests define the composition order.
+
+**Considered: a file that mounts another as a region** (`"regions": { "press": { "use": "./press.nudg.json", "targets": { "button": "card" } } }`).
+- It is one player and one runtime, and the validator could see two regions writing the same property.
+- But it is a format change in three runtimes. The file would need to rename targets and namespace events, and it would only cover files written together. The press file and the list file come from different places in an app and bind at different times (the press on any button, on pointer down).
+- Kept in reserve, for when a single file genuinely needs to own both motions.
+
+### Recommended: a delay that reads an input (#124)
+
+- **The rhythm stays in the file and the index stays in the host**, as for lists (0.17) and per-property delays (0.12): `"animate": { "card.y": { "use": "rise", "delay": { "input": "host.index", "times": 0.06 } } }`.
+- **Each card's player gets its index** (`inputs: { "host.index": 2 }`), and one `host.show` per player starts them all. The cards rise 0.06 s apart.
+- **A tag inside a card adds its own index:** `{ "input": "host.index", "times": 0.06, "plus": 0.15 }` plus a second input for the tag's position. Arithmetic is the same `times` / `plus` that measurements use (0.6).
+- **A ceiling** (`"max": 0.5`) keeps a long list from waiting seconds for its last row.
+- **Reduced motion ignores delays, as it already does.**
+- **What it costs:** a format version, the validator, conformance cases and the three runtimes. A delay that reads an input is new, but its evaluation is the 0.6 measure arithmetic over an input.
+- **Not chosen: one player driving many elements with a per-element time offset.** It reads as one call, but each card's press and hover are its own states. Those still need a player per card, so an offset that applies to every element at once only fits lists whose elements never differ, and it bends 0.17's one-player-per-item rule.
+
+**To decide:**
+- whether composition is the DOM and React Native default, or opt-in;
+- whether the delay input ships in the next format version, or waits for a second app to ask.
 
 ## Open questions
 

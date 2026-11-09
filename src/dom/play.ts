@@ -6,6 +6,7 @@ import { toProgram } from "../core/to-program.ts";
 import { handledEvents, unknownEventMessage } from "../core/observe.ts";
 import { dragAxes, pinchInputs, pinchableTargets } from "../core/pointer.ts";
 import { createLifecycle } from "../core/lifecycle.ts";
+import { composeStyle, releaseStyle } from "./compose.ts";
 import { propertiesByTarget, styleOf } from "./style.ts";
 import { measureElement } from "./measure.ts";
 import { createRuntime, type Runtime, type Value } from "../core/runtime.ts";
@@ -94,9 +95,6 @@ export interface Player<C extends NudgContract = NudgContract> {
   destroy(): void;
 }
 
-/** A style object's key as the CSS property name: `transformOrigin` → `transform-origin`. */
-const cssName = (key: string) => (key.startsWith("--") ? key : key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`));
-
 /**
  * Compiles a document (a preset, or a parsed .nudg.json) and plays it, in one call:
  * `playDoc(presets.press(), button)`. When `root` is an element and no [data-nudg] on or
@@ -161,10 +159,17 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   // Which properties each target has, so we only write the styles the file owns.
   const byTarget = propertiesByTarget(program);
 
+  // This player's layer on each element, one per target, composed with other players' layers.
+  const owners = new Map<string, object>();
+  const ownerOf = (target: string) => {
+    let owner = owners.get(target);
+    if (!owner) owners.set(target, (owner = {}));
+    return owner;
+  };
   function applyTo(target: string, values: Record<string, Value>, els: Iterable<Element>) {
     const props = byTarget.get(target);
     if (!props) return;
-    for (const el of els) Object.assign((el as HTMLElement | SVGElement).style, styleOf(target, props, values, el instanceof SVGElement));
+    for (const el of els) composeStyle(el, ownerOf(target), styleOf(target, props, values, el instanceof SVGElement), target);
   }
 
   // State changes, settle and presence: the host keeps the element until the exit motion has played.
@@ -328,11 +333,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     const callout = style?.getPropertyValue("-webkit-touch-callout");
     if (longPressable.has(name) && style) style.setProperty("-webkit-touch-callout", "none");
     if (scrollAxes) reportScroll();
-    // The inline values this player will overwrite, put back when it lets go of the element.
-    const props = byTarget.get(name);
-    const sampled = runtime.sample(now());
-    const before = style && props ? Object.keys(styleOf(name, props, sampled, el instanceof SVGElement)).map((k) => [k, style.getPropertyValue(cssName(k)), style.getPropertyPriority(cssName(k))] as const) : [];
-    applyTo(name, sampled, [el]);
+    applyTo(name, runtime.sample(now()), [el]);
     reflectState([el]);
     onLayoutBind?.(name, el);
     const unwatch = options.watch ? watchState(el, (event) => send(event)) : undefined;
@@ -344,7 +345,8 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
       for (const [type, fn] of listeners) el.removeEventListener(type, fn);
       if ((draggable.has(name) || pinchable.has(name)) && style) style.touchAction = touchAction;
       if (longPressable.has(name) && style) style.setProperty("-webkit-touch-callout", callout ?? "");
-      for (const [k, value, priority] of before) style.setProperty(cssName(k), value, priority);
+      // The element's own inline values come back once no player writes them.
+      releaseStyle(el, ownerOf(name));
       elements.get(name)?.delete(el);
       if (elements.get(name)?.size === 0) elements.delete(name);
       cleanups.delete(el);
@@ -417,7 +419,9 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   window.addEventListener("pointerup", onUp, true);
   window.addEventListener("pointercancel", onCancel, true);
 
-  root?.querySelectorAll("[data-nudg]").forEach((el) => {
+  // The root itself counts: an element another player already marked with the same name.
+  const parts = root ? [...(root instanceof Element && root.hasAttribute("data-nudg") ? [root] : []), ...root.querySelectorAll("[data-nudg]")] : [];
+  parts.forEach((el) => {
     const name = el.getAttribute("data-nudg")!;
     found.add(name);
     bind(name, el);

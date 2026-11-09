@@ -158,6 +158,7 @@ export interface NudgNative<C extends NudgContract = NudgContract> { bind(name: 
 export type StateName<C extends NudgContract> = C["states"] | LastName<C["states"]>;
 export interface UseNudgNativeOptions<C extends NudgContract = NudgContract> { state?: C["states"][]; inputs?: Partial<Record<C["inputs"], number>>; files?: Record<string, unknown>; reducedMotion?: boolean; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; }
 export declare function appear(options?: AppearOptions): NudgDocument;
+export declare function compose(...styles: Style[]): Record<string, unknown>;
 export declare function hover(options?: HoverOptions): NudgDocument;
 export declare const presets: { press: typeof press; hover: typeof hover; toggle: typeof toggle; toast: typeof toast; appear: typeof appear; };
 export declare function press(options?: PressOptions): NudgDocument;

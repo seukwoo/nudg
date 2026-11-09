@@ -383,9 +383,9 @@ On the web an adapter turns `click` into `tap`, so a keyboard or a screen reader
 - **Only the action, not the semantics.** Role, label, value and state stay the host's (principle 13): the adapter adds no traits. A host that already makes the view a button keeps working; its own action and the adapter's are the same tap.
 - **Reduced motion is the system's, on every platform.** Compose read no setting; it now follows "Remove animations" (an animator duration scale of 0), as SwiftUI follows Reduce Motion and React Native and the web their own settings. Every adapter follows it as it changes, through the runtime's `setReducedMotion` (see [Reduced motion keeps fades](#reduced-motion-keeps-fades-format-11) and the spec).
 
-## Proposal: players that share an element, and a stagger from the host's index
+## Players that share an element, and a stagger from the host's index
 
-Status: proposed, not decided. PlaySnack's first day of whole-app use ([devlog](devlog.md#2026-11-05-what-playsnacks-first-day-found)) hit three limits that are one question: what happens when more than one thing moves the same element.
+Status: decided 2026-11-09. Composition is implemented, as the default in the DOM adapter and as `compose()` on React Native. The delay that reads an input comes next, in the next format version. PlaySnack's first day of whole-app use ([devlog](devlog.md#2026-11-05-what-playsnacks-first-day-found)) hit three limits that are one question: what happens when more than one thing moves the same element.
 
 - [#122](https://github.com/seukwoo/nudg/issues/122): the shared press file and a list's rise-in can't both play on one card. Each DOM player writes the whole `transform`, so the last writer wins.
 - [#125](https://github.com/seukwoo/nudg/issues/125): an element placed by its own transform (a badge centred with `translate(-50%, -50%)`, a rotated sticker) loses its placement when a player binds it, so PlaySnack skips such elements and they don't press.
@@ -393,9 +393,9 @@ Status: proposed, not decided. PlaySnack's first day of whole-app use ([devlog](
 
 **What the platforms already do.** SwiftUI and Compose don't have the first two problems. Two `.nudg` modifiers on one view stack like any modifiers: the offsets and rotations compose, the scales and opacities multiply, and the view's own modifiers stay where the author put them. The DOM adapter writes final inline properties, and React Native's style arrays let a later `transform` replace an earlier one. So #122 and #125 are adapter gaps on two platforms, not a missing idea in the format.
 
-### Recommended: compose on the element, like modifiers (#122, #125)
+### Decided: compose on the element, like modifiers (#122, #125)
 
-- **Each element has one composer, shared by the players bound to it.** A DOM player hands its target's values to the element's composer instead of writing `style.transform` itself, and the composer writes once per frame.
+- **Each element has one composer, shared by the players bound to it.** (Also, a root element another player already marked with the same `data-nudg` name now binds by that name.) A DOM player hands its target's values to the element's composer instead of writing `style.transform` itself, and the composer writes once per frame.
 - **The author's transform is the outermost layer.** The element's own transform at bind time (inline, or from a stylesheet) stays first in the composed `transform`, and each player's `translate() rotate() scale()` follows it, in bind order. A badge centred with `translate(-50%, -50%)` therefore presses about its own centre. The composer restores the element's own transform when the last player lets go. (This builds on #121's restore.)
 - **Opacity multiplies, as nested views' opacity does. Size and color can't be combined:** a second player writing the same one is an error the adapter reports once, naming both files; the last writer keeps it.
 - **React Native gets a helper, not a rule change:** `compose(a.bind("card"), b.bind("button"))` returns one style, with the transform arrays concatenated and the opacities multiplied with `Animated.multiply`.
@@ -406,7 +406,7 @@ Status: proposed, not decided. PlaySnack's first day of whole-app use ([devlog](
 - But it is a format change in three runtimes. The file would need to rename targets and namespace events, and it would only cover files written together. The press file and the list file come from different places in an app and bind at different times (the press on any button, on pointer down).
 - Kept in reserve, for when a single file genuinely needs to own both motions.
 
-### Recommended: a delay that reads an input (#124)
+### Decided: a delay that reads an input (#124)
 
 - **The rhythm stays in the file and the index stays in the host**, as for lists (0.17) and per-property delays (0.12): `"animate": { "card.y": { "use": "rise", "delay": { "input": "host.index", "times": 0.06 } } }`.
 - **Each card's player gets its index** (`inputs: { "host.index": 2 }`), and one `host.show` per player starts them all. The cards rise 0.06 s apart.
@@ -416,9 +416,9 @@ Status: proposed, not decided. PlaySnack's first day of whole-app use ([devlog](
 - **What it costs:** a format version, the validator, conformance cases and the three runtimes. A delay that reads an input is new, but its evaluation is the 0.6 measure arithmetic over an input.
 - **Not chosen: one player driving many elements with a per-element time offset.** It reads as one call, but each card's press and hover are its own states. Those still need a player per card, so an offset that applies to every element at once only fits lists whose elements never differ, and it bends 0.17's one-player-per-item rule.
 
-**To decide:**
-- whether composition is the DOM and React Native default, or opt-in;
-- whether the delay input ships in the next format version, or waits for a second app to ask.
+**Decided:**
+- **Composition is the default, with no option to turn it off.** Before, the last writer won and a motion disappeared; nobody depends on that.
+- **The delay input ships in the next format version.** PlaySnack already works around it with a document per card and a timer per tag.
 
 ## Open questions
 

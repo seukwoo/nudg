@@ -2,6 +2,7 @@
 // At runtime the app's own react-native is used (an optional peer dependency).
 declare module "react-native" {
   export namespace Animated {
+    function multiply(a: unknown, b: unknown): unknown;
     class Value {
       constructor(value: number);
       setValue(value: number): void;

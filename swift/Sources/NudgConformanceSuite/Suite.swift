@@ -29,6 +29,7 @@ public func runConformanceSuite(at dir: URL, log: (String) -> Void = { print($0)
       var problems: [String] = []
       for step in steps {
         let t = (step["t"] as! NSNumber).doubleValue
+        if let on = step["reducedMotion"] as? Bool { try rt.setReducedMotion(on, at: t) }
         if let input = step["input"] as? String {
           if try !rt.input(input, (step["value"] as! NSNumber).doubleValue, at: t) { problems.append("input \(input) at \(t)s was refused") }
         }

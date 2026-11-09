@@ -396,7 +396,8 @@ Some people ask the system to reduce motion (`prefers-reduced-motion`; WCAG 2.3.
 - **From 1.1, a loop on `opacity` still plays.** It fades; nothing moves, scales or turns, which is what reduced motion is for (WCAG 2.3.3 names motion animation; the platforms' guidance replaces movement with fades). A loading indicator therefore keeps signalling progress. A file declaring 1.0 or older keeps the earlier rule, so its meaning doesn't change.
 - A glide keeps going: it is the user's own throw. Settling at a bound uses the short tween.
 - States, transitions, timers and followed values are unchanged, so nothing functional depends on the setting.
-- The DOM adapter follows the system setting unless the option is passed explicitly; `simulate`, `plot` and `render` take `--reduced-motion`.
+- **The setting can change while the runtime runs:** `runtime.setReducedMotion(on, t)`. Motions that start from `t` on follow the new setting. Turning it on stops the loops it doesn't allow; each hands off as when its state is left (the offset wrapped, the displayed value kept) and returns to its target with the short tween. Turning it off starts the active states' loops from `t`, their offsets at 0. Motions already moving finish as they are, so nothing jumps. Case: `reduced-motion-live`.
+- Every adapter follows the system setting as it changes, unless the host passes the option; then a change to the option applies to the running player. `simulate`, `plot` and `render` take `--reduced-motion`.
 
 ## Rest and lifecycle
 

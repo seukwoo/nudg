@@ -10,6 +10,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.utf16CodePoint
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -130,6 +131,12 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
         return used
     }
 
+    /** The reduced-motion setting changed: loops and motions from now on follow it (see [Runtime.setReducedMotion]). */
+    fun setReducedMotion(on: Boolean) {
+        runtime.setReducedMotion(on, lastTime)
+        changed()
+    }
+
     private fun changed() {
         lifecycle.changed()
         if (lifecycle.present) present = true
@@ -150,17 +157,28 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
 }
 
 /**
- * The system's "Remove animations" setting: the animator duration scale is 0. Read when a
- * player is created, like Reduce Motion on the other platforms.
+ * The system's "Remove animations" setting: the animator duration scale is 0. Followed as it
+ * changes, like Reduce Motion on the other platforms.
  */
 @Composable
 fun systemReducedMotion(): Boolean {
     val resolver = LocalContext.current.contentResolver
-    return remember { android.provider.Settings.Global.getFloat(resolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }
+    val read = { android.provider.Settings.Global.getFloat(resolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }
+    var reduced by remember { mutableStateOf(read()) }
+    DisposableEffect(resolver) {
+        val observer = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                reduced = read()
+            }
+        }
+        resolver.registerContentObserver(android.provider.Settings.Global.getUriFor(android.provider.Settings.Global.ANIMATOR_DURATION_SCALE), false, observer)
+        onDispose { resolver.unregisterContentObserver(observer) }
+    }
+    return reduced
 }
 
 /**
- * Plays [program]. [reducedMotion] defaults to the system's "Remove animations" setting. [exit] names the states that mean the component is gone ("hidden"):
+ * Plays [program]. [reducedMotion] defaults to the system's "Remove animations" setting, followed as it changes. [exit] names the states that mean the component is gone ("hidden"):
  * [NudgState.present] turns false and [onExit] is called once the exit motion has settled.
  * [onSettle] is called with the active states each time every value has come to rest after
  * something moved or the state changed, as in every other adapter.
@@ -175,6 +193,8 @@ fun rememberNudg(
     onExit: (() -> Unit)? = null,
 ): NudgState {
     val nudg = remember(program) { NudgState(program, state, reducedMotion, exit) }
+    // A changed setting applies to the running player, so its state and motion carry on.
+    LaunchedEffect(nudg, reducedMotion) { nudg.setReducedMotion(reducedMotion) }
     nudg.onSettle = onSettle
     nudg.onExit = onExit
     LaunchedEffect(nudg) { nudg.play() }

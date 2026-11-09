@@ -6,6 +6,7 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     var present: Boolean by mutableStateOf(true)
     fun send(event: String): Boolean
     fun input(name: String, value: Double): Boolean
+    fun setReducedMotion(on: Boolean)
 fun systemReducedMotion(): Boolean
 fun rememberNudg(
 fun Modifier.nudg(state: NudgState, name: String): Modifier
@@ -112,6 +113,7 @@ sealed interface Value
     data class Color(val hex: String) : Value
 class Runtime(val program: Program, state: List<String>
     fun send(event: String, t: Double): Boolean
+    fun setReducedMotion(on: Boolean, t: Double)
     fun input(name: String, value: Double, t: Double): Boolean
     fun sample(t: Double): Map<String, Value>
     fun state(): List<String>

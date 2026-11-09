@@ -1,0 +1,97 @@
+{
+  "conformance": "1.1",
+  "name": "Reduced motion that changes while running: on stops the loops it forbids (they return with the reduced tween), off starts them from that moment",
+  "doc": {
+    "nudg": "1.1",
+    "targets": [
+      "dot",
+      "spinner"
+    ],
+    "values": {
+      "dot.opacity": 1,
+      "spinner.rotation": 0
+    },
+    "initial": "busy",
+    "states": {
+      "busy": {
+        "loop": {
+          "dot.opacity": {
+            "keyframes": [
+              {
+                "at": 0.5,
+                "value": -0.75
+              }
+            ],
+            "duration": 0.9
+          },
+          "spinner.rotation": {
+            "to": 360,
+            "duration": 1,
+            "wrap": 360
+          }
+        },
+        "when": {
+          "host.done": "idle"
+        }
+      },
+      "idle": {}
+    }
+  },
+  "steps": [
+    {
+      "t": 0.45,
+      "expect": {
+        "values": {
+          "dot.opacity": 0.25,
+          "spinner.rotation": 162
+        },
+        "looping": true
+      }
+    },
+    {
+      "t": 0.5,
+      "reducedMotion": true
+    },
+    {
+      "t": 0.575,
+      "expect": {
+        "values": {
+          "dot.opacity": 0.458333333,
+          "spinner.rotation": 90.0
+        },
+        "looping": true
+      }
+    },
+    {
+      "t": 0.7,
+      "expect": {
+        "values": {
+          "dot.opacity": 0.666666667,
+          "spinner.rotation": 0
+        }
+      }
+    },
+    {
+      "t": 1.0,
+      "reducedMotion": false
+    },
+    {
+      "t": 1.0,
+      "expect": {
+        "values": {
+          "spinner.rotation": 0
+        }
+      }
+    },
+    {
+      "t": 1.25,
+      "expect": {
+        "values": {
+          "dot.opacity": 0.416666667,
+          "spinner.rotation": 90
+        },
+        "looping": true
+      }
+    }
+  ]
+}

@@ -74,12 +74,13 @@ private const val VELOCITY_WINDOW = 0.1
 private val REDUCED: Motion = Motion.Tween(0.15, Ease.Linear)
 private val LAYOUT_NAMES = setOf("x", "y", "width", "height", "naturalWidth", "naturalHeight")
 
-class Runtime(val program: Program, state: List<String> = emptyList(), private val reducedMotion: Boolean = false) {
+class Runtime(val program: Program, state: List<String> = emptyList(), reducedMotion: Boolean = false) {
+    private var reduced = reducedMotion
     private val active = HashMap<Machine.States, String>()
     private val segments = HashMap<String, Segment>()
     /** Under reduced motion no loop plays, except (from format 1.1) one that only fades: opacity moves nothing. */
     private val fades = program.version.split(".").map { it.toIntOrNull() ?: 0 }.let { v -> (v.getOrElse(0) { 0 } to v.getOrElse(1) { 0 }).let { (major, minor) -> major > 1 || (major == 1 && minor >= 1) } }
-    private fun loopPlays(key: String) = !reducedMotion || (fades && key.endsWith(".opacity"))
+    private fun loopPlays(key: String) = !reduced || (fades && key.endsWith(".opacity"))
     /** Loops of the active states, by property (v0.10). Under reduced motion only opacity loops, from 1.1. */
     private val loops = LinkedHashMap<String, ActiveLoop>()
     private val inputs = HashMap<String, MutableList<Pair<Double, Double>>>()
@@ -292,7 +293,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
      */
     private fun glidePhase(seg: Segment.GlideSeg, t: Double): GlidePhase {
         val m = seg.glide.momentum
-        val motion = program.animate[seg.key]?.let { if (reducedMotion) REDUCED else it }
+        val motion = program.animate[seg.key]?.let { if (reduced) REDUCED else it }
         resolvedRange(seg.key, seg.glide.range)?.let { (lo, hi) ->
             if (seg.x0 < lo || seg.x0 > hi) return GlidePhase.Settling(Segment.MotionSeg(seg.t0, listOf(seg.x0), listOf(seg.v0), listOf(if (seg.x0 < lo) lo else hi), motion))
             val end = seg.x0 + seg.v0 * m
@@ -530,7 +531,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
             val (pos, v) = handoff[key] ?: evaluate(seg, t)
             val vel = if (key in committed) v.map { 0.0 } else v
             val motion = overrides[key] ?: program.animate[key]
-            if (motion != null && motion.delay > 0 && !reducedMotion) {
+            if (motion != null && motion.delay > 0 && !reduced) {
                 // Until the delay ends the property keeps doing what it was doing: a pending
                 // motion that hasn't started is dropped, and a value placed here holds still.
                 val prev = when {
@@ -541,9 +542,9 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
                 segments[key] = Segment.DelayedSeg(t + motion.delay, prev, to, motion)
                 continue
             }
-            segments[key] = Segment.MotionSeg(t, pos, vel, to, motion?.let { if (reducedMotion) REDUCED else it })
+            segments[key] = Segment.MotionSeg(t, pos, vel, to, motion?.let { if (reduced) REDUCED else it })
         }
-        if (reducedMotion) return
+        if (reduced) return
         for (s in entered) {
             for ((key, effect) in s.enter) {
                 val seg = segments.getValue(key)
@@ -667,6 +668,35 @@ class Runtime(val program: Program, state: List<String> = emptyList(), private v
         if (!handle(program.machine, event, t, fired, entered)) return timerHandled
         settle(t, fired, entered)
         return true
+    }
+
+    /**
+     * The host's reduced-motion setting changed at time [t]. Motions started from then on follow
+     * it, and so do loops: turning it on stops the loops it doesn't allow (they hand off as on a
+     * state exit and return with the reduced tween), turning it off starts the active states'
+     * loops from [t]. Motions already moving finish as they are.
+     */
+    fun setReducedMotion(on: Boolean, t: Double) {
+        advanceTo(t)
+        if (on == reduced) return
+        reduced = on
+        for ((key, running) in loops.entries.toList()) {
+            if (loopPlays(key)) continue
+            val segment = segments.getValue(key)
+            loops.remove(key)
+            val to = when (segment) {
+                is Segment.MotionSeg -> segment.to
+                is Segment.KeyframesSeg -> segment.to
+                is Segment.DelayedSeg -> segment.to
+                else -> continue
+            }
+            val (pos, vel) = evaluate(segment, t)
+            var (offset, rate) = loopOffset(key, running, t)
+            // Into (-wrap/2, wrap/2], as when a state with a loop is left.
+            running.loop.wrap?.let { wrap -> offset -= wrap * ceil(offset / wrap - 0.5) }
+            segments[key] = Segment.MotionSeg(t, listOf(pos[0] + offset), listOf(vel[0] + rate), to, REDUCED)
+        }
+        walkActive(active) { s -> for ((key, loop) in s.loop) if (key !in loops && loopPlays(key)) loops[key] = ActiveLoop(loop, s, t) }
     }
 
     /** Records a referenced continuous input or a layout report. */

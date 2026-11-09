@@ -24,7 +24,7 @@ export interface PlayOptions<C extends NudgContract = NudgContract> {
   state?: C["states"][];
   /** Called with the active states after any event changes them. */
   onState?: (state: C["states"][]) => void;
-  /** Reduced motion (v0.3). Default: the system's prefers-reduced-motion setting. */
+  /** Reduced motion (v0.3). Default: the system's prefers-reduced-motion setting, followed as it changes. */
   reducedMotion?: boolean;
   /** Called with the values after every frame they're applied, e.g. to keep aria-valuenow in step. */
   onFrame?: (values: Record<string, Value>) => void;
@@ -85,8 +85,17 @@ export interface Player<C extends NudgContract = NudgContract> {
   render(t: number): void;
   /** False once the machine has exited (see `exit` in the options) and settled. */
   present(): boolean;
+  /**
+   * Turns reduced motion on or off now; `undefined` follows the system setting again. Without
+   * `reducedMotion` in the options the player follows the system setting as it changes.
+   */
+  setReducedMotion(on: boolean | undefined): void;
+  /** Stops the player and puts back the inline styles its elements had before they were bound. */
   destroy(): void;
 }
+
+/** A style object's key as the CSS property name: `transformOrigin` → `transform-origin`. */
+const cssName = (key: string) => (key.startsWith("--") ? key : key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`));
 
 /**
  * Compiles a document (a preset, or a parsed .nudg.json) and plays it, in one call:
@@ -114,8 +123,16 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   const elements = new Map<string, Set<Element>>();
   const cleanups = new Map<Element, () => void>();
   const found = new Set<string>();
-  const reducedMotion = options.reducedMotion ?? (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
-  const runtime = createRuntime(program, { state: options.state, reducedMotion });
+  // The system setting, followed while the player runs unless the host decides.
+  const system = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : undefined;
+  let followSystem = options.reducedMotion === undefined;
+  const runtime = createRuntime(program, { state: options.state, reducedMotion: options.reducedMotion ?? system?.matches === true });
+  const onSystemChange = () => {
+    if (!followSystem || destroyed) return;
+    runtime.setReducedMotion(system!.matches, now());
+    changed();
+  };
+  system?.addEventListener?.("change", onSystemChange);
   const scrollInputs = new Map<string, Set<"x" | "y">>();
   for (const input of runtime.requiredInputs()) {
     const match = /^(.+)\.scroll\.(x|y)$/.exec(input);
@@ -311,7 +328,11 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     const callout = style?.getPropertyValue("-webkit-touch-callout");
     if (longPressable.has(name) && style) style.setProperty("-webkit-touch-callout", "none");
     if (scrollAxes) reportScroll();
-    applyTo(name, runtime.sample(now()), [el]);
+    // The inline values this player will overwrite, put back when it lets go of the element.
+    const props = byTarget.get(name);
+    const sampled = runtime.sample(now());
+    const before = style && props ? Object.keys(styleOf(name, props, sampled, el instanceof SVGElement)).map((k) => [k, style.getPropertyValue(cssName(k)), style.getPropertyPriority(cssName(k))] as const) : [];
+    applyTo(name, sampled, [el]);
     reflectState([el]);
     onLayoutBind?.(name, el);
     const unwatch = options.watch ? watchState(el, (event) => send(event)) : undefined;
@@ -323,6 +344,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
       for (const [type, fn] of listeners) el.removeEventListener(type, fn);
       if ((draggable.has(name) || pinchable.has(name)) && style) style.touchAction = touchAction;
       if (longPressable.has(name) && style) style.setProperty("-webkit-touch-callout", callout ?? "");
+      for (const [k, value, priority] of before) style.setProperty(cssName(k), value, priority);
       elements.get(name)?.delete(el);
       if (elements.get(name)?.size === 0) elements.delete(name);
       cleanups.delete(el);
@@ -511,8 +533,15 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
       apply(runtime.sample(t));
       life.frame(t);
     },
+    setReducedMotion(on) {
+      if (destroyed) return;
+      followSystem = on === undefined;
+      runtime.setReducedMotion(on ?? system?.matches === true, now());
+      changed();
+    },
     destroy() {
       destroyed = true;
+      system?.removeEventListener?.("change", onSystemChange);
       cancelAnimationFrame(frame);
       cancelAnimationFrame(measureFrame);
       observer?.disconnect();

@@ -153,3 +153,15 @@ test("React Native: screen readers activate a target whose tap the file handles,
   slider.onAccessibilityAction({ nativeEvent: { actionName: "decrement" } });
   assert.deepEqual(sent.slice(-2), ["thumb.key.arrowright", "thumb.key.arrowleft"]);
 });
+
+test("React Native compose: transforms in order, the view's own first; opacities multiply; sizes from the last style", async () => {
+  const { composeWith } = await import("../src/native/compose-rule.ts");
+  const product = (a: unknown, b: unknown) => ({ multiply: [a, b] });
+  const rise = { transform: [{ translateY: "riseY" }], opacity: "riseOpacity", width: 10 };
+  const press = { transform: [{ scale: "pressScale" }], opacity: 0.5, width: 20 };
+  const out = composeWith(product, [{ transform: [{ rotate: "-8deg" }] }, rise, null, press]);
+  assert.deepEqual(out.transform, [{ rotate: "-8deg" }, { translateY: "riseY" }, { scale: "pressScale" }]);
+  assert.deepEqual(out.opacity, { multiply: ["riseOpacity", 0.5] });
+  assert.equal(out.width, 20);
+  assert.equal(composeWith(product, [{ opacity: 0.5 }, { opacity: 0.5 }]).opacity, 0.25, "plain numbers multiply without Animated");
+});

@@ -1,14 +1,11 @@
 // Drives the examples site in headless Chrome the way a visitor would: served by
-// demo/serve.mjs from a fresh build. Skipped without a local Chrome.
+// demo/serve.mjs from the build `npm test` makes first. Skipped without a local Chrome.
 
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import { after, before, test } from "node:test";
-import { fileURLToPath } from "node:url";
 import { findChrome } from "../src/node/chrome.ts";
 import { launchBrowser, waitFor, type Browser } from "../src/node/cdp.ts";
 
-const root = fileURLToPath(new URL("..", import.meta.url));
 const chrome = findChrome();
 const skip = chrome ? false : "no Chrome found";
 
@@ -19,7 +16,6 @@ const errors: string[] = [];
 
 before(async () => {
   if (!chrome) return;
-  execFileSync(process.execPath, [`${root}node_modules/typescript/bin/tsc`, "-p", `${root}tsconfig.build.json`], { stdio: "ignore" });
   const { serve } = await import("../demo/serve.mjs");
   server = await serve(0);
   base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;

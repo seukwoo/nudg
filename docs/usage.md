@@ -160,11 +160,11 @@ Findings are warnings or suggestions, never errors; `--strict` exits 1 on warnin
 ### upgrade
 
 ```sh
-nudg upgrade toggle.nudg.json             # 0.1 → 1.1, the rest of the file as written
+nudg upgrade toggle.nudg.json             # 0.1 → 1.2, the rest of the file as written
 nudg upgrade src/**/*.nudg.json --check   # CI: exit 1 if a file declares an older format
 ```
 
-Raises each file's `"nudg"` version to the current format, 1.1, once the file validates. Every format is a superset of the one before and nothing in the file changes. 1.0 froze 0.18; 1.1 changes one behavior, and only under reduced motion: opacity loops keep playing ([spec](spec.md#reduced-motion)). Runtimes keep reading older files with their own rules, so upgrading is a choice, not a requirement.
+Raises each file's `"nudg"` version to the current format, 1.2, once the file validates. Every format is a superset of the one before and nothing in the file changes. 1.0 froze 0.18; 1.1 changes one behavior, and only under reduced motion: opacity loops keep playing ([spec](spec.md#reduced-motion)); 1.2 adds a delay read from an app input ([spec](spec.md#delay)). Runtimes keep reading older files with their own rules, so upgrading is a choice, not a requirement.
 
 ### generate
 
@@ -296,7 +296,7 @@ nudg has one contract for anything that writes or edits its files, an AI coding 
 | Judge loop | `nudg skill`, the MCP server's instructions | When to validate, critique, compare against `HEAD` and observe the real page, so the person judges by looking. |
 | Host names | `nudg generate`, `nudg_generate` | The file's targets, events, inputs and states as TypeScript types, so host code can't drift from the file. |
 
-A file declares its format (`"nudg": "1.1"`); a runtime reads every older format, and the validator rejects fields newer than the declared one with a hint to raise it. Use the schema for completion and the validator for truth: where they disagree, the validator is right and the schema is the bug.
+A file declares its format (`"nudg": "1.2"`); a runtime reads every older format, and the validator rejects fields newer than the declared one with a hint to raise it. Use the schema for completion and the validator for truth: where they disagree, the validator is right and the schema is the bug.
 
 ## React adapter
 

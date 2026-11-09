@@ -2,6 +2,7 @@
 // same events and inputs at the same times always produce the same states and values.
 
 import { oklabToHex } from "./color.ts";
+import { animateMaps } from "./walk.ts";
 import { easeAt, easeSlope } from "./ease.ts";
 import { interpolate } from "./map.ts";
 import { springAt } from "./spring.ts";
@@ -124,6 +125,8 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
   const targetInputs = new Set<string>();
   collectTargetInputs(program.machine, targetInputs);
   for (const name of targetInputs) requiredInputs.add(name);
+  // Delays read from app inputs (v1.2), when their transition fires.
+  for (const animate of animateMaps(program)) for (const m of animate.values()) if (m.delayInput) requiredInputs.add(m.delayInput.input);
   let order = 0;
   let now = 0;
   let reduced = options.reducedMotion === true;
@@ -354,6 +357,13 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     return { kind: "follow", key, t0: t, anchor, input0: inputAt(f.follow.input, t), follow: f.follow, owner: f.owner };
   }
 
+  /** Seconds a motion waits: its `delay`, or (v1.2) `input × times + plus` from 0 up to `max`. */
+  function delayOf(motion: Motion, t: number): number {
+    const d = motion.delayInput;
+    if (!d) return motion.delay ?? 0;
+    return Math.min(d.max ?? Infinity, Math.max(0, inputAt(d.input, t) * d.times + d.plus));
+  }
+
   function inputAt(name: string, t: number): number {
     const history = inputs.get(name);
     if (!history) return 0;
@@ -577,12 +587,13 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       // A committed value is placed, not thrown: it keeps no velocity from the finger.
       if (committed.has(key)) vel.fill(0);
       const motion = overrides.get(key) ?? program.animate.get(key);
-      if (motion?.delay && !reduced) {
+      const wait = motion ? delayOf(motion, t) : 0;
+      if (motion && wait > 0 && !reduced) {
         // Until the delay ends the property keeps doing what it was doing: a pending
         // motion that hasn't started is dropped, and a value placed here holds still.
         const placed = handoff.has(key) || committed.has(key);
         const prev: Segment = placed ? { kind: "motion", t0: t, from: pos, v0: vel.map(() => 0), to: pos } : segment.kind === "delayed" && t < segment.t0 ? segment.prev : segment;
-        segments.set(key, { kind: "delayed", t0: t + motion.delay, prev, to, motion });
+        segments.set(key, { kind: "delayed", t0: t + wait, prev, to, motion });
         continue;
       }
       segments.set(key, { kind: "motion", t0: t, from: pos, v0: vel, to, motion: motion && reduced ? REDUCED : motion });

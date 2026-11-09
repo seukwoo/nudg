@@ -1,5 +1,5 @@
 {
-  "nudg": "1.1",
+  "nudg": "1.2",
   "note": "The jump-to-latest button. It appears once the reader has scrolled well up from the newest message and hides again near the bottom; the two thresholds differ so it doesn't flicker at one point. The host reports host.fromBottom, the distance from the bottom of the list in logical units.",
   "host": {
     "inputs": {

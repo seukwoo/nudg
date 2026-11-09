@@ -118,6 +118,8 @@ public final class Runtime {
       if let map = prop.map, map.sourceKind == "input" { requiredInputs.insert(map.source) }
     }
     collectFollowInputs(program.machine)
+    // Delays read from app inputs (v1.2), when their transition fires.
+    for (_, motion) in program.animate { if let d = motion.delayInput { requiredInputs.insert(d.input) } }
     var entered: [State] = []
     enterMachine(program.machine, &active, &entered, 0)
     for path in state { try enterPath(path) }
@@ -205,13 +207,19 @@ public final class Runtime {
     walk(program.machine)
   }
 
+  private func collectDelayInputs(_ transition: Transition) {
+    for (_, motion) in transition.animate { if let d = motion.delayInput { requiredInputs.insert(d.input) } }
+  }
+
   private func collectFollowInputs(_ machine: Machine) {
     switch machine.kind {
     case let .regions(regions): for (_, region) in regions { collectFollowInputs(region) }
-    case let .states(_, states, _):
+    case let .states(_, states, when):
+      for (_, transition) in when { collectDelayInputs(transition) }
       for state in states {
         for (_, follow) in state.follow { requiredInputs.insert(follow.input) }
         for (_, target) in state.input { requiredInputs.insert(target.input); targetInputs.insert(target.input) }
+        for transition in state.when.map({ $0.1 }) + state.timers.map({ $0.transition }) { collectDelayInputs(transition) }
         if let inner = state.machine { collectFollowInputs(inner) }
       }
     }
@@ -329,6 +337,12 @@ public final class Runtime {
 
   // MARK: inputs and evaluation
 
+  /** Seconds a motion waits: its `delay`, or (v1.2) input × times + plus, from 0 up to max. */
+  private func delayOf(_ motion: Motion, _ t: Double) -> Double {
+    guard let d = motion.delayInput else { return motion.delay }
+    return min(d.max ?? .infinity, max(0, inputAt(d.input, t) * d.times + d.plus))
+  }
+
   private func inputAt(_ name: String, _ t: Double) -> Double {
     var value = 0.0
     for (ti, v) in inputs[name] ?? [] { if ti > t { break }; value = v }
@@ -420,12 +434,12 @@ public final class Runtime {
     let zero = to.map { _ in 0.0 }
     guard let motion else { return (to, zero) }
     switch motion {
-    case let .tween(duration, ease, _):
+    case let .tween(duration, ease, _, _):
       if dt >= duration { return (to, zero) }
       let u = dt / duration
       let p = easeAt(ease, u), slope = easeSlope(ease, u) / duration
       return (zip(from, to).map { $0 + ($1 - $0) * p }, zip(from, to).map { ($1 - $0) * slope })
-    case let .spring(k, c, m, _, _):
+    case let .spring(k, c, m, _, _, _):
       var pos: [Double] = [], vel: [Double] = []
       for i in from.indices {
         let (x, v) = springAt(stiffness: k, damping: c, mass: m, x0: from[i] - to[i], v0: v0[i], t: dt)
@@ -547,13 +561,14 @@ public final class Runtime {
       var (pos, vel) = handoff[key] ?? evaluate(segment, t)
       if committed.contains(key) { vel = vel.map { _ in 0 } }
       let motion = overrides[key] ?? program.animate[key]
-      if let motion, motion.delay > 0, !reduced {
+      let wait = motion.map { delayOf($0, t) } ?? 0
+      if let motion, wait > 0, !reduced {
         // Until the delay ends the property keeps doing what it was doing: a pending
         // motion that hasn't started is dropped, and a value placed here holds still.
         var prev = segment
         if handoff[key] != nil || committed.contains(key) { prev = .motion(t0: t, from: pos, v0: vel.map { _ in 0 }, to: pos, motion: nil) }
         else if case let .delayed(t0, pending, _, _) = segment, t < t0 { prev = pending }
-        segments[key] = .delayed(t0: t + motion.delay, prev: prev, to: to, motion: motion)
+        segments[key] = .delayed(t0: t + wait, prev: prev, to: to, motion: motion)
         continue
       }
       segments[key] = .motion(t0: t, from: pos, v0: vel, to: to, motion: motion.map { reduced ? REDUCED : $0 })
@@ -570,7 +585,7 @@ public final class Runtime {
           segments[key] = .keyframes(t0: t, from: pos, to: to, frames: frames, duration: duration, ease: ease, owner: state)
         case let .kick(kick):
           var vel = v
-          if case let .spring(_, _, _, k, _) = kick { vel[0] += k ?? 0 }
+          if case let .spring(_, _, _, k, _, _) = kick { vel[0] += k ?? 0 }
           segments[key] = .motion(t0: t, from: pos, v0: vel, to: to, motion: kick)
         }
       }
@@ -818,8 +833,8 @@ public final class Runtime {
     if case let .keyframes(t0, _, _, _, duration, _, _) = segment { return t - t0 >= duration }
     guard case let .motion(t0, from, v0, to, motion) = segment, let motion else { return true }
     switch motion {
-    case let .tween(duration, _, _): return t - t0 >= duration
-    case let .spring(k, _, m, _, _):
+    case let .tween(duration, _, _, _): return t - t0 >= duration
+    case let .spring(k, _, m, _, _, _):
       let (pos, vel) = evaluateMotion(t0: t0, from: from, v0: v0, to: to, motion: motion, t: t)
       let eps = program.property(source)!.kind == .color ? REST_COLOR : REST_NUMBER
       let inertia = m / k

@@ -9,6 +9,7 @@ export interface Contract { targets: string[]; events: string[]; inputs: string[
 export interface CritiqueFinding { code: string; severity: CritiqueSeverity; path: string; message: string; hint: string; source: string; }
 export type CritiqueSeverity = "warning" | "suggestion";
 export declare const DRAG_SLOP = 4;
+export interface DelayInput { input: string; times: number; plus: number; max?: number; }
 export interface Diagnostic { severity: Severity; code: string; message: string; path: string; file?: string; hint?: string; }
 export declare const EVENTS: readonly ["down", "up", "cancel", "tap", "dragstart", "dragend", "hoverstart", "hoverend", "focus", "blur", "longpress", "doubletap", "scrollup", "scrolldown", "scrollleft", "scrollright", "pinchstart", "pinchend"];
 export type Ease = "linear" | readonly [number, number, number, number];
@@ -36,7 +37,7 @@ export interface MeasuredTransition { from: string; event: string; to: string; p
 export type Motion = SpringMotion | TweenMotion;
 export interface NudgContract { targets: string; events: string; inputs: string; states: string; }
 export type NudgDocument = Record<string, unknown>;
-export declare const PROGRAM_FORMAT = 8;
+export declare const PROGRAM_FORMAT = 9;
 export declare const PROPERTIES: Record<string, PropertyKind>;
 export type Perceptibility = "imperceptible" | "subtle" | "clear";
 export interface PlayerHost { now(): number; frame(fn: () => void): () => void; }
@@ -59,7 +60,7 @@ export type Severity = "error" | "warning";
 export interface SimulateOptions { events: TimedEvent[]; start?: string[]; reducedMotion?: boolean; until?: number; every?: number; properties?: string[]; }
 export interface Simulation { samples: Sample[]; summary: Record<string, PropertySummary>; unhandled: TimedEvent[]; }
 export interface Source { path: string; text: string; }
-export interface SpringMotion { kind: "spring"; stiffness: number; damping: number; mass: number; kick?: number; delay?: number; }
+export interface SpringMotion { kind: "spring"; stiffness: number; damping: number; mass: number; kick?: number; delay?: number; delayInput?: DelayInput; }
 export interface SpringOptions { duration?: number; bounce?: number; }
 export interface State { name: string; set: Map<string, Channels>; measure: Map<string, Measure>; input: Map<string, InputTarget>; follow: Map<string, Follow>; glide: Map<string, Glide>; enter: Map<string, EntryEffect>; loop: Map<string, Loop>; when: Map<string, Transition>; timers: Timer[]; machine?: Machine; }
 export type StateName<C extends NudgContract> = C["states"] | LastName<C["states"]>;
@@ -70,8 +71,8 @@ export interface TimerPause { on: string; off: string; }
 export interface ToastOptions { target?: string; duration?: number; rise?: number; motion?: SpringOptions; }
 export interface ToggleOptions { knob?: string; track?: string; travel?: number; colors?: [string, string]; motion?: SpringOptions; initial?: "off" | "on"; }
 export interface Transition { to?: string; nearest?: { states: string[]; by: string; momentum: number; }; animate: Map<string, Motion>; step?: Map<string, number>; commit?: string[]; }
-export interface TweenMotion { kind: "tween"; duration: number; ease: Ease; delay?: number; }
-export declare const VERSION = "1.1";
+export interface TweenMotion { kind: "tween"; duration: number; ease: Ease; delay?: number; delayInput?: DelayInput; }
+export declare const VERSION = "1.2";
 export type Value = number | string;
 export declare function actionTarget(program: Program, action: string): string;
 export declare function actionsToEvents(targetOf: string | ((action: string) => string), marks: HostMark[]): { t: number; event: string; }[];

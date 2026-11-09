@@ -1,6 +1,6 @@
 package dev.nudg
 
-/** A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 8). */
+/** A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 9). */
 
 enum class PropertyKind { LENGTH, NUMBER, COLOR }
 
@@ -9,11 +9,16 @@ sealed interface Ease {
     data class Bezier(val x1: Double, val y1: Double, val x2: Double, val y2: Double) : Ease
 }
 
+/** A delay read from an app input when the transition fires (v1.2): input × times + plus seconds, from 0 up to max. */
+data class DelayInput(val input: String, val times: Double, val plus: Double, val max: Double?)
+
 sealed interface Motion {
     /** Seconds before the motion starts (v0.12). */
     val delay: Double
-    data class Spring(val stiffness: Double, val damping: Double, val mass: Double, val kick: Double?, override val delay: Double = 0.0) : Motion
-    data class Tween(val duration: Double, val ease: Ease, override val delay: Double = 0.0) : Motion
+    /** A delay read from an input instead (v1.2). */
+    val delayInput: DelayInput?
+    data class Spring(val stiffness: Double, val damping: Double, val mass: Double, val kick: Double?, override val delay: Double = 0.0, override val delayInput: DelayInput? = null) : Motion
+    data class Tween(val duration: Double, val ease: Ease, override val delay: Double = 0.0, override val delayInput: DelayInput? = null) : Motion
 }
 
 data class Keyframe(val at: Double, val value: List<Double>)
@@ -83,7 +88,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
         }
 
         internal fun fromJson(j: Map<String, Any?>): Program {
-            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0)) { "Not a compiled nudg program (formats 1 to 8). Compile it with `nudg compile`." }
+            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0)) { "Not a compiled nudg program (formats 1 to 9). Compile it with `nudg compile`." }
             val properties = list(j["properties"]).map { p ->
                 obj(p).let { m ->
                     (m["key"] as String) to Property(
@@ -108,12 +113,15 @@ class Program(val version: String, val targets: List<String>, val properties: Li
 
         private fun motion(v: Any?): Motion {
             val m = obj(v)
+            // Format 9 (v1.2): a delay read from an input is an object where a number used to be.
+            val delayInput = (m["delay"] as? Map<*, *>)?.let { d -> DelayInput(d["input"] as String, d["times"] as? Double ?: 1.0, d["plus"] as? Double ?: 0.0, d["max"] as? Double) }
+            val delay = m["delay"] as? Double ?: 0.0
             if (m["kind"] == "tween") {
                 val e = m["ease"]
                 val ease = if (e is List<*>) doubles(e).let { Ease.Bezier(it[0], it[1], it[2], it[3]) } else Ease.Linear
-                return Motion.Tween(m["duration"] as Double, ease, m["delay"] as? Double ?: 0.0)
+                return Motion.Tween(m["duration"] as Double, ease, delay, delayInput)
             }
-            return Motion.Spring(m["stiffness"] as Double, m["damping"] as Double, m["mass"] as Double, m["kick"] as? Double, m["delay"] as? Double ?: 0.0)
+            return Motion.Spring(m["stiffness"] as Double, m["damping"] as Double, m["mass"] as Double, m["kick"] as? Double, delay, delayInput)
         }
 
         private fun ease(v: Any?): Ease = if (v is List<*>) doubles(v).let { Ease.Bezier(it[0], it[1], it[2], it[3]) } else Ease.Linear

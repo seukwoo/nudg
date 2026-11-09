@@ -61,8 +61,10 @@ enum class PropertyKind
 sealed interface Ease
     data object Linear : Ease
     data class Bezier(val x1: Double, val y1: Double, val x2: Double, val y2: Double) : Ease
+data class DelayInput(val input: String, val times: Double, val plus: Double, val max: Double?)
 sealed interface Motion
     val delay: Double
+    val delayInput: DelayInput?
     data class Spring(val stiffness: Double, val damping: Double, val mass: Double, val kick: Double?, override val delay: Double
     data class Tween(val duration: Double, val ease: Ease, override val delay: Double
 data class Keyframe(val at: Double, val value: List<Double>)

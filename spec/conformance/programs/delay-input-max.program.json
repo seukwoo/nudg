@@ -1,0 +1,77 @@
+{
+ "nudgProgram": 9,
+ "version": "1.2",
+ "targets": [
+  "card"
+ ],
+ "properties": [
+  {
+   "key": "card.y",
+   "kind": "length",
+   "base": [
+    20
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "card.y",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 438.6490844928604,
+    "damping": 41.88790204786391,
+    "mass": 1,
+    "delay": {
+     "input": "host.index",
+     "times": 0.06,
+     "plus": 0.02,
+     "max": 0.2
+    }
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "hidden",
+  "states": [
+   {
+    "name": "hidden",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "host.show",
+      "animate": [],
+      "to": "shown"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "shown",
+    "set": [
+     {
+      "key": "card.y",
+      "value": [
+       0
+      ]
+     }
+    ],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

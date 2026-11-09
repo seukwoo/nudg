@@ -43,8 +43,14 @@ public func nudgKeyName(_ key: String) -> String
 // Nudg/Program.swift
 public enum PropertyKind: String
 public enum Ease
+public struct DelayInput
+public let input: String
+public let times: Double
+public let plus: Double
+public let max: Double?
 public enum Motion
 public var delay: Double
+public var delayInput: DelayInput?
 public struct Keyframe
 public let at: Double
 public let value: [Double]

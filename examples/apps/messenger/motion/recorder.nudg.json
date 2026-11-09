@@ -1,5 +1,5 @@
 {
-  "nudg": "1.1",
+  "nudg": "1.2",
   "note": "Recording from the composer's microphone. A quick tap switches between voice and round video (the host sends toggle when the recorder enters tapped). Held, it records: a circle grows under the finger and follows it, the bar over the field shows the time and 'slide to cancel', and a lock rises above. Slid left past the cancel point it discards; slid up past the lock it keeps recording hands-free, and a tap sends. Letting go sends. The host records while the recorder is in recording or locked, sends the message on entering sent and discards it on entering cancelled. It reports the microphone level as volume and, for video, how much of the minute is used as progress; a full minute sends.",
   "host": {
     "events": [

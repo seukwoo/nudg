@@ -6,7 +6,7 @@ nudg files describe a UI interaction: states, the events that move between them,
 
 ```json
 {
-  "nudg": "1.1",
+  "nudg": "1.2",
   "note": "What this interaction is for.",
   "targets": ["knob", "track"],
   "values": { "knob.x": 0, "track.color": "#D1D5DB" },
@@ -25,7 +25,7 @@ nudg files describe a UI interaction: states, the events that move between them,
 }
 ```
 
-- Write new files as `"nudg": "1.1"`, the current stable format: every feature in this guide is in it. Older files keep working; `nudg upgrade file.nudg.json` raises one to 1.1.
+- Write new files as `"nudg": "1.2"`, the current stable format: every feature in this guide is in it. Older files keep working; `nudg upgrade file.nudg.json` raises one to 1.2.
 - **States say where** (`set`), **`animate` says how** each property travels there. A change mid-flight retargets from the current value; springs keep their velocity.
 - `targets` are names the host binds to its views (`data-nudg="knob"` on the web).
 - Every property used anywhere needs a base value in `values`.
@@ -54,7 +54,7 @@ A motion is an object with exactly one of `spring` or `tween`, or the name of a 
 - `kick` — velocity (units/second) added on state entry without changing the target; always with a `spring`. Only in a state's `enter`, only on numbers. `{ "kick": 6, "spring": { "duration": 0.4, "bounce": 0.5 } }` on `scale` pops; `{ "kick": -400, "spring": { "duration": 0.25, "bounce": 0.7 } }` on `x` shakes.
 - `keyframes` (format 0.8) — intermediate values played on state entry. The current value at 0 and state target at 1 are implicit; list `{ "at", "value" }` points strictly between them with a positive `duration` and optional `ease`.
 - `loop` (format 0.10) — a periodic offset on a number while a state is active; see [Loops](#loops-format-010).
-- `delay` (format 0.12) — seconds before a motion in `animate` starts: `{ "tween": { "duration": 0.15 }, "delay": 0.05 }`. For order and stagger, give a transition's `animate` growing delays (items 30–40 ms apart); for the reverse order, give the closing transition its own. Until the delay ends, the property keeps doing what it was doing. Not in `motions` or `enter`.
+- `delay` (format 0.12) — seconds before a motion in `animate` starts: `{ "tween": { "duration": 0.15 }, "delay": 0.05 }`. For order and stagger, give a transition's `animate` growing delays (items 30–40 ms apart); for the reverse order, give the closing transition its own. Until the delay ends, the property keeps doing what it was doing. Not in `motions` or `enter`. For a list where each item is its own player (format 1.2), read the delay from the item's index: `"delay": { "input": "host.index", "times": 0.06, "max": 0.5 }`, and the app passes `host.index` to each item.
 
 ## Structure
 
@@ -65,7 +65,7 @@ A motion is an object with exactly one of `spring` or `tween`, or the name of a 
 
 ## Drag and derived values (format 0.2)
 
-Available from format 0.2; new files declare `"nudg": "1.1"`, which includes everything here.
+Available from format 0.2; new files declare `"nudg": "1.2"`, which includes everything here.
 
 ```json
 "values": {
@@ -297,7 +297,7 @@ In a Vite web app, add `nudg()` from `@nudg/core/vite` to the config's plugins w
 | slower, softer, more relaxed | raise `duration`; optionally lower `bounce` |
 | pop, punchier feedback | add or raise a `kick` on `scale` in the state's `enter` |
 | shake on error | format 0.8 `enter` keyframes on `x`; use a kick only for a less-authored physical wobble |
-| one after another, stagger, cascade, in order | growing `delay` per property in that transition's `animate`; reverse the delays on the way back |
+| one after another, stagger, cascade, in order | growing `delay` per property in that transition's `animate`; reverse the delays on the way back. Items of a list, each its own player: `"delay": { "input": "host.index", "times": 0.06, "max": 0.5 }` |
 | the content should appear after it opens | `delay` on the content's opacity in the opening transition only |
 | pinch to zoom, zoomable photo, image viewer | `pinchstart` / `pinchend` and a multiplying follow of `pinch.scale` (format 0.18); `doubletap` toggles a zoom; pan with `drag` and `glide` |
 | list, add / delete row, drag to reorder | one player per row (`animated-list` starter): presence states for insert and remove, host shifts neighbours, the dropped row springs to `host.drop` |

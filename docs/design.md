@@ -385,7 +385,7 @@ On the web an adapter turns `click` into `tap`, so a keyboard or a screen reader
 
 ## Players that share an element, and a stagger from the host's index
 
-Status: decided 2026-11-09. Composition is implemented, as the default in the DOM adapter and as `compose()` on React Native. The delay that reads an input comes next, in the next format version. PlaySnack's first day of whole-app use ([devlog](devlog.md#2026-11-05-what-playsnacks-first-day-found)) hit three limits that are one question: what happens when more than one thing moves the same element.
+Status: decided 2026-11-09. Composition is implemented, as the default in the DOM adapter and as `compose()` on React Native. The delay that reads an input is implemented as format 1.2. PlaySnack's first day of whole-app use ([devlog](devlog.md#2026-11-05-what-playsnacks-first-day-found)) hit three limits that are one question: what happens when more than one thing moves the same element.
 
 - [#122](https://github.com/seukwoo/nudg/issues/122): the shared press file and a list's rise-in can't both play on one card. Each DOM player writes the whole `transform`, so the last writer wins.
 - [#125](https://github.com/seukwoo/nudg/issues/125): an element placed by its own transform (a badge centred with `translate(-50%, -50%)`, a rotated sticker) loses its placement when a player binds it, so PlaySnack skips such elements and they don't press.
@@ -418,7 +418,7 @@ Status: decided 2026-11-09. Composition is implemented, as the default in the DO
 
 **Decided:**
 - **Composition is the default, with no option to turn it off.** Before, the last writer won and a motion disappeared; nobody depends on that.
-- **The delay input ships in the next format version.** PlaySnack already works around it with a document per card and a timer per tag.
+- **The delay input ships in format 1.2.** PlaySnack already works around it with a document per card and a timer per tag.
 
 ## Open questions
 

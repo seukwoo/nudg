@@ -1,0 +1,80 @@
+{
+  "conformance": "1.2",
+  "name": "Delay from an input: max caps it, so a long list doesn't wait for its last row",
+  "doc": {
+    "nudg": "1.2",
+    "host": {
+      "events": [
+        "show"
+      ],
+      "inputs": {
+        "index": {
+          "range": [
+            0,
+            100
+          ]
+        }
+      }
+    },
+    "targets": [
+      "card"
+    ],
+    "values": {
+      "card.y": 20
+    },
+    "animate": {
+      "card.y": {
+        "spring": {
+          "duration": 0.3,
+          "bounce": 0
+        },
+        "delay": {
+          "input": "host.index",
+          "times": 0.06,
+          "plus": 0.02,
+          "max": 0.2
+        }
+      }
+    },
+    "initial": "hidden",
+    "states": {
+      "hidden": {
+        "when": {
+          "host.show": "shown"
+        }
+      },
+      "shown": {
+        "set": {
+          "card.y": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "input": "host.index",
+      "value": 9
+    },
+    {
+      "t": 0.1,
+      "send": "host.show"
+    },
+    {
+      "t": 0.29,
+      "expect": {
+        "values": {
+          "card.y": 20
+        }
+      }
+    },
+    {
+      "t": 0.4,
+      "expect": {
+        "values": {
+          "card.y": 7.621167816
+        }
+      }
+    }
+  ]
+}

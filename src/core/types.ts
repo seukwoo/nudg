@@ -31,6 +31,8 @@ export interface SpringMotion {
   kick?: number;
   /** Seconds before the motion starts, in "animate" only (v0.12). */
   delay?: number;
+  /** A delay read from an app input when the transition fires (v1.2), instead of `delay`. */
+  delayInput?: DelayInput;
 }
 
 export interface TweenMotion {
@@ -40,9 +42,19 @@ export interface TweenMotion {
   ease: Ease;
   /** Seconds before the motion starts, in "animate" only (v0.12). */
   delay?: number;
+  /** A delay read from an app input when the transition fires (v1.2), instead of `delay`. */
+  delayInput?: DelayInput;
 }
 
 export type Motion = SpringMotion | TweenMotion;
+
+/** A delay from an app input (v1.2): `input × times + plus` seconds, from 0 up to `max`. */
+export interface DelayInput {
+  input: string;
+  times: number;
+  plus: number;
+  max?: number;
+}
 
 export interface Keyframe {
   /** Normalized time strictly between 0 and 1; the current value and state target are implicit endpoints. */

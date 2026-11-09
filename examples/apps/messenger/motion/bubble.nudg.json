@@ -1,5 +1,5 @@
 {
-  "nudg": "1.1",
+  "nudg": "1.2",
   "note": "One message in a chat. A new one opens its row to the bubble's height and rises into place. Dragged left, the bubble follows the finger and the reply arrow grows in; past the reply point the state is armed, and letting go there replies (the host starts a reply on entering replied). Pressed, the bubble sinks a little; held, it pops back as the host opens reactions; the host sends release when they close.",
   "host": {
     "events": [

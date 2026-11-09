@@ -4,7 +4,7 @@
 import { hexToOklab, isHexColor } from "./color.ts";
 import { interpolate } from "./map.ts";
 import { fromDurationBounce, fromStiffnessRatio } from "./spring.ts";
-import type { Measure,
+import type { DelayInput, Measure,
   MeasuredEndpoint,
   Channels,
   Diagnostic,
@@ -135,7 +135,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-1.1.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-1.2.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -176,7 +176,7 @@ function compileFile(
       }
       for (const [name, def] of local) {
         let motion = parseMotionObject(def, ptr("/motions", name), r);
-        if (motion?.delay !== undefined) {
+        if (motion?.delay !== undefined || motion?.delayInput) {
           r.error("delay-outside-animate", ptr(ptr("/motions", name), "delay"), "A delay belongs to one transition's choreography, not to a named motion.", `Remove it here, and write it where the motion is used: "animate": { "panel.height": { "spring": { ... }, "delay": 0.08 } }.`);
           motion = undefined;
         }
@@ -731,6 +731,15 @@ class ComponentCompiler {
         continue;
       }
       if (motion.delay !== undefined && !this.needsVersion("0.12", ptr(kp, "delay"), "A motion delay")) continue;
+      if (motion.delayInput) {
+        const dp = ptr(kp, "delay");
+        if (!this.needsVersion("1.2", dp, "A delay read from an input")) continue;
+        if (!motion.delayInput.input.startsWith(`${HOST}.`)) {
+          this.r.error("invalid-value", ptr(dp, "input"), "A delay reads an app input (host.<name>), which holds still while the motion waits.", 'For example "host.index", which the app supplies to each item\'s player.');
+          continue;
+        }
+        if (!this.checkInput(motion.delayInput.input, ptr(dp, "input"), ptr(dp, "input"))) continue;
+      }
       out.set(key, motion);
     }
     return out;
@@ -753,7 +762,7 @@ class ComponentCompiler {
       }
       const motion = this.motion(value, kp);
       if (!prop || !motion) continue;
-      if (motion.delay !== undefined) {
+      if (motion.delay !== undefined || motion.delayInput) {
         this.r.error("delay-outside-animate", ptr(kp, "delay"), "An entry kick starts on entry; it can't wait.", "Remove the delay. To start a motion later, put a delayed motion in \"animate\" for the transition.");
         continue;
       }
@@ -1584,6 +1593,33 @@ function settable(machine: Machine): Set<string> {
   return out;
 }
 
+/** `{ "input": "host.index", "times": 0.06, "plus": 0.1, "max": 0.5 }` (v1.2); the input itself is checked by the caller. */
+function parseDelayInput(raw: JsonObject, p: string, r: Reporter): DelayInput | undefined {
+  r.keys(raw, p, ["input", "times", "plus", "max"]);
+  if (typeof raw.input !== "string") {
+    r.error("invalid-value", ptr(p, "input"), "A delay read from an input names an app input.", 'For example: "delay": { "input": "host.index", "times": 0.06 }.');
+    return undefined;
+  }
+  const out: DelayInput = { input: raw.input, times: 1, plus: 0 };
+  if ("times" in raw) {
+    if (typeof raw.times !== "number" || !Number.isFinite(raw.times)) {
+      r.error("invalid-value", ptr(p, "times"), '"times" must be a finite number: seconds per unit of the input.', "For example 0.06, for 60 ms between list items.");
+      return undefined;
+    }
+    out.times = raw.times;
+  }
+  for (const field of ["plus", "max"] as const) {
+    if (!(field in raw)) continue;
+    const v = parseTime(raw[field]);
+    if (v === undefined) {
+      r.error("invalid-value", ptr(p, field), `"${field}" must be a time of 0 or more.`, field === "plus" ? "For example 0.1, for a tag that follows its card." : "For example 0.5, so a long list doesn't wait seconds for its last row.");
+      return undefined;
+    }
+    out[field] = v;
+  }
+  return out;
+}
+
 function parseMotionObject(raw: Json, p: string, r: Reporter): Motion | undefined {
   if (!isObject(raw)) {
     r.error("invalid-type", p, "A motion is a motion name or an object with \"spring\" or \"tween\".", `For example: ${EXAMPLE_SPRING}`);
@@ -1595,14 +1631,18 @@ function parseMotionObject(raw: Json, p: string, r: Reporter): Motion | undefine
     return undefined;
   }
   let delay: number | undefined;
-  if ("delay" in raw) {
+  let delayInput: DelayInput | undefined;
+  if ("delay" in raw && isObject(raw.delay)) {
+    delayInput = parseDelayInput(raw.delay, ptr(p, "delay"), r);
+    if (!delayInput) return undefined;
+  } else if ("delay" in raw) {
     delay = parseTime(raw.delay);
     if (delay === undefined) {
-      r.error("invalid-value", ptr(p, "delay"), '"delay" must be a time of 0 or more.', 'Use seconds (0.08) or a string like "80ms".');
+      r.error("invalid-value", ptr(p, "delay"), '"delay" must be a time of 0 or more, or an input: { "input": "host.index", "times": 0.06 }.', 'Use seconds (0.08) or a string like "80ms".');
       return undefined;
     }
   }
-  const withDelay = <M extends Motion>(m: M): M => (delay ? { ...m, delay } : m);
+  const withDelay = <M extends Motion>(m: M): M => (delayInput ? { ...m, delayInput } : delay ? { ...m, delay } : m);
   let kick: number | undefined;
   if ("kick" in raw) {
     if (typeof raw.kick !== "number" || !Number.isFinite(raw.kick)) {

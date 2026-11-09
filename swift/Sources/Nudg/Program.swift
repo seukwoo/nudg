@@ -1,4 +1,4 @@
-// A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 8).
+// A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 9).
 // Everything is already validated and resolved; this only decodes it.
 
 import Foundation
@@ -10,13 +10,27 @@ public enum Ease {
   case bezier(Double, Double, Double, Double)
 }
 
+/** A delay read from an app input when the transition fires (v1.2): input × times + plus seconds, from 0 up to max. */
+public struct DelayInput {
+  public let input: String
+  public let times: Double
+  public let plus: Double
+  public let max: Double?
+}
+
 public enum Motion {
-  case spring(stiffness: Double, damping: Double, mass: Double, kick: Double?, delay: Double = 0)
-  case tween(duration: Double, ease: Ease, delay: Double = 0)
+  case spring(stiffness: Double, damping: Double, mass: Double, kick: Double?, delay: Double = 0, delayInput: DelayInput? = nil)
+  case tween(duration: Double, ease: Ease, delay: Double = 0, delayInput: DelayInput? = nil)
   /** Seconds before the motion starts (v0.12). */
   public var delay: Double {
     switch self {
-    case let .spring(_, _, _, _, delay), let .tween(_, _, delay): return delay
+    case let .spring(_, _, _, _, delay, _), let .tween(_, _, delay, _): return delay
+    }
+  }
+  /** A delay read from an input instead (v1.2). */
+  public var delayInput: DelayInput? {
+    switch self {
+    case let .spring(_, _, _, _, _, d), let .tween(_, _, _, d): return d
     }
   }
 }
@@ -168,8 +182,8 @@ public struct Program {
 
   /** Reads `nudg compile` output. */
   public static func decode(_ data: Data) throws -> Program {
-    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...8).contains(format) else {
-      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 8). Compile it with `nudg compile`.")
+    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...9).contains(format) else {
+      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 9). Compile it with `nudg compile`.")
     }
     let properties: [(String, Property)] = (j["properties"] as! [[String: Any]]).map { p in
       (p["key"] as! String, Property(
@@ -199,12 +213,17 @@ private func readEndpoint(_ value: Any) -> MeasuredEndpoint {
 
 private func readMotion(_ v: Any) -> Motion {
   let m = v as! [String: Any]
+  // Format 9 (v1.2): a delay read from an input is an object where a number used to be.
+  let delayInput = (m["delay"] as? [String: Any]).map { d in
+    DelayInput(input: d["input"] as! String, times: number(d["times"]) ?? 1, plus: number(d["plus"]) ?? 0, max: number(d["max"]))
+  }
+  let delay = number(m["delay"]) ?? 0
   if (m["kind"] as! String) == "tween" {
     let ease: Ease
     if let e = m["ease"] as? [Any] { let d = doubles(e); ease = .bezier(d[0], d[1], d[2], d[3]) } else { ease = .linear }
-    return .tween(duration: number(m["duration"])!, ease: ease, delay: number(m["delay"]) ?? 0)
+    return .tween(duration: number(m["duration"])!, ease: ease, delay: delay, delayInput: delayInput)
   }
-  return .spring(stiffness: number(m["stiffness"])!, damping: number(m["damping"])!, mass: number(m["mass"])!, kick: number(m["kick"]), delay: number(m["delay"]) ?? 0)
+  return .spring(stiffness: number(m["stiffness"])!, damping: number(m["damping"])!, mass: number(m["mass"])!, kick: number(m["kick"]), delay: delay, delayInput: delayInput)
 }
 
 private func readEase(_ v: Any?) -> Ease {

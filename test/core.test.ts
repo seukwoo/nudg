@@ -189,9 +189,9 @@ test("cli validate and simulate speak JSON", () => {
 test("upgrade raises a valid file to the latest format and keeps the rest of its text", async () => {
   const { upgradeText } = await import("../src/core/upgrade.ts");
   const text = '{\n  "nudg":  "0.3",\n  "note": "keep  this",\n  "targets": []\n}\n';
-  assert.deepEqual(upgradeText(text), { from: "0.3", text: '{\n  "nudg":  "1.1",\n  "note": "keep  this",\n  "targets": []\n}\n' });
-  assert.equal(upgradeText('{ "nudg": "1.1" }')?.text, '{ "nudg": "1.1" }');
-  assert.equal(upgradeText('{ "$schema": "https://unpkg.com/@nudg/core/spec/nudg-0.18.schema.json", "nudg": "0.18" }')?.text, '{ "$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.1.schema.json", "nudg": "1.1" }');
+  assert.deepEqual(upgradeText(text), { from: "0.3", text: '{\n  "nudg":  "1.2",\n  "note": "keep  this",\n  "targets": []\n}\n' });
+  assert.equal(upgradeText('{ "nudg": "1.2" }')?.text, '{ "nudg": "1.2" }');
+  assert.equal(upgradeText('{ "$schema": "https://unpkg.com/@nudg/core/spec/nudg-0.18.schema.json", "nudg": "0.18" }')?.text, '{ "$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.2.schema.json", "nudg": "1.2" }');
   assert.equal(upgradeText('{ "targets": [] }'), undefined);
   assert.equal(upgradeText("not json"), undefined);
 
@@ -201,8 +201,8 @@ test("upgrade raises a valid file to the latest format and keeps the rest of its
     const old = join(dir, "toggle.nudg.json");
     writeFileSync(old, readFileSync(`${root}spec/conformance/toggle-tap.json`, "utf8").replace(/[\s\S]*"doc": /, "").replace(/,\s*"steps"[\s\S]*/, ""));
     assert.equal(run(old, "--check").status, 1, "--check fails on an older file");
-    assert.match(run(old).stdout, /0\.1 → 1\.1/);
-    assert.equal(JSON.parse(readFileSync(old, "utf8")).nudg, "1.1");
+    assert.match(run(old).stdout, /0\.1 → 1\.2/);
+    assert.equal(JSON.parse(readFileSync(old, "utf8")).nudg, "1.2");
     assert.equal(run(old, "--check").status, 0);
     const broken = join(dir, "broken.nudg.json");
     writeFileSync(broken, '{ "nudg": "0.1", "targets": ["a"], "initial": "missing", "states": {} }');

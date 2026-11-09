@@ -1,5 +1,5 @@
 {
-  "nudg": "1.1",
+  "nudg": "1.2",
   "note": "The composer's action button. With nothing typed it is a microphone; once there is text the microphone turns away and the send arrow turns in, and clearing the field turns it back. The host sends typed and cleared as the field changes.",
   "host": {
     "events": [

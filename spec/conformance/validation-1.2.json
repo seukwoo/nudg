@@ -1,0 +1,418 @@
+{
+  "conformance": "1.2",
+  "name": "Validator (1.2): a delay read from an input",
+  "documents": [
+    {
+      "name": "valid",
+      "doc": {
+        "nudg": "1.2",
+        "host": {
+          "events": [
+            "show"
+          ],
+          "inputs": {
+            "index": {
+              "range": [
+                0,
+                100
+              ]
+            }
+          }
+        },
+        "targets": [
+          "card"
+        ],
+        "values": {
+          "card.y": 20
+        },
+        "animate": {
+          "card.y": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            },
+            "delay": {
+              "input": "host.index",
+              "times": 0.06,
+              "plus": 0.02,
+              "max": 0.2
+            }
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "card.y": 0
+            }
+          }
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "1.1",
+        "host": {
+          "events": [
+            "show"
+          ],
+          "inputs": {
+            "index": {
+              "range": [
+                0,
+                100
+              ]
+            }
+          }
+        },
+        "targets": [
+          "card"
+        ],
+        "values": {
+          "card.y": 20
+        },
+        "animate": {
+          "card.y": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            },
+            "delay": {
+              "input": "host.index",
+              "times": 0.06,
+              "plus": 0.02,
+              "max": 0.2
+            }
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "card.y": 0
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/animate/card.y/delay"
+        }
+      ]
+    },
+    {
+      "name": "not-an-app-input",
+      "doc": {
+        "nudg": "1.2",
+        "host": {
+          "events": [
+            "show"
+          ],
+          "inputs": {
+            "index": {
+              "range": [
+                0,
+                100
+              ]
+            }
+          }
+        },
+        "targets": [
+          "card"
+        ],
+        "values": {
+          "card.y": 20
+        },
+        "animate": {
+          "card.y": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            },
+            "delay": {
+              "input": "card.drag.y",
+              "times": 0.06,
+              "plus": 0.02,
+              "max": 0.2
+            }
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "card.y": 0
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/animate/card.y/delay/input"
+        }
+      ]
+    },
+    {
+      "name": "undeclared",
+      "doc": {
+        "nudg": "1.2",
+        "host": {
+          "events": [
+            "show"
+          ],
+          "inputs": {
+            "index": {
+              "range": [
+                0,
+                100
+              ]
+            }
+          }
+        },
+        "targets": [
+          "card"
+        ],
+        "values": {
+          "card.y": 20
+        },
+        "animate": {
+          "card.y": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            },
+            "delay": {
+              "input": "host.order",
+              "times": 0.06,
+              "plus": 0.02,
+              "max": 0.2
+            }
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "card.y": 0
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "undeclared-host-input",
+          "path": "/animate/card.y/delay/input"
+        }
+      ]
+    },
+    {
+      "name": "times",
+      "doc": {
+        "nudg": "1.2",
+        "host": {
+          "events": [
+            "show"
+          ],
+          "inputs": {
+            "index": {
+              "range": [
+                0,
+                100
+              ]
+            }
+          }
+        },
+        "targets": [
+          "card"
+        ],
+        "values": {
+          "card.y": 20
+        },
+        "animate": {
+          "card.y": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            },
+            "delay": {
+              "input": "host.index",
+              "times": "fast",
+              "plus": 0.02,
+              "max": 0.2
+            }
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "card.y": 0
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/animate/card.y/delay/times"
+        }
+      ]
+    },
+    {
+      "name": "max",
+      "doc": {
+        "nudg": "1.2",
+        "host": {
+          "events": [
+            "show"
+          ],
+          "inputs": {
+            "index": {
+              "range": [
+                0,
+                100
+              ]
+            }
+          }
+        },
+        "targets": [
+          "card"
+        ],
+        "values": {
+          "card.y": 20
+        },
+        "animate": {
+          "card.y": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            },
+            "delay": {
+              "input": "host.index",
+              "times": 0.06,
+              "plus": 0.02,
+              "max": -1
+            }
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "card.y": 0
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/animate/card.y/delay/max"
+        }
+      ]
+    },
+    {
+      "name": "named",
+      "doc": {
+        "nudg": "1.2",
+        "host": {
+          "events": [
+            "show"
+          ],
+          "inputs": {
+            "index": {
+              "range": [
+                0,
+                100
+              ]
+            }
+          }
+        },
+        "targets": [
+          "card"
+        ],
+        "values": {
+          "card.y": 20
+        },
+        "animate": {
+          "card.y": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            },
+            "delay": {
+              "input": "host.index",
+              "times": 0.06,
+              "plus": 0.02,
+              "max": 0.2
+            }
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "card.y": 0
+            }
+          }
+        },
+        "motions": {
+          "late": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            },
+            "delay": {
+              "input": "host.index"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "delay-outside-animate",
+          "path": "/motions/late/delay"
+        }
+      ]
+    }
+  ]
+}

@@ -5,14 +5,17 @@
 // object key order.
 
 import type { EntryEffect, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
+import { animateMaps } from "./walk.ts";
 
-export const PROGRAM_FORMAT = 8;
+export const PROGRAM_FORMAT = 9;
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
+/** Program format 8 is frozen with 1.0; 9 adds a delay read from an input (1.2). */
 export function programToJson(program: Program): Json {
   return {
-    nudgProgram: PROGRAM_FORMAT,
+    // A program without format 9's one addition says 8, so runtimes from before 1.2 still read it.
+    nudgProgram: animateMaps(program).some((t) => [...t.values()].some((m) => m.delayInput)) ? PROGRAM_FORMAT : 8,
     version: program.version,
     targets: program.targets,
     properties: [...program.properties].map(([key, p]) => ({ key, ...property(p) })),
@@ -23,12 +26,12 @@ export function programToJson(program: Program): Json {
 
 export function programFromJson(json: unknown): Program {
   const j = json as Record<string, any>;
-  if (![1, 2, 3, 4, 5, 6, 7, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
+  if (![1, 2, 3, 4, 5, 6, 7, 8, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
   return {
     version: j.version,
     targets: j.targets,
     properties: new Map(j.properties.map((p: any) => [p.key, readProperty(p)])),
-    animate: new Map(j.animate.map((a: any) => [a.key, a.motion as Motion])),
+    animate: new Map(j.animate.map((a: any) => [a.key, readMotion(a.motion)])),
     machine: readMachine(j.machine),
   };
 }
@@ -60,7 +63,15 @@ function motion(m: Motion): Json {
     m.kind === "tween" ? { kind: "tween", duration: m.duration, ease: m.ease === "linear" ? "linear" : [...m.ease] } : { kind: "spring", stiffness: m.stiffness, damping: m.damping, mass: m.mass };
   if (m.kind === "spring" && m.kick !== undefined) out.kick = m.kick;
   if (m.delay !== undefined) out.delay = m.delay;
+  // Format 9 (v1.2): a delay read from an input is an object where a number used to be.
+  if (m.delayInput) out.delay = m.delayInput.max === undefined ? { input: m.delayInput.input, times: m.delayInput.times, plus: m.delayInput.plus } : { ...m.delayInput };
   return out;
+}
+
+function readMotion(j: any): Motion {
+  if (j.delay === undefined || typeof j.delay === "number") return j as Motion;
+  const { delay, ...rest } = j;
+  return { ...rest, delayInput: { input: delay.input, times: delay.times ?? 1, plus: delay.plus ?? 0, ...(delay.max === undefined ? {} : { max: delay.max }) } } as Motion;
 }
 
 function entryEffect(effect: EntryEffect): Json {
@@ -154,7 +165,7 @@ function transition(t: Transition): Record<string, Json> {
 }
 
 function readTransition(j: any): Transition {
-  const t: Transition = { animate: new Map(j.animate.map((a: any) => [a.key, a.motion as Motion])) };
+  const t: Transition = { animate: new Map(j.animate.map((a: any) => [a.key, readMotion(a.motion)])) };
   if (j.to !== undefined) t.to = j.to;
   if (j.nearest) t.nearest = j.nearest;
   if (j.step) t.step = new Map(j.step.map((s: any) => [s.key, s.delta]));

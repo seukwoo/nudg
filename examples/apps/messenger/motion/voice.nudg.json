@@ -1,5 +1,5 @@
 {
-  "nudg": "1.1",
+  "nudg": "1.2",
   "note": "A voice message. Tapping the button plays it: the play icon turns into pause, the played part of the waveform fills from the left as the host reports progress, and the dot for an unheard message goes away. Tapping again pauses; the host sends ended when it reaches the end. The host plays and pauses the audio as the file enters playing and paused.",
   "host": {
     "events": [

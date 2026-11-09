@@ -2511,6 +2511,80 @@ def rest_cases():
     })
 
 
+# --- v1.2: a delay read from an input ---------------------------------------
+
+RISE = {
+    "nudg": "1.2",
+    "host": {"events": ["show"], "inputs": {"index": {"range": [0, 100]}}},
+    "targets": ["card"],
+    "values": {"card.y": 20},
+    "animate": {"card.y": {**spring_json(0.3, 0), "delay": {"input": "host.index", "times": 0.06, "plus": 0.02, "max": 0.2}}},
+    "initial": "hidden",
+    "states": {
+        "hidden": {"when": {"host.show": "shown"}},
+        "shown": {"set": {"card.y": 0}},
+    },
+}
+
+
+def delay_input_cases():
+    # The third card (index 2) waits 2 × 0.06 + 0.02 = 0.14 s. The delay is read when the
+    # transition fires; a later change of the input doesn't move a motion already waiting.
+    y = Prop(20)
+    y.retarget(0, spring(0.3, 0), 0.1 + 0.14)
+    write("delay-input", {
+        "conformance": "1.2",
+        "name": "Delay from an input: input × times + plus seconds, read when the transition fires",
+        "doc": RISE,
+        "steps": [
+            {"t": 0, "input": "host.index", "value": 2},
+            {"t": 0.1, "send": "host.show"},
+            {"t": 0.15, "input": "host.index", "value": 0},
+            {"t": 0.2, "expect": {"state": ["shown"], "values": {"card.y": 20}, "resting": False}},
+            {"t": 0.3, "expect": {"values": {"card.y": y.value(0.3)}}},
+            {"t": 0.5, "expect": {"values": {"card.y": y.value(0.5)}}},
+        ],
+    })
+    # The tenth card would wait 0.56 s; "max" holds it to 0.2.
+    y = Prop(20)
+    y.retarget(0, spring(0.3, 0), 0.1 + 0.2)
+    write("delay-input-max", {
+        "conformance": "1.2",
+        "name": "Delay from an input: max caps it, so a long list doesn't wait for its last row",
+        "doc": RISE,
+        "steps": [
+            {"t": 0, "input": "host.index", "value": 9},
+            {"t": 0.1, "send": "host.show"},
+            {"t": 0.29, "expect": {"values": {"card.y": 20}}},
+            {"t": 0.4, "expect": {"values": {"card.y": y.value(0.4)}}},
+        ],
+    })
+
+
+def validation_v1_2_cases():
+    def doc():
+        return json.loads(json.dumps(RISE))
+
+    out = [("valid", doc(), [])]
+    d = doc(); d["nudg"] = "1.1"
+    out.append(("needs-version", d, [("needs-version", "/animate/card.y/delay")]))
+    d = doc(); d["animate"]["card.y"]["delay"]["input"] = "card.drag.y"
+    out.append(("not-an-app-input", d, [("invalid-value", "/animate/card.y/delay/input")]))
+    d = doc(); d["animate"]["card.y"]["delay"]["input"] = "host.order"
+    out.append(("undeclared", d, [("undeclared-host-input", "/animate/card.y/delay/input")]))
+    d = doc(); d["animate"]["card.y"]["delay"]["times"] = "fast"
+    out.append(("times", d, [("invalid-value", "/animate/card.y/delay/times")]))
+    d = doc(); d["animate"]["card.y"]["delay"]["max"] = -1
+    out.append(("max", d, [("invalid-value", "/animate/card.y/delay/max")]))
+    d = doc(); d["motions"] = {"late": {**spring_json(0.3, 0), "delay": {"input": "host.index"}}}
+    out.append(("named", d, [("delay-outside-animate", "/motions/late/delay")]))
+    write("validation-1.2", {
+        "conformance": "1.2",
+        "name": "Validator (1.2): a delay read from an input",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 if __name__ == "__main__":
     toggle_cases()
     spring_form_cases()
@@ -2556,5 +2630,7 @@ if __name__ == "__main__":
     validation_v17_cases()
     pinch_cases()
     validation_v18_cases()
+    delay_input_cases()
+    validation_v1_2_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

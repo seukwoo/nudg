@@ -111,6 +111,8 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
             if (prop.map?.sourceKind == "input") requiredInputs.add(prop.map.source)
         }
         collectFollowInputs(program.machine)
+        // Delays read from app inputs (v1.2), when their transition fires.
+        for (motion in program.animate.values) motion.delayInput?.let { requiredInputs.add(it.input) }
         enterMachine(program.machine, active, ArrayList(), 0.0)
         for (path in state) enterPath(path)
         val targets = resolveTargets(active)
@@ -196,13 +198,22 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
         walk(program.machine)
     }
 
+    private fun collectDelayInputs(transition: Transition) {
+        for ((_, motion) in transition.animate) motion.delayInput?.let { requiredInputs.add(it.input) }
+    }
+
     private fun collectFollowInputs(machine: Machine) {
         when (machine) {
             is Machine.Regions -> for ((_, region) in machine.regions) collectFollowInputs(region)
-            is Machine.States -> for (state in machine.states) {
-                for ((_, follow) in state.follow) requiredInputs.add(follow.input)
-                for ((_, target) in state.input) { requiredInputs.add(target.input); targetInputs.add(target.input) }
-                state.machine?.let(::collectFollowInputs)
+            is Machine.States -> {
+                for ((_, transition) in machine.`when`) collectDelayInputs(transition)
+                for (state in machine.states) {
+                    for ((_, follow) in state.follow) requiredInputs.add(follow.input)
+                    for ((_, target) in state.input) { requiredInputs.add(target.input); targetInputs.add(target.input) }
+                    for ((_, transition) in state.`when`) collectDelayInputs(transition)
+                    for (timer in state.timers) collectDelayInputs(timer.transition)
+                    state.machine?.let(::collectFollowInputs)
+                }
             }
         }
     }
@@ -310,6 +321,12 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
     private fun followSegment(key: String, f: Pair<Follow, State>, anchor: Double, t: Double) = Segment.FollowSeg(key, t, anchor, inputAt(f.first.input, t), f.first, f.second)
 
     // inputs and evaluation
+
+    /** Seconds a motion waits: its `delay`, or (v1.2) input × times + plus, from 0 up to max. */
+    private fun delayOf(motion: Motion, t: Double): Double {
+        val d = motion.delayInput ?: return motion.delay
+        return minOf(d.max ?: Double.POSITIVE_INFINITY, maxOf(0.0, inputAt(d.input, t) * d.times + d.plus))
+    }
 
     private fun inputAt(name: String, t: Double): Double {
         var value = 0.0
@@ -531,7 +548,8 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
             val (pos, v) = handoff[key] ?: evaluate(seg, t)
             val vel = if (key in committed) v.map { 0.0 } else v
             val motion = overrides[key] ?: program.animate[key]
-            if (motion != null && motion.delay > 0 && !reduced) {
+            val wait = motion?.let { delayOf(it, t) } ?: 0.0
+            if (motion != null && wait > 0 && !reduced) {
                 // Until the delay ends the property keeps doing what it was doing: a pending
                 // motion that hasn't started is dropped, and a value placed here holds still.
                 val prev = when {
@@ -539,7 +557,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
                     seg is Segment.DelayedSeg && t < seg.t0 -> seg.prev
                     else -> seg
                 }
-                segments[key] = Segment.DelayedSeg(t + motion.delay, prev, to, motion)
+                segments[key] = Segment.DelayedSeg(t + wait, prev, to, motion)
                 continue
             }
             segments[key] = Segment.MotionSeg(t, pos, vel, to, motion?.let { if (reduced) REDUCED else it })

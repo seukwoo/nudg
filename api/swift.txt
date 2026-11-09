@@ -135,6 +135,7 @@ public final class Runtime
 public let program: Program
 public init(_ program: Program, state: [String]
 public func send(_ event: String, at t: Double) throws -> Bool
+public func setReducedMotion(_ on: Bool, at t: Double) throws
 public func input(_ name: String, _ value: Double, at t: Double) throws -> Bool
 public func sample(_ t: Double) throws -> [String: Value]
 public func state() -> [String]
@@ -148,6 +149,7 @@ public let runtime: Runtime
 @Published public private(set) var state: [String]
 @Published public private(set) var present
 public init(_ program: Program, state: [String]
+public func setReducedMotion(_ on: Bool)
 public func time(at date: Date) -> Double
 public func send(_ event: String) -> Bool
 public func input(_ name: String, _ value: Double) -> Bool

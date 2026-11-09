@@ -53,6 +53,26 @@ public final class NudgModel: ObservableObject {
         onExit?()
       }
     }
+    #if os(iOS)
+    // Without an explicit setting, Reduce Motion is followed as it changes.
+    if reducedMotion == nil {
+      reduceMotionObserver = NotificationCenter.default.addObserver(forName: UIAccessibility.reduceMotionStatusDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+        self?.setReducedMotion(UIAccessibility.isReduceMotionEnabled)
+      }
+    }
+    #endif
+  }
+
+  private var reduceMotionObserver: NSObjectProtocol?
+  deinit {
+    if let observer = reduceMotionObserver { NotificationCenter.default.removeObserver(observer) }
+  }
+
+  /** The reduced-motion setting changed: loops and motions from now on follow it (see `Runtime.setReducedMotion`). */
+  public func setReducedMotion(_ on: Bool) {
+    try? runtime.setReducedMotion(on, at: time(at: clock()))
+    changed()
+    objectWillChange.send()
   }
 
   private func publish(_ change: @escaping () -> Void) {

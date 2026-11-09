@@ -61,3 +61,57 @@ test("playDoc binds the root to the first target unless a [data-nudg] in it name
     close();
   }
 });
+
+test("destroy puts back the inline styles an element had; the system's reduced-motion setting is followed as it changes", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const { launchBrowser, waitFor } = await import("../src/node/cdp.ts");
+  const { serveIfLocal } = await import("../src/node/observe.ts");
+  const { url, close } = await serveIfLocal("test/fixtures/host/presence.html");
+  const browser = await launchBrowser(chrome!);
+  try {
+    await browser.send("Page.navigate", { url });
+    await waitFor(() => browser.evaluate("window.__player ? 'ready' : ''"), 15_000);
+    const restored = await browser.evaluate(`(async () => {
+      const { playDoc } = await import("../../../dist/dom/index.js");
+      const { presets } = await import("../../../dist/index.js");
+      const el = document.createElement("button");
+      el.style.transform = "translateX(5px)";
+      document.body.append(el);
+      const p = playDoc(presets.press(), el);
+      const during = el.style.transform;
+      p.destroy();
+      return { during, after: el.style.transform, opacity: el.style.opacity };
+    })()`);
+    assert.notEqual(restored.during, "translateX(5px)", "while bound, the player writes the transform");
+    assert.equal(restored.after, "translateX(5px)", "after destroy, the page's own transform is back");
+    assert.equal(restored.opacity, "");
+
+    await browser.evaluate(`(async () => {
+      const { compileUrl, play } = await import("../../../dist/dom/index.js");
+      const { program } = await compileUrl("../../../examples/spinner.nudg.json");
+      const el = document.createElement("div");
+      el.id = "spin";
+      document.body.append(el);
+      window.__spin = play(program, null, { bind: { spinner: el } });
+      window.__spin.send("host.start");
+    })()`);
+    const angle = () => browser.evaluate(`(() => { const m = new DOMMatrix(getComputedStyle(document.getElementById("spin")).transform); return Math.round(Math.atan2(m.b, m.a) * 180 / Math.PI); })()`);
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const spins = async () => {
+      const a = await angle();
+      await sleep(120);
+      return a !== (await angle());
+    };
+    assert.ok(await spins(), "it spins");
+    await browser.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
+    await sleep(300);
+    assert.equal(await angle(), 0, "reduced motion turned on: the turn comes back to rest");
+    assert.ok(!(await spins()), "and stays still");
+    await browser.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });
+    await sleep(100);
+    assert.ok(await spins(), "turned off: it spins again, in the same state");
+    assert.deepEqual(await browser.evaluate(`window.__spin.runtime.state()`), ["spinning"]);
+  } finally {
+    await browser.close();
+    close();
+  }
+});

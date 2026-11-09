@@ -39,6 +39,8 @@ export interface HeadlessPlayer<C extends NudgContract = NudgContract> {
   present(): boolean;
   /** The player's time in seconds. */
   now(): number;
+  /** The host's reduced-motion setting changed: see `Runtime.setReducedMotion`. */
+  setReducedMotion(on: boolean): void;
   destroy(): void;
 }
 
@@ -86,6 +88,11 @@ export function createPlayer<C extends NudgContract = NudgContract>(program: Pro
     values: () => lastValues,
     present: () => life.present(),
     now,
+    setReducedMotion(on) {
+      if (destroyed) return;
+      runtime.setReducedMotion(on, now());
+      changed();
+    },
     destroy() {
       destroyed = true;
       cancel?.();

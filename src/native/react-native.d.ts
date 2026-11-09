@@ -18,7 +18,10 @@ declare module "react-native" {
   export const View: import("react").ComponentType<any>;
   export const Text: import("react").ComponentType<any>;
   export const Pressable: import("react").ComponentType<any>;
-  export const AccessibilityInfo: { isReduceMotionEnabled(): Promise<boolean> };
+  export const AccessibilityInfo: {
+    isReduceMotionEnabled(): Promise<boolean>;
+    addEventListener(event: "reduceMotionChanged", fn: (on: boolean) => void): { remove(): void };
+  };
   export interface PanResponderGestureState { dx: number; dy: number }
   /** A responder event; `touches` lists every finger on the screen. */
   export interface GestureResponderEvent { nativeEvent: { touches?: { identifier: number | string; pageX: number; pageY: number }[] } }

@@ -30,6 +30,7 @@ fun main(args: Array<String>) {
             for (s in steps) {
                 val step = s as Map<*, *>
                 val t = step["t"] as Double
+                (step["reducedMotion"] as? Boolean)?.let { rt.setReducedMotion(it, t) }
                 (step["input"] as? String)?.let { if (!rt.input(it, step["value"] as Double, t)) problems.add("input $it at ${t}s was refused") }
                 (step["send"] as? String)?.let { ev ->
                     val handled = rt.send(ev, t)

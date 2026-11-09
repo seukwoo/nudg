@@ -16,7 +16,7 @@ export interface UseNudgNativeOptions<C extends NudgContract = NudgContract> {
   /** App inputs known before mount, e.g. { "host.progress": 0.6 }: the first frame uses them. Read once; update with `input`. */
   inputs?: Partial<Record<C["inputs"], number>>;
   files?: Record<string, unknown>;
-  /** Default: the system's Reduce Motion setting. */
+  /** Default: the system's Reduce Motion setting, followed as it changes. A change to this option applies to the running player. */
   reducedMotion?: boolean;
   exit?: StateName<C> | StateName<C>[];
   onExit?: () => void;
@@ -103,20 +103,32 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
   const onSettle = useRef(options.onSettle);
   onSettle.current = options.onSettle;
   const reads = useMemo(() => new Set(createRuntime(program).requiredInputs()), [program]);
-  const [reduced, setReduced] = useState<boolean | undefined>(options.reducedMotion);
-
+  // The setting applies to the running player as it changes, so the state and motion carry on.
+  const reduced = useRef(options.reducedMotion ?? false);
   useEffect(() => {
-    if (options.reducedMotion !== undefined) return;
     let live = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((on) => live && setReduced(on)).catch(() => {});
-    return () => void (live = false);
+    const apply = (on: boolean) => {
+      if (!live) return;
+      reduced.current = on;
+      player.current?.setReducedMotion(on);
+    };
+    if (options.reducedMotion !== undefined) {
+      apply(options.reducedMotion);
+      return () => void (live = false);
+    }
+    AccessibilityInfo.isReduceMotionEnabled().then(apply).catch(() => {});
+    const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", apply);
+    return () => {
+      live = false;
+      subscription.remove();
+    };
   }, [options.reducedMotion]);
 
   useEffect(() => {
     const p = createPlayer(program, {
       host: { now: () => extra.current.now?.() ?? performance.now() / 1000, frame: (fn) => { const id = requestAnimationFrame(fn); return () => cancelAnimationFrame(id); } },
       state: options.state,
-      reducedMotion: reduced,
+      reducedMotion: reduced.current,
       exit: options.exit,
       onExit: () => {
         setPresent(false);
@@ -135,7 +147,7 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
       p.destroy();
       player.current = null;
     };
-  }, [program, animated, reduced]);
+  }, [program, animated]);
 
   const styles = useMemo(() => {
     const out = new Map<string, Record<string, unknown>>();

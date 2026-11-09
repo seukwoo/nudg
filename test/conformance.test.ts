@@ -13,6 +13,7 @@ const COLOR_TOLERANCE = 1;
 interface Step {
   t: number;
   send?: string;
+  reducedMotion?: boolean;
   input?: string;
   value?: number;
   handled?: boolean;
@@ -71,6 +72,7 @@ for (const file of readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
   const run = (program: Program) => {
     const rt = createRuntime(program, { state: c.start, reducedMotion: c.reducedMotion });
     for (const step of c.steps ?? []) {
+      if (step.reducedMotion !== undefined) rt.setReducedMotion(step.reducedMotion, step.t);
       if (step.input !== undefined) assert.ok(rt.input(step.input, step.value!, step.t), `input ${step.input} at ${step.t}s`);
       if (step.send !== undefined) {
         const handled = rt.send(step.send, step.t);

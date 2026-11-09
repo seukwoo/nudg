@@ -28,7 +28,7 @@ export interface UseNudgOptions<C extends NudgContract = NudgContract> {
    * keyed as the import is written (a leading "./" is optional).
    */
   files?: Record<string, unknown>;
-  /** Reduced motion (v0.3). Default: the system's prefers-reduced-motion setting. */
+  /** Reduced motion (v0.3). Default: the system's prefers-reduced-motion setting, followed as it changes. A change to this option applies to the running player. */
   reducedMotion?: boolean;
   /**
    * States that mean the component is gone, e.g. "hidden". `present` turns false once the
@@ -124,6 +124,16 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
       for (const entry of attached.current.values()) entry.unbind = undefined;
     };
   }, [program]);
+
+  // A changed option applies to the running player; `undefined` follows the system setting again.
+  const firstReduced = useRef(true);
+  useEffect(() => {
+    if (firstReduced.current) {
+      firstReduced.current = false;
+      return;
+    }
+    player.current?.setReducedMotion(options.reducedMotion);
+  }, [options.reducedMotion]);
 
   const bind = useCallback((name: string) => {
     let ref = refs.current.get(name);

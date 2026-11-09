@@ -30,6 +30,13 @@ export interface Runtime {
   readonly program: Program;
   /** Sends an event at time `t` (seconds). Returns false if nothing handled it. */
   send(event: string, t: number): boolean;
+  /**
+   * The host's reduced-motion setting changed at time `t`. Motions started from then on follow
+   * it, and so do loops: turning it on stops the loops it doesn't allow (they hand off as on a
+   * state exit and return with the reduced tween), turning it off starts the active states'
+   * loops from `t`. Motions already moving finish as they are.
+   */
+  setReducedMotion(on: boolean, t: number): void;
   /** Records a referenced drag, app, scroll, or layout input sample at time `t`. */
   input(name: string, value: number, t: number): boolean;
   /** Continuous inputs referenced by `map` or `follow` (layout measurements excluded). */
@@ -119,7 +126,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
   for (const name of targetInputs) requiredInputs.add(name);
   let order = 0;
   let now = 0;
-  const reduced = options.reducedMotion === true;
+  let reduced = options.reducedMotion === true;
   // Under reduced motion no loop plays, except (from format 1.1) one that only fades: opacity moves nothing.
   const fades = VERSIONS.indexOf(program.version) >= VERSIONS.indexOf("1.1");
   const loopPlays = (key: string) => !reduced || (fades && key.endsWith(".opacity"));
@@ -709,6 +716,27 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
         lastTap.set(target, t);
       }
       return handled;
+    },
+
+    setReducedMotion(on, t) {
+      advanceTo(t);
+      if (on === reduced) return;
+      reduced = on;
+      for (const [key, running] of [...loops]) {
+        if (loopPlays(key)) continue;
+        const segment = segments.get(key)!;
+        loops.delete(key);
+        if (!("to" in segment)) continue;
+        const [pos, vel] = evaluate(segment, t);
+        let [offset, rate] = loopOffset(key, running, t);
+        const wrap = running.loop.wrap;
+        // Into (-wrap/2, wrap/2], as when a state with a loop is left.
+        if (wrap !== undefined) offset -= wrap * Math.ceil(offset / wrap - 0.5);
+        segments.set(key, { kind: "motion", t0: t, from: [pos[0] + offset], v0: [vel[0] + rate], to: segment.to, motion: REDUCED });
+      }
+      walkActive(active, (state) => {
+        for (const [key, loop] of state.loop) if (!loops.has(key) && loopPlays(key)) loops.set(key, { loop, owner: state, t0: t });
+      });
     },
 
     input(name, value, t) {

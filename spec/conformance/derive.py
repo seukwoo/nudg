@@ -1760,6 +1760,27 @@ def reduced_loop_cases():
             {"t": 0.45, "expect": {"state": ["busy"], "values": {"dot.opacity": 1, "spinner.rotation": 0}, "looping": False}},
         ],
     })
+    # The host's setting changes while the player runs (runtime 1.6): turning reduced motion
+    # on stops the loops it doesn't allow, which hand off like a state exit and return with the
+    # reduced tween; turning it off starts the active states' loops from that moment. The
+    # opacity loop, allowed either way, runs on untouched.
+    on, off = 0.5, 1.0
+    turned = wrapped(loop_offset([(1.0, 360)], 1, 0, 0, on)[0], 360)
+    back = lambda t: round(turned + (0 - turned) * min(1, (t - on) / 0.15), 9)
+    write("reduced-motion-live", {
+        "conformance": "1.1",
+        "name": "Reduced motion that changes while running: on stops the loops it forbids (they return with the reduced tween), off starts them from that moment",
+        "doc": BLINK,
+        "steps": [
+            {"t": 0.45, "expect": {"values": {"dot.opacity": 0.25, "spinner.rotation": 162}, "looping": True}},
+            {"t": on, "reducedMotion": True},
+            {"t": 0.575, "expect": {"values": {"dot.opacity": at(0.575), "spinner.rotation": back(0.575)}, "looping": True}},
+            {"t": 0.7, "expect": {"values": {"dot.opacity": at(0.7), "spinner.rotation": 0}}},
+            {"t": off, "reducedMotion": False},
+            {"t": 1.0, "expect": {"values": {"spinner.rotation": 0}}},
+            {"t": 1.25, "expect": {"values": {"dot.opacity": at(1.25), "spinner.rotation": 90}, "looping": True}},
+        ],
+    })
     # Without reduced motion both loop, in either version.
     write("loop-fade", {
         "conformance": "1.1",

@@ -102,7 +102,7 @@ public final class Runtime {
   private var crossings: [Crossing] = []
   private var scrolls: [String: ScrollDirection] = [:]
   private var now = 0.0
-  private let reduced: Bool
+  private var reduced: Bool
   /** Under reduced motion no loop plays, except (from format 1.1) one that only fades: opacity moves nothing. */
   private let fades: Bool
   private func loopPlays(_ key: String) -> Bool { !reduced || (fades && key.hasSuffix(".opacity")) }
@@ -682,6 +682,31 @@ public final class Runtime {
     if !handle(program.machine, event, t, &fired, &entered) { return timerHandled }
     settle(t, fired, entered)
     return true
+  }
+
+  /**
+   The host's reduced-motion setting changed at time `t`. Motions started from then on follow
+   it, and so do loops: turning it on stops the loops it doesn't allow (they hand off as on a
+   state exit and return with the reduced tween), turning it off starts the active states'
+   loops from `t`. Motions already moving finish as they are.
+   */
+  public func setReducedMotion(_ on: Bool, at t: Double) throws {
+    try advanceTo(t)
+    guard on != reduced else { return }
+    reduced = on
+    for (key, running) in loops.sorted(by: { $0.key < $1.key }) where !loopPlays(key) {
+      let segment = segments[key]!
+      loops[key] = nil
+      guard let to = segment.to else { continue }
+      let (pos, vel) = evaluate(segment, t)
+      var (offset, rate) = loopOffset(key, running, t)
+      // Into (-wrap/2, wrap/2], as when a state with a loop is left.
+      if let wrap = running.loop.wrap { offset -= wrap * (offset / wrap - 0.5).rounded(.up) }
+      segments[key] = .motion(t0: t, from: [pos[0] + offset], v0: [vel[0] + rate], to: to, motion: REDUCED)
+    }
+    walkActive(active) { state in
+      for (key, loop) in state.loop where loops[key] == nil && loopPlays(key) { loops[key] = ActiveLoop(loop: loop, owner: state, t0: t) }
+    }
   }
 
   /** Records a referenced continuous input or a layout report. */

@@ -408,7 +408,7 @@ Status: decided 2026-11-09. Composition is implemented, as the default in the DO
 
 ### Decided: a delay that reads an input (#124)
 
-- **The rhythm stays in the file and the index stays in the host**, as for lists (0.17) and per-property delays (0.12): `"animate": { "card.y": { "use": "rise", "delay": { "input": "host.index", "times": 0.06 } } }`.
+- **The rhythm stays in the file and the index stays in the host**, as for lists (0.17) and per-property delays (0.12): `"animate": { "card.y": { "spring": { "duration": 0.3 }, "delay": { "input": "host.index", "times": 0.06 } } }`.
 - **Each card's player gets its index** (`inputs: { "host.index": 2 }`), and one `host.show` per player starts them all. The cards rise 0.06 s apart.
 - **A tag inside a card adds its own index:** `{ "input": "host.index", "times": 0.06, "plus": 0.15 }` plus a second input for the tag's position. Arithmetic is the same `times` / `plus` that measurements use (0.6).
 - **A ceiling** (`"max": 0.5`) keeps a long list from waiting seconds for its last row.

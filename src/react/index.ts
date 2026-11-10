@@ -9,8 +9,10 @@ import { play, type Player } from "../dom/play.ts";
 import { initialValues } from "../core/player.ts";
 import { propertiesByTarget, styleOf, type NudgStyle } from "../dom/style.ts";
 
-export { presets, press, hover, toggle, toast, appear } from "../core/presets.ts";
+export { presets, press, hover, toggle, toast, appear, pop, drop, shake } from "../core/presets.ts";
 export { nudgTransition } from "./transition.ts";
+export { useNudgOnce } from "./once.ts";
+export type { UseNudgOnceOptions } from "./once.ts";
 export type { NudgTransitionOptions, TransitionProps } from "./transition.ts";
 export type { NudgContract, StateName } from "../core/types.ts";
 

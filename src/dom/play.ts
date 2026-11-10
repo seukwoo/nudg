@@ -64,6 +64,14 @@ export interface PlayOptions<C extends NudgContract = NudgContract> {
    * The state at bind time is sent too, so content that mounts open animates in.
    */
   watch?: boolean;
+  /** An event to send as soon as the elements are bound: `start: "host.show"` plays a way in on mount. */
+  start?: C["events"];
+  /**
+   * Let go by itself: destroy the player, and put back the elements' own styles, at the first
+   * rest ("settle") or at the exit ("exit", which needs `exit`). For one-shots: a shake, a
+   * success pop, a burst piece, an entrance. `done` resolves then.
+   */
+  release?: "settle" | "exit";
 }
 
 export interface Player<C extends NudgContract = NudgContract> {
@@ -93,6 +101,8 @@ export interface Player<C extends NudgContract = NudgContract> {
   setReducedMotion(on: boolean | undefined): void;
   /** Stops the player and puts back the inline styles its elements had before they were bound. */
   destroy(): void;
+  /** Resolves once the player has stopped: released (see `release`) or destroyed. */
+  readonly done: Promise<void>;
 }
 
 /**
@@ -118,6 +128,7 @@ const DRAG_SLOP = 4;
 let releasedFromDrag = false;
 
 export function play<C extends NudgContract = NudgContract>(program: Program, root: ParentNode | null = document, options: PlayOptions<C> = {}): Player<C> {
+  if (options.release === "exit" && !options.exit) throw new Error('release: "exit" needs `exit`, the states that mean the component is gone.');
   const elements = new Map<string, Set<Element>>();
   const cleanups = new Map<Element, () => void>();
   const found = new Set<string>();
@@ -182,9 +193,19 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
       for (const els of elements.values()) reflectState(els);
       options.onState?.(state);
     },
-    onSettle: options.onSettle,
-    onExit: options.onExit,
+    onSettle: (state) => {
+      options.onSettle?.(state);
+      if (options.release === "settle") letGo();
+    },
+    onExit: () => {
+      options.onExit?.();
+      if (options.release === "exit") letGo();
+    },
   });
+  // A release runs after the frame that reported the rest, not inside it.
+  const letGo = () => queueMicrotask(() => player.destroy());
+  let stopped!: () => void;
+  const done = new Promise<void>((resolve) => (stopped = resolve));
 
   let lastValues: Record<string, Value> = {};
   function apply(values: Record<string, Value>) {
@@ -520,8 +541,9 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   // A starting state that loops moves from the first frame on.
   if (!manual && runtime.looping()) frame = nextFrame(tick);
 
-  return {
+  const player: Player<C> = {
     runtime,
+    done,
     get unbound() {
       return program.targets.filter((t) => !elements.has(t));
     },
@@ -547,7 +569,9 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
       changed();
     },
     destroy() {
+      if (destroyed) return;
       destroyed = true;
+      stopped();
       system?.removeEventListener?.("change", onSystemChange);
       frame?.();
       cancelAnimationFrame(measureFrame);
@@ -560,6 +584,8 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
       window.removeEventListener("pointercancel", onCancel, true);
     },
   };
+  if (options.start !== undefined) send(options.start);
+  return player;
 }
 
 /** KeyboardEvent.key as a nudg key name: " " is space, names are lowercased. */

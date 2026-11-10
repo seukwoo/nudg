@@ -420,6 +420,86 @@ Status: decided 2026-11-09. Composition is implemented, as the default in the DO
 - **Composition is the default, with no option to turn it off.** Before, the last writer won and a motion disappeared; nobody depends on that.
 - **The delay input ships in format 1.2.** PlaySnack already works around it with a document per card and a timer per tag.
 
+## Nothing around nudg: host glue, and an agent that finds what exists
+
+Status: proposed 2026-11-10. PlaySnack drives every shell interaction with nudg, and still keeps 731 lines of motion glue and CSS keyframes on seven screens ([devlog](devlog.md#2026-11-10-what-playsnack-wrote-around-nudg)). Two kinds of gap produced them.
+
+- **nudg lacked the feature.** Examples: a player that lets go by itself; binding every button. These need new adapter API.
+- **nudg had the feature, and the agent never found it.** Examples: `nudgTransition`; `onExit` and `present` for close-then-unmount; reduced motion that is already automatic. The agent skill teaches the file loop (edit, compare, judge) and says nothing about the host side, so the agent wired nudg the way it would wire any library: with its own timers and wrappers.
+
+Glue that duplicates nudg is a maintenance cost the person pays, and it hides motion from the tools (compare, critique, observe). The goal: an app's motion is nudg files plus adapter calls, and an agent that builds with nudg reaches for those first.
+
+None of this changes the format. Every item is adapter API or agent tooling, so the runtimes and conformance cases stay as they are.
+
+### Proposed: adapter features, in order of the glue they remove
+
+1. **A player that lets go by itself.**
+   - API: `playDoc(file, el, { start: "host.go", release: "settle" | "exit" })`.
+   - `start` sends an event right after binding.
+   - `release` destroys the player at its first rest (or exit) after something moved, which restores the element's own styles.
+   - This is a shake, a success pop, a burst piece: one call, no `letGo`, no timers.
+   - A `player.done` promise resolves when it lets go, for hosts that clean up a container.
+2. **Close, then unmount, as one thing.**
+   - The React hook (and the DOM player) gain `leaving`: in an exit state and still moving.
+   - Today a host must derive this to let taps through a leaving dim.
+   - Everything else in PlaySnack's 78-line closer already exists or was #133:
+     - `send("host.hide")`, then the parent unmounts in `onExit`;
+     - a show during the way out cancels the exit (`present` returns to true);
+     - reduced motion exits at once;
+     - a hidden tab now ends.
+   - This item is therefore mostly guidance (see below), plus one flag.
+3. **One file on every element that matches.**
+   - API: `playEach(file, selector, { root, when: "press" | "mount" })`.
+   - `press` binds a player when a pointer lands, in the capture phase, so the press shows on that very touch.
+   - `mount` binds elements as they appear, through a MutationObserver.
+   - Players whose elements leave the page are destroyed.
+   - It skips disabled controls and `[data-nudg-off]`.
+   - Composition (1.6) makes the old skips (another player moves it, it has its own transform) unnecessary.
+4. **One-off entrances cheaper than a CSS line.**
+   - API: `useNudgOnce(file, { replay: [deps] })` in React returns a ref. The element plays the file's way in on mount, plays it again when a dependency changes (a countdown's number), and lets go at rest.
+   - On the DOM, the same is item 1 with `start: "host.show"`.
+   - Presets for the shapes PlaySnack hand-wrote as keyframes: `pop` (scale and fade in with overshoot), `drop` (falls in, squashes, settles), `shake`.
+   - With these, a trophy drop is `useNudgOnce(presets.drop())`. It honours reduced motion and shows in compare, which the CSS line never did.
+5. **Particles ([#118](https://github.com/seukwoo/nudg/issues/118)).**
+   - This one is a format question: many pieces from one file, each with its own direction.
+   - It is kept separate, and decided after 1 to 4 show how much of the burst is left.
+
+### Proposed: an agent that finds what exists
+
+1. **The skill and the guide cover the host side.**
+   - A short "wire without glue" table maps what an app needs to the API that does it:
+     - unmount after the way out: `exit` and `onExit` / `present`;
+     - a library's overlay: `nudgTransition`;
+     - a one-shot: `release`;
+     - every button: `playEach`;
+     - a stagger: `delay.input`;
+     - two motions on one element: they compose;
+     - reduced motion: already followed.
+   - Rules:
+     - never time motion with `setTimeout`, use `onSettle` / `onExit`;
+     - never write `transform` or `opacity` on a bound element;
+     - never add CSS keyframes or transitions for something a preset or recipe covers.
+2. **`nudg audit` (CLI and MCP `nudg_audit`).**
+   - It scans a project for motion that lives outside nudg:
+     - CSS `@keyframes`, `animation` and `transition` on transform or opacity;
+     - `element.animate`;
+     - other motion libraries;
+     - `requestAnimationFrame` loops;
+     - timers around a player's `send` or `destroy`;
+     - style writes to bound elements.
+   - Each finding names the nudg equivalent: a preset, a recipe, or an adapter call.
+   - A summary line gives the share of motion on nudg. "PlaySnack at 100%" then becomes a number the person and the agent can both see.
+   - The skill tells the agent to run it after wiring nudg into an app.
+3. **Warnings where the glue happens.**
+   - The DOM adapter warns once when a bound element also has a CSS transition or animation on a property the file writes.
+   - `observe` already detects this after the fact; the warning catches it while the agent is still working.
+
+### Open choices
+
+- `release` on the existing `playDoc`, or a separate `playOnce`? Proposed: an option, so one function stays the way in.
+- `useNudgOnce` replaying on dependencies, or a `key` the host changes (React's own way to restart)? Proposed: `replay`, because a key remounts the element and loses its focus and DOM state.
+- `audit` heuristics will miss things and flag some CSS that is fine (a colour hover). Proposed: report, never fail, and let `// nudg-audit-ignore` mark the deliberate ones.
+
 ## Open questions
 
 These are unresolved design choices. Scheduling and completion status live in the [roadmap](roadmap.md); examples of possible syntax below are proposals.

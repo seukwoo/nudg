@@ -88,6 +88,7 @@ test("nudg skill writes a Claude Code skill", () => {
     const skill = readFileSync(join(dir, ".claude", "skills", "nudg", "SKILL.md"), "utf8");
     assert.match(skill, /^---\nname: nudg\ndescription: /);
     assert.match(skill, /before: "HEAD"/);
+    assert.match(skill, /Wire it without glue/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

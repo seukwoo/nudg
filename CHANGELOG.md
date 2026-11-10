@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Agents wire nudg without glue.** PlaySnack's agent-written motion code kept timers, wrappers and CSS keyframes for things the adapters already did (unmounting after the way out, knowing when motion is over, nudgTransition), because the guide and skill taught the file and not the host side. The guide has a new section, "Wire it without glue", mapping what an app needs to the adapter call that does it; the skill and the MCP instructions point to it.
 - **A hidden tab still reaches the end.** The DOM adapter moved only on animation frames, which a background tab never draws, so `onSettle` and `onExit` never came there: a sheet closed in another tab never unmounted, and hosts kept fallback timers for it. Each frame is now backed by a timer, so the motion lands at its end and the callbacks come. Found in PlaySnack's motion code ([devlog](docs/devlog.md#2026-11-10-what-playsnack-wrote-around-nudg)).
 
 ## 1.6.0

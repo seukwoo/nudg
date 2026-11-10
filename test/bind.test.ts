@@ -208,3 +208,39 @@ test("players on one element compose: the element's own transform stays outermos
     close();
   }
 });
+
+test("a page that draws no frames (a hidden tab) still reaches the end: onSettle and onExit come", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const { launchBrowser, waitFor } = await import("../src/node/cdp.ts");
+  const { serveIfLocal } = await import("../src/node/observe.ts");
+  const { url, close } = await serveIfLocal("test/fixtures/host/presence.html");
+  const browser = await launchBrowser(chrome!);
+  try {
+    await browser.send("Page.navigate", { url });
+    await waitFor(() => browser.evaluate("window.__player ? 'ready' : ''"), 15_000);
+    const result = await browser.evaluate(`(async () => {
+      const { playDoc } = await import("../../../dist/dom/index.js");
+      const { presets } = await import("../../../dist/index.js");
+      const raf = window.requestAnimationFrame;
+      window.requestAnimationFrame = () => 0; // as in a hidden tab: no frame ever comes
+      const el = document.createElement("div");
+      document.body.append(el);
+      const heard = [];
+      const p = playDoc(presets.appear(), el, { exit: "hidden", onSettle: (s) => heard.push("settle:" + s.join()), onExit: () => heard.push("exit") });
+      p.send("host.show");
+      await new Promise((r) => setTimeout(r, 1500));
+      const shown = getComputedStyle(el).opacity;
+      p.send("host.hide");
+      await new Promise((r) => setTimeout(r, 1500));
+      const hidden = getComputedStyle(el).opacity;
+      p.destroy();
+      window.requestAnimationFrame = raf;
+      return { heard, shown, hidden };
+    })()`);
+    assert.equal(result.shown, "1", "the way in reached its end");
+    assert.equal(result.hidden, "0", "the way out reached its end");
+    assert.deepEqual(result.heard, ["settle:shown", "settle:hidden", "exit"]);
+  } finally {
+    await browser.close();
+    close();
+  }
+});

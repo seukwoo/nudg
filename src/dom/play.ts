@@ -153,7 +153,10 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   const speed = options.speed ?? 1;
   if (!(speed > 0)) throw new RangeError("`speed` must be greater than 0.");
   let manualTime = 0;
-  let frame = 0;
+  // The pending frame's cancel, or undefined. A hidden tab draws no frames, so a timer backs
+  // each one up: the motion still reaches its end (time is absolute, so a late frame lands
+  // there), onSettle and onExit still come, and a closed sheet still unmounts.
+  let frame: (() => void) | undefined;
   const now = () => (manual ? manualTime : ((performance.now() - start) / 1000) * speed);
 
   // Which properties each target has, so we only write the styles the file owns.
@@ -191,10 +194,10 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   }
 
   function tick() {
-    frame = 0;
+    frame = undefined;
     const t = now();
     apply(runtime.sample(t));
-    if (life.frame(t)) frame = requestAnimationFrame(tick);
+    if (life.frame(t)) frame = nextFrame(tick);
   }
 
   // The active states, on every bound element, so CSS can style by state:
@@ -206,7 +209,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
 
   function changed() {
     if (manual) apply(runtime.sample(manualTime));
-    else if (!frame) frame = requestAnimationFrame(tick);
+    else if (!frame) frame = nextFrame(tick);
     life.changed();
   }
 
@@ -515,7 +518,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   // Real time has already started; sampling at 0 now would run the clock backwards.
   apply(runtime.sample(now()));
   // A starting state that loops moves from the first frame on.
-  if (!manual && runtime.looping()) frame = requestAnimationFrame(tick);
+  if (!manual && runtime.looping()) frame = nextFrame(tick);
 
   return {
     runtime,
@@ -546,7 +549,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     destroy() {
       destroyed = true;
       system?.removeEventListener?.("change", onSystemChange);
-      cancelAnimationFrame(frame);
+      frame?.();
       cancelAnimationFrame(measureFrame);
       observer?.disconnect();
       contents?.disconnect();
@@ -638,4 +641,24 @@ function watchState(el: Element, send: (event: string) => void): () => void {
   });
   observer.observe(el, { attributes: true, attributeFilter: Object.keys(WATCHED) });
   return () => observer.disconnect();
+}
+
+/** How long a frame may be late before a timer runs it instead: a visible page draws long before. */
+const FRAME_BACKUP_MS = 100;
+
+/** Runs `fn` on the next animation frame, or after FRAME_BACKUP_MS if none comes (a hidden tab); returns a cancel. */
+function nextFrame(fn: () => void): () => void {
+  let id = 0;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const cancel = () => {
+    cancelAnimationFrame(id);
+    clearTimeout(timer);
+  };
+  const run = () => {
+    cancel();
+    fn();
+  };
+  id = requestAnimationFrame(run);
+  timer = setTimeout(run, FRAME_BACKUP_MS);
+  return cancel;
 }

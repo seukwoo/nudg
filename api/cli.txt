@@ -30,8 +30,9 @@ simulate and plot options
   mcp                       Run the MCP server on stdio (tools: nudg_guide, nudg_validate,
                             nudg_simulate, nudg_plot, nudg_compare, nudg_render, nudg_observe).
   preset <name> [--options '{"scale":0.9}']
-                            Print a preset (press, hover, toggle, toast) as a nudg file,
-                            to save and edit: nudg preset press > press.nudg.json
+                            Print a preset (press, hover, toggle, toast, appear, pop, drop,
+                            shake) as a nudg file, to save and edit:
+                            nudg preset press > press.nudg.json
   recipe [name] [--json|--source|--gaps]
                             List semantic interaction contracts, or resolve a human UI term
                             such as toggle, video chat or sheet. --source prints its starter file.

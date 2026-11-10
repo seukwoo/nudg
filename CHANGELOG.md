@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.7.0
+
+Less code around nudg. PlaySnack drives every interaction with nudg, but kept 731 lines of its own motion code and CSS keyframes on seven screens. Part of that was missing from nudg; part of it was already there, and the agent never found it. This release fixes both: one-shots let go by themselves, entrances are one hook, a hidden tab still ends its motion, and the guide and skill now cover the app side. The format stays 1.2; the API only gains.
 
 - **One-shots without glue.** `playDoc(file, el, { start, release })` sends `start` as soon as the elements are bound and lets go by itself at the first rest (or at the exit): the player is destroyed and the elements get their own styles back. `player.done` resolves then. React's `useNudgOnce(file, { replay })` plays a way in on mount and again when `replay` changes. New presets: `pop`, `drop` and `shake`. A trophy that drops in, a countdown number that pops and a field that shakes are each one line, with reduced motion and the tools included, where PlaySnack had CSS keyframes and its own release helper.
 - **Agents wire nudg without glue.** PlaySnack's agent-written motion code kept timers, wrappers and CSS keyframes for things the adapters already did (unmounting after the way out, knowing when motion is over, nudgTransition), because the guide and skill taught the file and not the host side. The guide has a new section, "Wire it without glue", mapping what an app needs to the adapter call that does it; the skill and the MCP instructions point to it.

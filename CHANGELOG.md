@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **A hidden tab still reaches the end.** The DOM adapter moved only on animation frames, which a background tab never draws, so `onSettle` and `onExit` never came there: a sheet closed in another tab never unmounted, and hosts kept fallback timers for it. Each frame is now backed by a timer, so the motion lands at its end and the callbacks come. Found in PlaySnack's motion code ([devlog](docs/devlog.md#2026-11-10-what-playsnack-wrote-around-nudg)).
+
 ## 1.6.0
 
 What a whole app needed. PlaySnack applied nudg across its screens and filed seven issues in a day; all seven are fixed here. Players on one element now compose, a staggered list keeps its rhythm in the file with format 1.2's delay from an input, and reduced motion follows the system as it changes, on every platform. Format 1.2 only adds; 1.1 files and compiled programs that don't use the new delay read as before.

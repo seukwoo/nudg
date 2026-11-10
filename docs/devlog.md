@@ -562,3 +562,25 @@ PlaySnack began applying nudg across its whole app (an exaggerated version first
 - **Cause:** Pages under `test/fixtures/host/` import the package from `dist/`, which CI doesn't have until something builds it. Only `demo.test.ts` did, partway through the run. `presence` and `layout` sort after `demo` and, with three files at a time, ran once its build had finished; `bind` sorts first and loaded the page before `dist/` existed. Locally a `dist/` was always left over from an earlier build, so nothing showed.
 - **Resolution:** `npm test` builds first (`pretest`), and `demo.test.ts` no longer rebuilds in the middle of the run, where it overwrote files other tests were reading.
 - **Lesson:** A test that depends on a build has to say so where it runs, not inherit it from another file's side effect.
+
+## 2026-11-10: What PlaySnack wrote around nudg
+
+After 1.6.0, PlaySnack's motion code was read for what nudg should have done itself. It uses nudg for every shell interaction: presses, switches, sheets, toasts, a staggered card list, shakes, a success burst. Around it sit 731 lines of glue in `src/motion/`, and seven screens still animate with CSS keyframes. The glue is the gap list.
+
+### No end in a hidden tab
+- **Problem:** Three places (`shake`, `burst`, sheet close) keep a fallback timer "for a tab that draws no frames": without it, a sheet closed in a background tab never unmounts and a burst layer stays in the page.
+- **Cause:** The DOM player advanced only on `requestAnimationFrame`, which a hidden tab never calls, so `onSettle` and `onExit` never came.
+- **Resolution:** Each frame is backed by a 100 ms timer. Time is absolute, so a late frame lands where the motion would be, and the end and its callbacks come (in a hidden tab, about a second late, as browsers throttle timers there).
+- **Lesson:** "When it's over" is only as reliable as the clock that drives it. Hosts shouldn't need their own timer to trust onExit.
+
+### Already fixed by 1.6
+- A helper that binds a file to one element by its first target (`playOn`), for #119: `playDoc(doc, el)` does this now.
+- Skipping buttons another player moves or that carry their own inline transform, for #122 and #125: players compose now.
+- A document per card and a timer per tag for a stagger, for #124: `delay.input`.
+
+### Still open, in order of how much glue they cost
+- **One-shot effects.** A shake or a burst piece is played, then destroyed and its styles cleared once it rests (`letGo`). A player option that lets go by itself at rest or exit would remove this from every host.
+- **Close, then unmount.** Every sheet shares a 78-line closer: close plays the way out, the host unmounts only after `onExit`, a reopen during the way out cancels it, a second close is ignored, the dim lets taps through while leaving. The React adapter has `exit` and `present` (and `NudgTransition`), but not this sequence as one thing.
+- **One press for every button.** A capture-phase `pointerdown` listener binds the press file to whichever button a finger lands on. Binding a file to elements matching a selector, as they appear, would make this one call.
+- **One-off entrances still in CSS.** A countdown number, a trophy drop, a flag, a card pop: keyframes that play once on mount. nudg can express each (entry keyframes), but a file, a hook and a send cost more than a CSS line, so they stayed CSS and miss reduced motion and the judge loop.
+- **Particles** ([#118](https://github.com/seukwoo/nudg/issues/118)): the burst is one player per piece with random directions computed in the host.

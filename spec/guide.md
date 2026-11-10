@@ -282,6 +282,29 @@ Pattern words live in external recipe metadata, not core syntax. Every shipped e
 
 In a Vite web app, add `nudg()` from `@nudg/core/vite` to the config's plugins when you first wire nudg in: files are compiled at build time (errors fail the build), and the bundle is half the size. Presets keep working with it.
 
+## Wire it without glue
+
+An app's motion is nudg files plus adapter calls. Before you write a timer, a wrapper or a CSS animation around nudg, check this table: the adapter already does it, and code that duplicates it hides motion from compare, critique and observe, and has to be maintained twice.
+
+| The app needs | Use |
+|---|---|
+| Unmount after the way out (sheet, dialog, toast) | `exit: "hidden"` and `onExit` (or `present`) on the player or hook; send `host.hide`, unmount in `onExit`. A show during the way out cancels it; reduced motion exits at once. |
+| A component library's overlay (MUI, Ant Design, React Bootstrap) | `nudgTransition(file)` as its transition slot |
+| To know the motion is over | `onSettle` / `onExit`, never `setTimeout` with a guessed duration |
+| A file on one element | `playDoc(file, element)`: the element is the file's first target |
+| Two files on one element (a card that rises in and presses) | Bind both: transforms compose and opacities multiply; the element's own transform stays outermost. On React Native, `compose(a.bind("card"), b.bind("button"))`. |
+| Items one after another | `"delay": { "input": "host.index", "times": 0.06, "max": 0.5 }`, each item's player given `host.index` |
+| Reduced motion | Nothing: every adapter follows the system setting, live |
+| A value the app knows (progress, volume, scroll) | `input("host.progress", v)`, declared under `host.inputs` |
+| Something the app decides (closed, loaded, failed) | `send("host.close")`, declared under `host.events` |
+
+Never:
+- write `transform`, `opacity`, `width`, `height` or `background-color` yourself on an element a player is bound to;
+- add CSS `transition` or `animation` on those properties for an element nudg moves;
+- add a CSS keyframe animation for a press, an entrance, a shake or a sheet when a preset or recipe covers it (`nudg_recipe`, `presets`).
+
+If nudg can't do what the app needs without glue, say so to the person and suggest reporting it to the nudg project: the gap is nudg's to fix.
+
 ## Words to edits
 
 | Request | Edit |

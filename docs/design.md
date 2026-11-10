@@ -422,7 +422,7 @@ Status: decided 2026-11-09. Composition is implemented, as the default in the DO
 
 ## Nothing around nudg: host glue, and an agent that finds what exists
 
-Status: proposed 2026-11-10. PlaySnack drives every shell interaction with nudg, and still keeps 731 lines of motion glue and CSS keyframes on seven screens ([devlog](devlog.md#2026-11-10-what-playsnack-wrote-around-nudg)). Two kinds of gap produced them.
+Status: decided 2026-11-10, with the recommended choices below; being implemented in order (agent guidance first). PlaySnack drives every shell interaction with nudg, and still keeps 731 lines of motion glue and CSS keyframes on seven screens ([devlog](devlog.md#2026-11-10-what-playsnack-wrote-around-nudg)). Two kinds of gap produced them.
 
 - **nudg lacked the feature.** Examples: a player that lets go by itself; binding every button. These need new adapter API.
 - **nudg had the feature, and the agent never found it.** Examples: `nudgTransition`; `onExit` and `present` for close-then-unmount; reduced motion that is already automatic. The agent skill teaches the file loop (edit, compare, judge) and says nothing about the host side, so the agent wired nudg the way it would wire any library: with its own timers and wrappers.
@@ -431,7 +431,7 @@ Glue that duplicates nudg is a maintenance cost the person pays, and it hides mo
 
 None of this changes the format. Every item is adapter API or agent tooling, so the runtimes and conformance cases stay as they are.
 
-### Proposed: adapter features, in order of the glue they remove
+### Decided: adapter features, in order of the glue they remove
 
 1. **A player that lets go by itself.**
    - API: `playDoc(file, el, { start: "host.go", release: "settle" | "exit" })`.
@@ -464,7 +464,7 @@ None of this changes the format. Every item is adapter API or agent tooling, so 
    - This one is a format question: many pieces from one file, each with its own direction.
    - It is kept separate, and decided after 1 to 4 show how much of the burst is left.
 
-### Proposed: an agent that finds what exists
+### Decided: an agent that finds what exists
 
 1. **The skill and the guide cover the host side.**
    - A short "wire without glue" table maps what an app needs to the API that does it:
@@ -494,7 +494,7 @@ None of this changes the format. Every item is adapter API or agent tooling, so 
    - The DOM adapter warns once when a bound element also has a CSS transition or animation on a property the file writes.
    - `observe` already detects this after the fact; the warning catches it while the agent is still working.
 
-### Open choices
+### Choices (decided as proposed)
 
 - `release` on the existing `playDoc`, or a separate `playOnce`? Proposed: an option, so one function stays the way in.
 - `useNudgOnce` replaying on dependencies, or a `key` the host changes (React's own way to restart)? Proposed: `replay`, because a key remounts the element and loses its focus and DOM state.

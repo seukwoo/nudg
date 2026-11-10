@@ -11,6 +11,7 @@ export type CritiqueSeverity = "warning" | "suggestion";
 export declare const DRAG_SLOP = 4;
 export interface DelayInput { input: string; times: number; plus: number; max?: number; }
 export interface Diagnostic { severity: Severity; code: string; message: string; path: string; file?: string; hint?: string; }
+export interface DropOptions { target?: string; height?: number; tilt?: number; motion?: SpringOptions; }
 export declare const EVENTS: readonly ["down", "up", "cancel", "tap", "dragstart", "dragend", "hoverstart", "hoverend", "focus", "blur", "longpress", "doubletap", "scrollup", "scrolldown", "scrollleft", "scrollright", "pinchstart", "pinchend"];
 export type Ease = "linear" | readonly [number, number, number, number];
 export type EntryEffect = SpringMotion | KeyframesEffect;
@@ -45,6 +46,7 @@ export interface Plot { svg: string; width: number; height: number; simulation: 
 export interface PlotOptions extends SimulateOptions { title?: string; width?: number; against?: Program; labels?: [string, string]; }
 export interface PointerSink { send(event: string): void; input(name: string, value: number): void; }
 export declare class PointerTracker { private origin; private first; private dragging; private readonly points; private pinch; private pinched; private readonly target; private readonly draggable; private readonly pinchable; private readonly sink; constructor(target: string, draggable: boolean, sink: PointerSink, pinchable?: boolean); down(x: number, y: number, id?: number): void; move(x: number, y: number, id?: number): void; up(inside?: boolean, id?: number): void; cancel(): void; }
+export interface PopOptions { target?: string; scale?: number; motion?: SpringOptions; }
 export type PresetName = keyof typeof presets;
 export interface PressOptions { target?: string; scale?: number; y?: number; sink?: SpringOptions; release?: SpringOptions; }
 export interface Program { version: string; targets: string[]; host?: HostDeclaration; properties: Map<string, Property>; animate: Map<string, Motion>; machine: Machine; }
@@ -57,6 +59,7 @@ export type ReadFile = (path: string) => string | undefined;
 export interface Runtime { readonly program: Program; send(event: string, t: number): boolean; setReducedMotion(on: boolean, t: number): void; input(name: string, value: number, t: number): boolean; requiredInputs(): string[]; measurements(): string[]; unmeasured(): string[]; sample(t: number): Record<string, Value>; targets(): Record<string, Value | undefined>; state(): string[]; settled(t: number, property?: string): boolean; resting(t: number): boolean; time(): number; looping(): boolean; }
 export interface Sample { t: number; state: string[]; values: Record<string, Value>; }
 export type Severity = "error" | "warning";
+export interface ShakeOptions { target?: string; distance?: number; duration?: number; }
 export interface SimulateOptions { events: TimedEvent[]; start?: string[]; reducedMotion?: boolean; until?: number; every?: number; properties?: string[]; }
 export interface Simulation { samples: Sample[]; summary: Record<string, PropertySummary>; unhandled: TimedEvent[]; }
 export interface Source { path: string; text: string; }
@@ -91,6 +94,7 @@ export declare function decomposeMatrix(m: [number, number, number, number, numb
 export declare function didYouMean(input: string, candidates: string[]): string | undefined;
 export declare function dragAxes(program: Program): Map<string, "x" | "y">;
 export declare function draggableTargets(program: Program): Set<string>;
+export declare function drop(options?: DropOptions): NudgDocument;
 export declare function handledEvents(program: Program): Set<string>;
 export declare function hover(options?: HoverOptions): NudgDocument;
 export declare function initialValues(program: Program, options?: InitialOptions): Record<string, Value>;
@@ -101,10 +105,12 @@ export declare function measuredName(property: string): string | undefined;
 export declare function pinchInputs(start: [number, number][], now: [number, number][]): { scale: number; rotation: number; x: number; y: number; };
 export declare function pinchableTargets(program: Program): Set<string>;
 export declare function plot(program: Program, options: PlotOptions): Plot;
-export declare const presets: { press: typeof press; hover: typeof hover; toggle: typeof toggle; toast: typeof toast; appear: typeof appear; };
+export declare function pop(options?: PopOptions): NudgDocument;
+export declare const presets: { press: typeof press; hover: typeof hover; toggle: typeof toggle; toast: typeof toast; appear: typeof appear; pop: typeof pop; drop: typeof drop; shake: typeof shake; };
 export declare function press(options?: PressOptions): NudgDocument;
 export declare function programFromJson(json: unknown): Program;
 export declare function programToJson(program: Program): Json;
+export declare function shake(options?: ShakeOptions): NudgDocument;
 export declare function simulate(program: Program, options: SimulateOptions): Simulation;
 export declare function summarizeHost(series: HostSeries): HostSummary;
 export declare function toProgram(source: Program | object, files?: Record<string, unknown>): Program;
@@ -116,8 +122,8 @@ export declare function toggle(options?: ToggleOptions): NudgDocument;
 export interface InitialOptions { state?: string[]; inputs?: Record<string, number>; }
 export interface NudgContract { targets: string; events: string; inputs: string; states: string; }
 export type NudgStyle = Partial<Record<"transform" | "opacity" | "width" | "height" | "backgroundColor" | "fill", string>>;
-export interface PlayOptions<C extends NudgContract = NudgContract> { bind?: Partial<Record<C["targets"], Element | Element[]>>; clock?: "realtime" | "manual"; state?: C["states"][]; onState?: (state: C["states"][]) => void; reducedMotion?: boolean; onFrame?: (values: Record<string, Value>) => void; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; onEvent?: (item: { event: string; } | { input: string; value: number; }, t: number) => void; speed?: number; watch?: boolean; }
-export interface Player<C extends NudgContract = NudgContract> { readonly runtime: Runtime; readonly unbound: string[]; readonly unknown: string[]; send(event: C["events"]): boolean; values(): Record<string, Value>; input(name: C["inputs"], value: number): boolean; bind(name: C["targets"], element: Element): () => void; now(): number; render(t: number): void; present(): boolean; setReducedMotion(on: boolean | undefined): void; destroy(): void; }
+export interface PlayOptions<C extends NudgContract = NudgContract> { bind?: Partial<Record<C["targets"], Element | Element[]>>; clock?: "realtime" | "manual"; state?: C["states"][]; onState?: (state: C["states"][]) => void; reducedMotion?: boolean; onFrame?: (values: Record<string, Value>) => void; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; onEvent?: (item: { event: string; } | { input: string; value: number; }, t: number) => void; speed?: number; watch?: boolean; start?: C["events"]; release?: "settle" | "exit"; }
+export interface Player<C extends NudgContract = NudgContract> { readonly runtime: Runtime; readonly unbound: string[]; readonly unknown: string[]; send(event: C["events"]): boolean; values(): Record<string, Value>; input(name: C["inputs"], value: number): boolean; bind(name: C["targets"], element: Element): () => void; now(): number; render(t: number): void; present(): boolean; setReducedMotion(on: boolean | undefined): void; destroy(): void; readonly done: Promise<void>; }
 export type StateName<C extends NudgContract> = C["states"] | LastName<C["states"]>;
 export declare function compileText(text: string, url: string | URL): Promise<CompileResult>;
 export declare function compileUrl(url: string | URL): Promise<CompileResult>;
@@ -134,15 +140,20 @@ export interface NudgContract { targets: string; events: string; inputs: string;
 export interface NudgTransitionOptions { show?: string; hide?: string; hidden?: string | string[]; target?: string; files?: Record<string, unknown>; reducedMotion?: boolean; }
 export type StateName<C extends NudgContract> = C["states"] | LastName<C["states"]>;
 export interface TransitionProps { in?: boolean; appear?: boolean; children?: ReactElement; onEnter?: (node: Element | null, isAppearing: boolean) => void; onEntering?: (node: Element | null, isAppearing: boolean) => void; onEntered?: (node: Element | null, isAppearing: boolean) => void; onExit?: (node: Element | null) => void; onExiting?: (node: Element | null) => void; onExited?: (node: Element | null) => void; style?: Record<string, unknown>; timeout?: unknown; easing?: unknown; addEndListener?: unknown; }
+export interface UseNudgOnceOptions { start?: string; replay?: unknown[]; target?: string; files?: Record<string, unknown>; reducedMotion?: boolean; }
 export interface UseNudgOptions<C extends NudgContract = NudgContract> { state?: C["states"][]; inputs?: Partial<Record<C["inputs"], number>>; files?: Record<string, unknown>; reducedMotion?: boolean; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; watch?: boolean; }
 export declare function appear(options?: AppearOptions): NudgDocument;
+export declare function drop(options?: DropOptions): NudgDocument;
 export declare function hover(options?: HoverOptions): NudgDocument;
 export declare function nudgTransition(source?: Program | object, options?: NudgTransitionOptions): ForwardRefExoticComponent<TransitionProps & RefAttributes<Element>>;
-export declare const presets: { press: typeof press; hover: typeof hover; toggle: typeof toggle; toast: typeof toast; appear: typeof appear; };
+export declare function pop(options?: PopOptions): NudgDocument;
+export declare const presets: { press: typeof press; hover: typeof hover; toggle: typeof toggle; toast: typeof toast; appear: typeof appear; pop: typeof pop; drop: typeof drop; shake: typeof shake; };
 export declare function press(options?: PressOptions): NudgDocument;
+export declare function shake(options?: ShakeOptions): NudgDocument;
 export declare function toast(options?: ToastOptions): NudgDocument;
 export declare function toggle(options?: ToggleOptions): NudgDocument;
 export declare function useNudg<C extends NudgContract = NudgContract>(source: Program | object, options?: UseNudgOptions<C>): Nudg<C>;
+export declare function useNudgOnce(source: Program | object, options?: UseNudgOnceOptions): (element: Element | null) => void;
 
 ## @nudg/core/vite
 
@@ -160,9 +171,12 @@ export type StateName<C extends NudgContract> = C["states"] | LastName<C["states
 export interface UseNudgNativeOptions<C extends NudgContract = NudgContract> { state?: C["states"][]; inputs?: Partial<Record<C["inputs"], number>>; files?: Record<string, unknown>; reducedMotion?: boolean; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; }
 export declare function appear(options?: AppearOptions): NudgDocument;
 export declare function compose(...styles: Style[]): Record<string, unknown>;
+export declare function drop(options?: DropOptions): NudgDocument;
 export declare function hover(options?: HoverOptions): NudgDocument;
-export declare const presets: { press: typeof press; hover: typeof hover; toggle: typeof toggle; toast: typeof toast; appear: typeof appear; };
+export declare function pop(options?: PopOptions): NudgDocument;
+export declare const presets: { press: typeof press; hover: typeof hover; toggle: typeof toggle; toast: typeof toast; appear: typeof appear; pop: typeof pop; drop: typeof drop; shake: typeof shake; };
 export declare function press(options?: PressOptions): NudgDocument;
+export declare function shake(options?: ShakeOptions): NudgDocument;
 export declare function toast(options?: ToastOptions): NudgDocument;
 export declare function toggle(options?: ToggleOptions): NudgDocument;
 export declare function useNudg<C extends NudgContract = NudgContract>(source: Program | object, options?: UseNudgNativeOptions<C>): NudgNative<C>;

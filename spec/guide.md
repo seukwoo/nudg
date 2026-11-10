@@ -278,7 +278,7 @@ Pattern words live in external recipe metadata, not core syntax. Every shipped e
 
 ## Presets
 
-`presets.press()`, `hover()`, `toggle()`, `toast()` (in `@nudg/core` and `@nudg/core/react`) return ready-made documents for the common cases, so a plain press needs no file: `useNudg(presets.press({ scale: 0.96 }))`. When a user wants more than the options cover, write the file: `nudg preset press > press.nudg.json` prints the same document, and then edit it like any nudg file.
+`presets.press()`, `hover()`, `toggle()`, `toast()`, `appear()`, `pop()`, `drop()` and `shake()` (in `@nudg/core` and `@nudg/core/react`) return ready-made documents for the common cases, so a plain press needs no file: `useNudg(presets.press({ scale: 0.96 }))`. When a user wants more than the options cover, write the file: `nudg preset press > press.nudg.json` prints the same document, and then edit it like any nudg file.
 
 In a Vite web app, add `nudg()` from `@nudg/core/vite` to the config's plugins when you first wire nudg in: files are compiled at build time (errors fail the build), and the bundle is half the size. Presets keep working with it.
 
@@ -290,6 +290,8 @@ An app's motion is nudg files plus adapter calls. Before you write a timer, a wr
 |---|---|
 | Unmount after the way out (sheet, dialog, toast) | `exit: "hidden"` and `onExit` (or `present`) on the player or hook; send `host.hide`, unmount in `onExit`. A show during the way out cancels it; reduced motion exits at once. |
 | A component library's overlay (MUI, Ant Design, React Bootstrap) | `nudgTransition(file)` as its transition slot |
+| A one-off entrance (a result pops, a trophy drops, a countdown number) | React: `useNudgOnce(presets.pop(), { replay: [count] })` returns a ref. DOM: `playDoc(presets.drop(), el, { start: "host.show", release: "settle" })`. Never a CSS keyframe animation. |
+| A one-shot effect (a shake on a wrong PIN, a success pop) | `playDoc(presets.shake(), field, { start: "host.shake", release: "settle" })`: it lets go by itself at rest and puts the element's styles back; `player.done` resolves then. |
 | To know the motion is over | `onSettle` / `onExit`, never `setTimeout` with a guessed duration |
 | A file on one element | `playDoc(file, element)`: the element is the file's first target |
 | Two files on one element (a card that rises in and presses) | Bind both: transforms compose and opacities multiply; the element's own transform stays outermost. On React Native, `compose(a.bind("card"), b.bind("button"))`. |

@@ -213,7 +213,7 @@ nudg preset press > press.nudg.json
 nudg preset toast --options '{"duration": 5}'
 ```
 
-Prints a preset (`press`, `hover`, `toggle`, `toast`) as a nudg file. The same presets are `presets.*` in `@nudg/core` and `@nudg/core/react`, for use without a file: `useNudg(presets.press())`, `playDoc(presets.hover(), element)`.
+Prints a preset (`press`, `hover`, `toggle`, `toast`, `appear`, `pop`, `drop`, `shake`) as a nudg file. The same presets are `presets.*` in `@nudg/core` and `@nudg/core/react`, for use without a file: `useNudg(presets.press())`, `playDoc(presets.hover(), element)`.
 
 ### recipe
 
@@ -376,6 +376,14 @@ const sw = useNudg(switchMotion, { watch: true });   // the file switches on hos
 
 For content a library unmounts when closed (a Radix dialog), pass `forceMount`, and hide it when nudg says it's gone: `useNudg(presets.appear(), { watch: true, exit: "hidden" })` and `style={{ visibility: present ? undefined : "hidden" }}`.
 
+**One-off motion.** `useNudgOnce(file, { replay })` returns a ref. The element plays the file's way in (`host.show`) when it mounts, plays it again when a value in `replay` changes, and lets go at rest, so it keeps its own styles. It is the nudg line for what would otherwise be a CSS keyframe animation, with reduced motion and the tools included:
+
+```tsx
+const trophy = useNudgOnce(presets.drop());
+const number = useNudgOnce(presets.pop(), { replay: [count] });   // a countdown: each number pops
+<img ref={trophy} src={cup} /> <b ref={number}>{count}</b>
+```
+
 **Transition slots** (MUI, and libraries on the react-transition-group contract: Ant Design, React Bootstrap). `nudgTransition(file)` is a transition component: the library tells it when to show and hide, nudg plays the file (default `presets.appear()`), and the element stays mounted until the exit has settled.
 
 ```tsx
@@ -518,6 +526,7 @@ const player = play(program, document.querySelector(".settings"));
 - **State in CSS:** every bound element carries `data-nudg-state` with the active states (`"checked/on press/up"`), so styles can depend on state without any code: `.spinner[data-nudg-state~="refreshing"] { animation: spin 0.8s linear infinite }`. This is how continuous decoration such as a loading spin is done today.
 - **Settle:** `onSettle(state)` is called each time every value has come to rest after something moved or the state changed, once per rest; pending timers don't delay it. The rules are in [the spec](spec.md#rest-and-lifecycle), and the headless player, React, React Native, SwiftUI and Compose report it the same way.
 - **Exits:** `{ exit: "hidden", onExit }` names the states that mean gone. `player.present()` turns false, and `onExit` is called once, when the machine has entered one of them from elsewhere and every value has settled: remove or hide the element then, so the exit motion is seen. Mounting in an exit state doesn't count as an exit.
+- **One-shots:** `{ start: "host.show", release: "settle" }` sends `start` as soon as the elements are bound, and lets go at the first rest: the player is destroyed and the elements get their own styles back. `release: "exit"` lets go at the exit instead (it needs `exit`). `player.done` resolves when the player stops, released or destroyed, so a host can remove a container it made: `playDoc(presets.shake(), field, { start: "host.shake", release: "settle" })`.
 - **App events and state:** `player.send("host.check")` sends an app event. In format 0.5, `player.input("host.volume", 0.7)` supplies a continuous finite number that a file can read with `map` or `follow`; inputs begin at zero and undeclared names return `false`. `{ state: ["on"] }` starts somewhere other than `initial`, and `onState` reports state changes. `player.bind(name, element)` binds an element later and returns a function that unbinds it.
 - **Scroll (0.5):** when a file reads `list.scroll.x` or `list.scroll.y`, the adapter reports that bound element's scroll offset at bind time and on every scroll. The component needs no scroll handler of its own.
 - **Layout (0.4, arithmetic in 0.6):** for a file that measures, the adapter reports each target's untransformed box (offsets) and natural size (scroll size, without the transforms the player writes inside the element) when it starts and when an element is bound later, and again from a `ResizeObserver` (for a natural size, on the element's children too, and when children are added), on window resize and when fonts load. `{ "measure": "sheet.height", "times": 0.5, "plus": -16 }` scales and offsets that result. Values move to the new place with their motion. Measuring a size that the same file animates on the same element would feed back on itself; measure the content's `naturalHeight` instead of the panel's `height`.

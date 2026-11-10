@@ -214,5 +214,116 @@ export function appear(options: AppearOptions = {}): NudgDocument {
   };
 }
 
-export const presets = { press, hover, toggle, toast, appear };
+export interface PopOptions {
+  target?: string;
+  /** The scale it pops from, default 0.6. */
+  scale?: number;
+  motion?: SpringOptions;
+}
+
+/**
+ * Something that pops in once (host.show): a badge, a result, a number. It grows from small
+ * past its size and back, and fades in quickly. Play it with `release: "settle"` and it lets go.
+ */
+export function pop(options: PopOptions = {}): NudgDocument {
+  const t = options.target ?? "content";
+  return {
+    nudg: "1.2",
+    note: "presets.pop(): pops in on host.show and goes on host.hide. Save this file to change more than the options cover.",
+    targets: [t],
+    values: { [`${t}.scale`]: options.scale ?? 0.6, [`${t}.opacity`]: 0 },
+    animate: {
+      [`${t}.scale`]: spring(options.motion ?? {}, 0.35, 0.45),
+      [`${t}.opacity`]: { tween: { duration: 0.12, ease: "out" } },
+    },
+    initial: "hidden",
+    when: { "host.show": "shown", "host.hide": "hidden" },
+    states: {
+      hidden: {},
+      shown: { set: { [`${t}.scale`]: 1, [`${t}.opacity`]: 1 } },
+    },
+  };
+}
+
+export interface DropOptions {
+  target?: string;
+  /** Logical units above its resting place it falls from, default 80. */
+  height?: number;
+  /** Degrees it is tilted as it falls, default -12. */
+  tilt?: number;
+  motion?: SpringOptions;
+}
+
+/**
+ * Something that falls into place once (host.show): a trophy, a flag, a sticker. It drops
+ * with a tilt, squashes as it lands and settles. Play it with `release: "settle"` and it lets go.
+ */
+export function drop(options: DropOptions = {}): NudgDocument {
+  const t = options.target ?? "content";
+  const s = spring(options.motion ?? {}, 0.5, 0.35);
+  return {
+    nudg: "1.2",
+    note: "presets.drop(): falls in on host.show, squashing as it lands. Save this file to change more than the options cover.",
+    targets: [t],
+    values: { [`${t}.y`]: -(options.height ?? 80), [`${t}.rotation`]: options.tilt ?? -12, [`${t}.scaleX`]: 1, [`${t}.scaleY`]: 1, [`${t}.opacity`]: 0 },
+    animate: {
+      [`${t}.y`]: s,
+      [`${t}.rotation`]: s,
+      [`${t}.opacity`]: { tween: { duration: 0.15, ease: "out" } },
+    },
+    initial: "hidden",
+    when: { "host.show": "shown", "host.hide": "hidden" },
+    states: {
+      hidden: {},
+      shown: {
+        set: { [`${t}.y`]: 0, [`${t}.rotation`]: 0, [`${t}.opacity`]: 1 },
+        enter: {
+          [`${t}.scaleX`]: { keyframes: [{ at: 0.35, value: 1 }, { at: 0.5, value: 1.15 }, { at: 0.75, value: 0.97 }], duration: 0.6, ease: "out" },
+          [`${t}.scaleY`]: { keyframes: [{ at: 0.35, value: 1 }, { at: 0.5, value: 0.85 }, { at: 0.75, value: 1.03 }], duration: 0.6, ease: "out" },
+        },
+      },
+    },
+  };
+}
+
+export interface ShakeOptions {
+  target?: string;
+  /** How far the first beat goes, in logical units, default 10. */
+  distance?: number;
+  /** Seconds for the whole shake, default 0.42. */
+  duration?: number;
+}
+
+/**
+ * "No": a field or a button shakes side to side each time the app sends host.shake (a wrong
+ * PIN, a missing name). Sending it again restarts the shake. Reduced motion skips it.
+ */
+export function shake(options: ShakeOptions = {}): NudgDocument {
+  const t = options.target ?? "content";
+  const d = options.distance ?? 10;
+  const r = (v: number) => Math.round(v * 100) / 100;
+  return {
+    nudg: "1.2",
+    note: "presets.shake(): shakes on host.shake. Save this file to change more than the options cover.",
+    targets: [t],
+    values: { [`${t}.x`]: 0 },
+    animate: { [`${t}.x`]: { spring: { duration: 0.3, bounce: 0 } } },
+    initial: "still",
+    when: { "host.shake": "shaking" },
+    states: {
+      still: {},
+      shaking: {
+        enter: {
+          [`${t}.x`]: {
+            keyframes: [{ at: 0.16, value: -d }, { at: 0.36, value: r(d * 0.9) }, { at: 0.58, value: r(-d * 0.6) }, { at: 0.78, value: r(d * 0.4) }],
+            duration: options.duration ?? 0.42,
+            ease: "out-quad",
+          },
+        },
+      },
+    },
+  };
+}
+
+export const presets = { press, hover, toggle, toast, appear, pop, drop, shake };
 export type PresetName = keyof typeof presets;

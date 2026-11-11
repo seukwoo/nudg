@@ -187,6 +187,7 @@ An agent can't watch an animation, so nudg tells it what happened, in text and i
 | `render` | Real frames of your component, captured in a headless browser. |
 | `compare` | Before and after under the same tap: whether a person would notice, then both side by side, and a page that plays them in slow motion. Point it at the running app and it opens in your browser. |
 | `critique` | Whether the motion is good, not only valid: too slow, late press feedback, invisible, bouncy fades, slow exits, short timeouts, no Escape. Each with a fix and its source. |
+| `audit` | How much of an app's motion is on nudg, and what in nudg replaces each piece that isn't: CSS keyframes and transitions, other libraries, hand-written styles, timers around players. Gaps nudg can't cover yet are marked. |
 | `observe` | Host truth: the real page, tapped and measured every frame, judged against the file. "The element left the page at 0.18 s; the release is never shown." |
 
 The examples site's playground has the same judge view live: **Compare with original** plays the original beside your edit, a tap on either reaches both, slow motion is a select, and the verdict updates as you type.
@@ -221,7 +222,7 @@ Interactive animation usually lives in binary files made in a dedicated studio. 
 
 ## Status
 
-**Stable.** Version 1.7 (format 1.2) is [on npm](https://www.npmjs.com/package/@nudg/core) with a starter for every semantic recipe, taps, hovers, drags, throws and glides, pinches, long press and double tap, keyboard events, scroll direction and input thresholds, pausable timers, continuous app and scroll inputs, measured layout, entry keyframes, loops, staggered delays (fixed, or read from an app input such as a list index), screen transitions, a declared host interface, reduced motion, type-safe host names (`nudg generate`), one "motion is over" callback (`onSettle`) on every platform, screen-reader activation and adjusting on native, server rendering without a flash, and adapters for the DOM, React (with bridges to MUI, Radix and shadcn/ui), React Native, SwiftUI and Jetpack Compose. Within 1.x, files and APIs only gain; anything that breaks waits for 2.0. See the [changelog](CHANGELOG.md).
+**Stable.** Version 1.8 (format 1.2) is [on npm](https://www.npmjs.com/package/@nudg/core) with a starter for every semantic recipe, taps, hovers, drags, throws and glides, pinches, long press and double tap, keyboard events, scroll direction and input thresholds, pausable timers, continuous app and scroll inputs, measured layout, entry keyframes, loops, staggered delays (fixed, or read from an app input such as a list index), screen transitions, a declared host interface, reduced motion, type-safe host names (`nudg generate`), one "motion is over" callback (`onSettle`) on every platform, screen-reader activation and adjusting on native, server rendering without a flash, and adapters for the DOM, React (with bridges to MUI, Radix and shadcn/ui), React Native, SwiftUI and Jetpack Compose. Within 1.x, files and APIs only gain; anything that breaks waits for 2.0. See the [changelog](CHANGELOG.md).
 
 The [roadmap](docs/roadmap.md) tracks development priorities and stage status, from component interactions through screens and flows, native adapters and exploratory standalone content. Mobile-first semantic patterns build on that progression.
 

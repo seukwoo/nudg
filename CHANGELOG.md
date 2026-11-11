@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.9.0
+
+Feedback beyond motion. Format 1.3 lets a file say when to play a sound or a haptic, and the runtime fires it on the same frame as the motion. Every platform plays it its own way: Web Haptics or `vibrate`, UIKit's feedback generators, Android's haptic constants, or the haptics React Native apps already use. Shadows and blur move with their own springs. For anything nudg doesn't draw, a declared custom property keeps the timing in nudg and leaves the drawing to the app. CSS that would fight a file's motion is turned off on the elements nudg moves. Files from 1.2 and earlier read as before. A compiled program that uses cues is format 10; every other program keeps the format older runtimes read.
 
 - **Cues: sound and haptics on the motion's own clock (format 1.3).**
   - A file names moments: `"cue": { "haptic": "success", "sound": "pop" }`, on a transition, on entering a state, or on a beat of entry keyframes or a loop.

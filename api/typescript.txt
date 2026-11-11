@@ -122,6 +122,8 @@ export declare function toggle(options?: ToggleOptions): NudgDocument;
 export interface InitialOptions { state?: string[]; inputs?: Record<string, number>; }
 export interface NudgContract { targets: string; events: string; inputs: string; states: string; }
 export type NudgStyle = Partial<Record<"transform" | "opacity" | "width" | "height" | "backgroundColor" | "fill", string>>;
+export interface PlayEach { get(element: Element): Player | undefined; stop(): void; }
+export interface PlayEachOptions<C extends NudgContract = NudgContract> extends Omit<PlayOptions<C>, "bind"> { root?: Document | Element; when?: "press" | "mount"; files?: Record<string, unknown>; }
 export interface PlayOptions<C extends NudgContract = NudgContract> { bind?: Partial<Record<C["targets"], Element | Element[]>>; clock?: "realtime" | "manual"; state?: C["states"][]; onState?: (state: C["states"][]) => void; reducedMotion?: boolean; onFrame?: (values: Record<string, Value>) => void; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; onEvent?: (item: { event: string; } | { input: string; value: number; }, t: number) => void; speed?: number; watch?: boolean; start?: C["events"]; release?: "settle" | "exit"; }
 export interface Player<C extends NudgContract = NudgContract> { readonly runtime: Runtime; readonly unbound: string[]; readonly unknown: string[]; send(event: C["events"]): boolean; values(): Record<string, Value>; input(name: C["inputs"], value: number): boolean; bind(name: C["targets"], element: Element): () => void; now(): number; render(t: number): void; present(): boolean; leaving(): boolean; setReducedMotion(on: boolean | undefined): void; destroy(): void; readonly done: Promise<void>; }
 export type StateName<C extends NudgContract> = C["states"] | LastName<C["states"]>;
@@ -132,6 +134,7 @@ export declare function initialStyles(program: Program, options?: InitialOptions
 export declare function initialValues(program: Program, options?: InitialOptions): Record<string, Value>;
 export declare function play<C extends NudgContract = NudgContract>(program: Program, root?: ParentNode | null, options?: PlayOptions<C>): Player<C>;
 export declare function playDoc<C extends NudgContract = NudgContract>(doc: object, root?: ParentNode | null, options?: PlayOptions<C> & { files?: Record<string, unknown>; }): Player<C>;
+export declare function playEach<C extends NudgContract = NudgContract>(file: object | ((element: Element) => object), selector: string, options?: PlayEachOptions<C>): PlayEach;
 
 ## @nudg/core/react
 

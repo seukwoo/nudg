@@ -293,6 +293,7 @@ An app's motion is nudg files plus adapter calls. Before you write a timer, a wr
 | A one-off entrance (a result pops, a trophy drops, a countdown number) | React: `useNudgOnce(presets.pop(), { replay: [count] })` returns a ref. DOM: `playDoc(presets.drop(), el, { start: "host.show", release: "settle" })`. Never a CSS keyframe animation. |
 | A one-shot effect (a shake on a wrong PIN, a success pop) | `playDoc(presets.shake(), field, { start: "host.shake", release: "settle" })`: it lets go by itself at rest and puts the element's styles back; `player.done` resolves then. |
 | To know the motion is over | `onSettle` / `onExit`, never `setTimeout` with a guessed duration |
+| The same motion on every button, card or tip in the app | `playEach(presets.press(), "button, .blk")` once at start-up: each element gets its player when a finger lands (or with `when: "mount"`, as it appears), removed elements are let go, disabled ones and `[data-nudg-off]` are skipped. A function of the element picks a variant. Never a document listener of your own. |
 | A file on one element | `playDoc(file, element)`: the element is the file's first target |
 | Two files on one element (a card that rises in and presses) | Bind both: transforms compose and opacities multiply; the element's own transform stays outermost. On React Native, `compose(a.bind("card"), b.bind("button"))`. |
 | Items one after another | `"delay": { "input": "host.index", "times": 0.06, "max": 0.5 }`, each item's player given `host.index` |

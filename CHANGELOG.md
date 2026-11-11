@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **`playEach`: one file on every element that matches.** `playEach(presets.press(), "button")` gives every button the same press. An element gets its player when a finger lands, in time for that touch, or as it appears (`when: "mount"`). Removed elements are let go, and disabled controls and `[data-nudg-off]` are skipped. A function of the element picks a variant. PlaySnack kept an 81-line document listener for this.
 - **`leaving`: the way out, as a flag.** Every adapter has it next to `present` (`player.leaving()`, `leaving` in the React and React Native hooks, `model.leaving` in SwiftUI, `state.leaving` in Compose), from the runtimes' shared lifecycle. It is true from the moment the machine enters an exit state from elsewhere until `onExit`, so a dim behind a leaving sheet lets taps through without the host tracking it. PlaySnack kept a 78-line closer for this; everything else in it was already `exit`, `onExit` and `present`.
 
 ## 1.7.0

@@ -9,10 +9,11 @@ import { createLifecycle } from "../core/lifecycle.ts";
 import { composeStyle, releaseStyle } from "./compose.ts";
 import { propertiesByTarget, styleOf } from "./style.ts";
 import { measureElement } from "./measure.ts";
-import { createRuntime, type Runtime, type Value } from "../core/runtime.ts";
+import { createRuntime, type FiredCue, type Runtime, type Value } from "../core/runtime.ts";
+import { playFeedback, type FeedbackOptions } from "./feedback.ts";
 import type { Machine, NudgContract, Program, StateName } from "../core/types.ts";
 
-export interface PlayOptions<C extends NudgContract = NudgContract> {
+export interface PlayOptions<C extends NudgContract = NudgContract> extends FeedbackOptions {
   /** Elements to bind by target name, in addition to [data-nudg] attributes. */
   bind?: Partial<Record<C["targets"], Element | Element[]>>;
   /**
@@ -72,6 +73,11 @@ export interface PlayOptions<C extends NudgContract = NudgContract> {
    * success pop, a burst piece, an entrance. `done` resolves then.
    */
   release?: "settle" | "exit";
+  /**
+   * A cue came due (1.3), after the adapter played its haptic and its sound from `sounds`.
+   * For custom haptic names, or sounds through your own audio engine.
+   */
+  onCue?: (cue: FiredCue) => void;
 }
 
 export interface Player<C extends NudgContract = NudgContract> {
@@ -220,7 +226,17 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     frame = undefined;
     const t = now();
     apply(runtime.sample(t));
+    cues();
     if (life.frame(t)) frame = nextFrame(tick);
+  }
+
+  // Taken every time, so cues nobody plays don't pile up.
+  function cues() {
+    for (const cue of runtime.takeCues()) {
+      if (destroyed) return;
+      playFeedback(cue, options);
+      options.onCue?.(cue);
+    }
   }
 
   // The active states, on every bound element, so CSS can style by state:
@@ -233,6 +249,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   function changed() {
     if (manual) apply(runtime.sample(manualTime));
     else if (!frame) frame = nextFrame(tick);
+    cues();
     life.changed();
   }
 
@@ -565,6 +582,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
       if (!manual) throw new Error("render(t) needs { clock: \"manual\" }.");
       manualTime = t;
       apply(runtime.sample(t));
+      cues();
       life.frame(t);
     },
     setReducedMotion(on) {

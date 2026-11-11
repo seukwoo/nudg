@@ -1,6 +1,8 @@
 // compose/src/main/kotlin/dev/nudg/compose/Nudg.kt
 class NudgState internal constructor(program: Program, state: List<String>, reducedMotion: Boolean, exit: List<String>
     val runtime
+    var onCue: ((FiredCue) -> Unit)?
+    var haptics
     var values: Map<String, Value> by mutableStateOf(runtime.sample(0.0))
     var state: List<String> by mutableStateOf(runtime.state())
     var present: Boolean by mutableStateOf(true)
@@ -69,7 +71,20 @@ sealed interface Motion
     val delayInput: DelayInput?
     data class Spring(val stiffness: Double, val damping: Double, val mass: Double, val kick: Double?, override val delay: Double
     data class Tween(val duration: Double, val ease: Ease, override val delay: Double
-data class Keyframe(val at: Double, val value: List<Double>)
+data class Keyframe(val at: Double, val value: List<Double>, val cues: List<Cue>
+sealed interface CueAmount
+    data class Number(val value: Double) : CueAmount
+    data class Input(val input: String, val times: Double, val plus: Double) : CueAmount
+class Cue(
+val sound: String?,
+val haptic: String?,
+val intensity: CueAmount?,
+val pitch: CueAmount?,
+val delay: Double,
+val delayInput: DelayInput?,
+val repeatCount: Int,
+val repeatEvery: Double,
+val throttle: Double?,
 sealed interface EntryEffect
     data class Kick(val motion: Motion) : EntryEffect
     data class Keyframes(val frames: List<Keyframe>, val duration: Double, val ease: Ease) : EntryEffect
@@ -78,7 +93,7 @@ data class InputTarget(val input: String, val times: Double, val plus: Double)
 sealed interface MeasuredEndpoint
     data class Number(val value: Double) : MeasuredEndpoint
     data class Measured(val measure: Measure) : MeasuredEndpoint
-data class Loop(val to: MeasuredEndpoint, val frames: List<Pair<Double, MeasuredEndpoint>>, val duration: Double, val ease: Ease, val delay: Double, val wrap: Double?)
+data class Loop(val to: MeasuredEndpoint, val frames: List<Pair<Double, MeasuredEndpoint>>, val duration: Double, val ease: Ease, val delay: Double, val wrap: Double?, val cues: List<Pair<Double, List<Cue>>>
 sealed interface MapValue
     data class Channels(val values: List<Double>) : MapValue
     data class Measured(val measure: Measure) : MapValue
@@ -87,7 +102,7 @@ data class Property(val kind: PropertyKind, val base: List<Double>, val map: Pro
 data class Follow(val input: String, val range: Pair<MeasuredEndpoint, MeasuredEndpoint>?, val overdrag: Double, val multiply: Boolean
 data class Glide(val momentum: Double, val range: Pair<MeasuredEndpoint, MeasuredEndpoint>?)
 data class Nearest(val states: List<String>, val by: String, val momentum: Double)
-class Transition(val to: String?, val nearest: Nearest?, val animate: List<Pair<String, Motion>>, val step: List<Pair<String, Double>>?, val commit: List<String>?)
+class Transition(val to: String?, val nearest: Nearest?, val animate: List<Pair<String, Motion>>, val step: List<Pair<String, Double>>?, val commit: List<String>?, val cues: List<Cue>
 data class TimerPause(val on: String, val off: String)
 class Timer(val key: String, val delay: Double, val transition: Transition, val pause: List<TimerPause>)
 class State(
@@ -102,6 +117,7 @@ val loop: List<Pair<String, Loop>>,
 val `when`: List<Pair<String, Transition>>,
 val timers: List<Timer>,
 val machine: Machine?,
+val cues: List<Cue>
     fun transition(event: String)
 sealed class Machine
     class States(val initial: String, val states: List<State>, val `when`: List<Pair<String, Transition>>) : Machine()
@@ -115,7 +131,9 @@ class Program(val version: String, val targets: List<String>, val properties: Li
 sealed interface Value
     data class Number(val value: Double) : Value
     data class Color(val hex: String) : Value
+data class FiredCue(val t: Double, val sound: String?, val haptic: String?, val intensity: Double, val pitch: Double)
 class Runtime(val program: Program, state: List<String>
+    fun takeCues(): List<FiredCue>
     fun send(event: String, t: Double): Boolean
     fun setReducedMotion(on: Boolean, t: Double)
     fun input(name: String, value: Double, t: Double): Boolean

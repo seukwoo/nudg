@@ -1,5 +1,10 @@
 package dev.nudg.compose
 
+import dev.nudg.FiredCue
+import androidx.compose.ui.platform.LocalView
+import android.view.View
+import android.view.HapticFeedbackConstants
+import android.os.Build
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -71,6 +76,12 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     private var lastTime = 0.0
     /** How fast time runs: 1, or slower in NudgCompare's slow motion. */
     internal var speed = 1.0
+    /** A cue came due (1.3), after its haptic was played: play its sound (SoundPool, MediaPlayer) or a custom haptic. */
+    var onCue: ((FiredCue) -> Unit)? = null
+    /** False plays no haptics. */
+    var haptics = true
+    /** The view haptics are performed on; [rememberNudg] sets it. */
+    internal var view: View? = null
     /** What NudgCompare mirrors into the other version: every event and input sample sent here. */
     internal var onSend: ((String) -> Unit)? = null
     internal var onInput: ((String, Double) -> Unit)? = null
@@ -124,6 +135,7 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     internal fun frame(nanos: Long) {
         val t = time(nanos)
         values = runtime.sample(t)
+        cues()
         moving = lifecycle.frame(t) // a timer may have fired; settle and exit are reported from here
         if (!moving) idle = true
         if (lifecycle.present) present = true
@@ -151,7 +163,18 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
         changed()
     }
 
+    /** Plays the cues that came due: the haptic on [view], then [onCue]. Taken every time, so they don't pile up. */
+    private fun cues() {
+        for (cue in runtime.takeCues()) {
+            val v = view
+            val haptic = cue.haptic
+            if (haptics && v != null && haptic != null && cue.intensity > 0) v.performHapticFeedback(hapticConstant(haptic))
+            onCue?.invoke(cue)
+        }
+    }
+
     private fun changed() {
+        cues()
         lifecycle.changed()
         if (lifecycle.present) present = true
         moving = true
@@ -205,14 +228,32 @@ fun rememberNudg(
     exit: List<String> = emptyList(),
     onSettle: ((List<String>) -> Unit)? = null,
     onExit: (() -> Unit)? = null,
+    /** A cue came due (1.3), after its haptic: play its sound. */
+    onCue: ((FiredCue) -> Unit)? = null,
 ): NudgState {
     val nudg = remember(program) { NudgState(program, state, reducedMotion, exit) }
+    nudg.view = LocalView.current
+    nudg.onCue = onCue
     // A changed setting applies to the running player, so its state and motion carry on.
     LaunchedEffect(nudg, reducedMotion) { nudg.setReducedMotion(reducedMotion) }
     nudg.onSettle = onSettle
     nudg.onExit = onExit
     LaunchedEffect(nudg) { nudg.play() }
     return nudg
+}
+
+/** A nudg haptic intent (1.3) as Android's haptic feedback constant, the closest one this Android version has. */
+private fun hapticConstant(name: String): Int {
+    val api = Build.VERSION.SDK_INT
+    return when (name) {
+        "tick", "select" -> if (api >= 34) HapticFeedbackConstants.SEGMENT_TICK else HapticFeedbackConstants.CLOCK_TICK
+        "align", "edge" -> if (api >= 34) HapticFeedbackConstants.SEGMENT_FREQUENT_TICK else HapticFeedbackConstants.CLOCK_TICK
+        "success" -> if (api >= 30) HapticFeedbackConstants.CONFIRM else HapticFeedbackConstants.VIRTUAL_KEY
+        "warning", "error" -> if (api >= 30) HapticFeedbackConstants.REJECT else HapticFeedbackConstants.LONG_PRESS
+        "heavy" -> HapticFeedbackConstants.LONG_PRESS
+        "medium", "rigid" -> HapticFeedbackConstants.VIRTUAL_KEY
+        else -> HapticFeedbackConstants.KEYBOARD_TAP
+    }
 }
 
 /** Applies a target's values: offset, rotation, scale and opacity in a graphics layer, size in layout, color behind, shadow and blur (1.3). */

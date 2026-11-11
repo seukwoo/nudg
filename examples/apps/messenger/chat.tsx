@@ -180,7 +180,7 @@ function usePlayback(n: { state: string[]; input: (name: string, v: number) => v
 function Voice({ clip, unheard }: { clip: Clip; unheard: boolean }) {
   const v = useNudg(voiceFile);
   const audio = useRef<HTMLAudioElement>(undefined);
-  const playing = usePlayback(v, clip, () => (clip.url ? (audio.current ??= new Audio(clip.url)) : undefined));
+  const playing = usePlayback(v, clip, () => (clip.url ? (audio.current ??= new Audio(clip.url)) : undefined)); // nudg-audit-ignore: plays the recorded message, not feedback
   return (
     <div className="voice">
       <button ref={v.bind("toggle")} className="voice-toggle" type="button" aria-label={playing ? "Pause" : "Play voice message"}>

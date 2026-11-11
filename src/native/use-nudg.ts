@@ -8,7 +8,8 @@ import { PointerTracker, draggableTargets, pinchableTargets } from "../core/poin
 import { activation, touchSync } from "./touches.ts";
 import { handledEvents, unknownEventMessage } from "../core/observe.ts";
 import { createPlayer, initialValues, toProgram, type HeadlessPlayer } from "../core/player.ts";
-import { createRuntime, type Value } from "../core/runtime.ts";
+import { createRuntime, type FiredCue, type Value } from "../core/runtime.ts";
+import type { HapticPlayer } from "./haptics.ts";
 import type { NudgContract, Program, StateName } from "../core/types.ts";
 
 export interface UseNudgNativeOptions<C extends NudgContract = NudgContract> {
@@ -22,6 +23,10 @@ export interface UseNudgNativeOptions<C extends NudgContract = NudgContract> {
   onExit?: () => void;
   /** Called with the active states each time every value has come to rest; as in the React hook. */
   onSettle?: (state: C["states"][]) => void;
+  /** Plays the file's haptic cues (1.3), e.g. expoHaptics(Haptics) from expo-haptics. Without it, cues reach only onCue. */
+  haptics?: HapticPlayer;
+  /** A cue came due (1.3), after its haptic: play its sound with your audio library. */
+  onCue?: (cue: FiredCue) => void;
 }
 
 /** What `bind(name)` gives a view: its animated style, layout reporting, and press handlers. */
@@ -110,6 +115,8 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
   onExit.current = options.onExit;
   const onSettle = useRef(options.onSettle);
   onSettle.current = options.onSettle;
+  const feedback = useRef(options);
+  feedback.current = options;
   const reads = useMemo(() => new Set(createRuntime(program).requiredInputs()), [program]);
   // The setting applies to the running player as it changes, so the state and motion carry on.
   const reduced = useRef(options.reducedMotion ?? false);
@@ -150,6 +157,10 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
       },
       onFrame: (values) => write(animated, values),
       onSettle: (s) => onSettle.current?.(s),
+      onCue: (cue) => {
+        if (cue.haptic && cue.intensity > 0) feedback.current.haptics?.(cue.haptic, cue.intensity);
+        feedback.current.onCue?.(cue);
+      },
     });
     player.current = p;
     for (const [name, value] of inputs.current) p.input(name, value);

@@ -405,6 +405,44 @@ Periodic motion while a state is active, for spinners, shimmers and typing dots:
 - `to` or `keyframes` and `duration` are required; `delay` is a time of 0 or more; `wrap` is greater than 0. A property followed or glided in the same state can't loop there.
 - `runtime.looping()` is true while any loop runs; adapters keep drawing frames while it is true, even when nothing settles.
 
+### Cues (1.3)
+
+A cue is a named moment for sound and haptics, reported by the runtime at an exact time. The file holds names and numbers; the host maps sound names to its files, and adapters map haptic names to each platform's feedback.
+
+```json
+"when": { "host.go": { "to": "on", "cue": { "haptic": "success" } } },
+"states": {
+  "on": { "cue": { "sound": "pop", "intensity": 0.6, "repeat": { "count": 3, "every": 0.12 } } },
+  "invalid": { "enter": { "field.x": { "keyframes": [{ "at": 0.25, "value": -10, "cue": "tick" }], "duration": 0.4 } } }
+}
+```
+
+**Where cues sit.**
+- On a transition: when it fires.
+- On a state: when it is entered through a transition, not when a player starts in it.
+- On a frame of entry keyframes: at `t + at × duration` after entry.
+- On a frame of a loop: on that beat, every cycle, while the loop plays.
+
+**The forms.**
+- `"cue"` is a name, an object, or a list of them. A name alone is a sound, and also a haptic when it is one of the haptic intents: `tick`, `select`, `light`, `medium`, `heavy`, `soft`, `rigid`, `success`, `warning`, `error`, `align`, `edge`.
+- An object has `sound` and/or `haptic` (`invalid-cue` without either). A haptic that is neither an intent nor a name under `host.custom` is `unknown-haptic`; a custom one reaches only the host's `onCue`.
+
+**What a cue carries.**
+- `intensity`, 0 to 1 (default 1), and `pitch`, in semitones (default 0). Either can be `{ "input", "times", "plus" }`, read when the cue is scheduled; intensity is then clamped to 0 to 1.
+- `delay`, in seconds after the moment: a time, or a delay read from an input as in [Delay](#delay), read when the moment happens.
+- `repeat: { "count", "every" }` fires it `count` times in all, `every` seconds apart.
+- `throttle`, a time: a firing less than that after the previous firing of the same cue is dropped.
+
+**Timing rules.**
+- A cue on a state, or on a beat of its keyframes or loop, belongs to that state. Firings still to come are dropped when the state is left or entered again.
+- Cues on a transition are not dropped.
+- Under reduced motion, cue delays are ignored, as motion delays are. Entry keyframes are skipped, so the first cue among their beats fires at the moment of entry instead. Loop beats fire only while the loop plays (opacity loops still play, from 1.1).
+- A pending cue keeps the runtime from being settled, so a host's frame loop runs until it has fired.
+
+**Reporting.**
+- `takeCues()` returns every cue that came due since the last call, earliest first, each with the time it was due, its names, and its resolved intensity and pitch.
+- Cues due at the same time keep the order they were scheduled in: transition cues, then state cues, then beats. Loop beats are taken by property name.
+
 ### Reduced motion
 
 Some people ask the system to reduce motion (`prefers-reduced-motion`; WCAG 2.3.3). The format says nothing about it; the runtime does, as an option: `createRuntime(program, { reducedMotion: true })`.

@@ -54,6 +54,16 @@ public func runConformanceSuite(at dir: URL, log: (String) -> Void = { print($0)
         if let expected = expect["resting"] as? Bool, try rt.resting(t) != expected { problems.append("resting at \(t)s: expected \(expected)") }
         if let expected = expect["settled"] as? Bool, try rt.settled(t) != expected { problems.append("settled at \(t)s: expected \(expected)") }
         if let expected = expect["looping"] as? Bool, rt.looping() != expected { problems.append("looping at \(t)s: expected \(expected)") }
+        // Every cue that came due since the last step that listed cues (1.3).
+        if let expected = expect["cues"] as? [[String: Any]] {
+          let got = rt.takeCues()
+          let num = { (v: Any?) in (v as? NSNumber)?.doubleValue ?? 0 }
+          let same = got.count == expected.count && zip(got, expected).allSatisfy { c, e in
+            abs(c.t - num(e["t"])) <= 1e-6 && c.sound == e["sound"] as? String && c.haptic == e["haptic"] as? String
+              && abs(c.intensity - num(e["intensity"])) <= 1e-6 && abs(c.pitch - num(e["pitch"])) <= 1e-6
+          }
+          if !same { problems.append("cues by \(t)s: got \(got.map { "\($0.t) \($0.sound ?? "-") \($0.haptic ?? "-") \($0.intensity) \($0.pitch)" })") }
+        }
       }
       if problems.isEmpty { passed += 1; log("ok    \(name)") }
       else { failures.append(name); log("FAIL  \(name)\n      " + problems.prefix(5).joined(separator: "\n      ")) }

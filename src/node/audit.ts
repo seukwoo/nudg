@@ -5,7 +5,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
-export type AuditKind = "css-keyframes" | "css-transition" | "web-animation" | "motion-library" | "style-write" | "timer-glue" | "frame-loop" | "document-listener";
+export type AuditKind = "css-keyframes" | "css-transition" | "web-animation" | "motion-library" | "style-write" | "timer-glue" | "frame-loop" | "document-listener" | "feedback";
 
 export interface AuditFinding {
   file: string;
@@ -171,6 +171,9 @@ export function audit(files: { path: string; text: string }[]): Audit {
       // Only timers that do motion's work: sending to a player, letting it go, unmounting, styling.
       if (usesNudg && /\bsetTimeout\s*\(/.test(line) && /\.send\(|\.destroy\(|\.remove\(|[Mm]ounted|unmount|\.style\b|letGo|[Cc]lose\(/.test(near(0, 2)))
         add(i, "timer-glue", "onSettle / onExit, release: \"settle\", after:<time> in the file, or delay.input; not a timer");
+      // Sound and haptics played by hand, which a cue would time with the motion (1.3).
+      if (/navigator\.vibrate\s*\(|new Audio\s*\(|\.playHaptics\s*\(|\b(impactAsync|notificationAsync|selectionAsync)\s*\(|performHapticFeedback\s*\(|UI(Impact|Selection|Notification)FeedbackGenerator\b/.test(line) || (/\b(import|require)\b/.test(line) && /["'](howler|expo-haptics|react-native-haptic-feedback|use-sound)["']/.test(line)))
+        add(i, "feedback", "a cue in the file (\"cue\": { \"haptic\": \"success\", \"sound\": \"pop\" }) with the adapter's sound map; nudg fires it on the same frame as the motion");
       if (usesNudg && /addEventListener\(\s*["']pointerdown["']/.test(line) && /capture/.test(lines.slice(i, i + 20).join("\n")))
         add(i, "document-listener", "playEach(file, selector): binds each element on the touch that lands");
     }
@@ -188,6 +191,7 @@ const KIND_LABEL: Record<AuditKind, string> = {
   "timer-glue": "timer around a player",
   "frame-loop": "frame loop",
   "document-listener": "document listener",
+  feedback: "sound or haptic played by hand",
 };
 
 export function formatAudit(a: Audit): string {

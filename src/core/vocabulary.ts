@@ -27,6 +27,12 @@ export const PROPERTIES: Record<string, PropertyKind> = {
   blur: "length",
 };
 
+/**
+ * Haptic intents (1.3), as the platforms name them: each adapter maps them to its own feedback
+ * (UIFeedbackGenerator, HapticFeedbackConstants, InputHapticsManager, Web Haptics).
+ */
+export const HAPTICS = ["tick", "select", "light", "medium", "heavy", "soft", "rigid", "success", "warning", "error", "align", "edge"];
+
 /** Properties that need format 1.3. */
 export const PROPERTIES_1_3 = ["shadowX", "shadowY", "shadowBlur", "shadowColor", "blur"];
 /** A custom property, target.custom.<name> (1.3): a number nudg moves and the host draws. */

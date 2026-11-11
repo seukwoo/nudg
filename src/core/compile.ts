@@ -4,7 +4,7 @@
 import { hexToOklab, isHexColor } from "./color.ts";
 import { interpolate } from "./map.ts";
 import { fromDurationBounce, fromStiffnessRatio } from "./spring.ts";
-import type { DelayInput, Measure,
+import type { Cue, CueAmount, DelayInput, Measure,
   MeasuredEndpoint,
   Channels,
   Diagnostic,
@@ -50,6 +50,7 @@ import { MEASUREMENTS,
   PROPERTIES_1_3,
   CUSTOM,
   BUILT_IN_LIKE,
+  HAPTICS,
 } from "./vocabulary.ts";
 
 export interface Source {
@@ -82,8 +83,8 @@ const TOP_LEVEL_KEYS = ["$schema", "nudg", "import", "host", "targets", "values"
 const MACHINE_KEYS = ["initial", "states", "regions"];
 /** A region's object: a machine that may also have machine-level `when`. */
 const REGION_KEYS = [...MACHINE_KEYS, "when"];
-const STATE_KEYS = ["set", "follow", "glide", "enter", "loop", "when", ...MACHINE_KEYS];
-const TRANSITION_KEYS = ["to", "nearest", "by", "momentum", "animate", "step", "commit"];
+const STATE_KEYS = ["set", "follow", "glide", "enter", "loop", "when", "cue", ...MACHINE_KEYS];
+const TRANSITION_KEYS = ["to", "nearest", "by", "momentum", "animate", "step", "commit", "cue"];
 const VALUE_KEYS = ["base", "min", "max"];
 const FOLLOW_KEYS = ["input", "range", "overdrag", "multiply"];
 const MAP_KEYS = ["map", "from", "to"];
@@ -881,7 +882,7 @@ class ComponentCompiler {
               ok = false;
               return;
             }
-            r.keys(frame, fp, ["at", "value"]);
+            r.keys(frame, fp, ["at", "value", "cue"]);
             const at = frame.at;
             if (typeof at !== "number" || !Number.isFinite(at) || at <= 0 || at >= 1 || at <= previous) {
               r.error("invalid-keyframe-time", ptr(fp, "at"), '"at" must increase strictly between 0 and 1.', "The cycle starts at 0 with offset 0 and ends at 1 with \"to\"; put the points in between in ascending order.");
@@ -894,7 +895,8 @@ class ComponentCompiler {
               ok = false;
               return;
             }
-            frames.push({ at, value: point });
+            const cues = "cue" in frame ? this.parseCues(frame.cue, ptr(fp, "cue")) : undefined;
+            frames.push(cues?.length ? { at, value: point, cues } : { at, value: point });
             previous = at;
           });
         }
@@ -957,7 +959,7 @@ class ComponentCompiler {
         r.error("invalid-keyframes", fp, "A keyframe must have normalized time and a value.", 'Write { "at": 0.5, "value": 8 }.');
         return;
       }
-      r.keys(frame, fp, ["at", "value"]);
+      r.keys(frame, fp, ["at", "value", "cue"]);
       const at = frame.at;
       let ok = true;
       if (typeof at !== "number" || !Number.isFinite(at) || at <= 0 || at >= 1 || at <= previous) {
@@ -969,8 +971,9 @@ class ComponentCompiler {
         ok = false;
       }
       const value = "value" in frame ? this.parseValue(kind, key, frame.value, ptr(fp, "value")) : undefined;
+      const cues = "cue" in frame ? this.parseCues(frame.cue, ptr(fp, "cue")) : undefined;
       if (ok && value) {
-        frames.push({ at: at as number, value });
+        frames.push(cues?.length ? { at: at as number, value, cues } : { at: at as number, value });
         previous = at as number;
       }
     });
@@ -1169,6 +1172,10 @@ class ComponentCompiler {
       if (state.glide.has(key)) r.error("glide-conflict", ptr(ptr(p, "loop"), key), `"${key}" glides in this state, so it can't also loop here.`, "Loop a different property, or glide it in another state.");
     }
     if ("when" in raw) state.when = this.parseWhen(raw.when, ptr(p, "when"), false, state.timers);
+    if ("cue" in raw) {
+      const cues = this.parseCues(raw.cue, ptr(p, "cue"));
+      if (cues?.length) state.cues = cues;
+    }
     if ("states" in raw || "regions" in raw || "initial" in raw) {
       const machine = this.parseMachine(raw, p);
       if (!machine) return undefined;
@@ -1491,6 +1498,10 @@ class ComponentCompiler {
       if (key in raw) r.error("unknown-key", ptr(p, key), `"${key}" only goes with "nearest".`, "Add \"nearest\", or remove it.");
     }
     const transition: Transition = { animate };
+    if ("cue" in raw) {
+      const cues = this.parseCues(raw.cue, ptr(p, "cue"));
+      if (cues?.length) transition.cues = cues;
+    }
     if ("step" in raw) transition.step = this.parseStep(raw.step, ptr(p, "step"));
     if ("commit" in raw) transition.commit = this.parseCommit(raw.commit, ptr(p, "commit"));
     if (typeof raw.to === "string") transition.to = raw.to;
@@ -1502,6 +1513,124 @@ class ComponentCompiler {
       return undefined;
     }
     return transition;
+  }
+
+  /**
+   * `"cue": "tap"`, `{ "sound": "pop", "haptic": "light", "intensity": 0.6 }`, or a list (1.3).
+   * A name alone is a sound, and also a haptic when it is one of the built-in intents.
+   */
+  private parseCues(raw: Json, p: string): Cue[] | undefined {
+    if (!this.needsVersion("1.3", p, "A cue")) return undefined;
+    const list = Array.isArray(raw) ? raw : [raw];
+    const out: Cue[] = [];
+    list.forEach((item, i) => {
+      const ip = Array.isArray(raw) ? ptr(p, i) : p;
+      const cue = this.parseCue(item, ip);
+      if (cue) out.push(cue);
+    });
+    return out;
+  }
+
+  private parseCue(raw: Json, p: string): Cue | undefined {
+    const r = this.r;
+    const name = (value: Json, at: string): string | undefined => {
+      if (typeof value === "string" && IDENTIFIER.test(value)) return value;
+      r.error("invalid-name", at, `${JSON.stringify(value)} is not a cue name.`, "Use letters, digits, \"_\" and \"-\": the host maps sound names to its files.");
+      return undefined;
+    };
+    if (typeof raw === "string") {
+      const n = name(raw, p);
+      if (!n) return undefined;
+      return HAPTICS.includes(n) ? { sound: n, haptic: n } : { sound: n };
+    }
+    if (!isObject(raw)) {
+      r.error("invalid-type", p, "A cue is a name, or an object with \"sound\" and/or \"haptic\".", `For example: "cue": "pop", or "cue": { "sound": "pop", "haptic": "light", "intensity": 0.6 }.`);
+      return undefined;
+    }
+    r.keys(raw, p, ["sound", "haptic", "intensity", "pitch", "delay", "repeat", "throttle"]);
+    const cue: Cue = {};
+    let ok = true;
+    if ("sound" in raw) {
+      const n = name(raw.sound, ptr(p, "sound"));
+      if (n) cue.sound = n;
+      else ok = false;
+    }
+    if ("haptic" in raw) {
+      const n = name(raw.haptic, ptr(p, "haptic"));
+      if (!n) ok = false;
+      else if (!HAPTICS.includes(n) && !this.host?.custom?.includes(n)) {
+        const guess = didYouMean(n, HAPTICS);
+        r.error("unknown-haptic", ptr(p, "haptic"), `"${n}" is not a haptic nudg knows.`, guess ? `Did you mean "${guess}"? Haptics are ${HAPTICS.join(", ")}; for one of your own, declare it under host.custom.` : `Haptics are ${HAPTICS.join(", ")}; for one of your own, declare it under host.custom and handle it in onCue.`);
+        ok = false;
+      } else cue.haptic = n;
+    }
+    if (!("sound" in raw) && !("haptic" in raw)) {
+      r.error("invalid-cue", p, "A cue needs a \"sound\" or a \"haptic\".", `For example: { "haptic": "light" }.`);
+      ok = false;
+    }
+    const amount = (field: "intensity" | "pitch"): CueAmount | undefined => {
+      const v = raw[field];
+      const fp = ptr(p, field);
+      if (typeof v === "number" && Number.isFinite(v)) {
+        if (field === "intensity" && (v < 0 || v > 1)) {
+          r.error("invalid-value", fp, '"intensity" must be between 0 and 1.', "1 is full strength, 0.5 half.");
+          return undefined;
+        }
+        return v;
+      }
+      if (isObject(v)) {
+        r.keys(v, fp, ["input", "times", "plus"]);
+        if (!this.checkInput(v.input, ptr(fp, "input"), ptr(fp, "input"))) return undefined;
+        const times = "times" in v ? v.times : 1;
+        const plus = "plus" in v ? v.plus : 0;
+        if (typeof times !== "number" || !Number.isFinite(times) || typeof plus !== "number" || !Number.isFinite(plus)) {
+          r.error("invalid-value", fp, `"times" and "plus" must be finite numbers.`, `For example: { "input": "host.combo", "times": 1 }.`);
+          return undefined;
+        }
+        return { input: v.input as string, times, plus };
+      }
+      r.error("invalid-value", fp, `"${field}" must be a number, or read from an input.`, field === "pitch" ? 'Semitones: 2 is a step up; { "input": "host.combo" } climbs with a combo.' : '0 to 1, or { "input": "host.level" }.');
+      return undefined;
+    };
+    for (const field of ["intensity", "pitch"] as const) {
+      if (!(field in raw)) continue;
+      const v = amount(field);
+      if (v === undefined) ok = false;
+      else cue[field] = v;
+    }
+    if ("delay" in raw) {
+      if (isObject(raw.delay)) {
+        const d = parseDelayInput(raw.delay, ptr(p, "delay"), r);
+        if (!d || !this.checkInput(d.input, ptr(ptr(p, "delay"), "input"), ptr(ptr(p, "delay"), "input"))) ok = false;
+        else cue.delay = d;
+      } else {
+        const d = parseTime(raw.delay);
+        if (d === undefined) {
+          r.error("invalid-value", ptr(p, "delay"), '"delay" must be a time of 0 or more, or an input.', 'Use seconds (0.1), "100ms", or { "input": "host.index", "times": 0.06 }.');
+          ok = false;
+        } else if (d > 0) cue.delay = d;
+      }
+    }
+    if ("repeat" in raw) {
+      const rp = raw.repeat;
+      const count = isObject(rp) ? rp.count : undefined;
+      const every = isObject(rp) ? parseTime(rp.every) : undefined;
+      if (!isObject(rp) || typeof count !== "number" || !Number.isInteger(count) || count < 1 || every === undefined || every <= 0) {
+        r.error("invalid-value", ptr(p, "repeat"), '"repeat" is { "count": a whole number of 1 or more, "every": a time greater than 0 }.', 'For example: { "count": 3, "every": 0.12 } for three ticks.');
+        ok = false;
+      } else {
+        r.keys(rp, ptr(p, "repeat"), ["count", "every"]);
+        cue.repeat = { count, every };
+      }
+    }
+    if ("throttle" in raw) {
+      const t = parseTime(raw.throttle);
+      if (t === undefined) {
+        r.error("invalid-value", ptr(p, "throttle"), '"throttle" must be a time of 0 or more.', "The least gap between two firings, for example 0.05.");
+        ok = false;
+      } else if (t > 0) cue.throttle = t;
+    }
+    return ok ? cue : undefined;
   }
 
   /** `"step": { "thumb.x": 10 }` (v0.3): adds to a property's base value. */

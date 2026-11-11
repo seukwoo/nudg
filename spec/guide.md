@@ -235,7 +235,29 @@ For motion that lasts as long as a state does: a spinner, a shimmer, typing dots
 - Reduced motion stops loops; give a spinner a label or `aria-busy` so it still says it's busy.
 - Don't fake a loop with timers bouncing between two states, or with host CSS on `data-nudg-state`.
 
-## Platform motion
+## Sound and haptics: cues (format 1.3)
+
+A cue fires a sound and/or a haptic at an exact moment: when a transition fires, when a state is entered, or on a beat of entry keyframes or a loop.
+
+```json
+"when": { "host.go": { "to": "on", "cue": { "haptic": "success" } } },
+"on": { "cue": { "sound": "pop", "intensity": 0.6, "delay": 0.05 } },
+"enter": { "field.x": { "keyframes": [{ "at": 0.25, "value": -10, "cue": "tick" }], "duration": 0.4 } }
+```
+
+- **Haptics are intents, not patterns:** `tick`, `select`, `light`, `medium`, `heavy`, `soft`, `rigid`, `success`, `warning`, `error`, `align`, `edge`. The adapters play each platform's closest feedback.
+- **Sounds are names; the host maps them to files:**
+  - web and React: `sounds: { pop: "/sfx/pop.mp3" }`;
+  - SwiftUI: `model.sounds`;
+  - React Native and Compose: `onCue`.
+- **A name alone (`"cue": "tick"`) is a sound,** and also a haptic when it is an intent.
+- **Shape a cue with:**
+  - `intensity` (0–1) and `pitch` (semitones), either of which can read an input: a combo that climbs is `"pitch": { "input": "host.combo" }`;
+  - `delay`, which can be `{ "input": "host.index", "times": 0.06 }`, so a stagger ticks with its items;
+  - `repeat: { "count", "every" }`;
+  - `throttle`, the least gap between two firings, for fast repeats.
+- **Cues on a state stop when the state is left.**
+
 
 Libraries in `examples/motion/` carry the platforms' published spring values: `apple.nudg.json` (SwiftUI `smooth`, `snappy`, `bouncy`), `material-expressive.nudg.json` and `material-standard.nudg.json` (Material 3 `spatial-*` and `effects-*` tokens). Every platform library also defines the common names `standard`, `quick`, `gentle`, `playful` and `fade` (for color and opacity).
 
@@ -298,6 +320,7 @@ An app's motion is nudg files plus adapter calls. Before you write a timer, a wr
 | Two files on one element (a card that rises in and presses) | Bind both: transforms compose and opacities multiply; the element's own transform stays outermost. On React Native, `compose(a.bind("card"), b.bind("button"))`. |
 | Items one after another | `"delay": { "input": "host.index", "times": 0.06, "max": 0.5 }`, each item's player given `host.index` |
 | Reduced motion | Nothing: every adapter follows the system setting, live |
+| A sound or a vibration at a moment (a tap, a success, a shake's beats, a list item landing) | A cue in the file (`"cue": { "haptic": "success", "sound": "pop" }`), with the sound map in the adapter (`sounds`). Never `navigator.vibrate`, `new Audio()` or a haptics call in a timer of your own. |
 | A lift whose shadow deepens, a background that blurs | `shadowY`, `shadowBlur`, `shadowColor` and `blur` (1.3), animated like `y`. Never a CSS `box-shadow` or `filter` transition. |
 | An effect no nudg property draws (a shader input, a platform-only material) | A custom property: `"host": { "custom": ["glow"] }` and `"card.custom.glow": 0`. nudg moves it and the host draws it: on the web `var(--nudg-glow)`, on React Native `value("card.custom.glow")`, in SwiftUI and Compose from the model's values. First check that a built-in doesn't do it, and tell the person why you needed a custom property. |
 | A value the app knows (progress, volume, scroll) | `input("host.progress", v)`, declared under `host.inputs` |

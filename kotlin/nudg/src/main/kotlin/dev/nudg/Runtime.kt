@@ -42,6 +42,11 @@ private sealed interface GlidePhase {
 /** A loop running since its state was entered at [t0]. */
 private class ActiveLoop(val loop: Loop, val owner: State, val t0: Double)
 
+/** A cue that came due (1.3): when, and what to play. [intensity] is 0 to 1, [pitch] in semitones. */
+data class FiredCue(val t: Double, val sound: String?, val haptic: String?, val intensity: Double, val pitch: Double)
+
+private class ScheduledCue(val t: Double, val seq: Int, val cue: Cue, val owner: State?, val intensity: Double, val pitch: Double)
+
 /** Seconds a press is held before it is a long press, and the most between two taps of a double tap (v0.14). */
 private const val LONG_PRESS = 0.5
 private const val DOUBLE_TAP = 0.3
@@ -103,6 +108,15 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
     private val crossings: List<Crossing> by lazy { wants.sorted().mapNotNull(Crossing::of) }
     private val scrolls = HashMap<String, ScrollDirection>()
     private var now = 0.0
+    /** Cues waiting for their time (1.3); [ScheduledCue.owner] cancels them when its state is left. */
+    private val scheduled = ArrayList<ScheduledCue>()
+    private var cueSeq = 0
+    /** Cues that came due, until the host takes them. */
+    private val due = ArrayList<FiredCue>()
+    /** Loop beats have been collected up to here. */
+    private var cueCursor = 0.0
+    /** When each cue was last scheduled to fire, for its throttle (by identity). */
+    private val lastCue = java.util.IdentityHashMap<Cue, Double>()
 
     init {
         for ((key, prop) in program.properties) {
@@ -200,6 +214,13 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
 
     private fun collectDelayInputs(transition: Transition) {
         for ((_, motion) in transition.animate) motion.delayInput?.let { requiredInputs.add(it.input) }
+        for (cue in transition.cues) collectCueInputs(cue)
+    }
+
+    /** Cue amounts and delays read from inputs (1.3). */
+    private fun collectCueInputs(cue: Cue) {
+        for (a in listOf(cue.intensity, cue.pitch)) if (a is CueAmount.Input) requiredInputs.add(a.input)
+        cue.delayInput?.let { requiredInputs.add(it.input) }
     }
 
     private fun collectFollowInputs(machine: Machine) {
@@ -212,6 +233,9 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
                     for ((_, target) in state.input) { requiredInputs.add(target.input); targetInputs.add(target.input) }
                     for ((_, transition) in state.`when`) collectDelayInputs(transition)
                     for (timer in state.timers) collectDelayInputs(timer.transition)
+                    for (cue in state.cues) collectCueInputs(cue)
+                    for ((_, effect) in state.enter) if (effect is EntryEffect.Keyframes) for (f in effect.frames) for (cue in f.cues) collectCueInputs(cue)
+                    for ((_, loop) in state.loop) for ((_, cues) in loop.cues) for (cue in cues) collectCueInputs(cue)
                     state.machine?.let(::collectFollowInputs)
                 }
             }
@@ -326,6 +350,92 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
     private fun delayOf(motion: Motion, t: Double): Double {
         val d = motion.delayInput ?: return motion.delay
         return minOf(d.max ?: Double.POSITIVE_INFINITY, maxOf(0.0, inputAt(d.input, t) * d.times + d.plus))
+    }
+
+    // cues (1.3)
+
+    private fun amount(a: CueAmount?, fallback: Double, t: Double): Double = when (a) {
+        null -> fallback
+        is CueAmount.Number -> a.value
+        is CueAmount.Input -> inputAt(a.input, t) * a.times + a.plus
+    }
+
+    private fun push(cue: Cue, at: Double, owner: State?, t: Double) {
+        val last = lastCue[cue]
+        if (cue.throttle != null && last != null && at - last < cue.throttle - 1e-9) return
+        lastCue[cue] = at
+        scheduled.add(ScheduledCue(at, ++cueSeq, cue, owner, amount(cue.intensity, 1.0, t).coerceIn(0.0, 1.0), amount(cue.pitch, 0.0, t)))
+    }
+
+    /** Schedules a cue's firings for a moment at [t]. Under reduced motion its delay is ignored, as motion's is. */
+    private fun schedule(cue: Cue, t: Double, owner: State?) {
+        val d = cue.delayInput
+        var wait = if (d != null) minOf(d.max ?: Double.POSITIVE_INFINITY, maxOf(0.0, inputAt(d.input, t) * d.times + d.plus)) else cue.delay
+        if (reduced) wait = 0.0
+        for (k in 0 until cue.repeatCount) push(cue, t + wait + k * cue.repeatEvery, owner, t)
+    }
+
+    private fun activeStates(): Set<State> {
+        val out = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<State, Boolean>())
+        walkActive(active) { out.add(it) }
+        return out
+    }
+
+    /** The cues of what happened at [t]: transitions that fired, states entered (and their entry beats), states left. */
+    private fun cueMoment(t: Double, fired: List<Transition>, entered: List<State>, before: Set<State>) {
+        val after = activeStates()
+        scheduled.removeAll { c -> val o = c.owner; o != null && c.t > t && ((o in before && o !in after) || entered.any { it === o }) }
+        for (transition in fired) for (cue in transition.cues) schedule(cue, t, null)
+        for (state in entered) {
+            for (cue in state.cues) schedule(cue, t, state)
+            for ((_, effect) in state.enter) {
+                if (effect !is EntryEffect.Keyframes) continue
+                val beats = effect.frames.filter { it.cues.isNotEmpty() }
+                // Reduced motion skips the beats; their first cue still marks the moment.
+                if (reduced) {
+                    for (cue in beats.firstOrNull()?.cues ?: emptyList()) schedule(cue, t, state)
+                    continue
+                }
+                for (frame in beats) for (cue in frame.cues) schedule(cue, t + frame.at * effect.duration, state)
+            }
+        }
+        flushCues(t)
+    }
+
+    /** Moves cues due by [time] to [due], with the loop beats since the last flush. */
+    private fun flushCues(time: Double) {
+        if (time > cueCursor) {
+            // By property name, so every runtime lists beats due at the same time in the same order.
+            for ((_, running) in loops.entries.sortedBy { it.key }) {
+                val loop = running.loop
+                if (loop.cues.isEmpty()) continue
+                val start = running.t0 + loop.delay
+                var k = maxOf(0, Math.floor((cueCursor - start) / loop.duration).toInt())
+                while (start + k * loop.duration <= time) {
+                    for ((at, cues) in loop.cues) {
+                        val beat = start + (k + at) * loop.duration
+                        if (beat <= cueCursor || beat > time) continue
+                        for (cue in cues) push(cue, beat, running.owner, beat)
+                    }
+                    k++
+                }
+            }
+            cueCursor = time
+        }
+        val ready = scheduled.filter { it.t <= time + 1e-9 }.sortedWith(compareBy({ it.t }, { it.seq }))
+        if (ready.isEmpty()) return
+        scheduled.removeAll(ready.toSet())
+        for (c in ready) due.add(FiredCue(c.t, c.cue.sound, c.cue.haptic, c.intensity, c.pitch))
+    }
+
+    /**
+     * Cues that have come due since the last call (1.3), in time order: from transitions, entered
+     * states, entry keyframes and loop beats. Each has the time it was due.
+     */
+    fun takeCues(): List<FiredCue> {
+        val out = due.toList()
+        due.clear()
+        return out
     }
 
     private fun inputAt(name: String, t: Double): Double {
@@ -594,6 +704,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
             var press: Pair<String, Double>? = null
             for ((target, due) in pressDue) if (due <= t + 1e-9 && (press == null || due < press.second)) press = target to due
             if (press != null && (next == null || press.second < next.due)) {
+                flushCues(press.second)
                 pressDue.remove(press.first)
                 longPressed.add(press.first)
                 dispatch("${press.first}.longpress", press.second)
@@ -603,8 +714,12 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
             pending.remove(due)
             val fired = ArrayList<Transition>()
             val entered = ArrayList<State>()
+            // Loop beats up to the timer belong to the states before it.
+            flushCues(due.due)
+            val before = activeStates()
             perform(due.machine, due.transition, due.due, fired, entered)
             settle(due.due, fired, entered)
+            cueMoment(due.due, fired, entered, before)
         }
     }
 
@@ -630,6 +745,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
         require(t.isFinite() && t >= now) { "Time must not go backwards: got $t, already at $now." }
         now = t
         fireDue(t)
+        flushCues(t)
     }
 
     private fun valueOf(key: String, t: Double): List<Double> {
@@ -683,8 +799,10 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
         val fired = ArrayList<Transition>()
         val entered = ArrayList<State>()
         val timerHandled = controlTimers(event, t)
+        val before = activeStates()
         if (!handle(program.machine, event, t, fired, entered)) return timerHandled
         settle(t, fired, entered)
+        cueMoment(t, fired, entered, before)
         return true
     }
 
@@ -786,7 +904,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
     /** True when every property has come to rest and no unpaused timer is counting down. */
     fun settled(t: Double, property: String? = null): Boolean {
         advanceTo(t)
-        if (property == null && (pending.any { it.pausedAt == null } || pressDue.isNotEmpty())) return false
+        if (property == null && (pending.any { it.pausedAt == null } || pressDue.isNotEmpty() || scheduled.isNotEmpty())) return false
         val keys = property?.let { listOf(it) } ?: program.properties.map { it.first }
         return keys.all { atRest(it, t) }
     }

@@ -55,6 +55,18 @@ public var delayInput: DelayInput?
 public struct Keyframe
 public let at: Double
 public let value: [Double]
+public var cues: [Cue]
+public enum CueAmount
+public final class Cue
+public let sound: String?
+public let haptic: String?
+public let intensity: CueAmount?
+public let pitch: CueAmount?
+public let delay: Double
+public let delayInput: DelayInput?
+public let repeatCount: Int
+public let repeatEvery: Double
+public let throttle: Double?
 public enum EntryEffect
 public struct Measure
 public let target: String
@@ -73,6 +85,7 @@ public let duration: Double
 public let ease: Ease
 public let delay: Double
 public let wrap: Double?
+public var cues: [(at: Double, cues: [Cue])]
 public enum MapValue
 public struct PropertyMap
 public let source: String
@@ -100,6 +113,7 @@ public let nearest: (states: [String], by: String, momentum: Double)?
 public let animate: [(String, Motion)]
 public let step: [(String, Double)]?
 public let commit: [String]?
+public let cues: [Cue]
 public struct TimerPause
 public let on: String
 public let off: String
@@ -120,6 +134,7 @@ public let loop: [(String, Loop)]
 public let when: [(String, Transition)]
 public let timers: [Timer]
 public let machine: Machine?
+public let cues: [Cue]
 public final class Machine
 public enum Kind
 public let kind: Kind
@@ -138,9 +153,16 @@ public enum Value: Equatable
 public var number: Double?
 public var color: String?
 public enum RuntimeError: Error
+public struct FiredCue: Equatable
+public let t: Double
+public let sound: String?
+public let haptic: String?
+public let intensity: Double
+public let pitch: Double
 public final class Runtime
 public let program: Program
 public init(_ program: Program, state: [String]
+public func takeCues() -> [FiredCue]
 public func send(_ event: String, at t: Double) throws -> Bool
 public func setReducedMotion(_ on: Bool, at t: Double) throws
 public func input(_ name: String, _ value: Double, at t: Double) throws -> Bool
@@ -156,6 +178,10 @@ public let runtime: Runtime
 @Published public private(set) var state: [String]
 @Published public private(set) var present
 @Published public private(set) var leaving
+public var sounds: [String: URL]
+public var sound
+public var haptics
+public var onCue: ((FiredCue) -> Void)?
 public init(_ program: Program, state: [String]
 public func setReducedMotion(_ on: Bool)
 public func time(at date: Date) -> Double

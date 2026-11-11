@@ -1,0 +1,76 @@
+{
+ "nudgProgram": 10,
+ "version": "1.3",
+ "targets": [
+  "card"
+ ],
+ "properties": [
+  {
+   "key": "card.y",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [],
+ "machine": {
+  "kind": "states",
+  "initial": "idle",
+  "states": [
+   {
+    "name": "idle",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "card.tap",
+      "animate": [],
+      "to": "idle",
+      "cue": [
+       {
+        "haptic": "select",
+        "throttle": 0.1
+       }
+      ]
+     },
+     {
+      "event": "host.show",
+      "animate": [],
+      "to": "shown"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "shown",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [],
+    "timers": [],
+    "cue": [
+     {
+      "sound": "pop",
+      "delay": {
+       "input": "host.index",
+       "times": 0.05,
+       "plus": 0,
+       "max": 0.12
+      }
+     }
+    ]
+   }
+  ],
+  "when": []
+ }
+}

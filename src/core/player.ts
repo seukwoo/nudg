@@ -4,7 +4,7 @@
 // onFrame, events and inputs come in through send and input.
 
 import { createLifecycle } from "./lifecycle.ts";
-import { createRuntime, type Runtime, type Value } from "./runtime.ts";
+import { createRuntime, type FiredCue, type Runtime, type Value } from "./runtime.ts";
 import type { NudgContract, Program, StateName } from "./types.ts";
 
 export interface PlayerHost {
@@ -29,6 +29,8 @@ export interface HeadlessOptions<C extends NudgContract = NudgContract> {
   onExit?: () => void;
   /** Every value has come to rest after something moved or the state changed; see the DOM adapter's `onSettle`. */
   onSettle?: (state: C["states"][]) => void;
+  /** A cue came due (1.3): play its sound and haptic. Called after the frame it fell in, or right after the event that fired it. */
+  onCue?: (cue: FiredCue) => void;
 }
 
 export interface HeadlessPlayer<C extends NudgContract = NudgContract> {
@@ -63,10 +65,16 @@ export function createPlayer<C extends NudgContract = NudgContract>(program: Pro
     const t = now();
     lastValues = runtime.sample(t);
     options.onFrame?.(lastValues);
+    cues();
     if (life.frame(t)) cancel = host.frame(tick);
+  };
+  // Always taken, so cues nobody listens to don't pile up.
+  const cues = () => {
+    for (const cue of runtime.takeCues()) options.onCue?.(cue);
   };
   const changed = () => {
     if (!cancel) cancel = host.frame(tick);
+    cues();
     life.changed();
   };
   options.onFrame?.(lastValues);

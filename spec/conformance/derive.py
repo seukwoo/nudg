@@ -2631,6 +2631,119 @@ def shadow_blur_custom_cases():
     })
 
 
+
+def cue(t, sound=None, haptic=None, intensity=1.0, pitch=0.0):
+    out = {"t": round(t, 9)}
+    if sound is not None:
+        out["sound"] = sound
+    if haptic is not None:
+        out["haptic"] = haptic
+    out["intensity"] = intensity
+    out["pitch"] = pitch
+    return out
+
+
+def cue_cases():
+    # Cues (1.3) are moments the runtime reports at exact times; the host plays them.
+    doc = {
+        "nudg": "1.3",
+        "host": {"events": ["go", "stop"]},
+        "targets": ["card"],
+        "values": {"card.x": 0},
+        "animate": {"card.x": spring_json(0.3, 0)},
+        "initial": "idle",
+        "states": {
+            "idle": {"when": {"host.go": {"to": "running", "cue": {"haptic": "light", "intensity": 0.6}}}},
+            "running": {
+                "set": {"card.x": 100},
+                "cue": [{"sound": "start", "delay": 0.1}, {"sound": "tick", "repeat": {"count": 3, "every": 0.2}}],
+                "when": {"host.stop": "idle"},
+            },
+        },
+    }
+    write("cues", {
+        "conformance": "1.3",
+        "name": "Cues: on a transition and on entering a state, with delay and repeat; leaving the state drops the rest",
+        "doc": doc,
+        "steps": [
+            {"t": 0, "expect": {"cues": []}},
+            {"t": 0.1, "send": "host.go"},
+            {"t": 0.15, "expect": {"state": ["running"], "cues": [cue(0.1, haptic="light", intensity=0.6), cue(0.1, sound="tick")], "settled": False}},
+            {"t": 0.4, "send": "host.stop"},
+            {"t": 0.45, "expect": {"cues": [cue(0.2, sound="start"), cue(0.3, sound="tick")]}},
+            {"t": 1.0, "expect": {"cues": []}},
+        ],
+    })
+
+    beats = {
+        "nudg": "1.3",
+        "host": {"events": ["invalid", "valid"], "inputs": {"level": {"range": [0, 1]}}},
+        "targets": ["field", "dot"],
+        "values": {"field.x": 0, "dot.opacity": 1},
+        "animate": {"field.x": spring_json(0.3, 0)},
+        "initial": "idle",
+        "states": {
+            "idle": {"when": {"host.invalid": "invalid"}},
+            "invalid": {
+                "enter": {"field.x": {"keyframes": [{"at": 0.25, "value": -10, "cue": "tick"}, {"at": 0.75, "value": 5, "cue": {"haptic": "tick", "intensity": 0.5}}], "duration": 0.4}},
+                "loop": {"dot.opacity": {"keyframes": [{"at": 0.5, "value": -0.5, "cue": {"sound": "blip", "pitch": {"input": "host.level", "times": 12}}}], "to": 0, "duration": 0.2, "delay": 0.1}},
+                "when": {"host.valid": "idle"},
+            },
+        },
+    }
+    write("cue-beats", {
+        "conformance": "1.3",
+        "name": "Cues on beats: entry keyframes and every cycle of a loop; a name that is a haptic plays as both",
+        "doc": beats,
+        "steps": [
+            {"t": 0, "input": "host.level", "value": 0.5},
+            {"t": 0.1, "send": "host.invalid"},
+            {"t": 0.6, "send": "host.valid"},
+            {"t": 0.65, "expect": {"cues": [cue(0.2, sound="tick", haptic="tick"), cue(0.3, sound="blip", pitch=6), cue(0.4, haptic="tick", intensity=0.5), cue(0.5, sound="blip", pitch=6)]}},
+            {"t": 1.0, "expect": {"cues": []}},
+        ],
+    })
+    write("cue-beats-reduced", {
+        "conformance": "1.3",
+        "name": "Cues under reduced motion: skipped entry beats leave their first cue at the moment of entry; a fade loop still beats",
+        "doc": beats,
+        "reducedMotion": True,
+        "steps": [
+            {"t": 0, "input": "host.level", "value": 0.5},
+            {"t": 0.1, "send": "host.invalid"},
+            {"t": 0.6, "send": "host.valid"},
+            {"t": 0.65, "expect": {"cues": [cue(0.1, sound="tick", haptic="tick"), cue(0.3, sound="blip", pitch=6), cue(0.5, sound="blip", pitch=6)]}},
+        ],
+    })
+
+    taps = {
+        "nudg": "1.3",
+        "host": {"events": ["show"], "inputs": {"index": {"range": [0, 100]}}},
+        "targets": ["card"],
+        "values": {"card.y": 0},
+        "initial": "idle",
+        "states": {
+            "idle": {"when": {"card.tap": {"to": "idle", "cue": {"haptic": "select", "throttle": 0.1}}, "host.show": "shown"}},
+            "shown": {"cue": {"sound": "pop", "delay": {"input": "host.index", "times": 0.05, "max": 0.12}}},
+        },
+    }
+    write("cue-throttle-delay", {
+        "conformance": "1.3",
+        "name": "Cues: throttle drops firings closer than its gap; a delay read from an input, capped by max",
+        "doc": taps,
+        "steps": [
+            {"t": 0.05, "send": "card.tap"},
+            {"t": 0.1, "send": "card.tap"},
+            {"t": 0.2, "send": "card.tap"},
+            {"t": 0.25, "expect": {"cues": [cue(0.05, haptic="select"), cue(0.2, haptic="select")]}},
+            {"t": 0.3, "input": "host.index", "value": 4},
+            {"t": 0.3, "send": "host.show"},
+            {"t": 0.41, "expect": {"cues": []}},
+            {"t": 0.43, "expect": {"cues": [cue(0.42, sound="pop")]}},
+        ],
+    })
+
+
 def validation_v1_3_cases():
     def doc():
         return json.loads(json.dumps(LIFT))
@@ -2653,9 +2766,19 @@ def validation_v1_3_cases():
     out.append(("custom-is-a-number", d, [("invalid-value", "/values/card.custom.glow")]))
     d = doc(); d["values"]["card.custom.glow.extra"] = 0
     out.append(("path", d, [("invalid-path", "/values/card.custom.glow.extra")]))
+    d = doc(); d["states"]["lifted"]["cue"] = {"haptic": "buzz"}
+    out.append(("unknown-haptic", d, [("unknown-haptic", "/states/lifted/cue/haptic")]))
+    d = doc(); d["host"]["custom"] = ["glow", "buzz"]; d["states"]["lifted"]["cue"] = {"haptic": "buzz"}
+    out.append(("custom-haptic", d, []))
+    d = doc(); d["states"]["lifted"]["cue"] = {"intensity": 0.5}
+    out.append(("cue-needs-a-name", d, [("invalid-cue", "/states/lifted/cue")]))
+    d = doc(); d["states"]["lifted"]["cue"] = [{"sound": "pop", "intensity": 2}, {"sound": "pop", "repeat": {"count": 0, "every": 0.1}}]
+    out.append(("cue-values", d, [("invalid-value", "/states/lifted/cue/0/intensity"), ("invalid-value", "/states/lifted/cue/1/repeat")]))
+    d = doc(); d["nudg"] = "1.2"; d["host"].pop("custom"); d["values"] = {"card.y": 0}; d["animate"] = {}; d["states"]["lifted"] = {"set": {"card.y": -8}, "cue": "pop"}
+    out.append(("cue-needs-version", d, [("needs-version", "/states/lifted/cue")]))
     write("validation-1.3", {
         "conformance": "1.3",
-        "name": "Validator (1.3): shadow, blur and declared custom properties",
+        "name": "Validator (1.3): shadow, blur, declared custom properties, and cues",
         "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
     })
 
@@ -2708,6 +2831,7 @@ if __name__ == "__main__":
     delay_input_cases()
     validation_v1_2_cases()
     shadow_blur_custom_cases()
+    cue_cases()
     validation_v1_3_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

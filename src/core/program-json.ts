@@ -4,29 +4,55 @@
 // of entries, because order matters (regions, states) and not every JSON reader keeps
 // object key order.
 
-import type { EntryEffect, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
+import type { Cue, EntryEffect, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
 import { animateMaps } from "./walk.ts";
 
-export const PROGRAM_FORMAT = 9;
+export const PROGRAM_FORMAT = 10;
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
-/** Program format 8 is frozen with 1.0; 9 adds a delay read from an input (1.2). */
+/** Set while a program is written, when it holds a cue (format 10). */
+let wroteCues = false;
+
+/**
+ * Program format 8 is frozen with 1.0; 9 adds a delay read from an input (1.2); 10 adds cues
+ * (1.3). A program says the oldest format that has everything it uses, so older runtimes
+ * still read every program that doesn't use what they lack.
+ */
 export function programToJson(program: Program): Json {
+  wroteCues = false;
+  const written = machine(program.machine);
+  const delayInput = animateMaps(program).some((t) => [...t.values()].some((m) => m.delayInput));
   return {
-    // A program without format 9's one addition says 8, so runtimes from before 1.2 still read it.
-    nudgProgram: animateMaps(program).some((t) => [...t.values()].some((m) => m.delayInput)) ? PROGRAM_FORMAT : 8,
+    nudgProgram: wroteCues ? 10 : delayInput ? 9 : 8,
     version: program.version,
     targets: program.targets,
     properties: [...program.properties].map(([key, p]) => ({ key, ...property(p) })),
     animate: [...program.animate].map(([key, m]) => ({ key, motion: motion(m) })),
-    machine: machine(program.machine),
+    machine: written,
   };
 }
 
+function cues(list: Cue[]): Json {
+  wroteCues = true;
+  return list.map((c) => {
+    const out: Record<string, Json> = {};
+    if (c.sound !== undefined) out.sound = c.sound;
+    if (c.haptic !== undefined) out.haptic = c.haptic;
+    if (c.intensity !== undefined) out.intensity = typeof c.intensity === "number" ? c.intensity : { ...c.intensity };
+    if (c.pitch !== undefined) out.pitch = typeof c.pitch === "number" ? c.pitch : { ...c.pitch };
+    if (c.delay !== undefined) out.delay = typeof c.delay === "number" ? c.delay : { ...c.delay };
+    if (c.repeat) out.repeat = { ...c.repeat };
+    if (c.throttle !== undefined) out.throttle = c.throttle;
+    return out;
+  });
+}
+
+const readCues = (j: any): Cue[] | undefined => (Array.isArray(j) ? j.map((c: any) => ({ ...c })) : undefined);
+
 export function programFromJson(json: unknown): Program {
   const j = json as Record<string, any>;
-  if (![1, 2, 3, 4, 5, 6, 7, 8, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
   return {
     version: j.version,
     targets: j.targets,
@@ -76,12 +102,12 @@ function readMotion(j: any): Motion {
 
 function entryEffect(effect: EntryEffect): Json {
   if (effect.kind !== "keyframes") return motion(effect);
-  return { kind: "keyframes", frames: effect.frames.map((frame) => ({ at: frame.at, value: frame.value })), duration: effect.duration, ease: effect.ease === "linear" ? "linear" : [...effect.ease] };
+  return { kind: "keyframes", frames: effect.frames.map((frame): Json => (frame.cues ? { at: frame.at, value: frame.value, cue: cues(frame.cues) } : { at: frame.at, value: frame.value })), duration: effect.duration, ease: effect.ease === "linear" ? "linear" : [...effect.ease] };
 }
 
 function readEntryEffect(effect: any): EntryEffect {
   return effect.kind === "keyframes"
-    ? { kind: "keyframes", frames: effect.frames.map((frame: any) => ({ at: frame.at, value: frame.value })), duration: effect.duration, ease: effect.ease }
+    ? { kind: "keyframes", frames: effect.frames.map((frame: any) => (frame.cue ? { at: frame.at, value: frame.value, cues: readCues(frame.cue) } : { at: frame.at, value: frame.value })), duration: effect.duration, ease: effect.ease }
     : (effect as Motion & EntryEffect);
 }
 
@@ -108,6 +134,7 @@ function state(s: State): Json {
     when: [...s.when].map(([event, t]) => ({ event, ...transition(t) })),
     timers: s.timers.map((t: Timer) => ({ key: t.key, delay: t.delay, pause: t.pause.map((p) => ({ ...p })), transition: transition(t.transition) })),
   };
+  if (s.cues) out.cue = cues(s.cues);
   if (s.machine) out.machine = machine(s.machine);
   return out;
 }
@@ -125,18 +152,19 @@ function readState(j: any): State {
     when: new Map(j.when.map((w: any) => [w.event, readTransition(w)])),
     timers: j.timers.map((t: any) => ({ key: t.key, delay: t.delay, pause: (t.pause ?? []).map((p: any) => ({ on: p.on, off: p.off })), transition: readTransition(t.transition) })),
   };
+  if (j.cue) s.cues = readCues(j.cue);
   if (j.machine) s.machine = readMachine(j.machine);
   return s;
 }
 
 function loop(l: Loop): Record<string, Json> {
-  const out: Record<string, Json> = { to: endpoint(l.to), frames: l.frames.map((frame) => ({ at: frame.at, value: endpoint(frame.value) })), duration: l.duration, ease: l.ease === "linear" ? "linear" : [...l.ease], delay: l.delay };
+  const out: Record<string, Json> = { to: endpoint(l.to), frames: l.frames.map((frame): Json => (frame.cues ? { at: frame.at, value: endpoint(frame.value), cue: cues(frame.cues) } : { at: frame.at, value: endpoint(frame.value) })), duration: l.duration, ease: l.ease === "linear" ? "linear" : [...l.ease], delay: l.delay };
   if (l.wrap !== undefined) out.wrap = l.wrap;
   return out;
 }
 
 function readLoop(j: any): Loop {
-  const l: Loop = { to: readEndpoint(j.to), frames: j.frames.map((frame: any) => ({ at: frame.at, value: readEndpoint(frame.value) })), duration: j.duration, ease: j.ease, delay: j.delay ?? 0 };
+  const l: Loop = { to: readEndpoint(j.to), frames: j.frames.map((frame: any) => (frame.cue ? { at: frame.at, value: readEndpoint(frame.value), cues: readCues(frame.cue) } : { at: frame.at, value: readEndpoint(frame.value) })), duration: j.duration, ease: j.ease, delay: j.delay ?? 0 };
   if (j.wrap !== undefined) l.wrap = j.wrap;
   return l;
 }
@@ -161,6 +189,7 @@ function transition(t: Transition): Record<string, Json> {
   if (t.nearest) out.nearest = { states: t.nearest.states, by: t.nearest.by, momentum: t.nearest.momentum };
   if (t.step) out.step = [...t.step].map(([key, delta]) => ({ key, delta }));
   if (t.commit) out.commit = t.commit;
+  if (t.cues) out.cue = cues(t.cues);
   return out;
 }
 
@@ -170,5 +199,6 @@ function readTransition(j: any): Transition {
   if (j.nearest) t.nearest = j.nearest;
   if (j.step) t.step = new Map(j.step.map((s: any) => [s.key, s.delta]));
   if (j.commit) t.commit = j.commit;
+  if (j.cue) t.cues = readCues(j.cue);
   return t;
 }

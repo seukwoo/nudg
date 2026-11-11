@@ -1,0 +1,96 @@
+{
+ "nudgProgram": 10,
+ "version": "1.3",
+ "targets": [
+  "card"
+ ],
+ "properties": [
+  {
+   "key": "card.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "card.x",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 438.6490844928604,
+    "damping": 41.88790204786391,
+    "mass": 1
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "idle",
+  "states": [
+   {
+    "name": "idle",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "host.go",
+      "animate": [],
+      "to": "running",
+      "cue": [
+       {
+        "haptic": "light",
+        "intensity": 0.6
+       }
+      ]
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "running",
+    "set": [
+     {
+      "key": "card.x",
+      "value": [
+       100
+      ]
+     }
+    ],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "host.stop",
+      "animate": [],
+      "to": "idle"
+     }
+    ],
+    "timers": [],
+    "cue": [
+     {
+      "sound": "start",
+      "delay": 0.1
+     },
+     {
+      "sound": "tick",
+      "repeat": {
+       "count": 3,
+       "every": 0.2
+      }
+     }
+    ]
+   }
+  ],
+  "when": []
+ }
+}

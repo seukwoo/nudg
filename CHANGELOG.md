@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.8.0
+
+How much of an app is on nudg, as a number, and less code to get it to 100%. `nudg audit` finds motion outside nudg and names what replaces each piece. PlaySnack measures 49%, and 38 of its 40 findings can be replaced today. `leaving` and `playEach` replace the last two pieces of glue PlaySnack wrote: the sheet closer and the document-wide press listener. The format stays 1.2; the API only gains.
 
 - **`nudg audit`: is an app's motion on nudg?** `nudg audit src` (MCP `nudg_audit`) finds motion that lives outside nudg:
   - CSS keyframes, and transitions of moving properties;

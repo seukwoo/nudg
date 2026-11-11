@@ -28,6 +28,8 @@ export interface Lifecycle {
   frame(t: number): boolean;
   /** False once the component has exited, until it leaves the exit state again. */
   present(): boolean;
+  /** True while the way out plays: an exit state entered from elsewhere, not yet settled. */
+  leaving(): boolean;
 }
 
 export function createLifecycle(runtime: Runtime, hooks: LifecycleHooks): Lifecycle {
@@ -85,5 +87,6 @@ export function createLifecycle(runtime: Runtime, hooks: LifecycleHooks): Lifecy
       return !settled || owed || runtime.looping();
     },
     present: () => present,
+    leaving: () => armed && present && inExit(),
   };
 }

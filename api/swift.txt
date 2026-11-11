@@ -25,6 +25,7 @@ public var onState: (([String]) -> Void)?
 public var onSettle: (([String]) -> Void)?
 public var onExit: (() -> Void)?
 public private(set) var present
+public var leaving: Bool
 public init(_ runtime: Runtime, exit: [String]
 public func changed()
 public func frame(_ at: Double) -> Bool
@@ -154,6 +155,7 @@ public final class NudgModel: ObservableObject
 public let runtime: Runtime
 @Published public private(set) var state: [String]
 @Published public private(set) var present
+@Published public private(set) var leaving
 public init(_ program: Program, state: [String]
 public func setReducedMotion(_ on: Bool)
 public func time(at date: Date) -> Double

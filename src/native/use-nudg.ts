@@ -46,6 +46,8 @@ export interface NudgNative<C extends NudgContract = NudgContract> {
   input(name: C["inputs"], value: number): boolean;
   state: C["states"][];
   present: boolean;
+  /** True while the way out plays (see `exit`): a dim behind a leaving sheet can let taps through. */
+  leaving: boolean;
 }
 
 const TRANSFORM = ["x", "y", "rotation", "scale", "scaleX", "scaleY"] as const;
@@ -78,6 +80,7 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
   }, [program]);
   const [state, setState] = useState<string[]>(() => createRuntime(program, { state: options.state }).state());
   const [present, setPresent] = useState(true);
+  const [leaving, setLeaving] = useState(false);
   const player = useRef<HeadlessPlayer | null>(null);
   const handledByFile = useMemo(() => handledEvents(program), [program]);
   const warned = useRef(new Set<string>());
@@ -132,10 +135,12 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
       exit: options.exit,
       onExit: () => {
         setPresent(false);
+        setLeaving(false);
         onExit.current?.();
       },
       onState: (s) => {
         setState(s);
+        setLeaving(p.leaving());
         if (p.present()) setPresent(true);
       },
       onFrame: (values) => write(animated, values),
@@ -206,7 +211,7 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
     if (used) inputs.current.set(name, value);
     return used;
   }, [reads]);
-  return { bind, send, input, state, present };
+  return { bind, send, input, state, present, leaving };
 }
 
 /** The value each Animated value last showed. React Native updates the view on every setValue, so unchanged ones are skipped. */

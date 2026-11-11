@@ -81,11 +81,19 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     var present: Boolean by mutableStateOf(true)
         private set
 
+    /** True while the way out plays (see `exit`): a dim behind a leaving sheet can let taps through. */
+    var leaving: Boolean by mutableStateOf(false)
+        private set
+
     init {
-        lifecycle.onState = { this.state = it }
+        lifecycle.onState = {
+            this.state = it
+            leaving = lifecycle.leaving
+        }
         lifecycle.onSettle = { onSettle?.invoke(it) }
         lifecycle.onExit = {
             present = false
+            leaving = false
             onExit?.invoke()
         }
     }

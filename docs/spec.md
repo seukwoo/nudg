@@ -432,6 +432,7 @@ The runtime is **resting** when every property is at rest, whatever timers are p
 - **State:** the active states, after an event, a timer or a derived event changes them.
 - **Settle:** the active states, once each time the runtime is resting after something moved or the state changed. An interrupted motion reports only the rest that follows the interruption. A state change that moves nothing settles at the next frame. An event nobody handles, and input samples that only move followed or mapped values, report nothing. Pending timers don't delay a settle: a toast settles once shown while its dismiss timer runs, and again once hidden. A host may send events from inside the notification.
 - **Exit:** once the machine has entered a host-named exit state from another state and the runtime is settled. Mounting in an exit state is not an exit.
+- **Leaving:** a flag, not a notification. It is true from the moment the machine enters a host-named exit state from another state until the exit is reported (or the machine leaves the exit state). An exit that moves nothing is reported at once, so it is never seen leaving.
 
 **First frame.** Before anything happens, a player shows the starting states (the host's, or `initial`), with app inputs as the host gives them (0 otherwise) and measured values at their base until the first layout report. Entry effects of the starting states don't play. Every adapter starts from this frame, and a server can compute it without a clock or platform APIs, so a server-rendered page hydrates without a jump.
 

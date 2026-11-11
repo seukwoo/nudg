@@ -18,6 +18,8 @@ public final class NudgModel: ObservableObject {
   @Published public private(set) var state: [String]
   /** False once the component has exited (see `exit`); render nothing then. True again if it is shown again. */
   @Published public private(set) var present = true
+  /** True while the way out plays (see `exit`): a dim behind a leaving sheet can let taps through. */
+  @Published public private(set) var leaving = false
   private let start: Date
   private let clock: () -> Date
   private var lastTime = 0.0
@@ -45,11 +47,12 @@ public final class NudgModel: ObservableObject {
     self.start = clock()
     self.state = runtime.state()
     self.lifecycle = Lifecycle(runtime, exit: exit)
-    lifecycle.onState = { [unowned self] s in publish { self.state = s } }
+    lifecycle.onState = { [unowned self] s in publish { self.state = s; self.leaving = self.lifecycle.leaving } }
     lifecycle.onSettle = onSettle.map { callback in { [unowned self] s in publish { callback(s) } } }
     lifecycle.onExit = { [unowned self] in
       publish {
         self.present = false
+        self.leaving = false
         onExit?()
       }
     }

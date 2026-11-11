@@ -4,6 +4,7 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     var values: Map<String, Value> by mutableStateOf(runtime.sample(0.0))
     var state: List<String> by mutableStateOf(runtime.state())
     var present: Boolean by mutableStateOf(true)
+    var leaving: Boolean by mutableStateOf(false)
     fun send(event: String): Boolean
     fun input(name: String, value: Double): Boolean
     fun setReducedMotion(on: Boolean)
@@ -40,6 +41,7 @@ class Lifecycle(private val runtime: Runtime, exit: List<String>
     var onSettle: ((List<String>) -> Unit)?
     var onExit: (() -> Unit)?
     var present
+    val leaving: Boolean get()
     fun changed()
     fun frame(at: Double): Boolean
 // nudg/src/main/kotlin/dev/nudg/Math.kt

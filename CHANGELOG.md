@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **`leaving`: the way out, as a flag.** Every adapter has it next to `present` (`player.leaving()`, `leaving` in the React and React Native hooks, `model.leaving` in SwiftUI, `state.leaving` in Compose), from the runtimes' shared lifecycle. It is true from the moment the machine enters an exit state from elsewhere until `onExit`, so a dim behind a leaving sheet lets taps through without the host tracking it. PlaySnack kept a 78-line closer for this; everything else in it was already `exit`, `onExit` and `present`.
+
 ## 1.7.0
 
 Less code around nudg. PlaySnack drives every interaction with nudg, but kept 731 lines of its own motion code and CSS keyframes on seven screens. Part of that was missing from nudg; part of it was already there, and the agent never found it. This release fixes both: one-shots let go by themselves, entrances are one hook, a hidden tab still ends its motion, and the guide and skill now cover the app side. The format stays 1.2; the API only gains.

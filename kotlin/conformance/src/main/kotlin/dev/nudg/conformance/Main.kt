@@ -101,11 +101,12 @@ fun main(args: Array<String>) {
         frames(0.1)
         rt.send("track.tap", t); life.changed()
         frames(2.0)
-        val once = settles == listOf(listOf("on")) && exits == 0 && life.present
+        val once = settles == listOf(listOf("on")) && exits == 0 && life.present && !life.leaving
         rt.send("track.tap", t); life.changed()
+        val leaving = life.leaving
         frames(4.0)
-        if (once && settles == listOf(listOf("on"), listOf("off")) && exits == 1 && !life.present) { passed++; println("ok    lifecycle: one settle per rest, exit once the exit state settled") }
-        else { failures.add("lifecycle"); println("FAIL  lifecycle: settles $settles, exits $exits, present ${life.present}") }
+        if (once && leaving && settles == listOf(listOf("on"), listOf("off")) && exits == 1 && !life.present && !life.leaving) { passed++; println("ok    lifecycle: one settle per rest, exit once the exit state settled") }
+        else { failures.add("lifecycle"); println("FAIL  lifecycle: settles $settles, exits $exits, present ${life.present}, leaving $leaving") }
     }
 
     // The comparison bundle `nudg compare --bundle` writes: both versions under its events

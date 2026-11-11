@@ -500,6 +500,131 @@ None of this changes the format. Every item is adapter API or agent tooling, so 
 - `useNudgOnce` replaying on dependencies, or a `key` the host changes (React's own way to restart)? Proposed: `replay`, because a key remounts the element and loses its focus and DOM state.
 - `audit` heuristics will miss things and flag some CSS that is fine (a colour hover). Proposed: report, never fail, and let `// nudg-audit-ignore` mark the deliberate ones.
 
+## Format 1.3: feedback beyond motion (proposed)
+
+Status: proposed 2026-11-11. Interaction feedback is motion, sound and touch landing on the same moment, plus the effects motion alone can't draw. Today a nudg app does the rest itself:
+- PlaySnack keeps about 800 lines for sound and haptics (`sfx.ts`, `tapSound.ts`, `moments.ts`, `gameCues.ts`), and much of that only times them against the motion;
+- it draws confetti with `element.animate`, one call per piece (#118);
+- it animates `box-shadow` with CSS keyframes, which `nudg audit` can only call a gap.
+
+Four additions share one aim: the file says what happens and when, the runtime decides the exact moment, and the adapter does it on each platform. For what nudg can't do on a platform there is one narrow way out, so nobody needs to leave the format for it.
+
+### Proposed: cues, for sound and haptics
+
+A **cue** is a named moment the runtime reports at an exact time. The file holds only names and numbers, never sound files or vibration patterns.
+
+```json
+"when": { "track.tap": { "to": "on", "cue": "toggle" } },
+"states": {
+  "won":     { "cue": { "sound": "win", "haptic": "success" } },
+  "invalid": { "enter": { "field.x": { "keyframes": [
+    { "at": 0.16, "value": -10, "cue": "tick" },
+    { "at": 0.58, "value": -6,  "cue": { "haptic": "tick", "intensity": 0.5 } }
+  ], "duration": 0.42 } } }
+}
+```
+
+- **Where a cue can sit.**
+  - On a transition: it fires when the transition fires.
+  - On a state: on entering it.
+  - On a keyframe or loop frame: on that beat, and on every cycle of a loop.
+  - `{ "arrive": "card.y" }`: when that property's motion first reaches its target. That is the landing of a drop, before the overshoot settles.
+  - `{ "every": 10, "of": "slider.value" }`: each time a value crosses a step. These are the detents of a slider or a picker.
+- **What a cue carries.**
+  - `sound` and `haptic` names; a string is shorthand for both.
+  - `intensity`, from 0 to 1.
+  - `pitch`, in semitones, for a combo that climbs.
+  - `delay`, in the same forms as motion delay: a number, or `{ input, times, plus, max }`, so a stagger ticks with its items.
+  - `repeat` (`{ "count", "every" }`).
+  - `throttle`: a minimum gap, so a fast drag doesn't fire 60 times a second.
+  - Any number can be `{ "input": … }`, so a rubber band can pull harder the further it goes.
+- **Haptics are intent names, as every platform now does:** `tick`, `select`, `light`, `medium`, `heavy`, `soft`, `rigid`, `success`, `warning`, `error`, `align`, `edge`. The adapters map them:
+
+  | name | iOS | Android | Windows (InputHapticsManager) | Web |
+  |---|---|---|---|---|
+  | tick / select | UISelectionFeedbackGenerator | `SEGMENT_TICK` / `CLOCK_TICK` | Step | `tick` (proposed Web Haptics), else a 10 ms `vibrate` |
+  | light, medium, heavy, soft, rigid | UIImpactFeedbackGenerator styles | VibrationEffect primitives (`TICK`, `CLICK`, `THUD`), scaled by intensity | Collide | `hint`, else `vibrate` |
+  | success, warning, error | UINotificationFeedbackGenerator | `CONFIRM` / `REJECT` | Success | `vibrate` pattern |
+  | align, edge | Selection | `SEGMENT_FREQUENT_TICK` | Align | `align` / `edge` |
+
+- **Sounds are the host's:** `nudg({ sounds: { win: "/sfx/win.mp3" } })` on the web. A native adapter takes a name-to-resource map. Volume, mixing and preloading stay the app's.
+- **Settings.**
+  - Haptics follow the system's haptics setting.
+  - Sounds follow `sound: false` (an app's mute).
+  - Under reduced motion, cues still fire, because they aren't motion. Cues on beats that reduced motion skips fire once, when their state is entered.
+- **The runtime reports cues as time-stamped events** (`runtime.cues(from, to)`), deterministic like everything else. Conformance cases list them, and `simulate`, `plot` and `compare` show them on the timeline.
+
+### Proposed: particles (#118)
+
+An **emitter** sends out many short-lived pieces from one place, in one file. Each piece follows a closed-form path: a launch velocity, linear drag, gravity, spin, and a fade near the end of its life. So any time can be sampled exactly, and a seed makes every burst reproducible.
+
+```json
+"targets": ["button", "confetti"],
+"emitters": { "confetti": { "from": "button", "count": 24, "angle": [-150, -30], "speed": [500, 900],
+  "gravity": 1600, "drag": 1.2, "spin": [-720, 720], "life": [0.9, 1.3], "fade": 0.3, "scale": [0.6, 1] } },
+"when": { "host.celebrate": { "emit": "confetti" } }
+```
+
+- **Sources:**
+  - `from` a target's centre (a burst);
+  - `from` its bounds;
+  - `"from": "top"`, the top edge of the bound container (rain);
+  - `around` a target (a sparkle).
+- **Each piece's numbers** come from its index and the emitter's `seed`, never from `Math.random`, so `simulate` and `compare` stay exact. A second `emit` while pieces are flying adds another wave with the next seed.
+- **What the host draws.** Pieces are drawn from templates the host gives:
+  - on the web, children of the emitter's element marked `data-nudg-piece`, cloned and cycled;
+  - natively, a view builder that receives the index;
+  - on a canvas, the headless player's `pieces(emitter)` with each piece's x, y, rotation, scale and opacity.
+
+  Colors and shapes are the template's, so a file stays brand-free.
+- **Lifecycle:** pieces count as moving until their life ends, so `onSettle` comes after the last one has faded. The adapter removes them; the host keeps nothing.
+- **Reduced motion:** nothing is emitted. A file can name a cue or a state for the moment instead (a soft pop).
+- **Budget:** `critique` warns past 60 pieces in a wave or 2 s of life. Only transform and opacity move.
+- **Recipes and presets:** `confetti-burst`, `confetti-rain` and `sparkle` get starters.
+
+### Proposed: shadow and blur
+
+| property | web | SwiftUI | Compose | React Native |
+|---|---|---|---|---|
+| `shadowX`, `shadowY`, `shadowBlur` (numbers), `shadowColor` (color with alpha) | `box-shadow` | `.shadow(color:radius:x:y:)` (radius = blur / 2) | `Modifier.dropShadow` (Compose 1.9) | `boxShadow` (0.76+) |
+| `blur` (number) | `filter: blur()` | `.blur(radius:)` | `Modifier.blur` (Android 12+) | `filter` where supported |
+
+- **Four plain properties, not one compound value.** Each has its own motion, like `x` and `y`. A lift deepens its shadow with the same spring that raises the card.
+- **No spread.** SwiftUI and Compose shadows have none. A ring that spreads is a separate element that scales up as it fades, which also runs on the GPU.
+- **Where a platform can't draw it** (blur below Android 12, some React Native versions), the adapter warns once and skips it, and the rest of the file plays.
+- **Gradients wait.** They don't interpolate in CSS, and the common cases (a shimmer, a color shift) are an overlay that moves or two layers that cross-fade. Stops as color properties come when a real case can't be done that way.
+
+### Proposed: one narrow way out (custom properties and cues)
+
+For what nudg doesn't cover on some platform (a shader, a platform-only material, a Lottie frame), the way out carries values and moments, never timing logic. The motion stays in the file and the tools keep seeing it.
+
+- **Custom properties.**
+  - `"card.custom.glow": 0` is a number the file moves like any other: spring, delay, stagger, reduced motion, settle.
+  - The host only draws it. On the web it is also written as a CSS variable on the element (`--nudg-glow`), so `box-shadow: 0 0 calc(var(--nudg-glow) * 20px) gold` needs no script.
+  - Natively it is in the model's values.
+- **Custom cues:** a sound or haptic name that isn't built in reaches `onCue(name, { intensity, pitch })`, at the exact moment.
+- **Guardrails, so the way out doesn't become the way in:**
+  - custom names must be declared under `host.custom`, so the file stays closed;
+  - a custom name that matches a built-in property or haptic is an error whose hint names the built-in;
+  - `audit` counts custom uses next to the share on nudg;
+  - the skill tells the agent to look for the built-in first, and to tell the person why when it reaches for a custom one;
+  - the custom names that keep appearing in shared reports are the queue for the next built-ins.
+
+### What it costs, and in what order
+
+- **Shadow and blur:** a vocabulary entry and an adapter mapping each; the runtimes already move numbers and colors. Cheapest.
+- **Cues:** a field on transitions, states and frames; `runtime.cues(from, to)` in three runtimes; conformance cases with cue times; haptics in five adapters; sounds through host maps.
+- **Particles:** the emitter model and its closed-form path in three runtimes, conformance by sampled pieces, piece rendering in five adapters, and three recipes.
+- **The way out:** a property namespace, a host declaration, the CSS variable, `onCue`.
+
+Proposed order: shadow and blur with custom properties, then cues, then particles. They ship together as format 1.3, or as 1.3, 1.4 and 1.5 if one is ready well before the others.
+
+### Choices to make
+
+- **A cue string as shorthand for both sound and haptic, or sound only?** Proposed: both. A built-in haptic name plays its haptic, and every name reaches the sound map and `onCue`.
+- **Particles as a top-level `emitters` block, or as a target kind?** Proposed: `emitters`, because a piece isn't a target the host binds one by one.
+- **Releases:** one format version for all four, or one each? Proposed: one each, in the order above, each as soon as it is ready.
+
 ## Open questions
 
 These are unresolved design choices. Scheduling and completion status live in the [roadmap](roadmap.md); examples of possible syntax below are proposals.
@@ -511,7 +636,7 @@ These are unresolved design choices. Scheduling and completion status live in th
 - Pattern metadata currently lives in the versioned external recipe catalog. Revisit a file-level role such as `"role": "bottom-sheet"` only if generation or validation needs cannot be met without changing runtime documents.
 - Pattern aliases and locale: how to map common design words such as FAB, snackbar, toast, tabs, tab bar, bottom nav, GNB, LNB and side nav without making the core format depend on one design system's names.
 - Reduced motion inside the format: a way for a file to say which properties must not be reduced (a progress bar's width), beyond the runtime's blanket option and 1.1's opacity loops.
-- Properties beyond transform, opacity, size and background color. `nudg audit` found PlaySnack animating `box-shadow` (a ring that spreads from a button), which no nudg property moves. Shadows, blur and border color are common in press and focus feedback. Each new property costs a name in the vocabulary, a value type (a shadow is several numbers and a color), and a style mapping in five adapters. Decide when a second app needs one.
+- Properties beyond transform, opacity, size and background color: shadow and blur are proposed in [Format 1.3](#format-13-feedback-beyond-motion-proposed); gradients and border color remain open.
 - Discrete steps for `commit` (a slider that snaps to 10s), beyond `min`/`max`.
 - Nonlinear rubber banding that depends on the view's size, instead of the linear `overdrag` factor.
 - Loops that run a fixed number of times, and loops on colors; see [loops](#loops-while-a-state-is-active-format-010) for what 0.10 settled.

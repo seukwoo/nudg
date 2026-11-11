@@ -500,16 +500,16 @@ None of this changes the format. Every item is adapter API or agent tooling, so 
 - `useNudgOnce` replaying on dependencies, or a `key` the host changes (React's own way to restart)? Proposed: `replay`, because a key remounts the element and loses its focus and DOM state.
 - `audit` heuristics will miss things and flag some CSS that is fine (a colour hover). Proposed: report, never fail, and let `// nudg-audit-ignore` mark the deliberate ones.
 
-## Format 1.3: feedback beyond motion (proposed)
+## Format 1.3: feedback beyond motion
 
-Status: proposed 2026-11-11. Interaction feedback is motion, sound and touch landing on the same moment, plus the effects motion alone can't draw. Today a nudg app does the rest itself:
+Status: decided 2026-11-11 with the proposed choices; shipping one at a time (shadow, blur and custom properties first). Interaction feedback is motion, sound and touch landing on the same moment, plus the effects motion alone can't draw. Today a nudg app does the rest itself:
 - PlaySnack keeps about 800 lines for sound and haptics (`sfx.ts`, `tapSound.ts`, `moments.ts`, `gameCues.ts`), and much of that only times them against the motion;
 - it draws confetti with `element.animate`, one call per piece (#118);
 - it animates `box-shadow` with CSS keyframes, which `nudg audit` can only call a gap.
 
 Four additions share one aim: the file says what happens and when, the runtime decides the exact moment, and the adapter does it on each platform. For what nudg can't do on a platform there is one narrow way out, so nobody needs to leave the format for it.
 
-### Proposed: cues, for sound and haptics
+### Decided: cues, for sound and haptics
 
 A **cue** is a named moment the runtime reports at an exact time. The file holds only names and numbers, never sound files or vibration patterns.
 
@@ -554,7 +554,7 @@ A **cue** is a named moment the runtime reports at an exact time. The file holds
   - Under reduced motion, cues still fire, because they aren't motion. Cues on beats that reduced motion skips fire once, when their state is entered.
 - **The runtime reports cues as time-stamped events** (`runtime.cues(from, to)`), deterministic like everything else. Conformance cases list them, and `simulate`, `plot` and `compare` show them on the timeline.
 
-### Proposed: particles (#118)
+### Decided: particles (#118)
 
 An **emitter** sends out many short-lived pieces from one place, in one file. Each piece follows a closed-form path: a launch velocity, linear drag, gravity, spin, and a fade near the end of its life. So any time can be sampled exactly, and a seed makes every burst reproducible.
 
@@ -582,7 +582,7 @@ An **emitter** sends out many short-lived pieces from one place, in one file. Ea
 - **Budget:** `critique` warns past 60 pieces in a wave or 2 s of life. Only transform and opacity move.
 - **Recipes and presets:** `confetti-burst`, `confetti-rain` and `sparkle` get starters.
 
-### Proposed: shadow and blur
+### Decided: shadow and blur
 
 | property | web | SwiftUI | Compose | React Native |
 |---|---|---|---|---|
@@ -594,7 +594,7 @@ An **emitter** sends out many short-lived pieces from one place, in one file. Ea
 - **Where a platform can't draw it** (blur below Android 12, some React Native versions), the adapter warns once and skips it, and the rest of the file plays.
 - **Gradients wait.** They don't interpolate in CSS, and the common cases (a shimmer, a color shift) are an overlay that moves or two layers that cross-fade. Stops as color properties come when a real case can't be done that way.
 
-### Proposed: one narrow way out (custom properties and cues)
+### Decided: one narrow way out (custom properties and cues)
 
 For what nudg doesn't cover on some platform (a shader, a platform-only material, a Lottie frame), the way out carries values and moments, never timing logic. The motion stays in the file and the tools keep seeing it.
 
@@ -619,7 +619,7 @@ For what nudg doesn't cover on some platform (a shader, a platform-only material
 
 Proposed order: shadow and blur with custom properties, then cues, then particles. They ship together as format 1.3, or as 1.3, 1.4 and 1.5 if one is ready well before the others.
 
-### Choices to make
+### Choices (decided as proposed)
 
 - **A cue string as shorthand for both sound and haptic, or sound only?** Proposed: both. A built-in haptic name plays its haptic, and every name reaches the sound map and `onCue`.
 - **Particles as a top-level `emitters` block, or as a target kind?** Proposed: `emitters`, because a piece isn't a target the host binds one by one.
@@ -636,7 +636,7 @@ These are unresolved design choices. Scheduling and completion status live in th
 - Pattern metadata currently lives in the versioned external recipe catalog. Revisit a file-level role such as `"role": "bottom-sheet"` only if generation or validation needs cannot be met without changing runtime documents.
 - Pattern aliases and locale: how to map common design words such as FAB, snackbar, toast, tabs, tab bar, bottom nav, GNB, LNB and side nav without making the core format depend on one design system's names.
 - Reduced motion inside the format: a way for a file to say which properties must not be reduced (a progress bar's width), beyond the runtime's blanket option and 1.1's opacity loops.
-- Properties beyond transform, opacity, size and background color: shadow and blur are proposed in [Format 1.3](#format-13-feedback-beyond-motion-proposed); gradients and border color remain open.
+- Properties beyond transform, opacity, size and background color: shadow and blur are proposed in [Format 1.3](#format-13-feedback-beyond-motion); gradients and border color remain open.
 - Discrete steps for `commit` (a slider that snaps to 10s), beyond `min`/`max`.
 - Nonlinear rubber banding that depends on the view's size, instead of the linear `overdrag` factor.
 - Loops that run a fixed number of times, and loops on colors; see [loops](#loops-while-a-state-is-active-format-010) for what 0.10 settled.

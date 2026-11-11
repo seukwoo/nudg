@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.10.0
+
+Particles. Format 1.4 lets a file send confetti out of a button, sparkles around a badge or rain from the top of a screen. Every piece flies on a seeded path that TypeScript, Swift and Kotlin compute the same way, so a burst looks the same on every platform and can be compared and tested. It completes the feedback the 1.3 design set out: motion, sound, touch and particles from one file, on one clock. Files from 1.3 and earlier read as before. A compiled program with emitters is format 11.
 
 - **Format 1.4: particles.** An emitter sends out many short-lived pieces from one place: confetti from a button, sparkles around a badge, rain from the top of a screen ([#118](https://github.com/seukwoo/nudg/issues/118)).
   - **In the file:** `"emitters": { "confetti": { "from": "button", "count": 24, ... } }`, and `"emit": "confetti"` on a transition or a state. A transition may now only cue and emit.

@@ -7,11 +7,13 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     var state: List<String> by mutableStateOf(runtime.state())
     var present: Boolean by mutableStateOf(true)
     var leaving: Boolean by mutableStateOf(false)
+    var pieces: List<Piece> by mutableStateOf(emptyList())
     fun send(event: String): Boolean
     fun input(name: String, value: Double): Boolean
     fun setReducedMotion(on: Boolean)
 fun systemReducedMotion(): Boolean
 fun rememberNudg(
+fun NudgEmitter(state: NudgState, name: String, modifier: Modifier
 fun Modifier.nudg(state: NudgState, name: String): Modifier
 fun Modifier.nudgPress(state: NudgState, name: String): Modifier
 fun Modifier.nudgKeys(state: NudgState, name: String): Modifier
@@ -103,6 +105,21 @@ data class Follow(val input: String, val range: Pair<MeasuredEndpoint, MeasuredE
 data class Glide(val momentum: Double, val range: Pair<MeasuredEndpoint, MeasuredEndpoint>?)
 data class Nearest(val states: List<String>, val by: String, val momentum: Double)
 class Transition(val to: String?, val nearest: Nearest?, val animate: List<Pair<String, Motion>>, val step: List<Pair<String, Double>>?, val commit: List<String>?, val cues: List<Cue>
+class Emitter(
+val from: String,
+val at: String,
+val count: Int,
+val area: Pair<Double, Double>,
+val angle: Pair<Double, Double>,
+val speed: Pair<Double, Double>,
+val gravity: Double,
+val drag: Double,
+val spin: Pair<Double, Double>,
+val life: Pair<Double, Double>,
+val fade: Double,
+val scale: Pair<Double, Double>,
+val stagger: Double,
+val seed: Int,
 data class TimerPause(val on: String, val off: String)
 class Timer(val key: String, val delay: Double, val transition: Transition, val pause: List<TimerPause>)
 class State(
@@ -118,12 +135,13 @@ val `when`: List<Pair<String, Transition>>,
 val timers: List<Timer>,
 val machine: Machine?,
 val cues: List<Cue>
+val emit: List<String>
     fun transition(event: String)
 sealed class Machine
     class States(val initial: String, val states: List<State>, val `when`: List<Pair<String, Transition>>) : Machine()
         fun state(name: String)
     class Regions(val regions: List<Pair<String, Machine>>) : Machine()
-class Program(val version: String, val targets: List<String>, val properties: List<Pair<String, Property>>, val animate: Map<String, Motion>, val machine: Machine)
+class Program(val version: String, val targets: List<String>, val properties: List<Pair<String, Property>>, val animate: Map<String, Motion>, val machine: Machine, val emitters: List<Pair<String, Emitter>>
     fun property(key: String): Property
     companion object
         fun decode(text: String): Program
@@ -131,6 +149,9 @@ class Program(val version: String, val targets: List<String>, val properties: Li
 sealed interface Value
     data class Number(val value: Double) : Value
     data class Color(val hex: String) : Value
+data class Piece(val emitter: String, val wave: Int, val index: Int, val x: Double, val y: Double, val rotation: Double, val scale: Double, val opacity: Double)
+fun pieceRandom(seed: Int, wave: Int, index: Int, field: Int): Double
+fun pieceAt(name: String, e: Emitter, wave: Int, index: Int, age: Double): Piece?
 data class FiredCue(val t: Double, val sound: String?, val haptic: String?, val intensity: Double, val pitch: Double)
 class Runtime(val program: Program, state: List<String>
     fun takeCues(): List<FiredCue>
@@ -143,3 +164,4 @@ class Runtime(val program: Program, state: List<String>
     fun resting(t: Double): Boolean
     fun time(): Double
     fun looping(): Boolean
+    fun pieces(name: String?

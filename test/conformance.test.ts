@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, test } from "node:test";
 import { compile, createRuntime, type Program, type Value } from "../src/index.ts";
-import type { FiredCue } from "../src/core/runtime.ts";
+import type { FiredCue, Piece } from "../src/core/runtime.ts";
 import { programFromJson, programToJson } from "../src/core/program-json.ts";
 
 const NUMBER_TOLERANCE = 1e-6;
@@ -19,7 +19,7 @@ interface Step {
   value?: number;
   handled?: boolean;
   /** `cues`: every cue that came due since the last step that listed cues (or the start). */
-  expect?: { state?: string[]; values?: Record<string, Value>; resting?: boolean; settled?: boolean; looping?: boolean; cues?: FiredCue[] };
+  expect?: { state?: string[]; values?: Record<string, Value>; resting?: boolean; settled?: boolean; looping?: boolean; cues?: FiredCue[]; pieces?: Piece[] };
 }
 
 interface Case {
@@ -89,6 +89,15 @@ for (const file of readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
       if (step.expect?.resting !== undefined) assert.equal(rt.resting(step.t), step.expect.resting, `resting at ${step.t}s`);
       if (step.expect?.settled !== undefined) assert.equal(rt.settled(step.t), step.expect.settled, `settled at ${step.t}s`);
       if (step.expect?.looping !== undefined) assert.equal(rt.looping(), step.expect.looping, `looping at ${step.t}s`);
+      const expectedPieces = step.expect?.pieces;
+      if (expectedPieces) {
+        const got = rt.pieces();
+        assert.equal(got.length, expectedPieces.length, `pieces at ${step.t}s: ${got.length}, expected ${expectedPieces.length}`);
+        expectedPieces.forEach((e, i) => {
+          const p = got[i];
+          assert.ok(p.emitter === e.emitter && p.wave === e.wave && p.index === e.index && (["x", "y", "rotation", "scale", "opacity"] as const).every((k) => Math.abs(p[k] - e[k]) <= NUMBER_TOLERANCE * Math.max(1, Math.abs(e[k]))), `piece ${i} at ${step.t}s: ${JSON.stringify(p)}, expected ${JSON.stringify(e)}`);
+        });
+      }
       const expectedCues = step.expect?.cues;
       if (expectedCues) {
         const got = rt.takeCues();

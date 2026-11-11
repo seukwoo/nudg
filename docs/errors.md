@@ -14,6 +14,7 @@ Errors stop a file from compiling. Warnings don't.
 | `duplicate-host-name` | A name is declared twice under `host`. |
 | `duplicate-motion` | Two files define a motion with the same name. |
 | `duplicate-target` | A target is listed twice. |
+| `emitter-not-target` | An emitter's name isn't in `targets`; it is the view the host draws its pieces in (1.4). |
 | `enter-effect-conflict` | An entry effect has both keyframes and a kick. |
 | `enter-without-kick` | A motion in `enter` has no kick or keyframes. |
 | `follow-conflict` | A property is followed and also set, or given an entry effect, in the same state. |
@@ -76,6 +77,7 @@ Errors stop a file from compiling. Warnings don't.
 | `undeclared-host-event` | With a `host` declaration, a `host.<name>` event isn't declared. |
 | `undeclared-host-input` | With a `host` declaration, a `host.<name>` input isn't declared. |
 | `unknown-ease` | An ease name isn't one of nudg's. |
+| `unknown-emitter` | `emit` names an emitter that isn't declared under `emitters` (1.4). |
 | `unknown-event` | An event isn't a nudg event; the hint suggests the nearest. |
 | `unknown-haptic` | A cue's `haptic` is not a built-in intent (tick, select, light, medium, heavy, soft, rigid, success, warning, error, align, edge) or a name declared under `host.custom` (1.3). |
 | `unknown-input` | An input isn't a drag, pinch, scroll or app input. |

@@ -41,6 +41,56 @@ private final class Pending {
 }
 
 /** A loop running since its state was entered at `t0`. */
+/** One flying piece of an emitter (1.4): where the host draws it, relative to the emitter's starting point. */
+public struct Piece: Equatable {
+  public let emitter: String
+  /** Which emit it came from, counting from 0 per emitter. */
+  public let wave: Int
+  public let index: Int
+  public let x: Double
+  public let y: Double
+  /** Degrees. */
+  public let rotation: Double
+  public let scale: Double
+  public let opacity: Double
+}
+
+/** A number in [0, 1) from a seed, a wave, a piece's index and a field: the same 32-bit hash as every runtime. */
+public func pieceRandom(_ seed: Int, _ wave: Int, _ index: Int, _ field: Int) -> Double {
+  var h = UInt32(truncatingIfNeeded: seed) &* 0x9E37_79B1 &+ UInt32(truncatingIfNeeded: wave) &* 0x85EB_CA77
+    &+ UInt32(truncatingIfNeeded: index) &* 0xC2B2_AE3D &+ UInt32(truncatingIfNeeded: field) &* 0x27D4_EB2F
+  h ^= h >> 15
+  h = h &* 0x2C1B_3C6D
+  h ^= h >> 12
+  h = h &* 0x297A_2D39
+  h ^= h >> 15
+  return Double(h) / 4_294_967_296
+}
+
+/** Piece `index` of a wave, `age` seconds after its launch, or nil before launch and after its life. */
+public func pieceAt(_ name: String, _ e: Emitter, _ wave: Int, _ index: Int, _ age: Double) -> Piece? {
+  let u = { (field: Int) in pieceRandom(e.seed, wave, index, field) }
+  let pick = { (r: (Double, Double), field: Int) in r.0 + u(field) * (r.1 - r.0) }
+  let life = pick(e.life, 3)
+  if age < 0 || age > life { return nil }
+  let angle = pick(e.angle, 0) * .pi / 180
+  let speed = pick(e.speed, 1)
+  let vx = speed * cos(angle), vy = speed * sin(angle)
+  let x0 = (u(5) - 0.5) * e.area.0, y0 = (u(6) - 0.5) * e.area.1
+  let k = e.drag, g = e.gravity
+  var x: Double, y: Double
+  if k > 1e-9 {
+    let decay = (1 - exp(-k * age)) / k
+    x = x0 + vx * decay
+    y = y0 + (vy + g / k) * decay - (g / k) * age
+  } else {
+    x = x0 + vx * age
+    y = y0 + vy * age + 0.5 * g * age * age
+  }
+  let opacity = e.fade > 0 && age > life - e.fade ? max(0, (life - age) / e.fade) : 1
+  return Piece(emitter: name, wave: wave, index: index, x: x, y: y, rotation: pick(e.spin, 2) * age, scale: pick(e.scale, 4), opacity: opacity)
+}
+
 /** A cue that came due (1.3): when, and what to play. */
 public struct FiredCue: Equatable {
   public let t: Double
@@ -131,6 +181,9 @@ public final class Runtime {
   private var cueCursor = 0.0
   /** When each cue was last scheduled to fire, for its throttle. */
   private var lastCue: [ObjectIdentifier: Double] = [:]
+  /** Waves of pieces (1.4), and how many each emitter has sent. */
+  private var waves: [(name: String, wave: Int, t0: Double)] = []
+  private var waveCount: [String: Int] = [:]
   private var reduced: Bool
   /** Under reduced motion no loop plays, except (from format 1.1) one that only fades: opacity moves nothing. */
   private let fades: Bool
@@ -425,6 +478,14 @@ public final class Runtime {
       return (before.contains(id) && !after.contains(id)) || reentered.contains(id)
     }
     for transition in fired { for cue in transition.cues { schedule(cue, t, nil) } }
+    // Emitters send a wave (1.4); under reduced motion, nothing flies.
+    if !reduced {
+      for name in fired.flatMap(\.emit) + entered.flatMap(\.emit) {
+        let n = waveCount[name] ?? 0
+        waveCount[name] = n + 1
+        waves.append((name, n, t))
+      }
+    }
     for state in entered {
       for cue in state.cues { schedule(cue, t, state) }
       for (_, effect) in state.enter {
@@ -935,7 +996,7 @@ public final class Runtime {
   /** True when every property has come to rest and no unpaused timer is counting down. */
   public func settled(_ t: Double, property: String? = nil) throws -> Bool {
     try advanceTo(t)
-    if property == nil && (pending.contains(where: { $0.pausedAt == nil }) || !pressDue.isEmpty || !scheduled.isEmpty) { return false }
+    if property == nil && (pending.contains(where: { $0.pausedAt == nil }) || !pressDue.isEmpty || !scheduled.isEmpty || flying(t)) { return false }
     let keys = property.map { [$0] } ?? program.properties.map { $0.0 }
     return keys.allSatisfy { atRest($0, t) }
   }
@@ -943,6 +1004,7 @@ public final class Runtime {
   /** True when every property has come to rest, whatever timers are pending: nothing is moving. */
   public func resting(_ t: Double) throws -> Bool {
     try advanceTo(t)
+    if flying(t) { return false }
     return program.properties.allSatisfy { atRest($0.0, t) }
   }
 
@@ -951,6 +1013,24 @@ public final class Runtime {
 
   /** True while an active state loops a property (v0.10): values change every frame though nothing is settling. */
   public func looping() -> Bool { !loops.isEmpty }
+
+  private func emitter(_ name: String) -> Emitter { program.emitters.first { $0.0 == name }!.1 }
+
+  /** True while a wave has pieces still to launch or alive at `t` (1.4); drops the waves that are over. */
+  private func flying(_ t: Double) -> Bool {
+    waves.removeAll { w in let e = emitter(w.name); return t - w.t0 > Double(e.count - 1) * e.stagger + e.life.1 }
+    return !waves.isEmpty
+  }
+
+  /** The pieces flying at the time the runtime was last advanced to (1.4), of one emitter or all. */
+  public func pieces(_ name: String? = nil) -> [Piece] {
+    var out: [Piece] = []
+    for w in waves where name == nil || w.name == name {
+      let e = emitter(w.name)
+      for i in 0..<e.count { if let p = pieceAt(w.name, e, w.wave, i, now - w.t0 - Double(i) * e.stagger) { out.append(p) } }
+    }
+    return out
+  }
 
   /** Whether one property has come to rest at `t`; see the spec's rest rule. */
   private func atRest(_ key: String, _ t: Double) -> Bool {

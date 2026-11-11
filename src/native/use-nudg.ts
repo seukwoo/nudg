@@ -8,7 +8,7 @@ import { PointerTracker, draggableTargets, pinchableTargets } from "../core/poin
 import { activation, touchSync } from "./touches.ts";
 import { handledEvents, unknownEventMessage } from "../core/observe.ts";
 import { createPlayer, initialValues, toProgram, type HeadlessPlayer } from "../core/player.ts";
-import { createRuntime, type FiredCue, type Value } from "../core/runtime.ts";
+import { createRuntime, type FiredCue, type Piece, type Value } from "../core/runtime.ts";
 import type { HapticPlayer } from "./haptics.ts";
 import type { NudgContract, Program, StateName } from "../core/types.ts";
 
@@ -58,6 +58,11 @@ export interface NudgNative<C extends NudgContract = NudgContract> {
    * property the host draws, or to interpolate into a style nudg doesn't set.
    */
   value(property: string): Animated.Value | Animated.Color | undefined;
+  /**
+   * An emitter's pieces flying now (1.4). The hook re-renders while pieces fly, so draw them:
+   * pieces("confetti").map((p) => <View key={`${p.wave}:${p.index}`} style={pieceStyle(p)} />)
+   */
+  pieces(emitter: string): Piece[];
 }
 
 const TRANSFORM = ["x", "y", "rotation", "scale", "scaleX", "scaleY"] as const;
@@ -117,6 +122,8 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
   onSettle.current = options.onSettle;
   const feedback = useRef(options);
   feedback.current = options;
+  const [, bump] = useState(0);
+  const hadPieces = useRef(false);
   const reads = useMemo(() => new Set(createRuntime(program).requiredInputs()), [program]);
   // The setting applies to the running player as it changes, so the state and motion carry on.
   const reduced = useRef(options.reducedMotion ?? false);
@@ -140,6 +147,7 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
   }, [options.reducedMotion]);
 
   useEffect(() => {
+    let made: HeadlessPlayer | undefined;
     const p = createPlayer(program, {
       host: { now: () => extra.current.now?.() ?? performance.now() / 1000, frame: (fn) => { const id = requestAnimationFrame(fn); return () => cancelAnimationFrame(id); } },
       state: options.state,
@@ -155,13 +163,23 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
         setLeaving(p.leaving());
         if (p.present()) setPresent(true);
       },
-      onFrame: (values) => write(animated, values),
+      onFrame: (values) => {
+        write(animated, values);
+        // Pieces aren't Animated values: re-render while any fly, and once more when the last is gone.
+        if (program.emitters) {
+          // The player calls onFrame once while it is being made, before `made` is set.
+          const flying = (made?.runtime.pieces().length ?? 0) > 0;
+          if (flying || hadPieces.current) bump((n) => n + 1);
+          hadPieces.current = flying;
+        }
+      },
       onSettle: (s) => onSettle.current?.(s),
       onCue: (cue) => {
         if (cue.haptic && cue.intensity > 0) feedback.current.haptics?.(cue.haptic, cue.intensity);
         feedback.current.onCue?.(cue);
       },
     });
+    made = p;
     player.current = p;
     for (const [name, value] of inputs.current) p.input(name, value);
     return () => {
@@ -228,7 +246,8 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
     return used;
   }, [reads]);
   const value = useCallback((property: string) => animated.get(property), [animated]);
-  return { bind, send, input, state, present, leaving, value };
+  const pieces = (emitter: string) => player.current?.runtime.pieces(emitter) ?? [];
+  return { bind, send, input, state, present, leaving, value, pieces };
 }
 
 /** The value each Animated value last showed. React Native updates the view on every setValue, so unchanged ones are skipped. */
@@ -245,6 +264,11 @@ function write(animated: Map<string, Animated.Value | Animated.Color>, values: R
 }
 
 const warnedSkips = new Set<string>();
+
+/** A piece's style (1.4), from the emitter view's center: absolutely placed, moved, turned and faded. */
+export function pieceStyle(p: Piece): Record<string, unknown> {
+  return { position: "absolute", left: "50%", top: "50%", opacity: p.opacity, transform: [{ translateX: p.x }, { translateY: p.y }, { rotate: `${p.rotation}deg` }, { scale: p.scale }] };
+}
 
 /** A target's style, reading the Animated values: transform in nudg's order (translate, rotate, scale). */
 function styleFor(program: Program, target: string, animated: Map<string, Animated.Value | Animated.Color>): Record<string, unknown> {

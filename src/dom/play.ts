@@ -11,6 +11,7 @@ import { propertiesByTarget, styleOf } from "./style.ts";
 import { measureElement } from "./measure.ts";
 import { createRuntime, type FiredCue, type Runtime, type Value } from "../core/runtime.ts";
 import { playFeedback, type FeedbackOptions } from "./feedback.ts";
+import { clearPieces, drawPieces } from "./pieces.ts";
 import type { Machine, NudgContract, Program, StateName } from "../core/types.ts";
 
 export interface PlayOptions<C extends NudgContract = NudgContract> extends FeedbackOptions {
@@ -219,8 +220,21 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   function apply(values: Record<string, Value>) {
     lastValues = values;
     for (const [target, els] of elements) applyTo(target, values, els);
+    // Emitters (1.4): their pieces, in their own elements.
+    if (program.emitters) {
+      for (const [name, e] of program.emitters) {
+        const pieces = runtime.pieces(name);
+        const from = elements.get(e.from)?.values().next().value;
+        for (const el of elements.get(name) ?? []) if (el instanceof HTMLElement && (pieces.length || drewPieces.has(el))) {
+          drawPieces(el, from, e, pieces);
+          if (pieces.length) drewPieces.add(el);
+          else drewPieces.delete(el);
+        }
+      }
+    }
     options.onFrame?.(values);
   }
+  const drewPieces = new Set<Element>();
 
   function tick() {
     frame = undefined;
@@ -595,6 +609,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
       if (destroyed) return;
       destroyed = true;
       stopped();
+      for (const name of program.emitters?.keys() ?? []) for (const el of elements.get(name) ?? []) clearPieces(el);
       system?.removeEventListener?.("change", onSystemChange);
       frame?.();
       cancelAnimationFrame(measureFrame);

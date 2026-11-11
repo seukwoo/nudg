@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- **Format 1.4: particles.** An emitter sends out many short-lived pieces from one place: confetti from a button, sparkles around a badge, rain from the top of a screen ([#118](https://github.com/seukwoo/nudg/issues/118)).
+  - **In the file:** `"emitters": { "confetti": { "from": "button", "count": 24, ... } }`, and `"emit": "confetti"` on a transition or a state. A transition may now only cue and emit.
+  - **Paths:** each piece flies a closed-form path (launch angle and speed, drag, gravity, spin, a fade at the end of its life). Its numbers come from a fixed 32-bit hash of the seed, the wave and its index, so TypeScript, Swift and Kotlin place every piece in the same place. They share the new conformance cases `particles`, `particles-reduced` and `validation-1.4`.
+  - **Lifecycle:** while pieces fly, the runtime isn't settled, so `onSettle` comes after the last one. Under reduced motion nothing is emitted.
+  - **Drawing:**
+    - the web adapter clones the host's `data-nudg-piece` templates in the emitter's element, and removes them when their life ends;
+    - SwiftUI and Compose have `NudgEmitter`;
+    - React Native has `pieces()` and `pieceStyle()`.
+  - **Format:** schema 1.4; a compiled program with emitters is format 11. New validator codes: `emitter-not-target` and `unknown-emitter`.
+  - **`nudg audit`** now points confetti keyframes and confetti libraries to emitters.
+- **The agent guide has its "Platform motion" heading back.** 1.9.0's cue section replaced it by mistake.
+
 ## 1.9.0
 
 Feedback beyond motion. Format 1.3 lets a file say when to play a sound or a haptic, and the runtime fires it on the same frame as the motion. Every platform plays it its own way: Web Haptics or `vibrate`, UIKit's feedback generators, Android's haptic constants, or the haptics React Native apps already use. Shadows and blur move with their own springs. For anything nudg doesn't draw, a declared custom property keeps the timing in nudg and leaves the drawing to the app. CSS that would fight a file's motion is turned off on the elements nudg moves. Files from 1.2 and earlier read as before. A compiled program that uses cues is format 10; every other program keeps the format older runtimes read.

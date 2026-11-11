@@ -4,10 +4,10 @@
 // of entries, because order matters (regions, states) and not every JSON reader keeps
 // object key order.
 
-import type { Cue, EntryEffect, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
+import type { Cue, Emitter, EntryEffect, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
 import { animateMaps } from "./walk.ts";
 
-export const PROGRAM_FORMAT = 10;
+export const PROGRAM_FORMAT = 11;
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
@@ -23,14 +23,17 @@ export function programToJson(program: Program): Json {
   wroteCues = false;
   const written = machine(program.machine);
   const delayInput = animateMaps(program).some((t) => [...t.values()].some((m) => m.delayInput));
-  return {
-    nudgProgram: wroteCues ? 10 : delayInput ? 9 : 8,
+  const out: Record<string, Json> = {
+    nudgProgram: program.emitters ? 11 : wroteCues ? 10 : delayInput ? 9 : 8,
     version: program.version,
     targets: program.targets,
     properties: [...program.properties].map(([key, p]) => ({ key, ...property(p) })),
     animate: [...program.animate].map(([key, m]) => ({ key, motion: motion(m) })),
     machine: written,
   };
+  // Format 11 (1.4): emitters, by name.
+  if (program.emitters) out.emitters = [...program.emitters].map(([name, e]) => ({ name, ...(e as unknown as Record<string, Json>) }));
+  return out;
 }
 
 function cues(list: Cue[]): Json {
@@ -52,13 +55,14 @@ const readCues = (j: any): Cue[] | undefined => (Array.isArray(j) ? j.map((c: an
 
 export function programFromJson(json: unknown): Program {
   const j = json as Record<string, any>;
-  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
   return {
     version: j.version,
     targets: j.targets,
     properties: new Map(j.properties.map((p: any) => [p.key, readProperty(p)])),
     animate: new Map(j.animate.map((a: any) => [a.key, readMotion(a.motion)])),
     machine: readMachine(j.machine),
+    ...(j.emitters ? { emitters: new Map(j.emitters.map(({ name, ...e }: any) => [name, e as Emitter])) } : {}),
   };
 }
 
@@ -135,6 +139,7 @@ function state(s: State): Json {
     timers: s.timers.map((t: Timer) => ({ key: t.key, delay: t.delay, pause: t.pause.map((p) => ({ ...p })), transition: transition(t.transition) })),
   };
   if (s.cues) out.cue = cues(s.cues);
+  if (s.emit) out.emit = s.emit;
   if (s.machine) out.machine = machine(s.machine);
   return out;
 }
@@ -153,6 +158,7 @@ function readState(j: any): State {
     timers: j.timers.map((t: any) => ({ key: t.key, delay: t.delay, pause: (t.pause ?? []).map((p: any) => ({ on: p.on, off: p.off })), transition: readTransition(t.transition) })),
   };
   if (j.cue) s.cues = readCues(j.cue);
+  if (j.emit) s.emit = j.emit;
   if (j.machine) s.machine = readMachine(j.machine);
   return s;
 }
@@ -190,6 +196,7 @@ function transition(t: Transition): Record<string, Json> {
   if (t.step) out.step = [...t.step].map(([key, delta]) => ({ key, delta }));
   if (t.commit) out.commit = t.commit;
   if (t.cues) out.cue = cues(t.cues);
+  if (t.emit) out.emit = t.emit;
   return out;
 }
 
@@ -200,5 +207,6 @@ function readTransition(j: any): Transition {
   if (j.step) t.step = new Map(j.step.map((s: any) => [s.key, s.delta]));
   if (j.commit) t.commit = j.commit;
   if (j.cue) t.cues = readCues(j.cue);
+  if (j.emit) t.emit = j.emit;
   return t;
 }

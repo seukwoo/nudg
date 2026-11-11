@@ -2783,6 +2783,118 @@ def validation_v1_3_cases():
     })
 
 
+
+def piece_random(seed, wave, index, field):
+    M = 0xFFFFFFFF
+    h = (seed * 0x9E3779B1 + wave * 0x85EBCA77 + index * 0xC2B2AE3D + field * 0x27D4EB2F) & M
+    h ^= h >> 15
+    h = (h * 0x2C1B3C6D) & M
+    h ^= h >> 12
+    h = (h * 0x297A2D39) & M
+    h ^= h >> 15
+    return h / 4294967296
+
+
+def piece_at(name, e, wave, index, age):
+    u = lambda f: piece_random(e["seed"], wave, index, f)
+    pick = lambda r, f: r[0] + u(f) * (r[1] - r[0])
+    life = pick(e["life"], 3)
+    if age < 0 or age > life:
+        return None
+    angle = math.radians(pick(e["angle"], 0))
+    speed = pick(e["speed"], 1)
+    vx, vy = speed * math.cos(angle), speed * math.sin(angle)
+    x0 = (u(5) - 0.5) * e["area"][0]
+    y0 = (u(6) - 0.5) * e["area"][1]
+    k, g = e["drag"], e["gravity"]
+    if k > 1e-9:
+        decay = (1 - math.exp(-k * age)) / k
+        x = x0 + vx * decay
+        y = y0 + (vy + g / k) * decay - (g / k) * age
+    else:
+        x = x0 + vx * age
+        y = y0 + vy * age + 0.5 * g * age * age
+    opacity = max(0.0, (life - age) / e["fade"]) if e["fade"] > 0 and age > life - e["fade"] else 1.0
+    return {"emitter": name, "wave": wave, "index": index, "x": x, "y": y, "rotation": pick(e["spin"], 2) * age, "scale": pick(e["scale"], 4), "opacity": opacity}
+
+
+def particle_cases():
+    # Emitters (1.4): seeded, closed-form pieces, the same in every runtime.
+    emitter = {"from": "button", "count": 3, "angle": [-150, -30], "speed": [500, 900], "gravity": 1600, "drag": 1.2,
+               "spin": [-720, 720], "life": [0.6, 0.9], "fade": 0.3, "scale": [0.6, 1], "area": [10, 4], "stagger": 0.05, "seed": 7}
+    doc = {
+        "nudg": "1.4",
+        "host": {"events": ["celebrate"]},
+        "targets": ["button", "confetti"],
+        "values": {"button.scale": 1},
+        "emitters": {"confetti": emitter},
+        "initial": "idle",
+        "states": {"idle": {"when": {"host.celebrate": {"emit": "confetti", "cue": "success"}}}},
+    }
+    full = {"at": "center", **emitter}
+
+    def all_pieces(t, waves):
+        out = []
+        for wave, t0 in waves:
+            for i in range(emitter["count"]):
+                p = piece_at("confetti", full, wave, i, t - t0 - i * emitter["stagger"])
+                if p:
+                    out.append(p)
+        return out
+
+    waves = [(0, 0.1), (1, 0.3)]
+    steps = [{"t": 0.1, "send": "host.celebrate"}]
+    steps.append({"t": 0.2, "expect": {"pieces": all_pieces(0.2, waves[:1]), "settled": False, "resting": False}})
+    steps.append({"t": 0.3, "send": "host.celebrate"})
+    steps.append({"t": 0.45, "expect": {"pieces": all_pieces(0.45, waves)}})
+    steps.append({"t": 0.8, "expect": {"pieces": all_pieces(0.8, waves)}})
+    steps.append({"t": 2.0, "expect": {"pieces": [], "settled": True}})
+    write("particles", {
+        "conformance": "1.4",
+        "name": "Particles: each wave's pieces fly on seeded, closed-form paths and fade at the end of their life; the runtime settles after the last",
+        "doc": doc,
+        "steps": steps,
+    })
+    write("particles-reduced", {
+        "conformance": "1.4",
+        "name": "Particles under reduced motion: nothing is emitted; the transition's other effects still happen",
+        "doc": doc,
+        "reducedMotion": True,
+        "steps": [
+            {"t": 0.1, "send": "host.celebrate"},
+            {"t": 0.2, "expect": {"pieces": [], "settled": True}},
+        ],
+    })
+
+
+def validation_v1_4_cases():
+    base = {
+        "nudg": "1.4", "host": {"events": ["go"]}, "targets": ["button", "confetti"], "values": {"button.scale": 1},
+        "emitters": {"confetti": {"from": "button"}},
+        "initial": "idle", "states": {"idle": {"when": {"host.go": {"emit": "confetti"}}}},
+    }
+
+    def doc():
+        return json.loads(json.dumps(base))
+
+    out = [("valid", doc(), [])]
+    d = doc(); d["nudg"] = "1.3"
+    out.append(("needs-version", d, [("needs-version", "/emitters"), ("needs-version", "/states/idle/when/host.go/emit")]))
+    d = doc(); d["targets"] = ["button"]
+    out.append(("not-a-target", d, [("emitter-not-target", "/emitters/confetti"), ("unknown-emitter", "/states/idle/when/host.go/emit")]))
+    d = doc(); d["states"]["idle"]["when"]["host.go"]["emit"] = "sparkle"
+    out.append(("unknown-emitter", d, [("unknown-emitter", "/states/idle/when/host.go/emit")]))
+    d = doc(); d["emitters"]["confetti"] = {"count": 500, "angle": [10, -10], "life": [0, 1], "at": "middle", "drag": -1}
+    out.append(("values", d, [("invalid-value", "/emitters/confetti/count"), ("invalid-value", "/emitters/confetti/angle"), ("invalid-value", "/emitters/confetti/life"), ("invalid-value", "/emitters/confetti/at"), ("invalid-value", "/emitters/confetti/drag")]))
+    d = doc(); d["emitters"]["confetti"]["from"] = "badge"
+    out.append(("from", d, [("unknown-target", "/emitters/confetti/from")]))
+    write("validation-1.4", {
+        "conformance": "1.4",
+        "name": "Validator (1.4): emitters and emit",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 if __name__ == "__main__":
     toggle_cases()
     spring_form_cases()
@@ -2833,5 +2945,7 @@ if __name__ == "__main__":
     shadow_blur_custom_cases()
     cue_cases()
     validation_v1_3_cases()
+    particle_cases()
+    validation_v1_4_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

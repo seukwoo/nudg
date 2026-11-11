@@ -54,6 +54,17 @@ public func runConformanceSuite(at dir: URL, log: (String) -> Void = { print($0)
         if let expected = expect["resting"] as? Bool, try rt.resting(t) != expected { problems.append("resting at \(t)s: expected \(expected)") }
         if let expected = expect["settled"] as? Bool, try rt.settled(t) != expected { problems.append("settled at \(t)s: expected \(expected)") }
         if let expected = expect["looping"] as? Bool, rt.looping() != expected { problems.append("looping at \(t)s: expected \(expected)") }
+        // The pieces flying now (1.4).
+        if let expected = expect["pieces"] as? [[String: Any]] {
+          let got = rt.pieces()
+          let num = { (v: Any?) in (v as? NSNumber)?.doubleValue ?? 0 }
+          let close = { (a: Double, e: Double) in abs(a - e) <= 1e-6 * max(1, abs(e)) }
+          let same = got.count == expected.count && zip(got, expected).allSatisfy { p, e in
+            p.emitter == e["emitter"] as? String && p.wave == (e["wave"] as? NSNumber)?.intValue && p.index == (e["index"] as? NSNumber)?.intValue
+              && close(p.x, num(e["x"])) && close(p.y, num(e["y"])) && close(p.rotation, num(e["rotation"])) && close(p.scale, num(e["scale"])) && close(p.opacity, num(e["opacity"]))
+          }
+          if !same { problems.append("pieces at \(t)s: got \(got.count) \(got.first.map { "\($0)" } ?? "")") }
+        }
         // Every cue that came due since the last step that listed cues (1.3).
         if let expected = expect["cues"] as? [[String: Any]] {
           let got = rt.takeCues()

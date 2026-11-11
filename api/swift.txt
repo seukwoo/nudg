@@ -114,6 +114,7 @@ public let animate: [(String, Motion)]
 public let step: [(String, Double)]?
 public let commit: [String]?
 public let cues: [Cue]
+public let emit: [String]
 public struct TimerPause
 public let on: String
 public let off: String
@@ -135,15 +136,32 @@ public let when: [(String, Transition)]
 public let timers: [Timer]
 public let machine: Machine?
 public let cues: [Cue]
+public let emit: [String]
 public final class Machine
 public enum Kind
 public let kind: Kind
+public struct Emitter
+public let from: String
+public let at: String
+public let count: Int
+public let area: (Double, Double)
+public let angle: (Double, Double)
+public let speed: (Double, Double)
+public let gravity: Double
+public let drag: Double
+public let spin: (Double, Double)
+public let life: (Double, Double)
+public let fade: Double
+public let scale: (Double, Double)
+public let stagger: Double
+public let seed: Int
 public struct Program
 public let version: String
 public let targets: [String]
 public let properties: [(String, Property)]
 public let animate: [String: Motion]
 public let machine: Machine
+public var emitters: [(String, Emitter)]
 public func property(_ key: String) -> Property?
 public enum DecodeError: Error, CustomStringConvertible
 public var description: String
@@ -153,6 +171,17 @@ public enum Value: Equatable
 public var number: Double?
 public var color: String?
 public enum RuntimeError: Error
+public struct Piece: Equatable
+public let emitter: String
+public let wave: Int
+public let index: Int
+public let x: Double
+public let y: Double
+public let rotation: Double
+public let scale: Double
+public let opacity: Double
+public func pieceRandom(_ seed: Int, _ wave: Int, _ index: Int, _ field: Int) -> Double
+public func pieceAt(_ name: String, _ e: Emitter, _ wave: Int, _ index: Int, _ age: Double) -> Piece?
 public struct FiredCue: Equatable
 public let t: Double
 public let sound: String?
@@ -172,6 +201,7 @@ public func settled(_ t: Double, property: String?
 public func resting(_ t: Double) throws -> Bool
 public func time() -> Double
 public func looping() -> Bool
+public func pieces(_ name: String?
 // NudgSwiftUI/Nudg+SwiftUI.swift
 public final class NudgModel: ObservableObject
 public let runtime: Runtime
@@ -191,6 +221,9 @@ public func values(at date: Date) -> [String: Value]
 public func settled(at date: Date) -> Bool
 public var looping: Bool
 public var now: Date
+public struct NudgEmitter<Content: View>: View
+public init(_ model: NudgModel, _ name: String, @ViewBuilder piece: @escaping (Piece) -> Content)
+public var body: some View
 public struct NudgTarget: ViewModifier
 public func body(content: Content) -> some View
 public struct NudgPress: ViewModifier

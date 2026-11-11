@@ -1,0 +1,88 @@
+{
+ "nudgProgram": 11,
+ "version": "1.4",
+ "targets": [
+  "button",
+  "confetti"
+ ],
+ "properties": [
+  {
+   "key": "button.scale",
+   "kind": "number",
+   "base": [
+    1
+   ]
+  }
+ ],
+ "animate": [],
+ "machine": {
+  "kind": "states",
+  "initial": "idle",
+  "states": [
+   {
+    "name": "idle",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "host.celebrate",
+      "animate": [],
+      "cue": [
+       {
+        "sound": "success",
+        "haptic": "success"
+       }
+      ],
+      "emit": [
+       "confetti"
+      ]
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": []
+ },
+ "emitters": [
+  {
+   "name": "confetti",
+   "from": "button",
+   "at": "center",
+   "count": 3,
+   "area": [
+    10,
+    4
+   ],
+   "angle": [
+    -150,
+    -30
+   ],
+   "speed": [
+    500,
+    900
+   ],
+   "gravity": 1600,
+   "drag": 1.2,
+   "spin": [
+    -720,
+    720
+   ],
+   "life": [
+    0.6,
+    0.9
+   ],
+   "fade": 0.3,
+   "scale": [
+    0.6,
+    1
+   ],
+   "stagger": 0.05,
+   "seed": 7
+  }
+ ]
+}

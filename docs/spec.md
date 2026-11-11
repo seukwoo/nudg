@@ -1,6 +1,6 @@
 # The nudg format, version 1.2
 
-The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [conformance suite](../spec/conformance/), the [JSON Schema](../spec/nudg-1.3.schema.json) describes the structure for editors, and every validator code is listed in the [error reference](errors.md). For the reasoning behind the format, see [Design](design.md).
+The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [conformance suite](../spec/conformance/), the [JSON Schema](../spec/nudg-1.4.schema.json) describes the structure for editors, and every validator code is listed in the [error reference](errors.md). For the reasoning behind the format, see [Design](design.md).
 
 **Stability.** Format 1.0 is stable. Within 1.x, files only gain: new fields, events, inputs and error codes may appear in a later 1.x version, but nothing a 1.0 file says changes meaning; a file opts into a 1.x version's rules by declaring it. Runtimes read every earlier version (0.1 to 1.0) unchanged; each was a superset of the one before, and `nudg upgrade` raises a file to the current version, 1.2. The [appendix](#appendix-format-history) lists what each version added.
 
@@ -30,7 +30,7 @@ The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [
 
 A nudg file is strict JSON with the extension `.nudg.json`. Every platform already parses it, JSON Schema describes it, and LLMs write it reliably, so there is no parser to maintain and nothing new to learn. A friendlier syntax can be added later as sugar that compiles to the same model, but JSON stays the source of truth.
 
-A file may start with `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.3.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
+A file may start with `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.4.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
 
 JSON has no comments. Instead, any object may carry a `note` string. Runtimes ignore it. Unlike a comment, a note survives tools rewriting the file, and an AI can read it as part of the data.
 
@@ -442,6 +442,55 @@ A cue is a named moment for sound and haptics, reported by the runtime at an exa
 **Reporting.**
 - `takeCues()` returns every cue that came due since the last call, earliest first, each with the time it was due, its names, and its resolved intensity and pitch.
 - Cues due at the same time keep the order they were scheduled in: transition cues, then state cues, then beats. Loop beats are taken by property name.
+
+### Particles (1.4)
+
+An emitter sends out many short-lived pieces from one place: confetti from a button, sparkles around a badge, rain from the top of a screen.
+
+```json
+"targets": ["button", "confetti"],
+"emitters": { "confetti": { "from": "button", "count": 24, "angle": [-150, -30], "speed": [500, 900], "gravity": 1600, "drag": 1.2, "life": [0.9, 1.3] } },
+"when": { "host.celebrate": { "emit": "confetti", "cue": "success" } }
+```
+
+**Declaring an emitter.**
+- **An emitter's name is also a target** (`emitter-not-target` otherwise): the view the host draws its pieces in.
+- **`emit`** sends out a wave. It goes on a transition, or on a state, where the wave starts when the state is entered through a transition. It takes a name or a list (`unknown-emitter`).
+- A transition may only cue and emit, with no `to`.
+
+**Fields.** A range is a number or `[low, high]`; each piece draws its own value from it.
+- `from`: the target the pieces start from (default: the emitter itself).
+- `at`: `center`, or the middle of an edge (`top`, `bottom`, `left`, `right`).
+- `area`: `[width, height]`, a box around that point that pieces start anywhere in. Rain is `"at": "top", "area": [400, 0]`.
+- `count`: 1 to 200, default 20.
+- `angle`: degrees, 0 to the right and −90 up (default `[-150, -30]`).
+- `speed`: units per second (default `[300, 700]`).
+- `gravity`: units per second squared, downward (default 1200).
+- `drag`: linear, per second (default 1).
+- `spin`: degrees per second (default `[-540, 540]`).
+- `life`: seconds (default `[0.8, 1.2]`).
+- `fade`: seconds at the end of a piece's life over which it fades (default 0.3).
+- `scale` (default `[0.7, 1]`).
+- `stagger`: seconds between one piece's launch and the next (default 0).
+- `seed`: a whole number (default 1).
+
+**A piece's path is closed form.** With launch velocity `(vx, vy)` from its angle and speed, drag `k` and gravity `g`, at age `a`:
+- `x = x0 + vx·(1 − e^(−k·a))/k`
+- `y = y0 + (vy + g/k)·(1 − e^(−k·a))/k − g·a/k`
+
+With no drag, `x = x0 + vx·a` and `y = y0 + vy·a + g·a²/2`. Rotation is `spin · a`. Opacity is 1 until the last `fade` seconds of life, then falls linearly to 0. A piece exists from its launch (`index × stagger` after the wave) until its life ends.
+
+**A piece's numbers are drawn from a 32-bit hash** of the seed, the wave (counting from 0 per emitter), the piece's index and a field: angle 0, speed 1, spin 2, life 3, scale 4, start x 5, start y 6. A value is `low + u·(high − low)`. The hash is fixed so that every runtime places every piece in the same place:
+
+```
+h = seed·0x9E3779B1 + wave·0x85EBCA77 + index·0xC2B2AE3D + field·0x27D4EB2F  (mod 2^32)
+h ^= h >>> 15;  h = h·0x2C1B3C6D;  h ^= h >>> 12;  h = h·0x297A2D39;  h ^= h >>> 15;  u = h / 2^32
+```
+
+**At runtime.**
+- `pieces(emitter?)` lists the pieces alive at the runtime's time, with x and y relative to the start point.
+- While pieces fly, the runtime is neither resting nor settled, so `onSettle` comes after the last one.
+- Under reduced motion nothing is emitted. The transition's other effects, such as a cue, still happen.
 
 ### Reduced motion
 

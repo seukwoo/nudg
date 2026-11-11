@@ -1,0 +1,268 @@
+{
+  "conformance": "1.4",
+  "name": "Validator (1.4): emitters and emit",
+  "documents": [
+    {
+      "name": "valid",
+      "doc": {
+        "nudg": "1.4",
+        "host": {
+          "events": [
+            "go"
+          ]
+        },
+        "targets": [
+          "button",
+          "confetti"
+        ],
+        "values": {
+          "button.scale": 1
+        },
+        "emitters": {
+          "confetti": {
+            "from": "button"
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.go": {
+                "emit": "confetti"
+              }
+            }
+          }
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "1.3",
+        "host": {
+          "events": [
+            "go"
+          ]
+        },
+        "targets": [
+          "button",
+          "confetti"
+        ],
+        "values": {
+          "button.scale": 1
+        },
+        "emitters": {
+          "confetti": {
+            "from": "button"
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.go": {
+                "emit": "confetti"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/emitters"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/idle/when/host.go/emit"
+        }
+      ]
+    },
+    {
+      "name": "not-a-target",
+      "doc": {
+        "nudg": "1.4",
+        "host": {
+          "events": [
+            "go"
+          ]
+        },
+        "targets": [
+          "button"
+        ],
+        "values": {
+          "button.scale": 1
+        },
+        "emitters": {
+          "confetti": {
+            "from": "button"
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.go": {
+                "emit": "confetti"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "emitter-not-target",
+          "path": "/emitters/confetti"
+        },
+        {
+          "code": "unknown-emitter",
+          "path": "/states/idle/when/host.go/emit"
+        }
+      ]
+    },
+    {
+      "name": "unknown-emitter",
+      "doc": {
+        "nudg": "1.4",
+        "host": {
+          "events": [
+            "go"
+          ]
+        },
+        "targets": [
+          "button",
+          "confetti"
+        ],
+        "values": {
+          "button.scale": 1
+        },
+        "emitters": {
+          "confetti": {
+            "from": "button"
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.go": {
+                "emit": "sparkle"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-emitter",
+          "path": "/states/idle/when/host.go/emit"
+        }
+      ]
+    },
+    {
+      "name": "values",
+      "doc": {
+        "nudg": "1.4",
+        "host": {
+          "events": [
+            "go"
+          ]
+        },
+        "targets": [
+          "button",
+          "confetti"
+        ],
+        "values": {
+          "button.scale": 1
+        },
+        "emitters": {
+          "confetti": {
+            "count": 500,
+            "angle": [
+              10,
+              -10
+            ],
+            "life": [
+              0,
+              1
+            ],
+            "at": "middle",
+            "drag": -1
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.go": {
+                "emit": "confetti"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/emitters/confetti/count"
+        },
+        {
+          "code": "invalid-value",
+          "path": "/emitters/confetti/angle"
+        },
+        {
+          "code": "invalid-value",
+          "path": "/emitters/confetti/life"
+        },
+        {
+          "code": "invalid-value",
+          "path": "/emitters/confetti/at"
+        },
+        {
+          "code": "invalid-value",
+          "path": "/emitters/confetti/drag"
+        }
+      ]
+    },
+    {
+      "name": "from",
+      "doc": {
+        "nudg": "1.4",
+        "host": {
+          "events": [
+            "go"
+          ]
+        },
+        "targets": [
+          "button",
+          "confetti"
+        ],
+        "values": {
+          "button.scale": 1
+        },
+        "emitters": {
+          "confetti": {
+            "from": "badge"
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.go": {
+                "emit": "confetti"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-target",
+          "path": "/emitters/confetti/from"
+        }
+      ]
+    }
+  ]
+}

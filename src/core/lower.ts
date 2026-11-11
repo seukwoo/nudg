@@ -5,6 +5,7 @@
 // and nothing else: anything outside it returns undefined and the caller says what to do.
 // A test checks that it gives exactly what the compiler gives, for every preset option.
 
+import type { PropertyKind } from "./types.ts";
 import { hexToOklab } from "./color.ts";
 import { fromDurationBounce } from "./spring.ts";
 import { NAMED_EASES, PROPERTIES } from "./vocabulary.ts";
@@ -21,7 +22,9 @@ export function lowerSimple(doc: object): Program | undefined {
   if (Object.keys(d).some((k) => !TOP.has(k)) || typeof d.nudg !== "string" || !Array.isArray(d.targets) || typeof d.initial !== "string") return undefined;
   const properties = new Map<string, Property>();
   for (const [key, value] of Object.entries((d.values as Json) ?? {})) {
-    const kind = PROPERTIES[key.split(".")[1]];
+    const parts = key.split(".");
+    // A custom property (1.3) is a number; anything else is a built-in name.
+    const kind: PropertyKind | undefined = parts.length === 3 && parts[1] === "custom" ? "number" : parts.length === 2 ? PROPERTIES[parts[1]] : undefined;
     const base = channels(kind, value);
     if (!kind || !base) return undefined;
     properties.set(key, { kind, base });

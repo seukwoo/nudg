@@ -9,15 +9,22 @@ export { initialValues, type InitialOptions };
 
 const TRANSFORM_PROPS = new Set(["x", "y", "rotation", "scale", "scaleX", "scaleY"]);
 
-/** CSS properties in camelCase (`backgroundColor`), as React's `style` and `element.style` take them. */
-export type NudgStyle = Partial<Record<"transform" | "opacity" | "width" | "height" | "backgroundColor" | "fill", string>>;
+/**
+ * CSS properties in camelCase (`backgroundColor`), as React's `style` and `element.style` take
+ * them, plus a CSS variable per custom property (`--nudg-glow`, 1.3).
+ */
+export type NudgStyle = Partial<Record<"transform" | "opacity" | "width" | "height" | "backgroundColor" | "fill" | "boxShadow" | "filter", string>> & { [variable: `--nudg-${string}`]: string };
+
+/** The shadow color when a file moves a shadow without giving one: a quarter-black. */
+const SHADOW_COLOR = "#00000040";
 
 /** The properties each target animates, in file order. */
 export function propertiesByTarget(program: Program): Map<string, string[]> {
   const out = new Map<string, string[]>();
   for (const key of program.properties.keys()) {
-    const [target, prop] = key.split(".");
-    out.set(target, [...(out.get(target) ?? []), prop]);
+    const dot = key.indexOf(".");
+    const target = key.slice(0, dot);
+    out.set(target, [...(out.get(target) ?? []), key.slice(dot + 1)]);
   }
   return out;
 }
@@ -33,6 +40,13 @@ export function styleOf(target: string, props: string[], values: Record<string, 
   if (props.includes("width")) style.width = `${v("width", 0)}px`;
   if (props.includes("height")) style.height = `${v("height", 0)}px`;
   if (props.includes("color")) style[svg ? "fill" : "backgroundColor"] = values[`${target}.color`] as string;
+  if (props.some((p) => p.startsWith("shadow"))) {
+    const color = props.includes("shadowColor") ? (values[`${target}.shadowColor`] as string) : SHADOW_COLOR;
+    style.boxShadow = `${v("shadowX", 0)}px ${v("shadowY", 0)}px ${Math.max(0, v("shadowBlur", 0))}px ${color}`;
+  }
+  if (props.includes("blur")) style.filter = `blur(${Math.max(0, v("blur", 0))}px)`;
+  // A custom property (1.3) is the host's to draw: a CSS variable it can use anywhere.
+  for (const p of props) if (p.startsWith("custom.")) style[`--nudg-${p.slice(7)}`] = String(values[`${target}.${p}`]);
   return style;
 }
 

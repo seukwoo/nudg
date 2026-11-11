@@ -47,7 +47,8 @@ export interface HostSummary {
 const REST = 0.002;
 /** Below this range a property counts as never having moved (a device pixel; a hundredth of scale or opacity... halved). */
 const CHANGE = { position: 0.5, fraction: 0.005 };
-const FRACTIONAL = new Set(["scale", "scaleX", "scaleY", "opacity"]);
+// A custom property (1.3, target.custom.<name>) is unitless, usually 0 to 1, so it is judged like opacity.
+const FRACTIONAL = new Set(["scale", "scaleX", "scaleY", "opacity", "custom"]);
 
 /**
  * The file events that the page's actions stand for, at the times the actions actually

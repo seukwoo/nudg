@@ -40,7 +40,8 @@ const SOURCES = {
 const FEEDBACK_T90 = 0.15;
 /** Settle times past these feel slow for a UI element (Material's long durations top out near 0.6 s). */
 const LONG = { suggestion: 0.6, warning: 1.0 };
-const FRACTIONAL = new Set(["scale", "scaleX", "scaleY", "opacity"]);
+// A custom property (1.3, target.custom.<name>) is unitless, usually 0 to 1, so it is judged like opacity.
+const FRACTIONAL = new Set(["scale", "scaleX", "scaleY", "opacity", "custom"]);
 const SCAN = 1 / 240;
 const HORIZON = 3;
 

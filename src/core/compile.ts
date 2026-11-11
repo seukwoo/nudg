@@ -47,6 +47,9 @@ import { MEASUREMENTS,
   PROPERTY_ALIASES,
   VERSION,
   VERSIONS,
+  PROPERTIES_1_3,
+  CUSTOM,
+  BUILT_IN_LIKE,
 } from "./vocabulary.ts";
 
 export interface Source {
@@ -135,7 +138,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-1.2.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-1.3.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -368,7 +371,7 @@ class ComponentCompiler {
       r.error("invalid-type", "/host", "\"host\" must be an object with \"events\" and \"inputs\".", `For example: "host": { "events": ["show", "hide"], "inputs": { "volume": { "range": [0, 1] } } }`);
       return;
     }
-    r.keys(raw, "/host", ["events", "inputs"]);
+    r.keys(raw, "/host", ["events", "inputs", "custom"]);
     const host: HostDeclaration = { events: [], inputs: new Map() };
     const name = (value: Json, p: string, seen: (n: string) => boolean): string | undefined => {
       const bare = typeof value === "string" && value.startsWith(`${HOST}.`) ? value.slice(HOST.length + 1) : value;
@@ -413,6 +416,30 @@ class ComponentCompiler {
           }
         }
         host.inputs.set(n, entry);
+      }
+    }
+    if ("custom" in raw && this.needsVersion("1.3", "/host/custom", "\"custom\"")) {
+      if (!Array.isArray(raw.custom)) r.error("invalid-type", "/host/custom", "\"custom\" must list custom property names.", `For example: "custom": ["glow"], then "card.custom.glow" in "values".`);
+      else {
+        const custom: string[] = [];
+        raw.custom.forEach((value, i) => {
+          const p = ptr("/host/custom", i);
+          if (typeof value !== "string" || !IDENTIFIER.test(value)) {
+            r.error("invalid-name", p, `${JSON.stringify(value)} is not a custom property name.`, "Use letters, digits, \"_\" and \"-\", starting with a letter.");
+            return;
+          }
+          const builtIn = value in PROPERTIES ? value : PROPERTY_ALIASES[value] ?? BUILT_IN_LIKE[value];
+          if (builtIn) {
+            r.error("custom-is-built-in", p, `"${value}" is drawn by nudg already, on every platform.`, `Use target.${builtIn.replace(/, | and /g, (m) => (m === ", " ? ", target." : " and target."))} instead of a custom property.`);
+            return;
+          }
+          if (custom.includes(value)) {
+            r.error("duplicate-host-name", p, `custom "${value}" is declared twice.`, "Remove the duplicate.");
+            return;
+          }
+          custom.push(value);
+        });
+        host.custom = custom;
       }
     }
     this.host = host;
@@ -647,6 +674,7 @@ class ComponentCompiler {
   private parsePropertyPath(key: string, p: string): PropertyKind | undefined {
     const r = this.r;
     const parts = key.split(".");
+    if (parts.length === 3 && parts[1] === CUSTOM && parts[0]) return this.parseCustomPath(parts[0], parts[2], key, p);
     if (parts.length !== 2 || !parts[0] || !parts[1]) {
       r.error("invalid-path", p, `"${key}" is not a property path.`, "Write properties as target.property, for example \"knob.x\".");
       return undefined;
@@ -667,7 +695,29 @@ class ComponentCompiler {
       );
       ok = false;
     }
+    if (ok && kind && PROPERTIES_1_3.includes(prop) && !this.needsVersion("1.3", p, `"${prop}"`)) return undefined;
     return ok ? kind : undefined;
+  }
+
+  /** target.custom.<name> (1.3): a number the file moves and the host draws, declared under host.custom. */
+  private parseCustomPath(target: string, name: string, key: string, p: string): PropertyKind | undefined {
+    let ok = this.checkTarget(target, p);
+    if (!this.needsVersion("1.3", p, "A custom property")) return undefined;
+    if (!IDENTIFIER.test(name)) {
+      this.r.error("invalid-path", p, `"${key}" is not a property path.`, "Write a custom property as target.custom.<name>, for example \"card.custom.glow\".");
+      return undefined;
+    }
+    if (!this.host?.custom?.includes(name)) {
+      const builtIn = name in PROPERTIES ? name : PROPERTY_ALIASES[name] ?? BUILT_IN_LIKE[name];
+      this.r.error(
+        "undeclared-custom",
+        p,
+        `"${name}" is not a declared custom property.`,
+        builtIn ? `nudg draws this already: use ${target}.${builtIn.split(/, | and /)[0]}.` : `Declare it: "host": { "custom": ["${name}"] }. Use a custom property only for what no nudg property draws.`,
+      );
+      ok = false;
+    }
+    return ok ? "number" : undefined;
   }
 
   private checkTarget(target: string, p: string): boolean {

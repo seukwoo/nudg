@@ -502,7 +502,7 @@ None of this changes the format. Every item is adapter API or agent tooling, so 
 
 ## Format 1.3: feedback beyond motion
 
-Status: decided 2026-11-11 with the proposed choices; shipping one at a time (shadow, blur and custom properties first). Interaction feedback is motion, sound and touch landing on the same moment, plus the effects motion alone can't draw. Today a nudg app does the rest itself:
+Status: decided 2026-11-11 with the proposed choices; shipping one at a time. Shadow, blur and custom properties are implemented as format 1.3; cues and particles come next. Interaction feedback is motion, sound and touch landing on the same moment, plus the effects motion alone can't draw. Today a nudg app does the rest itself:
 - PlaySnack keeps about 800 lines for sound and haptics (`sfx.ts`, `tapSound.ts`, `moments.ts`, `gameCues.ts`), and much of that only times them against the motion;
 - it draws confetti with `element.animate`, one call per piece (#118);
 - it animates `box-shadow` with CSS keyframes, which `nudg audit` can only call a gap.

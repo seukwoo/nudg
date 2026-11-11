@@ -2585,6 +2585,81 @@ def validation_v1_2_cases():
     })
 
 
+LIFT = {
+    "nudg": "1.3",
+    "host": {"events": ["lift", "drop"], "custom": ["glow"]},
+    "targets": ["card"],
+    "values": {"card.y": 0, "card.shadowY": 2, "card.shadowBlur": 4, "card.shadowColor": "#00000033", "card.blur": 0, "card.custom.glow": 0},
+    "animate": {
+        "card.y": spring_json(0.3, 0.2),
+        "card.shadowY": spring_json(0.3, 0.2),
+        "card.shadowBlur": spring_json(0.3, 0.2),
+        "card.shadowColor": {"tween": {"duration": 0.2, "ease": "out"}},
+        "card.blur": {"tween": {"duration": 0.2, "ease": "linear"}},
+        "card.custom.glow": spring_json(0.4, 0),
+    },
+    "initial": "resting",
+    "when": {"host.lift": "lifted", "host.drop": "resting"},
+    "states": {
+        "resting": {},
+        "lifted": {"set": {"card.y": -8, "card.shadowY": 12, "card.shadowBlur": 24, "card.shadowColor": "#00000059", "card.blur": 2, "card.custom.glow": 1}},
+    },
+}
+
+
+def shadow_blur_custom_cases():
+    # Shadow, blur and custom properties are ordinary numbers and colors: each moves with its
+    # own motion, like x and y. Every runtime plays them; adapters decide how they are drawn.
+    y, sy, sb, sc, bl, gl = Prop(0), Prop(2), Prop(4), Prop("#00000033"), Prop(0), Prop(0)
+    y.retarget(-8, spring(0.3, 0.2), 0.1)
+    sy.retarget(12, spring(0.3, 0.2), 0.1)
+    sb.retarget(24, spring(0.3, 0.2), 0.1)
+    sc.retarget("#00000059", tween(0.2, "out"), 0.1)
+    bl.retarget(2, tween(0.2, "linear"), 0.1)
+    gl.retarget(1, spring(0.4, 0), 0.1)
+    steps = [{"t": 0, "expect": {"state": ["resting"], "values": {"card.shadowY": 2, "card.shadowColor": "#00000033", "card.custom.glow": 0}}},
+             {"t": 0.1, "send": "host.lift"}]
+    for t in (0.15, 0.2, 0.3, 0.6):
+        steps.append({"t": t, "expect": {"state": ["lifted"], "values": {
+            "card.y": y.value(t), "card.shadowY": sy.value(t), "card.shadowBlur": sb.value(t),
+            "card.shadowColor": sc.value(t), "card.blur": bl.value(t), "card.custom.glow": gl.value(t)}}})
+    write("shadow-blur-custom", {
+        "conformance": "1.3",
+        "name": "Shadow, blur and a custom property move like any number or color, each with its own motion",
+        "doc": LIFT,
+        "steps": steps,
+    })
+
+
+def validation_v1_3_cases():
+    def doc():
+        return json.loads(json.dumps(LIFT))
+
+    out = [("valid", doc(), [])]
+    d = doc(); d["nudg"] = "1.2"
+    # Like any property the file can't use, each place that names it is reported.
+    new = ["card.shadowY", "card.shadowBlur", "card.shadowColor", "card.blur", "card.custom.glow"]
+    everywhere = lambda code, keys: [(code, f"{where}/{k}") for k in keys for where in ("/values", "/animate", "/states/lifted/set")]
+    out.append(("needs-version", d, everywhere("needs-version", new) + [("needs-version", "/host/custom")]))
+    d = doc(); d["host"]["custom"] = []
+    out.append(("undeclared", d, everywhere("undeclared-custom", ["card.custom.glow"])))
+    d = doc(); del d["host"]
+    out.append(("no-host", d, everywhere("undeclared-custom", ["card.custom.glow"])))
+    d = doc(); d["host"]["custom"] = ["glow", "shadow"]
+    out.append(("shadows-built-in", d, [("custom-is-built-in", "/host/custom/1")]))
+    d = doc(); d["host"]["custom"] = ["glow", "Bad name"]
+    out.append(("invalid-name", d, [("invalid-name", "/host/custom/1")]))
+    d = doc(); d["values"]["card.custom.glow"] = "#ffffff"
+    out.append(("custom-is-a-number", d, [("invalid-value", "/values/card.custom.glow")]))
+    d = doc(); d["values"]["card.custom.glow.extra"] = 0
+    out.append(("path", d, [("invalid-path", "/values/card.custom.glow.extra")]))
+    write("validation-1.3", {
+        "conformance": "1.3",
+        "name": "Validator (1.3): shadow, blur and declared custom properties",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 if __name__ == "__main__":
     toggle_cases()
     spring_form_cases()
@@ -2632,5 +2707,7 @@ if __name__ == "__main__":
     validation_v18_cases()
     delay_input_cases()
     validation_v1_2_cases()
+    shadow_blur_custom_cases()
+    validation_v1_3_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

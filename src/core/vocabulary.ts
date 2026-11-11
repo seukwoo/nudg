@@ -1,8 +1,8 @@
 import type { PropertyKind } from "./types.ts";
 
 /** The newest format version; every listed version is read. */
-export const VERSION = "1.2";
-export const VERSIONS = ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "0.10", "0.11", "0.12", "0.13", "0.14", "0.15", "0.16", "0.17", "0.18", "1.0", "1.1", "1.2"];
+export const VERSION = "1.3";
+export const VERSIONS = ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "0.10", "0.11", "0.12", "0.13", "0.14", "0.15", "0.16", "0.17", "0.18", "1.0", "1.1", "1.2", "1.3"];
 
 /** What a host reports about each target's layout, as target.layout.<name> inputs (v0.4). */
 export const MEASUREMENTS = ["x", "y", "width", "height", "naturalWidth", "naturalHeight"] as const;
@@ -20,6 +20,23 @@ export const PROPERTIES: Record<string, PropertyKind> = {
   rotation: "number",
   opacity: "number",
   color: "color",
+  shadowX: "length",
+  shadowY: "length",
+  shadowBlur: "length",
+  shadowColor: "color",
+  blur: "length",
+};
+
+/** Properties that need format 1.3. */
+export const PROPERTIES_1_3 = ["shadowX", "shadowY", "shadowBlur", "shadowColor", "blur"];
+/** A custom property, target.custom.<name> (1.3): a number nudg moves and the host draws. */
+export const CUSTOM = "custom";
+/** Names a custom property can't take, with the built-in to use instead. */
+export const BUILT_IN_LIKE: Record<string, string> = {
+  shadow: "shadowX, shadowY, shadowBlur and shadowColor",
+  boxShadow: "shadowX, shadowY, shadowBlur and shadowColor",
+  elevation: "shadowY and shadowBlur",
+  filter: "blur",
 };
 
 /** Names an AI or a person is likely to reach for, mapped to the nudg name. */
@@ -34,6 +51,10 @@ export const PROPERTY_ALIASES: Record<string, string> = {
   backgroundColor: "color",
   background: "color",
   fill: "color",
+  shadowOffsetX: "shadowX",
+  shadowOffsetY: "shadowY",
+  shadowRadius: "shadowBlur",
+  backdropBlur: "blur",
 };
 
 export const EVENTS = ["down", "up", "cancel", "tap", "dragstart", "dragend", "hoverstart", "hoverend", "focus", "blur", "longpress", "doubletap", "scrollup", "scrolldown", "scrollleft", "scrollright", "pinchstart", "pinchend"] as const;

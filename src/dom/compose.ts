@@ -159,5 +159,9 @@ function write(style: CSSStyleDeclaration, c: Composer) {
   }
   if (transforms.length) style.transform = c.author ? `${c.author} ${transforms.join(" ")}` : transforms.join(" ");
   if (opacity !== undefined) style.opacity = String(opacity);
-  Object.assign(style, rest);
+  for (const [key, value] of Object.entries(rest)) {
+    // CSS variables (custom properties) only go through setProperty.
+    if (key.startsWith("--")) style.setProperty(key, value);
+    else (style as unknown as Record<string, string>)[key] = value;
+  }
 }

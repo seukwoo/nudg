@@ -17,6 +17,7 @@ import { measureLayout, measuredNote, snapshotElement, type Measured } from "./n
 import { materializeRevision } from "./node/git.ts";
 import { clearLog, formatSummary as formatLogSummary, logPath, readLog, record, shareableSummary, shareTip, shareUrl, struggle, summarize } from "./node/log.ts";
 import { installSkill, SKILL } from "./node/skill.ts";
+import { auditDir, formatAudit } from "./node/audit.ts";
 import { formatComparison, formatCritique, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
 import { comparePage, lastRuntimeInlined, readWithImports } from "./node/compare-page.ts";
 import { compilePath } from "./node/load.ts";
@@ -97,6 +98,10 @@ simulate and plot options
   upgrade <file...>         Raise each file's "nudg" version to the current format (1.2) once it
                             validates; everything else in the file is kept as written.
                             --check writes nothing and exits 1 if a file is older (for CI).
+  audit [dir]               Where an app's motion lives outside nudg (CSS keyframes and
+                            transitions, Web Animations, other libraries, hand-written styles,
+                            frame loops, timers around players), what in nudg does each, and
+                            the share of motion on nudg. Gaps nudg can't cover are marked.
   critique <file...>        Whether the motion is good, not only valid: each transition checked
                             against the platforms' motion guidelines and accessibility rules
                             (slow transitions, late press feedback, invisible changes, bouncy
@@ -711,6 +716,12 @@ if (command === "critique") {
   if (json) process.stdout.write(JSON.stringify({ ok: true, results: all }, null, 2) + "\n");
   process.exit(args.flags.has("strict") && warnings > 0 ? 1 : 0);
 }
+if (command === "audit") {
+  if (args.positional.length > 1) fail("audit takes at most one directory.");
+  const result = auditDir(args.positional[0] ?? ".");
+  process.stdout.write((json ? JSON.stringify({ ok: true, ...result }, null, 2) : formatAudit(result)) + "\n");
+  process.exit(0);
+}
 if (command === "compare") process.exit(await runCompare(args, json));
 if (command === "recipe") {
   if (args.positional.length > 1) fail("recipe takes at most one name.");
@@ -797,4 +808,4 @@ if (command === "mcp") {
   await serveMcp();
   process.exit(0);
 }
-fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, compile, generate, upgrade, critique, observe, recipe, preset, log, skill, mcp.`);
+fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, compile, generate, upgrade, critique, audit, observe, recipe, preset, log, skill, mcp.`);

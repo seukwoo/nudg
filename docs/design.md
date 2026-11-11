@@ -511,6 +511,7 @@ These are unresolved design choices. Scheduling and completion status live in th
 - Pattern metadata currently lives in the versioned external recipe catalog. Revisit a file-level role such as `"role": "bottom-sheet"` only if generation or validation needs cannot be met without changing runtime documents.
 - Pattern aliases and locale: how to map common design words such as FAB, snackbar, toast, tabs, tab bar, bottom nav, GNB, LNB and side nav without making the core format depend on one design system's names.
 - Reduced motion inside the format: a way for a file to say which properties must not be reduced (a progress bar's width), beyond the runtime's blanket option and 1.1's opacity loops.
+- Properties beyond transform, opacity, size and background color. `nudg audit` found PlaySnack animating `box-shadow` (a ring that spreads from a button), which no nudg property moves. Shadows, blur and border color are common in press and focus feedback. Each new property costs a name in the vocabulary, a value type (a shadow is several numbers and a color), and a style mapping in five adapters. Decide when a second app needs one.
 - Discrete steps for `commit` (a slider that snaps to 10s), beyond `min`/`max`.
 - Nonlinear rubber banding that depends on the view's size, instead of the linear `overdrag` factor.
 - Loops that run a fixed number of times, and loops on colors; see [loops](#loops-while-a-state-is-active-format-010) for what 0.10 settled.

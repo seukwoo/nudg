@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **`nudg audit`: is an app's motion on nudg?** `nudg audit src` (MCP `nudg_audit`) finds motion that lives outside nudg:
+  - CSS keyframes, and transitions of moving properties;
+  - Web Animations and other motion libraries;
+  - transforms written by hand;
+  - frame loops;
+  - timers and listeners around players.
+
+  Each finding names what in nudg replaces it. It starts with the share of motion on nudg, and marks gaps nudg can't cover yet (a keyframe animation of `box-shadow`) to report instead of working around. The skill has agents run it after wiring nudg in. Our examples: 100% for the messenger, one CSS fade left in the video player. PlaySnack: 49%, with 38 of 40 findings replaceable today.
 - **`playEach`: one file on every element that matches.** `playEach(presets.press(), "button")` gives every button the same press. An element gets its player when a finger lands, in time for that touch, or as it appears (`when: "mount"`). Removed elements are let go, and disabled controls and `[data-nudg-off]` are skipped. A function of the element picks a variant. PlaySnack kept an 81-line document listener for this.
 - **`leaving`: the way out, as a flag.** Every adapter has it next to `present` (`player.leaving()`, `leaving` in the React and React Native hooks, `model.leaving` in SwiftUI, `state.leaving` in Compose), from the runtimes' shared lifecycle. It is true from the moment the machine enters an exit state from elsewhere until `onExit`, so a dim behind a leaving sheet lets taps through without the host tracking it. PlaySnack kept a 78-line closer for this; everything else in it was already `exit`, `onExit` and `present`.
 

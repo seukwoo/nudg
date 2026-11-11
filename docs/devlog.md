@@ -584,3 +584,14 @@ After 1.6.0, PlaySnack's motion code was read for what nudg should have done its
 - **One press for every button.** A capture-phase `pointerdown` listener binds the press file to whichever button a finger lands on. Binding a file to elements matching a selector, as they appear, would make this one call.
 - **One-off entrances still in CSS.** A countdown number, a trophy drop, a flag, a card pop: keyframes that play once on mount. nudg can express each (entry keyframes), but a file, a hook and a send cost more than a CSS line, so they stayed CSS and miss reduced motion and the judge loop.
 - **Particles** ([#118](https://github.com/seukwoo/nudg/issues/118)): the burst is one player per piece with random directions computed in the host.
+
+## 2026-11-11: Measuring how much of an app is on nudg
+
+- **Problem:** "Does PlaySnack use nudg fully?" had no answer beyond reading its code. Agents can't see either. An agent that wires nudg in can't tell what it left outside, so it moves on.
+- **Resolution:** `nudg audit` reads an app's source for motion outside nudg and says what in nudg does each, with a share at the top. The first run on PlaySnack said 17%. That was wrong: PlaySnack builds its documents in code and calls them through its own helpers (`playOn`, `useSheetIn`, `burst`), which the count missed. Counting calls to the exports of files that import `@nudg/core` brought it to 49%: 39 on nudg, 40 outside. 38 of the 40 have a nudg equivalent today; the other two animate `box-shadow`, which no nudg property moves (now an open question). The first runs also flagged things that aren't motion:
+  - a frame loop that feeds a player's `input` (that is how nudg is meant to be fed);
+  - timers that stand in for the network;
+  - a bundled `app.js`.
+
+  Those are now left out or marked.
+- **Lesson:** The number only persuades if it is fair. Undercounting nudg would have made nudg look worse than it is, and overcounting what is outside would have sent agents after code that is fine. Both errors showed up on the first real app, not on the examples.

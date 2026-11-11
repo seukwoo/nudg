@@ -6,6 +6,7 @@ nudg_plot(file?: string, rev?: string, source?: string, path?: string, events?: 
 nudg_compare(a?: object, b?: object, labels?: array, before?: string, file?: string, url?: string, selector?: string, open?: boolean, html?: string, page?: string, at?: array, frames?: integer, events?: array, start?: array, layout?: object, reducedMotion?: boolean, until?: number,string, properties?: array, out?: string, bundle?: string)
 nudg_render(file: string, html: string, events?: array, start?: array, reducedMotion?: boolean, at?: array, frames?: integer, until?: number,string, out?: string)
 nudg_critique(file?: string, rev?: string, source?: string, path?: string)
+nudg_audit(dir?: string)
 nudg_generate(file?: string, rev?: string, source?: string, path?: string)
 nudg_share(note?: string)
 nudg_observe(url: string, selector?: string, actions: array, file?: string, on?: string, events?: array, start?: array, reducedMotion?: boolean, settle?: number,string, warmup?: number,string, viewport?: object)

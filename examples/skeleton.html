@@ -43,6 +43,7 @@
     const load = () => {
       card.setAttribute("aria-busy", "true");
       player.send("host.loading");
+      // nudg-audit-ignore: stands in for the network
       setTimeout(() => {
         card.setAttribute("aria-busy", "false");
         player.send("host.loaded");

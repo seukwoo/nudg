@@ -37,6 +37,8 @@ export interface HeadlessPlayer<C extends NudgContract = NudgContract> {
   input(name: C["inputs"], value: number): boolean;
   values(): Record<string, Value>;
   present(): boolean;
+  /** True while the way out plays: the machine has entered an `exit` state from elsewhere and is still moving. */
+  leaving(): boolean;
   /** The player's time in seconds. */
   now(): number;
   /** The host's reduced-motion setting changed: see `Runtime.setReducedMotion`. */
@@ -87,6 +89,7 @@ export function createPlayer<C extends NudgContract = NudgContract>(program: Pro
     },
     values: () => lastValues,
     present: () => life.present(),
+    leaving: () => life.leaving(),
     now,
     setReducedMotion(on) {
       if (destroyed) return;

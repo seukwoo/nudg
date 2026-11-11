@@ -96,11 +96,14 @@ final class SwiftUITests: XCTestCase {
     frames(until: 2)
     XCTAssertEqual(settles, [["on"]])
     XCTAssertEqual(exits, 0)
+    XCTAssertFalse(model.leaving)
     model.send("track.tap")
+    XCTAssertTrue(model.leaving)
     frames(until: 4)
     XCTAssertEqual(settles, [["on"], ["off"]])
     XCTAssertEqual(exits, 1)
     XCTAssertFalse(model.present)
+    XCTAssertFalse(model.leaving)
   }
 
   #if os(iOS)

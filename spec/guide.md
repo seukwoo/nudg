@@ -288,7 +288,7 @@ An app's motion is nudg files plus adapter calls. Before you write a timer, a wr
 
 | The app needs | Use |
 |---|---|
-| Unmount after the way out (sheet, dialog, toast) | `exit: "hidden"` and `onExit` (or `present`) on the player or hook; send `host.hide`, unmount in `onExit`. A show during the way out cancels it; reduced motion exits at once. |
+| Unmount after the way out (sheet, dialog, toast) | `exit: "hidden"` and `onExit` (or `present`) on the player or hook; send `host.hide`, unmount in `onExit`. A show during the way out cancels it; reduced motion exits at once. `leaving` is true while the way out plays: let taps through a leaving dim with it (`pointerEvents: leaving ? "none" : undefined`). |
 | A component library's overlay (MUI, Ant Design, React Bootstrap) | `nudgTransition(file)` as its transition slot |
 | A one-off entrance (a result pops, a trophy drops, a countdown number) | React: `useNudgOnce(presets.pop(), { replay: [count] })` returns a ref. DOM: `playDoc(presets.drop(), el, { start: "host.show", release: "settle" })`. Never a CSS keyframe animation. |
 | A one-shot effect (a shake on a wrong PIN, a success pop) | `playDoc(presets.shake(), field, { start: "host.shake", release: "settle" })`: it lets go by itself at rest and puts the element's styles back; `player.done` resolves then. |

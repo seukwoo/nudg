@@ -26,6 +26,9 @@ class Lifecycle(private val runtime: Runtime, exit: List<String> = emptyList()) 
     var present = true
         private set
 
+    /** True while the way out plays: an exit state entered from elsewhere, not yet settled. */
+    val leaving: Boolean get() = armed && present && inExit()
+
     private var lastState = runtime.state()
 
     // A settle is owed once something moved or the state changed, and paid at the next rest.

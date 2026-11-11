@@ -94,6 +94,8 @@ export interface Player<C extends NudgContract = NudgContract> {
   render(t: number): void;
   /** False once the machine has exited (see `exit` in the options) and settled. */
   present(): boolean;
+  /** True while the way out plays: the machine has entered an `exit` state from elsewhere and is still moving. A dim behind a leaving sheet can let taps through. */
+  leaving(): boolean;
   /**
    * Turns reduced motion on or off now; `undefined` follows the system setting again. Without
    * `reducedMotion` in the options the player follows the system setting as it changes.
@@ -554,6 +556,9 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     values: () => lastValues,
     present() {
       return life.present();
+    },
+    leaving() {
+      return life.leaving();
     },
     now,
     render(t) {

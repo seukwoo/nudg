@@ -64,6 +64,8 @@ export interface Nudg<C extends NudgContract = NudgContract> {
   input(name: C["inputs"], value: number): boolean;
   /** False once the component has exited (see `exit`); true again if it is shown again. */
   present: boolean;
+  /** True while the way out plays (see `exit`): a dim behind a leaving sheet can let taps through. */
+  leaving: boolean;
   /**
    * The target's first-frame style, for server rendering and the first paint:
    * `<div ref={bind("toast")} style={style("toast")} />`. Stable per name; the adapter
@@ -91,6 +93,7 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
   // The first render knows the starting states without touching the DOM.
   const [state, setState] = useState<string[]>(() => createRuntime(program, { state: options.state }).state());
   const [present, setPresent] = useState(true);
+  const [leaving, setLeaving] = useState(false);
   const onExit = useRef(options.onExit);
   onExit.current = options.onExit;
   const onSettle = useRef(options.onSettle);
@@ -106,6 +109,7 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
       reducedMotion: options.reducedMotion,
       onState: (s) => {
         setState(s);
+        setLeaving(p.leaving());
         if (p.present()) setPresent(true);
       },
       exit: options.exit,
@@ -113,6 +117,7 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
       onSettle: (s) => onSettle.current?.(s),
       onExit: () => {
         setPresent(false);
+        setLeaving(false);
         onExit.current?.();
       },
     });
@@ -166,7 +171,7 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
     if (used) inputs.current.set(name, value);
     return used;
   }, [reads]);
-  return { bind, state, send, input, present, style };
+  return { bind, state, send, input, present, leaving, style };
 }
 
 const EMPTY_STYLE: NudgStyle = {};

@@ -18,6 +18,8 @@ public final class Lifecycle {
   public var onExit: (() -> Void)?
   /** False once the component has exited, until it leaves the exit state again. */
   public private(set) var present = true
+  /** True while the way out plays: an exit state entered from elsewhere, not yet settled. */
+  public var leaving: Bool { armed && present && inExit() }
   private var lastState: [String]
   // A settle is owed once something moved or the state changed, and paid at the next rest.
   private var owed = false

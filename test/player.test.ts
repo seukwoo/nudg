@@ -34,17 +34,20 @@ test("frames run while values move and stop at rest; values reach the views thro
   assert.deepEqual(p.runtime.state(), ["on"]);
 });
 
-test("presence: onExit once the exit has settled; destroyed players ignore events", () => {
+test("presence: leaving while the way out plays, onExit once it has settled; destroyed players ignore events", () => {
   const h = fakeHost();
   let exits = 0;
   const p = createPlayer(toProgram(presets.toast({ duration: 0 })), { host: h.host, exit: "hidden", onExit: () => exits++ });
   p.send("host.show");
   for (let i = 0; i < 120 && h.pending(); i++) h.advance(1 / 60);
   assert.equal(p.present(), true);
+  assert.equal(p.leaving(), false);
   p.send("host.hide");
   assert.equal(p.present(), true, "still present while leaving");
+  assert.equal(p.leaving(), true);
   for (let i = 0; i < 120 && h.pending(); i++) h.advance(1 / 60);
   assert.equal(p.present(), false);
+  assert.equal(p.leaving(), false, "gone, not leaving");
   assert.equal(exits, 1);
   p.destroy();
   assert.equal(p.send("host.show"), false);

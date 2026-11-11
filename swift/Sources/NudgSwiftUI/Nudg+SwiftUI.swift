@@ -132,7 +132,7 @@ public final class NudgModel: ObservableObject {
   public var now: Date { clock() }
 }
 
-/** Applies a target's values to a view: offset, rotation, scale, opacity, size, background color. */
+/** Applies a target's values to a view: offset, rotation, scale, opacity, size, background color, shadow and blur (1.3). */
 public struct NudgTarget: ViewModifier {
   @ObservedObject var model: NudgModel
   let name: String
@@ -143,9 +143,14 @@ public struct NudgTarget: ViewModifier {
       let v = model.values(at: model.now)
       let n = { (p: String, d: Double) in v["\(name).\(p)"]?.number ?? d }
       let scale = n("scale", 1)
+      let shadowed = ["shadowX", "shadowY", "shadowBlur", "shadowColor"].contains { v["\(name).\($0)"] != nil }
       content
         .frame(width: v["\(name).width"]?.number.map { CGFloat($0) }, height: v["\(name).height"]?.number.map { CGFloat($0) })
         .background(v["\(name).color"]?.color.map { Color(nudgHex: $0) } ?? Color.clear)
+        // A CSS blur radius is twice SwiftUI's shadow radius.
+        .shadow(color: shadowed ? (v["\(name).shadowColor"]?.color.map { Color(nudgHex: $0) } ?? Color.black.opacity(0.25)) : .clear,
+                radius: CGFloat(max(0, n("shadowBlur", 0)) / 2), x: CGFloat(n("shadowX", 0)), y: CGFloat(n("shadowY", 0)))
+        .blur(radius: CGFloat(max(0, n("blur", 0))))
         .scaleEffect(x: CGFloat(scale * n("scaleX", 1)), y: CGFloat(scale * n("scaleY", 1)))
         .rotationEffect(.degrees(n("rotation", 0)))
         .offset(x: CGFloat(n("x", 0)), y: CGFloat(n("y", 0)))

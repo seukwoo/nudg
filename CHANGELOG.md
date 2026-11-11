@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Format 1.3: shadow, blur, and custom properties.**
+  - `shadowX`, `shadowY`, `shadowBlur` and `shadowColor` are plain properties with their own motion, so a lifted card's shadow deepens with the same spring that raises it. `blur` blurs a view.
+  - Adapters draw them as `box-shadow` and `filter` on the web, `.shadow` and `.blur` in SwiftUI, and `Modifier.dropShadow` and `Modifier.blur` in Compose. On React Native, `shadowRadius`, `shadowColor` and `elevation` are drawn; shadow offsets and blur, which React Native can't animate, are skipped with a warning.
+  - For what no nudg property draws, `target.custom.<name>` is a number nudg moves and the host draws. It is declared under `host.custom`, and on the web it is also the CSS variable `--nudg-<name>`. React Native has `value("card.custom.glow")`.
+  - Guardrails: a custom name that nudg draws already (`shadow`, `filter`, `opacity`) is an error naming the built-in, and `nudg audit` lists the custom properties an app uses.
+  - TypeScript, Swift and Kotlin share the new conformance cases `shadow-blur-custom` and `validation-1.3`.
+  - Schema 1.3. New validator codes: `undeclared-custom` and `custom-is-built-in`.
 - **CSS no longer fights a file's motion.** A page's CSS transition or keyframe animation on a property a nudg file writes eased or overwrote every frame. PlaySnack's buttons had `transition: transform .06s` under the nudg press, so the spring arrived late. The DOM adapter now turns those off on the bound element, keeps the rest (a color transition, `transition: all` minus what nudg moves), restores them when the player lets go, and warns once per class so the stylesheet can be cleaned up.
 
 ## 1.8.0

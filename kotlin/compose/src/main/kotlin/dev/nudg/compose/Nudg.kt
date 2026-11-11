@@ -24,6 +24,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
@@ -209,8 +215,9 @@ fun rememberNudg(
     return nudg
 }
 
-/** Applies a target's values: offset, rotation, scale and opacity in a graphics layer, size in layout, color behind. */
+/** Applies a target's values: offset, rotation, scale and opacity in a graphics layer, size in layout, color behind, shadow and blur (1.3). */
 fun Modifier.nudg(state: NudgState, name: String): Modifier = this
+    .nudgShadow(state, name)
     .layout { measurable, constraints ->
         val w = (state.values["$name.width"] as? Value.Number)?.let { (it.value * density).roundToInt() }
         val h = (state.values["$name.height"] as? Value.Number)?.let { (it.value * density).roundToInt() }
@@ -234,6 +241,20 @@ fun Modifier.nudg(state: NudgState, name: String): Modifier = this
     .drawBehind {
         (state.values["$name.color"] as? Value.Color)?.let { drawRect(parseHex(it.hex)) }
     }
+    .then(
+        // Modifier.blur draws nothing below Android 12; the rest of the file still plays.
+        if (state.values.containsKey("$name.blur")) Modifier.blur((state.number(name, "blur", 0.0).coerceAtLeast(0.0)).dp, BlurredEdgeTreatment.Unbounded) else Modifier,
+    )
+
+/** A drop shadow from shadowX, shadowY, shadowBlur and shadowColor (1.3), drawn behind the view. */
+private fun Modifier.nudgShadow(state: NudgState, name: String): Modifier {
+    if (listOf("shadowX", "shadowY", "shadowBlur", "shadowColor").none { state.values.containsKey("$name.$it") }) return this
+    return this.dropShadow(RectangleShape) {
+        radius = (state.number(name, "shadowBlur", 0.0).coerceAtLeast(0.0) * density).toFloat()
+        offset = Offset((state.number(name, "shadowX", 0.0) * density).toFloat(), (state.number(name, "shadowY", 0.0) * density).toFloat())
+        color = (state.values["$name.shadowColor"] as? Value.Color)?.let { parseHex(it.hex) } ?: Color(0x40000000)
+    }
+}
 
 /**
  * Press and drag for a target, by the same rules as every other adapter: down, up (or

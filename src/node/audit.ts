@@ -25,6 +25,8 @@ export interface Audit {
   /** nudg files, nudg call sites, and calls of the app's own helpers around nudg: motion that is on nudg. */
   onNudg: number;
   findings: AuditFinding[];
+  /** Custom property names declared in nudg files (host.custom, 1.3): what the host draws itself. */
+  custom: string[];
   /** onNudg / (onNudg + findings), 0 to 100; 100 only when nothing is outside nudg. */
   coverage: number;
 }
@@ -80,8 +82,8 @@ const LIBRARIES: [RegExp, string, boolean?][] = [
 /** nudg uses: call sites that put motion on nudg. */
 const NUDG_USE = /\b(useNudg|useNudgOnce|playDoc|playEach|nudgTransition|createPlayer|rememberNudg|NudgModel)\s*[(<]|\.nudg\(|data-nudg=/g;
 
-/** CSS properties a nudg file can move (x, y, rotation, scale, opacity, width, height, background color). */
-const NUDG_CSS = new Set(["transform", "translate", "rotate", "scale", "opacity", "width", "height", "background", "background-color", "offset", "easing", "animation-timing-function"]);
+/** CSS properties a nudg file can move (x, y, rotation, scale, opacity, width, height, background color; shadow and blur from 1.3). */
+const NUDG_CSS = new Set(["transform", "translate", "rotate", "scale", "opacity", "width", "height", "background", "background-color", "offset", "easing", "animation-timing-function", "box-shadow", "filter"]);
 
 /** The body of the @keyframes block that starts at `start`, by brace counting. */
 function blockAt(text: string, start: number): string {
@@ -98,9 +100,10 @@ function blockAt(text: string, start: number): string {
 function keyframesUse(name: string, body: string): { use: string; gap?: boolean } {
   const n = name.toLowerCase();
   const props = [...new Set([...body.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1]))].filter((p) => !NUDG_CSS.has(p));
-  if (props.length === 1 && props[0] === "box-shadow" && /\b0\s+0\s+0\s+[1-9][\d.]*px/.test(body))
-    return { use: "a ring that spreads: a separate ring element whose scale grows as it fades does it today; a shadow property is planned", gap: true };
-  if (props.length) return { use: `animates ${props.join(", ")}, which no nudg property moves yet`, gap: true };
+  if (props.length) return { use: `animates ${props.join(", ")}, which no nudg property moves yet; a custom property (target.custom.<name>, drawn through var(--nudg-<name>)) keeps its timing in nudg`, gap: true };
+  if (/box-shadow/.test(body) && /\b0\s+0\s+0\s+[1-9][\d.]*px/.test(body))
+    return { use: "a ring that spreads: a separate ring element whose scale grows as it fades (nudg shadows have no spread)" };
+  if (/box-shadow|filter\s*:\s*blur/.test(body)) return { use: "shadowX / shadowY / shadowBlur / shadowColor or blur (1.3), in a state's set and enter like any property" };
   if (/shake|wobble|jiggle|nope/.test(n)) return { use: "presets.shake(), played with release: \"settle\"" };
   if (/spin|rotat|load|pulse|blink|breath|shimmer|skeleton|bounce-?loop|float|wave|typing|dots/.test(n)) return { use: "a loop in a state (the spinner, skeleton or typing-indicator recipe)" };
   if (/confetti|particle|burst|firework|sparkle/.test(n)) return { use: "particles: one player per piece today; nudg has no particle system yet (#118)", gap: true };
@@ -120,6 +123,7 @@ function wrappers(files: { path: string; text: string }[]): Set<string> {
 
 export function audit(files: { path: string; text: string }[]): Audit {
   const findings: AuditFinding[] = [];
+  const custom: string[] = [];
   let onNudg = 0;
   // Calls of the app's own helpers around nudg count as nudg uses, wherever they are.
   const helpers = wrappers(files);
@@ -127,6 +131,9 @@ export function audit(files: { path: string; text: string }[]): Audit {
   for (const { path, text } of files) {
     if (path.endsWith(".nudg.json")) {
       onNudg++;
+      try {
+        for (const name of (JSON.parse(text)?.host?.custom ?? []) as unknown[]) if (typeof name === "string" && !custom.includes(name)) custom.push(name);
+      } catch {}
       continue;
     }
     const lines = text.split("\n");
@@ -169,7 +176,7 @@ export function audit(files: { path: string; text: string }[]): Audit {
     }
   }
   const total = onNudg + findings.length;
-  return { files: files.length, onNudg, findings, coverage: findings.length === 0 ? 100 : Math.min(99, Math.round((onNudg / total) * 100)) };
+  return { files: files.length, onNudg, findings, custom, coverage: findings.length === 0 ? 100 : Math.min(99, Math.round((onNudg / total) * 100)) };
 }
 
 const KIND_LABEL: Record<AuditKind, string> = {
@@ -187,6 +194,7 @@ export function formatAudit(a: Audit): string {
   const outside = a.findings.length;
   const gaps = a.findings.filter((f) => f.gap).length;
   const lines = [`Motion on nudg: ${a.coverage}% (${a.onNudg} on nudg, ${outside} outside, in ${a.files} files)`];
+  if (a.custom.length) lines.push(`Custom properties the app draws itself: ${a.custom.join(", ")}. If nudg should draw one of them, report it.`);
   if (outside === 0) {
     lines.push("Every motion found is on nudg: one format, checked, comparable, with reduced motion everywhere.");
     return lines.join("\n");

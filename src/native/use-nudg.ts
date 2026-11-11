@@ -48,6 +48,11 @@ export interface NudgNative<C extends NudgContract = NudgContract> {
   present: boolean;
   /** True while the way out plays (see `exit`): a dim behind a leaving sheet can let taps through. */
   leaving: boolean;
+  /**
+   * The Animated value behind a property, e.g. value("card.custom.glow") (1.3): for a custom
+   * property the host draws, or to interpolate into a style nudg doesn't set.
+   */
+  value(property: string): Animated.Value | Animated.Color | undefined;
 }
 
 const TRANSFORM = ["x", "y", "rotation", "scale", "scaleX", "scaleY"] as const;
@@ -211,7 +216,8 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
     if (used) inputs.current.set(name, value);
     return used;
   }, [reads]);
-  return { bind, send, input, state, present, leaving };
+  const value = useCallback((property: string) => animated.get(property), [animated]);
+  return { bind, send, input, state, present, leaving, value };
 }
 
 /** The value each Animated value last showed. React Native updates the view on every setValue, so unchanged ones are skipped. */
@@ -226,6 +232,8 @@ function write(animated: Map<string, Animated.Value | Animated.Color>, values: R
     else a.setValue(v as number);
   }
 }
+
+const warnedSkips = new Set<string>();
 
 /** A target's style, reading the Animated values: transform in nudg's order (translate, rotate, scale). */
 function styleFor(program: Program, target: string, animated: Map<string, Animated.Value | Animated.Color>): Record<string, unknown> {
@@ -243,6 +251,20 @@ function styleFor(program: Program, target: string, animated: Map<string, Animat
   if (transform.length) style.transform = transform;
   for (const p of ["opacity", "width", "height"]) if (get(p)) style[p] = get(p);
   if (get("color")) style.backgroundColor = get("color");
+  // Shadow (1.3): radius and color on iOS, elevation on Android. Offsets and blur have no
+  // animatable React Native style yet; read them with value() to draw them yourself.
+  const blur = get("shadowBlur");
+  if (blur) {
+    style.shadowRadius = Animated.multiply(blur, 0.5);
+    style.elevation = Animated.multiply(blur, 0.5);
+    style.shadowOpacity = 1;
+  }
+  if (get("shadowColor")) style.shadowColor = get("shadowColor");
+  const skipped = ["shadowX", "shadowY", "blur"].filter((p) => get(p));
+  if (skipped.length && !warnedSkips.has(`${target}:${skipped}`)) {
+    warnedSkips.add(`${target}:${skipped}`);
+    console.warn(`nudg: React Native has no animatable style for ${skipped.map((p) => `${target}.${p}`).join(", ")}; it isn't drawn. Read it with value("${target}.${skipped[0]}") to draw it yourself.`);
+  }
   void program;
   return style;
 }

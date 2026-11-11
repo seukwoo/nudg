@@ -303,3 +303,40 @@ test("a page's CSS transition or animation on a property the file writes is turn
     close();
   }
 });
+
+test("shadow, blur and custom properties (1.3) are drawn as box-shadow, filter and a CSS variable, and put back", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const { launchBrowser, waitFor } = await import("../src/node/cdp.ts");
+  const { serveIfLocal } = await import("../src/node/observe.ts");
+  const { url, close } = await serveIfLocal("test/fixtures/host/presence.html");
+  const browser = await launchBrowser(chrome!);
+  try {
+    await browser.send("Page.navigate", { url });
+    await waitFor(() => browser.evaluate("window.__player ? 'ready' : ''"), 15_000);
+    const result = await browser.evaluate(`(async () => {
+      const { playDoc } = await import("../../../dist/dom/index.js");
+      const doc = {
+        nudg: "1.3", host: { events: ["lift"], custom: ["glow"] }, targets: ["card"],
+        values: { "card.shadowY": 2, "card.shadowBlur": 4, "card.shadowColor": "#00000033", "card.blur": 0, "card.custom.glow": 0 },
+        animate: { "card.shadowY": { tween: { duration: 0.1 } }, "card.shadowBlur": { tween: { duration: 0.1 } }, "card.blur": { tween: { duration: 0.1 } }, "card.custom.glow": { tween: { duration: 0.1 } } },
+        initial: "rest", when: { "host.lift": "lifted" },
+        states: { rest: {}, lifted: { set: { "card.shadowY": 12, "card.shadowBlur": 24, "card.blur": 2, "card.custom.glow": 1 } } },
+      };
+      const el = document.createElement("div");
+      el.style.cssText = "width:40px;height:40px;box-shadow:none";
+      document.body.append(el);
+      const p = playDoc(doc, el);
+      const first = { shadow: el.style.boxShadow, filter: el.style.filter, glow: el.style.getPropertyValue("--nudg-glow") };
+      p.send("host.lift");
+      await new Promise((r) => setTimeout(r, 400));
+      const lifted = { shadow: getComputedStyle(el).boxShadow, filter: getComputedStyle(el).filter, glow: el.style.getPropertyValue("--nudg-glow") };
+      p.destroy();
+      return { first, lifted, after: { shadow: el.style.boxShadow, filter: el.style.filter, glow: el.style.getPropertyValue("--nudg-glow") } };
+    })()`);
+    assert.deepEqual(result.first, { shadow: "rgba(0, 0, 0, 0.2) 0px 2px 4px", filter: "blur(0px)", glow: "0" });
+    assert.deepEqual(result.lifted, { shadow: "rgba(0, 0, 0, 0.2) 0px 12px 24px 0px", filter: "blur(2px)", glow: "1" });
+    assert.deepEqual(result.after, { shadow: "none", filter: "", glow: "" });
+  } finally {
+    await browser.close();
+    close();
+  }
+});

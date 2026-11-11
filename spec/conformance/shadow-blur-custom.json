@@ -1,0 +1,166 @@
+{
+  "conformance": "1.3",
+  "name": "Shadow, blur and a custom property move like any number or color, each with its own motion",
+  "doc": {
+    "nudg": "1.3",
+    "host": {
+      "events": [
+        "lift",
+        "drop"
+      ],
+      "custom": [
+        "glow"
+      ]
+    },
+    "targets": [
+      "card"
+    ],
+    "values": {
+      "card.y": 0,
+      "card.shadowY": 2,
+      "card.shadowBlur": 4,
+      "card.shadowColor": "#00000033",
+      "card.blur": 0,
+      "card.custom.glow": 0
+    },
+    "animate": {
+      "card.y": {
+        "spring": {
+          "duration": 0.3,
+          "bounce": 0.2
+        }
+      },
+      "card.shadowY": {
+        "spring": {
+          "duration": 0.3,
+          "bounce": 0.2
+        }
+      },
+      "card.shadowBlur": {
+        "spring": {
+          "duration": 0.3,
+          "bounce": 0.2
+        }
+      },
+      "card.shadowColor": {
+        "tween": {
+          "duration": 0.2,
+          "ease": "out"
+        }
+      },
+      "card.blur": {
+        "tween": {
+          "duration": 0.2,
+          "ease": "linear"
+        }
+      },
+      "card.custom.glow": {
+        "spring": {
+          "duration": 0.4,
+          "bounce": 0
+        }
+      }
+    },
+    "initial": "resting",
+    "when": {
+      "host.lift": "lifted",
+      "host.drop": "resting"
+    },
+    "states": {
+      "resting": {},
+      "lifted": {
+        "set": {
+          "card.y": -8,
+          "card.shadowY": 12,
+          "card.shadowBlur": 24,
+          "card.shadowColor": "#00000059",
+          "card.blur": 2,
+          "card.custom.glow": 1
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "resting"
+        ],
+        "values": {
+          "card.shadowY": 2,
+          "card.shadowColor": "#00000033",
+          "card.custom.glow": 0
+        }
+      }
+    },
+    {
+      "t": 0.1,
+      "send": "host.lift"
+    },
+    {
+      "t": 0.15,
+      "expect": {
+        "state": [
+          "lifted"
+        ],
+        "values": {
+          "card.y": -2.486864913,
+          "card.shadowY": 5.108581141,
+          "card.shadowBlur": 10.217162282,
+          "card.shadowColor": "#000000",
+          "card.blur": 0.5,
+          "card.custom.glow": 0.185968904
+        }
+      }
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "state": [
+          "lifted"
+        ],
+        "values": {
+          "card.y": -5.638000925,
+          "card.shadowY": 9.047501156,
+          "card.shadowBlur": 18.095002312,
+          "card.shadowColor": "#000000",
+          "card.blur": 1.0,
+          "card.custom.glow": 0.465583949
+        }
+      }
+    },
+    {
+      "t": 0.3,
+      "expect": {
+        "state": [
+          "lifted"
+        ],
+        "values": {
+          "card.y": -8.00709468,
+          "card.shadowY": 12.00886835,
+          "card.shadowBlur": 24.017736699,
+          "card.shadowColor": "#000000",
+          "card.blur": 2.0,
+          "card.custom.glow": 0.821025554
+        }
+      }
+    },
+    {
+      "t": 0.6,
+      "expect": {
+        "state": [
+          "lifted"
+        ],
+        "values": {
+          "card.y": -7.998160274,
+          "card.shadowY": 11.997700343,
+          "card.shadowBlur": 23.995400686,
+          "card.shadowColor": "#000000",
+          "card.blur": 2.0,
+          "card.custom.glow": 0.996562856
+        }
+      }
+    }
+  ]
+}

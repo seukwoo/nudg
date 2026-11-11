@@ -214,6 +214,8 @@ export interface HostDeclaration {
   events: string[];
   /** Input names without "host.", with the range the app sends them in, when declared. */
   inputs: Map<string, { range?: [number, number] }>;
+  /** Custom property names (1.3), drawn by the host: target.custom.<name>. */
+  custom?: string[];
 }
 
 export interface Program {

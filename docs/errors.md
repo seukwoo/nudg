@@ -9,6 +9,7 @@ Errors stop a file from compiling. Warnings don't.
 | Code | Means |
 |---|---|
 | `after-on-machine` | An `after:` timer is in a machine's `when`; timers belong to a state. |
+| `custom-is-built-in` | A name under `host.custom` is something nudg draws already (`shadow`, `blur`, `opacity`); the hint names the built-in property (1.3). |
 | `delay-outside-animate` | A `delay` is on a named motion or an entry kick; it belongs to a motion in `animate`. |
 | `duplicate-host-name` | A name is declared twice under `host`. |
 | `duplicate-motion` | Two files define a motion with the same name. |
@@ -70,6 +71,7 @@ Errors stop a file from compiling. Warnings don't.
 | `spring-incomplete` | A spring form is missing a required parameter. |
 | `spring-mixed-forms` | A spring mixes parameters from different forms. |
 | `transition-conflict` | A transition has both `to` and `nearest`. |
+| `undeclared-custom` | A custom property `target.custom.<name>` isn't listed under `host.custom` (1.3). |
 | `undeclared-host-event` | With a `host` declaration, a `host.<name>` event isn't declared. |
 | `undeclared-host-input` | With a `host` declaration, a `host.<name>` input isn't declared. |
 | `unknown-ease` | An ease name isn't one of nudg's. |

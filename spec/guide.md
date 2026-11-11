@@ -36,7 +36,7 @@ nudg files describe a UI interaction: states, the events that move between them,
 
 | Kind | Allowed |
 |---|---|
-| Properties (`target.property`) | `x`, `y`, `width`, `height` (logical units: number or `"20px"`/`"pt"`/`"dp"`), `scale`, `scaleX`, `scaleY`, `rotation` (degrees), `opacity` (0–1), `color` (hex `#RGB`, `#RRGGBB`, `#RRGGBBAA`) |
+| Properties (`target.property`) | `x`, `y`, `width`, `height` (logical units: number or `"20px"`/`"pt"`/`"dp"`), `scale`, `scaleX`, `scaleY`, `rotation` (degrees), `opacity` (0–1), `color` (hex `#RGB`, `#RRGGBB`, `#RRGGBBAA`); 1.3: `shadowX`, `shadowY`, `shadowBlur`, `shadowColor`, `blur`, and `custom.<name>` (declared in `host.custom`) for what the host draws |
 | Events (`target.event`) | `down`, `up`, `cancel`, `tap`. A click is `down`, `up`, `tap`. Format 0.14: `longpress` (held 0.5 s; its tap is swallowed) and `doubletap` (a second tap within 0.3 s, right after it). |
 | Time | seconds (`0.3`) or `"300ms"` |
 
@@ -298,6 +298,8 @@ An app's motion is nudg files plus adapter calls. Before you write a timer, a wr
 | Two files on one element (a card that rises in and presses) | Bind both: transforms compose and opacities multiply; the element's own transform stays outermost. On React Native, `compose(a.bind("card"), b.bind("button"))`. |
 | Items one after another | `"delay": { "input": "host.index", "times": 0.06, "max": 0.5 }`, each item's player given `host.index` |
 | Reduced motion | Nothing: every adapter follows the system setting, live |
+| A lift whose shadow deepens, a background that blurs | `shadowY`, `shadowBlur`, `shadowColor` and `blur` (1.3), animated like `y`. Never a CSS `box-shadow` or `filter` transition. |
+| An effect no nudg property draws (a shader input, a platform-only material) | A custom property: `"host": { "custom": ["glow"] }` and `"card.custom.glow": 0`. nudg moves it and the host draws it: on the web `var(--nudg-glow)`, on React Native `value("card.custom.glow")`, in SwiftUI and Compose from the model's values. First check that a built-in doesn't do it, and tell the person why you needed a custom property. |
 | A value the app knows (progress, volume, scroll) | `input("host.progress", v)`, declared under `host.inputs` |
 | Something the app decides (closed, loaded, failed) | `send("host.close")`, declared under `host.events` |
 

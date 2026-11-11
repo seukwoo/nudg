@@ -44,7 +44,8 @@ export interface Comparison {
 
 export { THRESHOLDS } from "./perception.ts";
 
-const FRACTIONAL = new Set(["scale", "scaleX", "scaleY", "opacity"]);
+// A custom property (1.3, target.custom.<name>) is unitless, usually 0 to 1, so it is judged like opacity.
+const FRACTIONAL = new Set(["scale", "scaleX", "scaleY", "opacity", "custom"]);
 
 export function compare(a: Program, b: Program, options: SimulateOptions): Comparison {
   const every = options.every ?? 1 / 120;

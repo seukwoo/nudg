@@ -19,7 +19,7 @@ export interface Follow { input: string; range?: [MeasuredEndpoint, MeasuredEndp
 export interface Glide { momentum: number; range?: [MeasuredEndpoint, MeasuredEndpoint]; }
 export interface HeadlessOptions<C extends NudgContract = NudgContract> { host: PlayerHost; state?: C["states"][]; reducedMotion?: boolean; speed?: number; onFrame?: (values: Record<string, Value>) => void; onState?: (state: C["states"][]) => void; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; }
 export interface HeadlessPlayer<C extends NudgContract = NudgContract> { readonly runtime: Runtime; send(event: C["events"]): boolean; input(name: C["inputs"], value: number): boolean; values(): Record<string, Value>; present(): boolean; leaving(): boolean; now(): number; setReducedMotion(on: boolean): void; destroy(): void; }
-export interface HostDeclaration { events: string[]; inputs: Map<string, { range?: [number, number]; }>; }
+export interface HostDeclaration { events: string[]; inputs: Map<string, { range?: [number, number]; }>; custom?: string[]; }
 export interface HostJudgement { verdict: "played" | "differs" | "never-shown" | "nothing-moved" | "unmeasured"; headline: string; properties: { property: string; measured: string; summary: string; verdict: Perceptibility; }[]; suggestion?: string; }
 export interface HostMark { t: number; action: string; }
 export interface HostSample { t: number; present: boolean; values: Record<string, number>; }
@@ -75,7 +75,7 @@ export interface ToastOptions { target?: string; duration?: number; rise?: numbe
 export interface ToggleOptions { knob?: string; track?: string; travel?: number; colors?: [string, string]; motion?: SpringOptions; initial?: "off" | "on"; }
 export interface Transition { to?: string; nearest?: { states: string[]; by: string; momentum: number; }; animate: Map<string, Motion>; step?: Map<string, number>; commit?: string[]; }
 export interface TweenMotion { kind: "tween"; duration: number; ease: Ease; delay?: number; delayInput?: DelayInput; }
-export declare const VERSION = "1.2";
+export declare const VERSION = "1.3";
 export type Value = number | string;
 export declare function actionTarget(program: Program, action: string): string;
 export declare function actionsToEvents(targetOf: string | ((action: string) => string), marks: HostMark[]): { t: number; event: string; }[];
@@ -121,7 +121,7 @@ export declare function toggle(options?: ToggleOptions): NudgDocument;
 
 export interface InitialOptions { state?: string[]; inputs?: Record<string, number>; }
 export interface NudgContract { targets: string; events: string; inputs: string; states: string; }
-export type NudgStyle = Partial<Record<"transform" | "opacity" | "width" | "height" | "backgroundColor" | "fill", string>>;
+export type NudgStyle = Partial<Record<"transform" | "opacity" | "width" | "height" | "backgroundColor" | "fill" | "boxShadow" | "filter", string>> & { [variable: `--nudg-${string}`]: string; };
 export interface PlayEach { get(element: Element): Player | undefined; stop(): void; }
 export interface PlayEachOptions<C extends NudgContract = NudgContract> extends Omit<PlayOptions<C>, "bind"> { root?: Document | Element; when?: "press" | "mount"; files?: Record<string, unknown>; }
 export interface PlayOptions<C extends NudgContract = NudgContract> { bind?: Partial<Record<C["targets"], Element | Element[]>>; clock?: "realtime" | "manual"; state?: C["states"][]; onState?: (state: C["states"][]) => void; reducedMotion?: boolean; onFrame?: (values: Record<string, Value>) => void; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; onEvent?: (item: { event: string; } | { input: string; value: number; }, t: number) => void; speed?: number; watch?: boolean; start?: C["events"]; release?: "settle" | "exit"; }
@@ -169,7 +169,7 @@ export interface Bound { style: Record<string, unknown>; onLayout: (e: LayoutCha
 export declare function NudgCompare({ comparison, children }: NudgCompareProps): import("react").ReactElement<any, string | import("react").JSXElementConstructor<any>>;
 export interface NudgCompareProps { comparison: object; children: (nudg: NudgNative) => ReactNode; }
 export interface NudgContract { targets: string; events: string; inputs: string; states: string; }
-export interface NudgNative<C extends NudgContract = NudgContract> { bind(name: C["targets"]): Bound; send(event: C["events"]): boolean; input(name: C["inputs"], value: number): boolean; state: C["states"][]; present: boolean; leaving: boolean; }
+export interface NudgNative<C extends NudgContract = NudgContract> { bind(name: C["targets"]): Bound; send(event: C["events"]): boolean; input(name: C["inputs"], value: number): boolean; state: C["states"][]; present: boolean; leaving: boolean; value(property: string): Animated.Value | Animated.Color | undefined; }
 export type StateName<C extends NudgContract> = C["states"] | LastName<C["states"]>;
 export interface UseNudgNativeOptions<C extends NudgContract = NudgContract> { state?: C["states"][]; inputs?: Partial<Record<C["inputs"], number>>; files?: Record<string, unknown>; reducedMotion?: boolean; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; }
 export declare function appear(options?: AppearOptions): NudgDocument;

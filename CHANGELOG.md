@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **Cues: sound and haptics on the motion's own clock (format 1.3).**
+  - A file names moments: `"cue": { "haptic": "success", "sound": "pop" }`, on a transition, on entering a state, or on a beat of entry keyframes or a loop.
+  - A cue can carry intensity, pitch (in semitones), a delay (including one read from an input, so a stagger ticks with its items), a repeat and a throttle. Intensity and pitch can read an input.
+  - The runtime reports cues at exact times through `takeCues()`. Cues on a state stop when it is left. Under reduced motion their delays go, and skipped beats leave one cue at the moment.
+  - Every adapter plays them:
+    - web: Web Haptics where a browser has it, otherwise `vibrate` on Android browsers, and sounds from a `sounds` map;
+    - iOS: UIKit's feedback generators, and AVAudioPlayer for `model.sounds`;
+    - Android: `performHapticFeedback`;
+    - React Native: a `haptics` function you pass, such as `expoHaptics(Haptics)`.
+
+    `onCue` hands each cue to the host for custom names and audio engines.
+  - TypeScript, Swift and Kotlin share four new conformance cases: `cues`, `cue-beats`, `cue-beats-reduced` and `cue-throttle-delay`.
+  - A compiled program that uses cues is format 10.
+  - New validator codes: `unknown-haptic` and `invalid-cue`.
+  - `nudg audit` flags sounds and haptics played by hand.
 - **Format 1.3: shadow, blur, and custom properties.**
   - `shadowX`, `shadowY`, `shadowBlur` and `shadowColor` are plain properties with their own motion, so a lifted card's shadow deepens with the same spring that raises it. `blur` blurs a view.
   - Adapters draw them as `box-shadow` and `filter` on the web, `.shadow` and `.blur` in SwiftUI, and `Modifier.dropShadow` and `Modifier.blur` in Compose. On React Native, `shadowRadius`, `shadowColor` and `elevation` are drawn; shadow offsets and blur, which React Native can't animate, are skipped with a warning.

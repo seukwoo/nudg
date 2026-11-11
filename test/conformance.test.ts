@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, test } from "node:test";
 import { compile, createRuntime, type Program, type Value } from "../src/index.ts";
+import type { FiredCue } from "../src/core/runtime.ts";
 import { programFromJson, programToJson } from "../src/core/program-json.ts";
 
 const NUMBER_TOLERANCE = 1e-6;
@@ -17,7 +18,8 @@ interface Step {
   input?: string;
   value?: number;
   handled?: boolean;
-  expect?: { state?: string[]; values?: Record<string, Value>; resting?: boolean; settled?: boolean; looping?: boolean };
+  /** `cues`: every cue that came due since the last step that listed cues (or the start). */
+  expect?: { state?: string[]; values?: Record<string, Value>; resting?: boolean; settled?: boolean; looping?: boolean; cues?: FiredCue[] };
 }
 
 interface Case {
@@ -87,6 +89,16 @@ for (const file of readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
       if (step.expect?.resting !== undefined) assert.equal(rt.resting(step.t), step.expect.resting, `resting at ${step.t}s`);
       if (step.expect?.settled !== undefined) assert.equal(rt.settled(step.t), step.expect.settled, `settled at ${step.t}s`);
       if (step.expect?.looping !== undefined) assert.equal(rt.looping(), step.expect.looping, `looping at ${step.t}s`);
+      const expectedCues = step.expect?.cues;
+      if (expectedCues) {
+        const got = rt.takeCues();
+        const show = (list: FiredCue[]) => JSON.stringify(list.map((c) => ({ ...c, t: Math.round(c.t * 1e6) / 1e6 })));
+        assert.equal(got.length, expectedCues.length, `cues by ${step.t}s: ${show(got)}, expected ${show(expectedCues)}`);
+        expectedCues.forEach((e, i) => {
+          const c = got[i];
+          assert.ok(Math.abs(c.t - e.t) <= NUMBER_TOLERANCE && c.sound === e.sound && c.haptic === e.haptic && Math.abs(c.intensity - e.intensity) <= NUMBER_TOLERANCE && Math.abs(c.pitch - e.pitch) <= NUMBER_TOLERANCE, `cue ${i} by ${step.t}s: ${show(got)}, expected ${show(expectedCues)}`);
+        });
+      }
     }
   };
 

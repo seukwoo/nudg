@@ -10,9 +10,20 @@ import { CROSSING, DOUBLE_TAP, LONG_PRESS, SCROLL_SLOP, VERSIONS } from "./vocab
 
 /** Where a pinch's inputs start (v0.18): the ratio at 1, rotation and travel at 0. */
 const PINCH_START: [string, number][] = [["scale", 1], ["rotation", 0], ["x", 0], ["y", 0]];
-import type { Channels, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, PropertyMap, State, TimerPause, Transition } from "./types.ts";
+import type { Channels, Cue, CueAmount, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, PropertyMap, State, TimerPause, Transition } from "./types.ts";
 
 export type Value = number | string;
+
+/** A cue that came due (1.3): when, and what to play. */
+export interface FiredCue {
+  t: number;
+  sound?: string;
+  haptic?: string;
+  /** 0 to 1. */
+  intensity: number;
+  /** Semitones. */
+  pitch: number;
+}
 
 export interface RuntimeOptions {
   /**
@@ -63,6 +74,12 @@ export interface Runtime {
   time(): number;
   /** True while an active state loops a property (v0.10): values change every frame though nothing is settling. */
   looping(): boolean;
+  /**
+   * Cues that have come due since the last call (1.3), in time order: from transitions, entered
+   * states, entry keyframes and loop beats. Each has the time it was due, which can be a little
+   * before the time the runtime was last advanced to.
+   */
+  takeCues(): FiredCue[];
 }
 
 /** A property's behavior since its last change, evaluated in closed form. */
@@ -127,6 +144,16 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
   for (const name of targetInputs) requiredInputs.add(name);
   // Delays read from app inputs (v1.2), when their transition fires.
   for (const animate of animateMaps(program)) for (const m of animate.values()) if (m.delayInput) requiredInputs.add(m.delayInput.input);
+  // Cue amounts and delays read from inputs (1.3).
+  collectCueInputs(program.machine, requiredInputs);
+  /** Cues waiting for their time (1.3); `owner` cancels them when its state is left. */
+  const scheduled: { t: number; cue: Cue; owner?: State; intensity: number; pitch: number }[] = [];
+  /** Cues that came due, until the host takes them. */
+  const due: FiredCue[] = [];
+  /** Loop beats have been collected up to here. */
+  let cueCursor = 0;
+  /** When each cue was last scheduled to fire, for its throttle. */
+  const lastCue = new Map<Cue, number>();
   let order = 0;
   let now = 0;
   let reduced = options.reducedMotion === true;
@@ -363,6 +390,94 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     if (!d) return motion.delay ?? 0;
     return Math.min(d.max ?? Infinity, Math.max(0, inputAt(d.input, t) * d.times + d.plus));
   }
+
+  function amount(a: CueAmount | undefined, fallback: number, t: number): number {
+    if (a === undefined) return fallback;
+    return typeof a === "number" ? a : inputAt(a.input, t) * a.times + a.plus;
+  }
+
+  /** Schedules a cue's firings for a moment at `t` (1.3). Under reduced motion its delay is ignored, as motion's is. */
+  function schedule(cue: Cue, t: number, owner?: State) {
+    const d = cue.delay;
+    const wait = reduced || d === undefined ? 0 : typeof d === "number" ? d : Math.min(d.max ?? Infinity, Math.max(0, inputAt(d.input, t) * d.times + d.plus));
+    const intensity = Math.min(1, Math.max(0, amount(cue.intensity, 1, t)));
+    const pitch = amount(cue.pitch, 0, t);
+    const count = cue.repeat?.count ?? 1;
+    for (let k = 0; k < count; k++) {
+      const at = t + wait + k * (cue.repeat?.every ?? 0);
+      const last = lastCue.get(cue);
+      if (cue.throttle !== undefined && last !== undefined && at - last < cue.throttle - 1e-9) continue;
+      lastCue.set(cue, at);
+      scheduled.push({ t: at, cue, owner, intensity, pitch });
+    }
+  }
+
+  /** The cues of what happened at `t`: transitions that fired, states entered (and their entry beats), states left. */
+  function cueMoment(t: number, fired: Transition[], entered: State[], before: Set<State>) {
+    const after = new Set<State>();
+    walkActive(active, (state) => after.add(state));
+    // A state left, or entered again, drops its cues still to come.
+    for (let i = scheduled.length - 1; i >= 0; i--) {
+      const owner = scheduled[i].owner;
+      if (owner && scheduled[i].t > t && ((before.has(owner) && !after.has(owner)) || entered.includes(owner))) scheduled.splice(i, 1);
+    }
+    for (const transition of fired) for (const cue of transition.cues ?? []) schedule(cue, t);
+    for (const state of entered) {
+      for (const cue of state.cues ?? []) schedule(cue, t, state);
+      for (const effect of state.enter.values()) {
+        if (effect.kind !== "keyframes") continue;
+        const beats = effect.frames.filter((f) => f.cues);
+        // Reduced motion skips the beats; their first cue still marks the moment.
+        if (reduced) {
+          for (const cue of beats[0]?.cues ?? []) schedule(cue, t, state);
+          continue;
+        }
+        for (const frame of beats) for (const cue of frame.cues!) schedule(cue, t + frame.at * effect.duration, state);
+      }
+    }
+    flushCues(t);
+  }
+
+  /** Moves cues due by `time` to `due`, with the loop beats since the last flush. */
+  function flushCues(time: number) {
+    if (time > cueCursor) {
+      // By property name, so every runtime lists beats due at the same time in the same order.
+      for (const [, running] of [...loops].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+        const { loop } = running;
+        if (!loop.frames.some((f) => f.cues)) continue;
+        const start = running.t0 + loop.delay;
+        const first = Math.max(0, Math.floor((cueCursor - start) / loop.duration));
+        for (let k = first; start + k * loop.duration <= time; k++) {
+          for (const frame of loop.frames) {
+            const beat = start + (k + frame.at) * loop.duration;
+            if (!frame.cues || beat <= cueCursor || beat > time) continue;
+            for (const cue of frame.cues) {
+              const last = lastCue.get(cue);
+              if (cue.throttle !== undefined && last !== undefined && beat - last < cue.throttle - 1e-9) continue;
+              lastCue.set(cue, beat);
+              scheduled.push({ t: beat, cue, owner: running.owner, intensity: Math.min(1, Math.max(0, amount(cue.intensity, 1, beat))), pitch: amount(cue.pitch, 0, beat) });
+            }
+          }
+        }
+      }
+      cueCursor = time;
+    }
+    // Earliest first; equal times keep the order they were scheduled in (Array.sort is stable).
+    const ready = scheduled.filter((c) => c.t <= time + 1e-9).sort((a, b) => a.t - b.t);
+    for (const c of ready) {
+      scheduled.splice(scheduled.indexOf(c), 1);
+      const out: FiredCue = { t: c.t, intensity: c.intensity, pitch: c.pitch };
+      if (c.cue.sound !== undefined) out.sound = c.cue.sound;
+      if (c.cue.haptic !== undefined) out.haptic = c.cue.haptic;
+      due.push(out);
+    }
+  }
+
+  const activeSet = () => {
+    const out = new Set<State>();
+    walkActive(active, (state) => out.add(state));
+    return out;
+  };
 
   function inputAt(name: string, t: number): number {
     const history = inputs.get(name);
@@ -626,6 +741,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       let press: [string, number] | undefined;
       for (const [target, due] of pressDue) if (due <= t + 1e-9 && (!press || due < press[1])) press = [target, due];
       if (press && (!next || press[1] < next.due)) {
+        flushCues(press[1]);
         pressDue.delete(press[0]);
         longPressed.add(press[0]);
         dispatch(`${press[0]}.longpress`, press[1]);
@@ -635,8 +751,12 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       pending.splice(pending.indexOf(next), 1);
       const fired: Transition[] = [];
       const entered: State[] = [];
+      // Loop beats up to the timer belong to the states before it.
+      flushCues(next.due);
+      const before = activeSet();
       perform(next.machine, next.transition, next.due, fired, entered);
       settle(next.due, fired, entered);
+      cueMoment(next.due, fired, entered, before);
     }
   }
 
@@ -645,8 +765,10 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     const fired: Transition[] = [];
     const entered: State[] = [];
     const timerHandled = controlTimers(event, t);
+    const before = activeSet();
     if (!handle(program.machine, event, t, fired, entered)) return timerHandled;
     settle(t, fired, entered);
+    cueMoment(t, fired, entered, before);
     return true;
   }
 
@@ -677,6 +799,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     }
     now = t;
     fireDue(t);
+    flushCues(t);
   }
 
   const valueOf = (key: string, t: number): Channels => {
@@ -868,7 +991,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
 
     settled(t, property) {
       advanceTo(t);
-      if (property === undefined && (pending.some((timer) => timer.pausedAt === undefined) || pressDue.size > 0)) return false;
+      if (property === undefined && (pending.some((timer) => timer.pausedAt === undefined) || pressDue.size > 0 || scheduled.length > 0)) return false;
       const keys = property === undefined ? [...program.properties.keys()] : [property];
       return keys.every((key) => atRest(key, t));
     },
@@ -876,6 +999,8 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     time: () => now,
 
     looping: () => loops.size > 0,
+
+    takeCues: () => due.splice(0),
 
     resting(t) {
       advanceTo(t);
@@ -974,6 +1099,30 @@ function collectTargetInputs(machine: Machine, out: Set<string>) {
   for (const state of machine.states.values()) {
     for (const target of state.input.values()) out.add(target.input);
     if (state.machine) collectTargetInputs(state.machine, out);
+  }
+}
+
+/** Inputs read by cues (1.3): intensity, pitch and delay from an input. */
+function collectCueInputs(machine: Machine, out: Set<string>) {
+  const add = (cues: Cue[] | undefined) => {
+    for (const c of cues ?? []) {
+      for (const a of [c.intensity, c.pitch]) if (a !== undefined && typeof a !== "number") out.add(a.input);
+      if (c.delay !== undefined && typeof c.delay !== "number") out.add(c.delay.input);
+    }
+  };
+  const transition = (t: Transition) => add(t.cues);
+  if (machine.kind === "regions") {
+    for (const region of machine.regions.values()) collectCueInputs(region, out);
+    return;
+  }
+  for (const t of machine.when.values()) transition(t);
+  for (const state of machine.states.values()) {
+    add(state.cues);
+    for (const t of state.when.values()) transition(t);
+    for (const timer of state.timers) transition(timer.transition);
+    for (const effect of state.enter.values()) if (effect.kind === "keyframes") for (const f of effect.frames) add(f.cues);
+    for (const loop of state.loop.values()) for (const f of loop.frames) add(f.cues);
+    if (state.machine) collectCueInputs(state.machine, out);
   }
 }
 

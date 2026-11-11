@@ -38,6 +38,31 @@ public enum Motion {
 public struct Keyframe {
   public let at: Double
   public let value: [Double]
+  /** Cues on this beat (1.3). */
+  public var cues: [Cue] = []
+}
+
+/** A number, or one read from an app input when the cue fires (1.3): input × times + plus. */
+public enum CueAmount {
+  case number(Double)
+  case input(String, times: Double, plus: Double)
+}
+
+/** A named moment for sound and haptics (1.3). A class, so a throttle can tell one cue from another. */
+public final class Cue {
+  public let sound: String?
+  public let haptic: String?
+  public let intensity: CueAmount?
+  public let pitch: CueAmount?
+  public let delay: Double
+  public let delayInput: DelayInput?
+  public let repeatCount: Int
+  public let repeatEvery: Double
+  public let throttle: Double?
+  init(sound: String?, haptic: String?, intensity: CueAmount?, pitch: CueAmount?, delay: Double, delayInput: DelayInput?, repeatCount: Int, repeatEvery: Double, throttle: Double?) {
+    self.sound = sound; self.haptic = haptic; self.intensity = intensity; self.pitch = pitch; self.delay = delay; self.delayInput = delayInput
+    self.repeatCount = repeatCount; self.repeatEvery = repeatEvery; self.throttle = throttle
+  }
 }
 
 public enum EntryEffect {
@@ -72,6 +97,8 @@ public struct Loop {
   public let ease: Ease
   public let delay: Double
   public let wrap: Double?
+  /** Cues on the cycle's beats (1.3), by normalized time. */
+  public var cues: [(at: Double, cues: [Cue])] = []
 }
 
 /** A map's value at one point: channels, or a measured number (v0.11). */
@@ -116,8 +143,10 @@ public final class Transition {
   public let animate: [(String, Motion)]
   public let step: [(String, Double)]?
   public let commit: [String]?
-  init(to: String?, nearest: (states: [String], by: String, momentum: Double)?, animate: [(String, Motion)], step: [(String, Double)]?, commit: [String]?) {
-    self.to = to; self.nearest = nearest; self.animate = animate; self.step = step; self.commit = commit
+  /** Cues when the transition fires (1.3). */
+  public let cues: [Cue]
+  init(to: String?, nearest: (states: [String], by: String, momentum: Double)?, animate: [(String, Motion)], step: [(String, Double)]?, commit: [String]?, cues: [Cue] = []) {
+    self.to = to; self.nearest = nearest; self.animate = animate; self.step = step; self.commit = commit; self.cues = cues
   }
 }
 
@@ -146,8 +175,10 @@ public final class State {
   public let when: [(String, Transition)]
   public let timers: [Timer]
   public let machine: Machine?
-  init(name: String, set: [(String, [Double])], measure: [String: Measure], input: [String: InputTarget], follow: [(String, Follow)], glide: [(String, Glide)], enter: [(String, EntryEffect)], loop: [(String, Loop)], when: [(String, Transition)], timers: [Timer], machine: Machine?) {
-    self.name = name; self.set = set; self.measure = measure; self.input = input; self.follow = follow; self.glide = glide; self.enter = enter; self.loop = loop; self.when = when; self.timers = timers; self.machine = machine
+  /** Cues when the state is entered through a transition (1.3). */
+  public let cues: [Cue]
+  init(name: String, set: [(String, [Double])], measure: [String: Measure], input: [String: InputTarget], follow: [(String, Follow)], glide: [(String, Glide)], enter: [(String, EntryEffect)], loop: [(String, Loop)], when: [(String, Transition)], timers: [Timer], machine: Machine?, cues: [Cue] = []) {
+    self.name = name; self.set = set; self.measure = measure; self.input = input; self.follow = follow; self.glide = glide; self.enter = enter; self.loop = loop; self.when = when; self.timers = timers; self.machine = machine; self.cues = cues
   }
   func transition(for event: String) -> Transition? { when.first { $0.0 == event }?.1 }
 }
@@ -182,8 +213,8 @@ public struct Program {
 
   /** Reads `nudg compile` output. */
   public static func decode(_ data: Data) throws -> Program {
-    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...9).contains(format) else {
-      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 9). Compile it with `nudg compile`.")
+    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...10).contains(format) else {
+      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 10). Compile it with `nudg compile`.")
     }
     let properties: [(String, Property)] = (j["properties"] as! [[String: Any]]).map { p in
       (p["key"] as! String, Property(
@@ -226,6 +257,26 @@ private func readMotion(_ v: Any) -> Motion {
   return .spring(stiffness: number(m["stiffness"])!, damping: number(m["damping"])!, mass: number(m["mass"])!, kick: number(m["kick"]), delay: delay, delayInput: delayInput)
 }
 
+/** Format 10 (1.3): a list of cues, where the file has one. */
+private func readCues(_ v: Any?) -> [Cue] {
+  (v as? [[String: Any]] ?? []).map { c in
+    let amount = { (a: Any?) -> CueAmount? in
+      if let n = number(a) { return .number(n) }
+      guard let o = a as? [String: Any] else { return nil }
+      return .input(o["input"] as! String, times: number(o["times"]) ?? 1, plus: number(o["plus"]) ?? 0)
+    }
+    let d = c["delay"] as? [String: Any]
+    let r = c["repeat"] as? [String: Any]
+    return Cue(
+      sound: c["sound"] as? String, haptic: c["haptic"] as? String,
+      intensity: amount(c["intensity"]), pitch: amount(c["pitch"]),
+      delay: number(c["delay"]) ?? 0,
+      delayInput: d.map { DelayInput(input: $0["input"] as! String, times: number($0["times"]) ?? 1, plus: number($0["plus"]) ?? 0, max: number($0["max"])) },
+      repeatCount: (r?["count"] as? NSNumber)?.intValue ?? 1, repeatEvery: number(r?["every"]) ?? 0,
+      throttle: number(c["throttle"]))
+  }
+}
+
 private func readEase(_ v: Any?) -> Ease {
   if let e = v as? [Any] { let d = doubles(e); return .bezier(d[0], d[1], d[2], d[3]) }
   return .linear
@@ -234,7 +285,7 @@ private func readEase(_ v: Any?) -> Ease {
 private func readEntryEffect(_ v: Any) -> EntryEffect {
   let effect = v as! [String: Any]
   if (effect["kind"] as? String) == "keyframes" {
-    let frames = (effect["frames"] as! [[String: Any]]).map { Keyframe(at: number($0["at"])!, value: doubles($0["value"])) }
+    let frames = (effect["frames"] as! [[String: Any]]).map { Keyframe(at: number($0["at"])!, value: doubles($0["value"]), cues: readCues($0["cue"])) }
     return .keyframes(frames: frames, duration: number(effect["duration"])!, ease: readEase(effect["ease"]))
   }
   return .kick(readMotion(v))
@@ -248,7 +299,8 @@ private func readTransition(_ v: Any) -> Transition {
     nearest: nearest,
     animate: (t["animate"] as! [[String: Any]]).map { ($0["key"] as! String, readMotion($0["motion"]!)) },
     step: (t["step"] as? [[String: Any]])?.map { ($0["key"] as! String, number($0["delta"])!) },
-    commit: t["commit"] as? [String])
+    commit: t["commit"] as? [String],
+    cues: readCues(t["cue"]))
 }
 
 private func readMachine(_ v: Any) -> Machine {
@@ -289,7 +341,8 @@ private func readState(_ s: [String: Any]) -> State {
         duration: number(l["duration"])!,
         ease: readEase(l["ease"]),
         delay: number(l["delay"]) ?? 0,
-        wrap: number(l["wrap"])))
+        wrap: number(l["wrap"]),
+        cues: (l["frames"] as! [[String: Any]]).compactMap { f in f["cue"] == nil ? nil : (at: number(f["at"])!, cues: readCues(f["cue"])) }))
     },
     when: (s["when"] as! [[String: Any]]).map { ($0["event"] as! String, readTransition($0)) },
     timers: (s["timers"] as! [[String: Any]]).map { timer in
@@ -299,5 +352,6 @@ private func readState(_ s: [String: Any]) -> State {
         transition: readTransition(timer["transition"]!),
         pause: (timer["pause"] as? [[String: Any]] ?? []).map { TimerPause(on: $0["on"] as! String, off: $0["off"] as! String) })
     },
-    machine: s["machine"].map(readMachine))
+    machine: s["machine"].map(readMachine),
+    cues: readCues(s["cue"]))
 }

@@ -6,6 +6,7 @@
 //     .onTapGesture { toggle.send("track.tap") }
 
 #if canImport(SwiftUI)
+import AVFoundation
 import Combine
 import Foundation
 import Nudg
@@ -26,6 +27,15 @@ public final class NudgModel: ObservableObject {
   private let lifecycle: Lifecycle
   // Views read values while SwiftUI updates them; what they report is published afterwards.
   private var inFrame = false
+  /** Sound names to files for the file's cues (1.3): ["pop": Bundle.main.url(forResource: "pop", withExtension: "caf")!]. */
+  public var sounds: [String: URL] = [:]
+  /** The app's mute: false plays no sounds. */
+  public var sound = true
+  /** False plays no haptics. */
+  public var haptics = true
+  /** A cue came due (1.3), after its haptic and sound were played: for custom names or your own audio. */
+  public var onCue: ((FiredCue) -> Void)?
+  private var playing: [AVAudioPlayer] = []
   /** What NudgCompare mirrors into the other version: every event and input sample sent here. */
   var onSend: ((String) -> Void)?
   var onInput: ((String, Double) -> Void)?
@@ -82,7 +92,28 @@ public final class NudgModel: ObservableObject {
     if inFrame { DispatchQueue.main.async(execute: change) } else { change() }
   }
 
+  /** Plays the cues that came due: on iOS the matching feedback generator, and the sound from `sounds`. */
+  private func cues() {
+    let due = runtime.takeCues()
+    guard !due.isEmpty else { return }
+    publish {
+      for cue in due {
+        if self.haptics, let name = cue.haptic, cue.intensity > 0 { playHaptic(name, cue.intensity) }
+        if self.sound, let name = cue.sound, let url = self.sounds[name], let player = try? AVAudioPlayer(contentsOf: url) {
+          player.enableRate = true
+          player.rate = Float(pow(2, cue.pitch / 12))
+          player.volume = Float(cue.intensity)
+          player.play()
+          self.playing.removeAll { !$0.isPlaying }
+          self.playing.append(player)
+        }
+        self.onCue?(cue)
+      }
+    }
+  }
+
   private func changed() {
+    cues()
     lifecycle.changed()
     if lifecycle.present && !present { present = true }
   }
@@ -117,6 +148,7 @@ public final class NudgModel: ObservableObject {
     let t = time(at: date)
     let v = (try? runtime.sample(t)) ?? [:]
     inFrame = true
+    cues()
     lifecycle.frame(t) // a timer may have fired; settle and exit are reported from here
     if lifecycle.present && !present { publish { self.present = true } }
     inFrame = false
@@ -130,6 +162,22 @@ public final class NudgModel: ObservableObject {
 
   /** The model's own clock: the real time in an app, a fixed one in tests and previews. */
   public var now: Date { clock() }
+}
+
+/** A nudg haptic intent (1.3) as UIKit's feedback; elsewhere there is nothing to play. */
+@MainActor
+private func playHaptic(_ name: String, _ intensity: Double) {
+  #if os(iOS)
+  switch name {
+  case "tick", "select", "align", "edge": UISelectionFeedbackGenerator().selectionChanged()
+  case "success": UINotificationFeedbackGenerator().notificationOccurred(.success)
+  case "warning": UINotificationFeedbackGenerator().notificationOccurred(.warning)
+  case "error": UINotificationFeedbackGenerator().notificationOccurred(.error)
+  default:
+    let style: UIImpactFeedbackGenerator.FeedbackStyle = ["medium": .medium, "heavy": .heavy, "soft": .soft, "rigid": .rigid][name] ?? .light
+    UIImpactFeedbackGenerator(style: style).impactOccurred(intensity: CGFloat(intensity))
+  }
+  #endif
 }
 
 /** Applies a target's values to a view: offset, rotation, scale, opacity, size, background color, shadow and blur (1.3). */

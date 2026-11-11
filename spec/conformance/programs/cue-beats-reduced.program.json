@@ -1,0 +1,137 @@
+{
+ "nudgProgram": 10,
+ "version": "1.3",
+ "targets": [
+  "field",
+  "dot"
+ ],
+ "properties": [
+  {
+   "key": "field.x",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "dot.opacity",
+   "kind": "number",
+   "base": [
+    1
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "field.x",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 438.6490844928604,
+    "damping": 41.88790204786391,
+    "mass": 1
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "idle",
+  "states": [
+   {
+    "name": "idle",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "host.invalid",
+      "animate": [],
+      "to": "invalid"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "invalid",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [
+     {
+      "key": "field.x",
+      "effect": {
+       "kind": "keyframes",
+       "frames": [
+        {
+         "at": 0.25,
+         "value": [
+          -10
+         ],
+         "cue": [
+          {
+           "sound": "tick",
+           "haptic": "tick"
+          }
+         ]
+        },
+        {
+         "at": 0.75,
+         "value": [
+          5
+         ],
+         "cue": [
+          {
+           "haptic": "tick",
+           "intensity": 0.5
+          }
+         ]
+        }
+       ],
+       "duration": 0.4,
+       "ease": "linear"
+      }
+     }
+    ],
+    "loop": [
+     {
+      "key": "dot.opacity",
+      "to": 0,
+      "frames": [
+       {
+        "at": 0.5,
+        "value": -0.5,
+        "cue": [
+         {
+          "sound": "blip",
+          "pitch": {
+           "input": "host.level",
+           "times": 12,
+           "plus": 0
+          }
+         }
+        ]
+       }
+      ],
+      "duration": 0.2,
+      "ease": "linear",
+      "delay": 0.1
+     }
+    ],
+    "when": [
+     {
+      "event": "host.valid",
+      "animate": [],
+      "to": "idle"
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

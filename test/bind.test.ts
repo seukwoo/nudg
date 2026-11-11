@@ -340,3 +340,48 @@ test("shadow, blur and custom properties (1.3) are drawn as box-shadow, filter a
     close();
   }
 });
+
+test("cues (1.3) play their haptic and sound in the browser and reach onCue, at their times", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const { launchBrowser, waitFor } = await import("../src/node/cdp.ts");
+  const { serveIfLocal } = await import("../src/node/observe.ts");
+  const { url, close } = await serveIfLocal("test/fixtures/host/presence.html");
+  const browser = await launchBrowser(chrome!);
+  try {
+    await browser.send("Page.navigate", { url });
+    await waitFor(() => browser.evaluate("window.__player ? 'ready' : ''"), 15_000);
+    const result = await browser.evaluate(`(async () => {
+      const { playDoc } = await import("../../../dist/dom/index.js");
+      const vibrated = [];
+      const played = [];
+      navigator.vibrate = (p) => (vibrated.push(p), true);
+      window.Audio = class { constructor(src) { this.src = src; } cloneNode() { const a = new window.Audio(this.src); return a; } play() { played.push({ src: this.src, volume: this.volume, rate: this.playbackRate }); return Promise.resolve(); } };
+      const doc = {
+        nudg: "1.3", host: { events: ["go"] }, targets: ["card"], values: { "card.x": 0 },
+        initial: "idle",
+        states: {
+          idle: { when: { "host.go": { to: "on", cue: { haptic: "success" } } } },
+          on: { set: { "card.x": 10 }, cue: { sound: "pop", intensity: 0.5, pitch: 12, repeat: { count: 2, every: 0.1 } } },
+        },
+      };
+      const el = document.createElement("div");
+      document.body.append(el);
+      const heard = [];
+      const p = playDoc(doc, el, { sounds: { pop: "/pop.mp3" }, onCue: (c) => heard.push([c.sound ?? c.haptic, Math.round(c.t * 100) / 100]) });
+      p.send("host.go");
+      const right = { vibrated: vibrated.length, played: played.length, heard: heard.length };
+      await new Promise((r) => setTimeout(r, 400));
+      p.destroy();
+      return { right, vibrated, played, heard };
+    })()`);
+    assert.deepEqual(result.right, { vibrated: 1, played: 1, heard: 2 }, "the transition's haptic and the state's first sound play with the event");
+    assert.deepEqual(result.vibrated, [[10, 50, 14]]);
+    assert.equal(result.played.length, 2);
+    assert.match(result.played[0].src, /\/pop\.mp3$/);
+    assert.deepEqual([result.played[0].volume, result.played[0].rate], [0.5, 2]);
+    assert.deepEqual(result.heard.map((h: [string, number]) => h[0]), ["success", "pop", "pop"]);
+    assert.ok(Math.abs(result.heard[2][1] - result.heard[1][1] - 0.1) < 0.011, `the repeat comes 0.1 s later: ${JSON.stringify(result.heard)}`);
+  } finally {
+    await browser.close();
+    close();
+  }
+});

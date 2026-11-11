@@ -1,0 +1,112 @@
+{
+  "conformance": "1.3",
+  "name": "Cues: throttle drops firings closer than its gap; a delay read from an input, capped by max",
+  "doc": {
+    "nudg": "1.3",
+    "host": {
+      "events": [
+        "show"
+      ],
+      "inputs": {
+        "index": {
+          "range": [
+            0,
+            100
+          ]
+        }
+      }
+    },
+    "targets": [
+      "card"
+    ],
+    "values": {
+      "card.y": 0
+    },
+    "initial": "idle",
+    "states": {
+      "idle": {
+        "when": {
+          "card.tap": {
+            "to": "idle",
+            "cue": {
+              "haptic": "select",
+              "throttle": 0.1
+            }
+          },
+          "host.show": "shown"
+        }
+      },
+      "shown": {
+        "cue": {
+          "sound": "pop",
+          "delay": {
+            "input": "host.index",
+            "times": 0.05,
+            "max": 0.12
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0.05,
+      "send": "card.tap"
+    },
+    {
+      "t": 0.1,
+      "send": "card.tap"
+    },
+    {
+      "t": 0.2,
+      "send": "card.tap"
+    },
+    {
+      "t": 0.25,
+      "expect": {
+        "cues": [
+          {
+            "t": 0.05,
+            "haptic": "select",
+            "intensity": 1.0,
+            "pitch": 0.0
+          },
+          {
+            "t": 0.2,
+            "haptic": "select",
+            "intensity": 1.0,
+            "pitch": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "t": 0.3,
+      "input": "host.index",
+      "value": 4
+    },
+    {
+      "t": 0.3,
+      "send": "host.show"
+    },
+    {
+      "t": 0.41,
+      "expect": {
+        "cues": []
+      }
+    },
+    {
+      "t": 0.43,
+      "expect": {
+        "cues": [
+          {
+            "t": 0.42,
+            "sound": "pop",
+            "intensity": 1.0,
+            "pitch": 0.0
+          }
+        ]
+      }
+    }
+  ]
+}

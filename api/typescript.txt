@@ -8,6 +8,8 @@ export interface CompileResult { program?: Program; motions: Map<string, Motion>
 export interface Contract { targets: string[]; events: string[]; inputs: string[]; states: string[]; }
 export interface CritiqueFinding { code: string; severity: CritiqueSeverity; path: string; message: string; hint: string; source: string; }
 export type CritiqueSeverity = "warning" | "suggestion";
+export interface Cue { sound?: string; haptic?: string; intensity?: CueAmount; pitch?: CueAmount; delay?: number | DelayInput; repeat?: { count: number; every: number; }; throttle?: number; }
+export type CueAmount = number | { input: string; times: number; plus: number; };
 export declare const DRAG_SLOP = 4;
 export interface DelayInput { input: string; times: number; plus: number; max?: number; }
 export interface Diagnostic { severity: Severity; code: string; message: string; path: string; file?: string; hint?: string; }
@@ -15,9 +17,10 @@ export interface DropOptions { target?: string; height?: number; tilt?: number; 
 export declare const EVENTS: readonly ["down", "up", "cancel", "tap", "dragstart", "dragend", "hoverstart", "hoverend", "focus", "blur", "longpress", "doubletap", "scrollup", "scrolldown", "scrollleft", "scrollright", "pinchstart", "pinchend"];
 export type Ease = "linear" | readonly [number, number, number, number];
 export type EntryEffect = SpringMotion | KeyframesEffect;
+export interface FiredCue { t: number; sound?: string; haptic?: string; intensity: number; pitch: number; }
 export interface Follow { input: string; range?: [MeasuredEndpoint, MeasuredEndpoint]; overdrag: number; multiply?: boolean; }
 export interface Glide { momentum: number; range?: [MeasuredEndpoint, MeasuredEndpoint]; }
-export interface HeadlessOptions<C extends NudgContract = NudgContract> { host: PlayerHost; state?: C["states"][]; reducedMotion?: boolean; speed?: number; onFrame?: (values: Record<string, Value>) => void; onState?: (state: C["states"][]) => void; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; }
+export interface HeadlessOptions<C extends NudgContract = NudgContract> { host: PlayerHost; state?: C["states"][]; reducedMotion?: boolean; speed?: number; onFrame?: (values: Record<string, Value>) => void; onState?: (state: C["states"][]) => void; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; onCue?: (cue: FiredCue) => void; }
 export interface HeadlessPlayer<C extends NudgContract = NudgContract> { readonly runtime: Runtime; send(event: C["events"]): boolean; input(name: C["inputs"], value: number): boolean; values(): Record<string, Value>; present(): boolean; leaving(): boolean; now(): number; setReducedMotion(on: boolean): void; destroy(): void; }
 export interface HostDeclaration { events: string[]; inputs: Map<string, { range?: [number, number]; }>; custom?: string[]; }
 export interface HostJudgement { verdict: "played" | "differs" | "never-shown" | "nothing-moved" | "unmeasured"; headline: string; properties: { property: string; measured: string; summary: string; verdict: Perceptibility; }[]; suggestion?: string; }
@@ -28,9 +31,9 @@ export interface HostSummary { properties: Record<string, PropertySummary & { ch
 export interface HoverOptions { target?: string; lift?: number; scale?: number; motion?: SpringOptions; }
 export interface InitialOptions { state?: string[]; inputs?: Record<string, number>; }
 export interface InputTarget { input: string; times: number; plus: number; }
-export interface Keyframe { at: number; value: Channels; }
+export interface Keyframe { at: number; value: Channels; cues?: Cue[]; }
 export interface KeyframesEffect { kind: "keyframes"; frames: Keyframe[]; duration: number; ease: Ease; }
-export interface Loop { to: MeasuredEndpoint; frames: { at: number; value: MeasuredEndpoint; }[]; duration: number; ease: Ease; delay: number; wrap?: number; }
+export interface Loop { to: MeasuredEndpoint; frames: { at: number; value: MeasuredEndpoint; cues?: Cue[]; }[]; duration: number; ease: Ease; delay: number; wrap?: number; }
 export type Machine = { kind: "states"; initial: string; states: Map<string, State>; when: Map<string, Transition>; } | { kind: "regions"; regions: Map<string, Machine>; };
 export interface Measure { target: string; of: "x" | "y" | "width" | "height" | "naturalWidth" | "naturalHeight"; times: number; plus: number; }
 export type MeasuredEndpoint = number | Measure;
@@ -38,7 +41,7 @@ export interface MeasuredTransition { from: string; event: string; to: string; p
 export type Motion = SpringMotion | TweenMotion;
 export interface NudgContract { targets: string; events: string; inputs: string; states: string; }
 export type NudgDocument = Record<string, unknown>;
-export declare const PROGRAM_FORMAT = 9;
+export declare const PROGRAM_FORMAT = 10;
 export declare const PROPERTIES: Record<string, PropertyKind>;
 export type Perceptibility = "imperceptible" | "subtle" | "clear";
 export interface PlayerHost { now(): number; frame(fn: () => void): () => void; }
@@ -56,7 +59,7 @@ export type PropertyKind = "length" | "number" | "color";
 export interface PropertyMap { source: string; sourceKind: "property" | "input"; from: MeasuredEndpoint[]; to: (Channels | Measure)[]; }
 export interface PropertySummary { final: Value; min?: number; max?: number; overshoot?: number; settledAt?: number; }
 export type ReadFile = (path: string) => string | undefined;
-export interface Runtime { readonly program: Program; send(event: string, t: number): boolean; setReducedMotion(on: boolean, t: number): void; input(name: string, value: number, t: number): boolean; requiredInputs(): string[]; measurements(): string[]; unmeasured(): string[]; sample(t: number): Record<string, Value>; targets(): Record<string, Value | undefined>; state(): string[]; settled(t: number, property?: string): boolean; resting(t: number): boolean; time(): number; looping(): boolean; }
+export interface Runtime { readonly program: Program; send(event: string, t: number): boolean; setReducedMotion(on: boolean, t: number): void; input(name: string, value: number, t: number): boolean; requiredInputs(): string[]; measurements(): string[]; unmeasured(): string[]; sample(t: number): Record<string, Value>; targets(): Record<string, Value | undefined>; state(): string[]; settled(t: number, property?: string): boolean; resting(t: number): boolean; time(): number; looping(): boolean; takeCues(): FiredCue[]; }
 export interface Sample { t: number; state: string[]; values: Record<string, Value>; }
 export type Severity = "error" | "warning";
 export interface ShakeOptions { target?: string; distance?: number; duration?: number; }
@@ -65,7 +68,7 @@ export interface Simulation { samples: Sample[]; summary: Record<string, Propert
 export interface Source { path: string; text: string; }
 export interface SpringMotion { kind: "spring"; stiffness: number; damping: number; mass: number; kick?: number; delay?: number; delayInput?: DelayInput; }
 export interface SpringOptions { duration?: number; bounce?: number; }
-export interface State { name: string; set: Map<string, Channels>; measure: Map<string, Measure>; input: Map<string, InputTarget>; follow: Map<string, Follow>; glide: Map<string, Glide>; enter: Map<string, EntryEffect>; loop: Map<string, Loop>; when: Map<string, Transition>; timers: Timer[]; machine?: Machine; }
+export interface State { name: string; set: Map<string, Channels>; measure: Map<string, Measure>; input: Map<string, InputTarget>; follow: Map<string, Follow>; glide: Map<string, Glide>; enter: Map<string, EntryEffect>; loop: Map<string, Loop>; when: Map<string, Transition>; timers: Timer[]; machine?: Machine; cues?: Cue[]; }
 export type StateName<C extends NudgContract> = C["states"] | LastName<C["states"]>;
 export declare const THRESHOLDS: { position: { imperceptible: number; subtle: number; }; fraction: { imperceptible: number; subtle: number; }; color: { imperceptible: number; subtle: number; }; time: { imperceptible: number; subtle: number; }; };
 export type TimedEvent = { t: number; event: string; implied?: boolean; } | { t: number; input: string; value: number; };
@@ -73,7 +76,7 @@ export interface Timer { key: string; delay: number; transition: Transition; pau
 export interface TimerPause { on: string; off: string; }
 export interface ToastOptions { target?: string; duration?: number; rise?: number; motion?: SpringOptions; }
 export interface ToggleOptions { knob?: string; track?: string; travel?: number; colors?: [string, string]; motion?: SpringOptions; initial?: "off" | "on"; }
-export interface Transition { to?: string; nearest?: { states: string[]; by: string; momentum: number; }; animate: Map<string, Motion>; step?: Map<string, number>; commit?: string[]; }
+export interface Transition { to?: string; nearest?: { states: string[]; by: string; momentum: number; }; animate: Map<string, Motion>; step?: Map<string, number>; commit?: string[]; cues?: Cue[]; }
 export interface TweenMotion { kind: "tween"; duration: number; ease: Ease; delay?: number; delayInput?: DelayInput; }
 export declare const VERSION = "1.3";
 export type Value = number | string;
@@ -119,12 +122,14 @@ export declare function toggle(options?: ToggleOptions): NudgDocument;
 
 ## @nudg/core/dom
 
+export interface FeedbackOptions { sounds?: Record<string, string>; sound?: boolean; haptics?: boolean; }
+export interface FiredCue { t: number; sound?: string; haptic?: string; intensity: number; pitch: number; }
 export interface InitialOptions { state?: string[]; inputs?: Record<string, number>; }
 export interface NudgContract { targets: string; events: string; inputs: string; states: string; }
 export type NudgStyle = Partial<Record<"transform" | "opacity" | "width" | "height" | "backgroundColor" | "fill" | "boxShadow" | "filter", string>> & { [variable: `--nudg-${string}`]: string; };
 export interface PlayEach { get(element: Element): Player | undefined; stop(): void; }
 export interface PlayEachOptions<C extends NudgContract = NudgContract> extends Omit<PlayOptions<C>, "bind"> { root?: Document | Element; when?: "press" | "mount"; files?: Record<string, unknown>; }
-export interface PlayOptions<C extends NudgContract = NudgContract> { bind?: Partial<Record<C["targets"], Element | Element[]>>; clock?: "realtime" | "manual"; state?: C["states"][]; onState?: (state: C["states"][]) => void; reducedMotion?: boolean; onFrame?: (values: Record<string, Value>) => void; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; onEvent?: (item: { event: string; } | { input: string; value: number; }, t: number) => void; speed?: number; watch?: boolean; start?: C["events"]; release?: "settle" | "exit"; }
+export interface PlayOptions<C extends NudgContract = NudgContract> extends FeedbackOptions { bind?: Partial<Record<C["targets"], Element | Element[]>>; clock?: "realtime" | "manual"; state?: C["states"][]; onState?: (state: C["states"][]) => void; reducedMotion?: boolean; onFrame?: (values: Record<string, Value>) => void; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; onEvent?: (item: { event: string; } | { input: string; value: number; }, t: number) => void; speed?: number; watch?: boolean; start?: C["events"]; release?: "settle" | "exit"; onCue?: (cue: FiredCue) => void; }
 export interface Player<C extends NudgContract = NudgContract> { readonly runtime: Runtime; readonly unbound: string[]; readonly unknown: string[]; send(event: C["events"]): boolean; values(): Record<string, Value>; input(name: C["inputs"], value: number): boolean; bind(name: C["targets"], element: Element): () => void; now(): number; render(t: number): void; present(): boolean; leaving(): boolean; setReducedMotion(on: boolean | undefined): void; destroy(): void; readonly done: Promise<void>; }
 export type StateName<C extends NudgContract> = C["states"] | LastName<C["states"]>;
 export declare function compileText(text: string, url: string | URL): Promise<CompileResult>;
@@ -138,13 +143,14 @@ export declare function playEach<C extends NudgContract = NudgContract>(file: ob
 
 ## @nudg/core/react
 
+export interface FiredCue { t: number; sound?: string; haptic?: string; intensity: number; pitch: number; }
 export interface Nudg<C extends NudgContract = NudgContract> { bind(name: C["targets"]): (element: Element | null) => void; state: C["states"][]; send(event: C["events"]): boolean; input(name: C["inputs"], value: number): boolean; present: boolean; leaving: boolean; style(name: C["targets"], options?: { svg?: boolean; }): NudgStyle; }
 export interface NudgContract { targets: string; events: string; inputs: string; states: string; }
 export interface NudgTransitionOptions { show?: string; hide?: string; hidden?: string | string[]; target?: string; files?: Record<string, unknown>; reducedMotion?: boolean; }
 export type StateName<C extends NudgContract> = C["states"] | LastName<C["states"]>;
 export interface TransitionProps { in?: boolean; appear?: boolean; children?: ReactElement; onEnter?: (node: Element | null, isAppearing: boolean) => void; onEntering?: (node: Element | null, isAppearing: boolean) => void; onEntered?: (node: Element | null, isAppearing: boolean) => void; onExit?: (node: Element | null) => void; onExiting?: (node: Element | null) => void; onExited?: (node: Element | null) => void; style?: Record<string, unknown>; timeout?: unknown; easing?: unknown; addEndListener?: unknown; }
 export interface UseNudgOnceOptions { start?: string; replay?: unknown[]; target?: string; files?: Record<string, unknown>; reducedMotion?: boolean; }
-export interface UseNudgOptions<C extends NudgContract = NudgContract> { state?: C["states"][]; inputs?: Partial<Record<C["inputs"], number>>; files?: Record<string, unknown>; reducedMotion?: boolean; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; watch?: boolean; }
+export interface UseNudgOptions<C extends NudgContract = NudgContract> { state?: C["states"][]; inputs?: Partial<Record<C["inputs"], number>>; files?: Record<string, unknown>; reducedMotion?: boolean; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; watch?: boolean; sounds?: Record<string, string>; sound?: boolean; haptics?: boolean; onCue?: (cue: FiredCue) => void; }
 export declare function appear(options?: AppearOptions): NudgDocument;
 export declare function drop(options?: DropOptions): NudgDocument;
 export declare function hover(options?: HoverOptions): NudgDocument;
@@ -166,15 +172,19 @@ export declare function nudg(options?: NudgPluginOptions): { name: string; enfor
 ## @nudg/core/native
 
 export interface Bound { style: Record<string, unknown>; onLayout: (e: LayoutChangeEvent) => void; press: { onPressIn: () => void; onPressOut: () => void; onPress: () => void; }; gesture: Record<string, unknown>; }
+export interface ExpoHapticsModule { selectionAsync(): Promise<void>; impactAsync(style?: unknown): Promise<void>; notificationAsync(type?: unknown): Promise<void>; ImpactFeedbackStyle: { Light: unknown; Medium: unknown; Heavy: unknown; Soft?: unknown; Rigid?: unknown; }; NotificationFeedbackType: { Success: unknown; Warning: unknown; Error: unknown; }; }
+export interface FiredCue { t: number; sound?: string; haptic?: string; intensity: number; pitch: number; }
+export type HapticPlayer = (name: string, intensity: number) => void;
 export declare function NudgCompare({ comparison, children }: NudgCompareProps): import("react").ReactElement<any, string | import("react").JSXElementConstructor<any>>;
 export interface NudgCompareProps { comparison: object; children: (nudg: NudgNative) => ReactNode; }
 export interface NudgContract { targets: string; events: string; inputs: string; states: string; }
 export interface NudgNative<C extends NudgContract = NudgContract> { bind(name: C["targets"]): Bound; send(event: C["events"]): boolean; input(name: C["inputs"], value: number): boolean; state: C["states"][]; present: boolean; leaving: boolean; value(property: string): Animated.Value | Animated.Color | undefined; }
 export type StateName<C extends NudgContract> = C["states"] | LastName<C["states"]>;
-export interface UseNudgNativeOptions<C extends NudgContract = NudgContract> { state?: C["states"][]; inputs?: Partial<Record<C["inputs"], number>>; files?: Record<string, unknown>; reducedMotion?: boolean; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; }
+export interface UseNudgNativeOptions<C extends NudgContract = NudgContract> { state?: C["states"][]; inputs?: Partial<Record<C["inputs"], number>>; files?: Record<string, unknown>; reducedMotion?: boolean; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; haptics?: HapticPlayer; onCue?: (cue: FiredCue) => void; }
 export declare function appear(options?: AppearOptions): NudgDocument;
 export declare function compose(...styles: Style[]): Record<string, unknown>;
 export declare function drop(options?: DropOptions): NudgDocument;
+export declare function expoHaptics(h: ExpoHapticsModule): HapticPlayer;
 export declare function hover(options?: HoverOptions): NudgDocument;
 export declare function pop(options?: PopOptions): NudgDocument;
 export declare const presets: { press: typeof press; hover: typeof hover; toggle: typeof toggle; toast: typeof toast; appear: typeof appear; pop: typeof pop; drop: typeof drop; shake: typeof shake; };

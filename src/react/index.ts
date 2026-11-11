@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toProgram } from "../core/to-program.ts";
-import { createRuntime } from "../core/runtime.ts";
+import { createRuntime, type FiredCue } from "../core/runtime.ts";
 import type { NudgContract, Program, StateName } from "../core/types.ts";
 import { play, type Player } from "../dom/play.ts";
 import { initialValues } from "../core/player.ts";
@@ -15,6 +15,7 @@ export { useNudgOnce } from "./once.ts";
 export type { UseNudgOnceOptions } from "./once.ts";
 export type { NudgTransitionOptions, TransitionProps } from "./transition.ts";
 export type { NudgContract, StateName } from "../core/types.ts";
+export type { FiredCue } from "../core/runtime.ts";
 
 export interface UseNudgOptions<C extends NudgContract = NudgContract> {
   /** Leaf state paths to start in instead of `initial`, e.g. ["on"] for a toggle that mounts checked. */
@@ -47,6 +48,14 @@ export interface UseNudgOptions<C extends NudgContract = NudgContract> {
   onSettle?: (state: C["states"][]) => void;
   /** Follow the state a component library shows on the bound elements (data-state, aria-*); see PlayOptions.watch. */
   watch?: boolean;
+  /** Sound names to URLs for the file's cues (1.3): { pop: "/sfx/pop.mp3" }. Read when a cue fires, so it can change. */
+  sounds?: Record<string, string>;
+  /** Default true. The app's mute: false plays no sounds. */
+  sound?: boolean;
+  /** Default true. False plays no haptics. */
+  haptics?: boolean;
+  /** A cue came due (1.3), after its haptic and sound were played: for custom names or your own audio. */
+  onCue?: (cue: FiredCue) => void;
 }
 
 export interface Nudg<C extends NudgContract = NudgContract> {
@@ -98,6 +107,9 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
   onExit.current = options.onExit;
   const onSettle = useRef(options.onSettle);
   onSettle.current = options.onSettle;
+  // Read when a cue fires, so a changed map, mute or callback applies without a new player.
+  const feedback = useRef(options);
+  feedback.current = options;
   // The latest value per app input, replayed into each new player; starts from `inputs`.
   const inputs = useRef<Map<string, number>>(null as unknown as Map<string, number>);
   if (!inputs.current) inputs.current = new Map(Object.entries(options.inputs ?? {}) as [string, number][]);
@@ -120,6 +132,16 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
         setLeaving(false);
         onExit.current?.();
       },
+      get sounds() {
+        return feedback.current.sounds;
+      },
+      get sound() {
+        return feedback.current.sound;
+      },
+      get haptics() {
+        return feedback.current.haptics;
+      },
+      onCue: (cue) => feedback.current.onCue?.(cue),
     });
     player.current = p;
     for (const [name, value] of inputs.current) p.input(name, value);

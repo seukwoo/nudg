@@ -52,6 +52,12 @@ test("audit counts nudg uses, the app's own helpers around nudg, and leaves out 
   assert.match(formatAudit(a), /^Motion on nudg: 75% \(6 on nudg, 2 outside, in 6 files\)\nCustom properties the app draws itself: glow\./);
 });
 
+test("audit flags sound and haptics played by hand, which cues would time with the motion", () => {
+  const a = audit([{ path: "sfx.ts", text: 'import { Howl } from "howler";\nnavigator.vibrate(20);\nconst a = new Audio("/pop.mp3");\nawait Haptics.impactAsync(Light);' }]);
+  assert.deepEqual(a.findings.map((f) => `${f.line} ${f.kind}`), ["1 feedback", "2 feedback", "3 feedback", "4 feedback"]);
+  assert.match(a.findings[0].use, /a cue in the file/);
+});
+
 test("the messenger example has all its motion on nudg", () => {
   const out = execFileSync(process.execPath, ["src/cli.ts", "audit", "examples/apps/messenger"], { encoding: "utf8" });
   assert.match(out, /^Motion on nudg: 100% \(\d+ on nudg, 0 outside/);

@@ -41,6 +41,26 @@ private final class Pending {
 }
 
 /** A loop running since its state was entered at `t0`. */
+/** A cue that came due (1.3): when, and what to play. */
+public struct FiredCue: Equatable {
+  public let t: Double
+  public let sound: String?
+  public let haptic: String?
+  /** 0 to 1. */
+  public let intensity: Double
+  /** Semitones. */
+  public let pitch: Double
+}
+
+private struct ScheduledCue {
+  let t: Double
+  let seq: Int
+  let cue: Cue
+  let owner: State?
+  let intensity: Double
+  let pitch: Double
+}
+
 private struct ActiveLoop {
   let loop: Loop
   let owner: State
@@ -102,6 +122,15 @@ public final class Runtime {
   private var crossings: [Crossing] = []
   private var scrolls: [String: ScrollDirection] = [:]
   private var now = 0.0
+  /** Cues waiting for their time (1.3); `owner` cancels them when its state is left. */
+  private var scheduled: [ScheduledCue] = []
+  private var cueSeq = 0
+  /** Cues that came due, until the host takes them. */
+  private var due: [FiredCue] = []
+  /** Loop beats have been collected up to here. */
+  private var cueCursor = 0.0
+  /** When each cue was last scheduled to fire, for its throttle. */
+  private var lastCue: [ObjectIdentifier: Double] = [:]
   private var reduced: Bool
   /** Under reduced motion no loop plays, except (from format 1.1) one that only fades: opacity moves nothing. */
   private let fades: Bool
@@ -215,14 +244,25 @@ public final class Runtime {
     switch machine.kind {
     case let .regions(regions): for (_, region) in regions { collectFollowInputs(region) }
     case let .states(_, states, when):
-      for (_, transition) in when { collectDelayInputs(transition) }
+      for (_, transition) in when { collectDelayInputs(transition); for cue in transition.cues { collectCueInputs(cue) } }
       for state in states {
         for (_, follow) in state.follow { requiredInputs.insert(follow.input) }
         for (_, target) in state.input { requiredInputs.insert(target.input); targetInputs.insert(target.input) }
         for transition in state.when.map({ $0.1 }) + state.timers.map({ $0.transition }) { collectDelayInputs(transition) }
+        // Cue amounts and delays read from inputs (1.3).
+        var cues = state.cues
+        for transition in state.when.map({ $0.1 }) + state.timers.map({ $0.transition }) { cues += transition.cues }
+        for (_, effect) in state.enter { if case let .keyframes(frames, _, _) = effect { for f in frames { cues += f.cues } } }
+        for (_, loop) in state.loop { for beat in loop.cues { cues += beat.cues } }
+        for cue in cues { collectCueInputs(cue) }
         if let inner = state.machine { collectFollowInputs(inner) }
       }
     }
+  }
+
+  private func collectCueInputs(_ cue: Cue) {
+    for amount in [cue.intensity, cue.pitch] { if case let .input(name, _, _)? = amount { requiredInputs.insert(name) } }
+    if let d = cue.delayInput { requiredInputs.insert(d.input) }
   }
 
   // MARK: targets
@@ -341,6 +381,99 @@ public final class Runtime {
   private func delayOf(_ motion: Motion, _ t: Double) -> Double {
     guard let d = motion.delayInput else { return motion.delay }
     return min(d.max ?? .infinity, max(0, inputAt(d.input, t) * d.times + d.plus))
+  }
+
+  // MARK: cues (1.3)
+
+  private func amount(_ a: CueAmount?, _ fallback: Double, _ t: Double) -> Double {
+    switch a {
+    case nil: return fallback
+    case let .number(n)?: return n
+    case let .input(name, times, plus)?: return inputAt(name, t) * times + plus
+    }
+  }
+
+  private func push(_ cue: Cue, _ at: Double, _ owner: State?, _ t: Double) {
+    let id = ObjectIdentifier(cue)
+    if let throttle = cue.throttle, let last = lastCue[id], at - last < throttle - 1e-9 { return }
+    lastCue[id] = at
+    cueSeq += 1
+    scheduled.append(ScheduledCue(t: at, seq: cueSeq, cue: cue, owner: owner, intensity: min(1, max(0, amount(cue.intensity, 1, t))), pitch: amount(cue.pitch, 0, t)))
+  }
+
+  /** Schedules a cue's firings for a moment at `t`. Under reduced motion its delay is ignored, as motion's is. */
+  private func schedule(_ cue: Cue, _ t: Double, _ owner: State?) {
+    var wait = cue.delay
+    if let d = cue.delayInput { wait = min(d.max ?? .infinity, max(0, inputAt(d.input, t) * d.times + d.plus)) }
+    if reduced { wait = 0 }
+    for k in 0..<cue.repeatCount { push(cue, t + wait + Double(k) * cue.repeatEvery, owner, t) }
+  }
+
+  private func activeStates() -> Set<ObjectIdentifier> {
+    var out = Set<ObjectIdentifier>()
+    walkActive(active) { out.insert(ObjectIdentifier($0)) }
+    return out
+  }
+
+  /** The cues of what happened at `t`: transitions that fired, states entered (and their entry beats), states left. */
+  private func cueMoment(_ t: Double, _ fired: [Transition], _ entered: [State], _ before: Set<ObjectIdentifier>) {
+    let after = activeStates()
+    let reentered = Set(entered.map(ObjectIdentifier.init))
+    scheduled.removeAll { c in
+      guard let owner = c.owner, c.t > t else { return false }
+      let id = ObjectIdentifier(owner)
+      return (before.contains(id) && !after.contains(id)) || reentered.contains(id)
+    }
+    for transition in fired { for cue in transition.cues { schedule(cue, t, nil) } }
+    for state in entered {
+      for cue in state.cues { schedule(cue, t, state) }
+      for (_, effect) in state.enter {
+        guard case let .keyframes(frames, duration, _) = effect else { continue }
+        let beats = frames.filter { !$0.cues.isEmpty }
+        // Reduced motion skips the beats; their first cue still marks the moment.
+        if reduced {
+          for cue in beats.first?.cues ?? [] { schedule(cue, t, state) }
+          continue
+        }
+        for frame in beats { for cue in frame.cues { schedule(cue, t + frame.at * duration, state) } }
+      }
+    }
+    flushCues(t)
+  }
+
+  /** Moves cues due by `time` to `due`, with the loop beats since the last flush. */
+  private func flushCues(_ time: Double) {
+    if time > cueCursor {
+      // By property name, so every runtime lists beats due at the same time in the same order.
+      for (_, running) in loops.sorted(by: { $0.key < $1.key }) where !running.loop.cues.isEmpty {
+        let loop = running.loop
+        let start = running.t0 + loop.delay
+        var k = max(0, Int(((cueCursor - start) / loop.duration).rounded(.down)))
+        while start + Double(k) * loop.duration <= time {
+          for beat in loop.cues {
+            let at = start + (Double(k) + beat.at) * loop.duration
+            if at <= cueCursor || at > time { continue }
+            for cue in beat.cues { push(cue, at, running.owner, at) }
+          }
+          k += 1
+        }
+      }
+      cueCursor = time
+    }
+    let ready = scheduled.filter { $0.t <= time + 1e-9 }.sorted { ($0.t, $0.seq) < ($1.t, $1.seq) }
+    guard !ready.isEmpty else { return }
+    let taken = Set(ready.map(\.seq))
+    scheduled.removeAll { taken.contains($0.seq) }
+    for c in ready { due.append(FiredCue(t: c.t, sound: c.cue.sound, haptic: c.cue.haptic, intensity: c.intensity, pitch: c.pitch)) }
+  }
+
+  /**
+   Cues that have come due since the last call (1.3), in time order: from transitions, entered
+   states, entry keyframes and loop beats. Each has the time it was due.
+   */
+  public func takeCues() -> [FiredCue] {
+    defer { due.removeAll() }
+    return due
   }
 
   private func inputAt(_ name: String, _ t: Double) -> Double {
@@ -604,6 +737,7 @@ public final class Runtime {
         if press == nil || due < press!.1 { press = (target, due) }
       }
       if let press, next == nil || press.1 < next!.due {
+        flushCues(press.1)
         pressDue[press.0] = nil
         longPressed.insert(press.0)
         dispatch("\(press.0).longpress", press.1)
@@ -612,8 +746,12 @@ public final class Runtime {
       guard let due = next else { return }
       pending.removeAll { $0 === due }
       var fired: [Transition] = [], entered: [State] = []
+      // Loop beats up to the timer belong to the states before it.
+      flushCues(due.due)
+      let before = activeStates()
       perform(due.machine, due.transition, due.due, &fired, &entered)
       settle(due.due, fired, entered)
+      cueMoment(due.due, fired, entered, before)
     }
   }
 
@@ -641,6 +779,7 @@ public final class Runtime {
     if !t.isFinite || t < now { throw RuntimeError.timeWentBackwards(t, now) }
     now = t
     fireDue(t)
+    flushCues(t)
   }
 
   private func valueOf(_ key: String, _ t: Double) -> [Double] {
@@ -694,8 +833,10 @@ public final class Runtime {
   private func dispatch(_ event: String, _ t: Double) -> Bool {
     var fired: [Transition] = [], entered: [State] = []
     let timerHandled = controlTimers(event, t)
+    let before = activeStates()
     if !handle(program.machine, event, t, &fired, &entered) { return timerHandled }
     settle(t, fired, entered)
+    cueMoment(t, fired, entered, before)
     return true
   }
 
@@ -794,7 +935,7 @@ public final class Runtime {
   /** True when every property has come to rest and no unpaused timer is counting down. */
   public func settled(_ t: Double, property: String? = nil) throws -> Bool {
     try advanceTo(t)
-    if property == nil && (pending.contains(where: { $0.pausedAt == nil }) || !pressDue.isEmpty) { return false }
+    if property == nil && (pending.contains(where: { $0.pausedAt == nil }) || !pressDue.isEmpty || !scheduled.isEmpty) { return false }
     let keys = property.map { [$0] } ?? program.properties.map { $0.0 }
     return keys.allSatisfy { atRest($0, t) }
   }

@@ -60,6 +60,30 @@ export interface Keyframe {
   /** Normalized time strictly between 0 and 1; the current value and state target are implicit endpoints. */
   at: number;
   value: Channels;
+  /** Cues on this beat (1.3). */
+  cues?: Cue[];
+}
+
+/** A number, or one read from an app input when the cue fires (1.3): input × times + plus. */
+export type CueAmount = number | { input: string; times: number; plus: number };
+
+/**
+ * A named moment for sound and haptics (1.3). The file holds names and numbers; the host
+ * maps sound names to its files, and adapters map haptic names to each platform's feedback.
+ */
+export interface Cue {
+  sound?: string;
+  haptic?: string;
+  /** 0 to 1, default 1. */
+  intensity?: CueAmount;
+  /** Semitones, default 0. */
+  pitch?: CueAmount;
+  /** Seconds after the moment, as a motion's delay (a number, or read from an input). */
+  delay?: number | DelayInput;
+  /** Fires `count` times in all, `every` seconds apart. */
+  repeat?: { count: number; every: number };
+  /** The least time between two firings of this cue; a firing sooner is dropped. */
+  throttle?: number;
 }
 
 /** A transient authored sequence played when a state is entered (v0.8). */
@@ -80,7 +104,7 @@ export interface Loop {
   /** The offset at the end of a cycle: 360 for a turning spinner, 0 for a pulse. */
   to: MeasuredEndpoint;
   /** Points strictly inside the cycle, in normalized time. */
-  frames: { at: number; value: MeasuredEndpoint }[];
+  frames: { at: number; value: MeasuredEndpoint; cues?: Cue[] }[];
   /** Seconds per cycle. */
   duration: number;
   ease: Ease;
@@ -163,6 +187,8 @@ export interface Transition {
   step?: Map<string, number>;
   /** Properties whose current value becomes their base value (v0.3). */
   commit?: string[];
+  /** Cues when the transition fires (1.3). */
+  cues?: Cue[];
 }
 
 export interface TimerPause {
@@ -196,6 +222,8 @@ export interface State {
   when: Map<string, Transition>;
   timers: Timer[];
   machine?: Machine;
+  /** Cues when the state is entered through a transition (1.3). */
+  cues?: Cue[];
 }
 
 export type Machine =

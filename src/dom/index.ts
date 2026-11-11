@@ -6,3 +6,5 @@ export type { PlayEach, PlayEachOptions } from "./each.ts";
 export { cssText, initialStyles, initialValues } from "./style.ts";
 export type { InitialOptions, NudgStyle } from "./style.ts";
 export type { NudgContract, StateName } from "../core/types.ts";
+export type { FiredCue } from "../core/runtime.ts";
+export type { FeedbackOptions } from "./feedback.ts";

@@ -1,0 +1,126 @@
+{
+  "conformance": "1.3",
+  "name": "Cues: on a transition and on entering a state, with delay and repeat; leaving the state drops the rest",
+  "doc": {
+    "nudg": "1.3",
+    "host": {
+      "events": [
+        "go",
+        "stop"
+      ]
+    },
+    "targets": [
+      "card"
+    ],
+    "values": {
+      "card.x": 0
+    },
+    "animate": {
+      "card.x": {
+        "spring": {
+          "duration": 0.3,
+          "bounce": 0
+        }
+      }
+    },
+    "initial": "idle",
+    "states": {
+      "idle": {
+        "when": {
+          "host.go": {
+            "to": "running",
+            "cue": {
+              "haptic": "light",
+              "intensity": 0.6
+            }
+          }
+        }
+      },
+      "running": {
+        "set": {
+          "card.x": 100
+        },
+        "cue": [
+          {
+            "sound": "start",
+            "delay": 0.1
+          },
+          {
+            "sound": "tick",
+            "repeat": {
+              "count": 3,
+              "every": 0.2
+            }
+          }
+        ],
+        "when": {
+          "host.stop": "idle"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "cues": []
+      }
+    },
+    {
+      "t": 0.1,
+      "send": "host.go"
+    },
+    {
+      "t": 0.15,
+      "expect": {
+        "state": [
+          "running"
+        ],
+        "cues": [
+          {
+            "t": 0.1,
+            "haptic": "light",
+            "intensity": 0.6,
+            "pitch": 0.0
+          },
+          {
+            "t": 0.1,
+            "sound": "tick",
+            "intensity": 1.0,
+            "pitch": 0.0
+          }
+        ],
+        "settled": false
+      }
+    },
+    {
+      "t": 0.4,
+      "send": "host.stop"
+    },
+    {
+      "t": 0.45,
+      "expect": {
+        "cues": [
+          {
+            "t": 0.2,
+            "sound": "start",
+            "intensity": 1.0,
+            "pitch": 0.0
+          },
+          {
+            "t": 0.3,
+            "sound": "tick",
+            "intensity": 1.0,
+            "pitch": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "t": 1.0,
+      "expect": {
+        "cues": []
+      }
+    }
+  ]
+}

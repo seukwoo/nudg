@@ -28,6 +28,7 @@ Errors stop a file from compiling. Warnings don't.
 | `invalid-bounds` | `min` / `max` aren't numbers, are on a color, or don't make a range. |
 | `invalid-by` | `nearest`'s `by` isn't a numeric property the candidates set. |
 | `invalid-commit` | `commit` lists a color or something that isn't a property. |
+| `invalid-cue` | A cue has neither a `sound` nor a `haptic` (1.3). |
 | `invalid-event` | An event key isn't `target.event`, `target.key.<name>`, `host.<name>` or an input crossing. |
 | `invalid-keyframe-time` | Keyframe `at` values aren't strictly increasing inside (0, 1). |
 | `invalid-keyframes` | `keyframes` isn't a list of `{ "at", "value" }` points. |
@@ -76,6 +77,7 @@ Errors stop a file from compiling. Warnings don't.
 | `undeclared-host-input` | With a `host` declaration, a `host.<name>` input isn't declared. |
 | `unknown-ease` | An ease name isn't one of nudg's. |
 | `unknown-event` | An event isn't a nudg event; the hint suggests the nearest. |
+| `unknown-haptic` | A cue's `haptic` is not a built-in intent (tick, select, light, medium, heavy, soft, rigid, success, warning, error, align, edge) or a name declared under `host.custom` (1.3). |
 | `unknown-input` | An input isn't a drag, pinch, scroll or app input. |
 | `unknown-key` | An object has a key nudg doesn't know; the hint suggests the nearest. |
 | `unknown-motion` | A named motion isn't defined or imported. |

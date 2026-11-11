@@ -303,7 +303,7 @@ An app's motion is nudg files plus adapter calls. Before you write a timer, a wr
 
 Never:
 - write `transform`, `opacity`, `width`, `height` or `background-color` yourself on an element a player is bound to;
-- add CSS `transition` or `animation` on those properties for an element nudg moves;
+- add CSS `transition` or `animation` on those properties for an element nudg moves (the DOM adapter turns such page styles off on bound elements and warns once; remove them when it does);
 - add a CSS keyframe animation for a press, an entrance, a shake or a sheet when a preset or recipe covers it (`nudg_recipe`, `presets`).
 
 If nudg can't do what the app needs without glue, say so to the person and suggest reporting it to the nudg project: the gap is nudg's to fix.

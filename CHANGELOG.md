@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **CSS no longer fights a file's motion.** A page's CSS transition or keyframe animation on a property a nudg file writes eased or overwrote every frame. PlaySnack's buttons had `transition: transform .06s` under the nudg press, so the spring arrived late. The DOM adapter now turns those off on the bound element, keeps the rest (a color transition, `transition: all` minus what nudg moves), restores them when the player lets go, and warns once per class so the stylesheet can be cleaned up.
+
 ## 1.8.0
 
 How much of an app is on nudg, as a number, and less code to get it to 100%. `nudg audit` finds motion outside nudg and names what replaces each piece. PlaySnack measures 49%, and 38 of its 40 findings can be replaced today. `leaving` and `playEach` replace the last two pieces of glue PlaySnack wrote: the sheet closer and the document-wide press listener. The format stays 1.2; the API only gains.

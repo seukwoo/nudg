@@ -1,0 +1,245 @@
+{
+  "conformance": "1.4",
+  "name": "Particles: each wave's pieces fly on seeded, closed-form paths and fade at the end of their life; the runtime settles after the last",
+  "doc": {
+    "nudg": "1.4",
+    "host": {
+      "events": [
+        "celebrate"
+      ]
+    },
+    "targets": [
+      "button",
+      "confetti"
+    ],
+    "values": {
+      "button.scale": 1
+    },
+    "emitters": {
+      "confetti": {
+        "from": "button",
+        "count": 3,
+        "angle": [
+          -150,
+          -30
+        ],
+        "speed": [
+          500,
+          900
+        ],
+        "gravity": 1600,
+        "drag": 1.2,
+        "spin": [
+          -720,
+          720
+        ],
+        "life": [
+          0.6,
+          0.9
+        ],
+        "fade": 0.3,
+        "scale": [
+          0.6,
+          1
+        ],
+        "area": [
+          10,
+          4
+        ],
+        "stagger": 0.05,
+        "seed": 7
+      }
+    },
+    "initial": "idle",
+    "states": {
+      "idle": {
+        "when": {
+          "host.celebrate": {
+            "emit": "confetti",
+            "cue": "success"
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0.1,
+      "send": "host.celebrate"
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "pieces": [
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 0,
+            "x": 47.83442013334142,
+            "y": -47.74428101960059,
+            "rotation": 16.953704193234444,
+            "scale": 0.692254885006696,
+            "opacity": 1.0
+          },
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 1,
+            "x": 8.190303864232188,
+            "y": -35.821671048811325,
+            "rotation": -17.13620171137154,
+            "scale": 0.8372960463166237,
+            "opacity": 1.0
+          },
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 2,
+            "x": -3.975860853679478,
+            "y": -1.6018725680187345,
+            "rotation": 0.0,
+            "scale": 0.7837233896367252,
+            "opacity": 1.0
+          }
+        ],
+        "settled": false,
+        "resting": false
+      }
+    },
+    {
+      "t": 0.3,
+      "send": "host.celebrate"
+    },
+    {
+      "t": 0.45,
+      "expect": {
+        "pieces": [
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 0,
+            "x": 138.03265986719046,
+            "y": -205.2288908331651,
+            "rotation": 59.337964676320546,
+            "scale": 0.692254885006696,
+            "opacity": 1.0
+          },
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 1,
+            "x": 42.201518464084266,
+            "y": -237.65930937878966,
+            "rotation": -102.81721026822925,
+            "scale": 0.8372960463166237,
+            "opacity": 1.0
+          },
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 2,
+            "x": -41.29384022339484,
+            "y": -185.59058825182836,
+            "rotation": 30.774973221123215,
+            "scale": 0.7837233896367252,
+            "opacity": 1.0
+          },
+          {
+            "emitter": "confetti",
+            "wave": 1,
+            "index": 0,
+            "x": -76.3341359368469,
+            "y": -86.30244373399013,
+            "rotation": 83.43600474111737,
+            "scale": 0.8782155358232557,
+            "opacity": 1.0
+          },
+          {
+            "emitter": "confetti",
+            "wave": 1,
+            "index": 1,
+            "x": 23.124660840054744,
+            "y": -58.44598773217598,
+            "rotation": -57.020890273153796,
+            "scale": 0.9147645072080195,
+            "opacity": 1.0
+          },
+          {
+            "emitter": "confetti",
+            "wave": 1,
+            "index": 2,
+            "x": -4.7888601390908665,
+            "y": -40.837196166021506,
+            "rotation": -18.1964673511684,
+            "scale": 0.9518707353621721,
+            "opacity": 1.0
+          }
+        ]
+      }
+    },
+    {
+      "t": 0.8,
+      "expect": {
+        "pieces": [
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 1,
+            "x": 75.54140860373126,
+            "y": -575.4257860102715,
+            "rotation": -222.77062224783003,
+            "scale": 0.8372960463166237,
+            "opacity": 0.498137999403601
+          },
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 2,
+            "x": -77.8752251300466,
+            "y": -505.8604501009349,
+            "rotation": 73.85993573069574,
+            "scale": 0.7837233896367252,
+            "opacity": 0.34655750822275866
+          },
+          {
+            "emitter": "confetti",
+            "wave": 1,
+            "index": 0,
+            "x": -214.63038221656507,
+            "y": -355.19792956276586,
+            "rotation": 278.1200158037245,
+            "scale": 0.8782155358232557,
+            "opacity": 0.4373989636854577
+          },
+          {
+            "emitter": "confetti",
+            "wave": 1,
+            "index": 1,
+            "x": 72.98280051450375,
+            "y": -319.85085133545783,
+            "rotation": -256.594006229192,
+            "scale": 0.9147645072080195,
+            "opacity": 0.9316519650164992
+          },
+          {
+            "emitter": "confetti",
+            "wave": 1,
+            "index": 2,
+            "x": -16.352018330137025,
+            "y": -353.1631374073163,
+            "rotation": -145.57173880934715,
+            "scale": 0.9518707353621721,
+            "opacity": 0.9860202252554395
+          }
+        ]
+      }
+    },
+    {
+      "t": 2.0,
+      "expect": {
+        "pieces": [],
+        "settled": true
+      }
+    }
+  ]
+}

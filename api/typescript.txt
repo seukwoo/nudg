@@ -16,6 +16,7 @@ export interface Diagnostic { severity: Severity; code: string; message: string;
 export interface DropOptions { target?: string; height?: number; tilt?: number; motion?: SpringOptions; }
 export declare const EVENTS: readonly ["down", "up", "cancel", "tap", "dragstart", "dragend", "hoverstart", "hoverend", "focus", "blur", "longpress", "doubletap", "scrollup", "scrolldown", "scrollleft", "scrollright", "pinchstart", "pinchend"];
 export type Ease = "linear" | readonly [number, number, number, number];
+export interface Emitter { from: string; at: "center" | "top" | "bottom" | "left" | "right"; count: number; area: [number, number]; angle: [number, number]; speed: [number, number]; gravity: number; drag: number; spin: [number, number]; life: [number, number]; fade: number; scale: [number, number]; stagger: number; seed: number; }
 export type EntryEffect = SpringMotion | KeyframesEffect;
 export interface FiredCue { t: number; sound?: string; haptic?: string; intensity: number; pitch: number; }
 export interface Follow { input: string; range?: [MeasuredEndpoint, MeasuredEndpoint]; overdrag: number; multiply?: boolean; }
@@ -41,9 +42,10 @@ export interface MeasuredTransition { from: string; event: string; to: string; p
 export type Motion = SpringMotion | TweenMotion;
 export interface NudgContract { targets: string; events: string; inputs: string; states: string; }
 export type NudgDocument = Record<string, unknown>;
-export declare const PROGRAM_FORMAT = 10;
+export declare const PROGRAM_FORMAT = 11;
 export declare const PROPERTIES: Record<string, PropertyKind>;
 export type Perceptibility = "imperceptible" | "subtle" | "clear";
+export interface Piece { emitter: string; wave: number; index: number; x: number; y: number; rotation: number; scale: number; opacity: number; }
 export interface PlayerHost { now(): number; frame(fn: () => void): () => void; }
 export interface Plot { svg: string; width: number; height: number; simulation: Simulation; }
 export interface PlotOptions extends SimulateOptions { title?: string; width?: number; against?: Program; labels?: [string, string]; }
@@ -52,14 +54,14 @@ export declare class PointerTracker { private origin; private first; private dra
 export interface PopOptions { target?: string; scale?: number; motion?: SpringOptions; }
 export type PresetName = keyof typeof presets;
 export interface PressOptions { target?: string; scale?: number; y?: number; sink?: SpringOptions; release?: SpringOptions; }
-export interface Program { version: string; targets: string[]; host?: HostDeclaration; properties: Map<string, Property>; animate: Map<string, Motion>; machine: Machine; }
+export interface Program { version: string; targets: string[]; host?: HostDeclaration; properties: Map<string, Property>; animate: Map<string, Motion>; machine: Machine; emitters?: Map<string, Emitter>; }
 export interface Property { kind: PropertyKind; measure?: Measure; base: Channels; map?: PropertyMap; min?: number; max?: number; }
 export interface PropertyDifference { property: string; maxDifference: number; at: number; overshoot?: [number, number]; settledAt: [number | undefined, number | undefined]; verdict: Perceptibility; summary: string; }
 export type PropertyKind = "length" | "number" | "color";
 export interface PropertyMap { source: string; sourceKind: "property" | "input"; from: MeasuredEndpoint[]; to: (Channels | Measure)[]; }
 export interface PropertySummary { final: Value; min?: number; max?: number; overshoot?: number; settledAt?: number; }
 export type ReadFile = (path: string) => string | undefined;
-export interface Runtime { readonly program: Program; send(event: string, t: number): boolean; setReducedMotion(on: boolean, t: number): void; input(name: string, value: number, t: number): boolean; requiredInputs(): string[]; measurements(): string[]; unmeasured(): string[]; sample(t: number): Record<string, Value>; targets(): Record<string, Value | undefined>; state(): string[]; settled(t: number, property?: string): boolean; resting(t: number): boolean; time(): number; looping(): boolean; takeCues(): FiredCue[]; }
+export interface Runtime { readonly program: Program; send(event: string, t: number): boolean; setReducedMotion(on: boolean, t: number): void; input(name: string, value: number, t: number): boolean; requiredInputs(): string[]; measurements(): string[]; unmeasured(): string[]; sample(t: number): Record<string, Value>; targets(): Record<string, Value | undefined>; state(): string[]; settled(t: number, property?: string): boolean; resting(t: number): boolean; time(): number; looping(): boolean; takeCues(): FiredCue[]; pieces(emitter?: string): Piece[]; }
 export interface Sample { t: number; state: string[]; values: Record<string, Value>; }
 export type Severity = "error" | "warning";
 export interface ShakeOptions { target?: string; distance?: number; duration?: number; }
@@ -68,7 +70,7 @@ export interface Simulation { samples: Sample[]; summary: Record<string, Propert
 export interface Source { path: string; text: string; }
 export interface SpringMotion { kind: "spring"; stiffness: number; damping: number; mass: number; kick?: number; delay?: number; delayInput?: DelayInput; }
 export interface SpringOptions { duration?: number; bounce?: number; }
-export interface State { name: string; set: Map<string, Channels>; measure: Map<string, Measure>; input: Map<string, InputTarget>; follow: Map<string, Follow>; glide: Map<string, Glide>; enter: Map<string, EntryEffect>; loop: Map<string, Loop>; when: Map<string, Transition>; timers: Timer[]; machine?: Machine; cues?: Cue[]; }
+export interface State { name: string; set: Map<string, Channels>; measure: Map<string, Measure>; input: Map<string, InputTarget>; follow: Map<string, Follow>; glide: Map<string, Glide>; enter: Map<string, EntryEffect>; loop: Map<string, Loop>; when: Map<string, Transition>; timers: Timer[]; machine?: Machine; cues?: Cue[]; emit?: string[]; }
 export type StateName<C extends NudgContract> = C["states"] | LastName<C["states"]>;
 export declare const THRESHOLDS: { position: { imperceptible: number; subtle: number; }; fraction: { imperceptible: number; subtle: number; }; color: { imperceptible: number; subtle: number; }; time: { imperceptible: number; subtle: number; }; };
 export type TimedEvent = { t: number; event: string; implied?: boolean; } | { t: number; input: string; value: number; };
@@ -76,9 +78,9 @@ export interface Timer { key: string; delay: number; transition: Transition; pau
 export interface TimerPause { on: string; off: string; }
 export interface ToastOptions { target?: string; duration?: number; rise?: number; motion?: SpringOptions; }
 export interface ToggleOptions { knob?: string; track?: string; travel?: number; colors?: [string, string]; motion?: SpringOptions; initial?: "off" | "on"; }
-export interface Transition { to?: string; nearest?: { states: string[]; by: string; momentum: number; }; animate: Map<string, Motion>; step?: Map<string, number>; commit?: string[]; cues?: Cue[]; }
+export interface Transition { to?: string; nearest?: { states: string[]; by: string; momentum: number; }; animate: Map<string, Motion>; step?: Map<string, number>; commit?: string[]; cues?: Cue[]; emit?: string[]; }
 export interface TweenMotion { kind: "tween"; duration: number; ease: Ease; delay?: number; delayInput?: DelayInput; }
-export declare const VERSION = "1.3";
+export declare const VERSION = "1.4";
 export type Value = number | string;
 export declare function actionTarget(program: Program, action: string): string;
 export declare function actionsToEvents(targetOf: string | ((action: string) => string), marks: HostMark[]): { t: number; event: string; }[];
@@ -178,7 +180,8 @@ export type HapticPlayer = (name: string, intensity: number) => void;
 export declare function NudgCompare({ comparison, children }: NudgCompareProps): import("react").ReactElement<any, string | import("react").JSXElementConstructor<any>>;
 export interface NudgCompareProps { comparison: object; children: (nudg: NudgNative) => ReactNode; }
 export interface NudgContract { targets: string; events: string; inputs: string; states: string; }
-export interface NudgNative<C extends NudgContract = NudgContract> { bind(name: C["targets"]): Bound; send(event: C["events"]): boolean; input(name: C["inputs"], value: number): boolean; state: C["states"][]; present: boolean; leaving: boolean; value(property: string): Animated.Value | Animated.Color | undefined; }
+export interface NudgNative<C extends NudgContract = NudgContract> { bind(name: C["targets"]): Bound; send(event: C["events"]): boolean; input(name: C["inputs"], value: number): boolean; state: C["states"][]; present: boolean; leaving: boolean; value(property: string): Animated.Value | Animated.Color | undefined; pieces(emitter: string): Piece[]; }
+export interface Piece { emitter: string; wave: number; index: number; x: number; y: number; rotation: number; scale: number; opacity: number; }
 export type StateName<C extends NudgContract> = C["states"] | LastName<C["states"]>;
 export interface UseNudgNativeOptions<C extends NudgContract = NudgContract> { state?: C["states"][]; inputs?: Partial<Record<C["inputs"], number>>; files?: Record<string, unknown>; reducedMotion?: boolean; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; haptics?: HapticPlayer; onCue?: (cue: FiredCue) => void; }
 export declare function appear(options?: AppearOptions): NudgDocument;
@@ -186,6 +189,7 @@ export declare function compose(...styles: Style[]): Record<string, unknown>;
 export declare function drop(options?: DropOptions): NudgDocument;
 export declare function expoHaptics(h: ExpoHapticsModule): HapticPlayer;
 export declare function hover(options?: HoverOptions): NudgDocument;
+export declare function pieceStyle(p: Piece): Record<string, unknown>;
 export declare function pop(options?: PopOptions): NudgDocument;
 export declare const presets: { press: typeof press; hover: typeof hover; toggle: typeof toggle; toast: typeof toast; appear: typeof appear; pop: typeof pop; drop: typeof drop; shake: typeof shake; };
 export declare function press(options?: PressOptions): NudgDocument;

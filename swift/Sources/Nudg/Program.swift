@@ -145,8 +145,10 @@ public final class Transition {
   public let commit: [String]?
   /** Cues when the transition fires (1.3). */
   public let cues: [Cue]
-  init(to: String?, nearest: (states: [String], by: String, momentum: Double)?, animate: [(String, Motion)], step: [(String, Double)]?, commit: [String]?, cues: [Cue] = []) {
-    self.to = to; self.nearest = nearest; self.animate = animate; self.step = step; self.commit = commit; self.cues = cues
+  /** Emitters that send out a wave when it fires (1.4). */
+  public let emit: [String]
+  init(to: String?, nearest: (states: [String], by: String, momentum: Double)?, animate: [(String, Motion)], step: [(String, Double)]?, commit: [String]?, cues: [Cue] = [], emit: [String] = []) {
+    self.to = to; self.nearest = nearest; self.animate = animate; self.step = step; self.commit = commit; self.cues = cues; self.emit = emit
   }
 }
 
@@ -177,8 +179,10 @@ public final class State {
   public let machine: Machine?
   /** Cues when the state is entered through a transition (1.3). */
   public let cues: [Cue]
-  init(name: String, set: [(String, [Double])], measure: [String: Measure], input: [String: InputTarget], follow: [(String, Follow)], glide: [(String, Glide)], enter: [(String, EntryEffect)], loop: [(String, Loop)], when: [(String, Transition)], timers: [Timer], machine: Machine?, cues: [Cue] = []) {
-    self.name = name; self.set = set; self.measure = measure; self.input = input; self.follow = follow; self.glide = glide; self.enter = enter; self.loop = loop; self.when = when; self.timers = timers; self.machine = machine; self.cues = cues
+  /** Emitters that send out a wave when it is entered through a transition (1.4). */
+  public let emit: [String]
+  init(name: String, set: [(String, [Double])], measure: [String: Measure], input: [String: InputTarget], follow: [(String, Follow)], glide: [(String, Glide)], enter: [(String, EntryEffect)], loop: [(String, Loop)], when: [(String, Transition)], timers: [Timer], machine: Machine?, cues: [Cue] = [], emit: [String] = []) {
+    self.name = name; self.set = set; self.measure = measure; self.input = input; self.follow = follow; self.glide = glide; self.enter = enter; self.loop = loop; self.when = when; self.timers = timers; self.machine = machine; self.cues = cues; self.emit = emit
   }
   func transition(for event: String) -> Transition? { when.first { $0.0 == event }?.1 }
 }
@@ -196,6 +200,28 @@ public final class Machine {
   }
 }
 
+/**
+ An emitter (1.4): many short-lived pieces from one place, on closed-form paths whose numbers
+ come from the seed, the wave and the piece's index, so every runtime places them the same.
+ */
+public struct Emitter {
+  public let from: String
+  /** "center", "top", "bottom", "left" or "right" of the `from` target's box. */
+  public let at: String
+  public let count: Int
+  public let area: (Double, Double)
+  public let angle: (Double, Double)
+  public let speed: (Double, Double)
+  public let gravity: Double
+  public let drag: Double
+  public let spin: (Double, Double)
+  public let life: (Double, Double)
+  public let fade: Double
+  public let scale: (Double, Double)
+  public let stagger: Double
+  public let seed: Int
+}
+
 public struct Program {
   public let version: String
   public let targets: [String]
@@ -203,6 +229,8 @@ public struct Program {
   public let properties: [(String, Property)]
   public let animate: [String: Motion]
   public let machine: Machine
+  /** Emitters by name (1.4), in file order. */
+  public var emitters: [(String, Emitter)] = []
 
   public func property(_ key: String) -> Property? { properties.first { $0.0 == key }?.1 }
 
@@ -213,8 +241,8 @@ public struct Program {
 
   /** Reads `nudg compile` output. */
   public static func decode(_ data: Data) throws -> Program {
-    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...10).contains(format) else {
-      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 10). Compile it with `nudg compile`.")
+    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...11).contains(format) else {
+      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 11). Compile it with `nudg compile`.")
     }
     let properties: [(String, Property)] = (j["properties"] as! [[String: Any]]).map { p in
       (p["key"] as! String, Property(
@@ -227,7 +255,15 @@ public struct Program {
     }
     var animate: [String: Motion] = [:]
     for a in j["animate"] as! [[String: Any]] { animate[a["key"] as! String] = readMotion(a["motion"]!) }
-    return Program(version: j["version"] as! String, targets: j["targets"] as! [String], properties: properties, animate: animate, machine: readMachine(j["machine"]!))
+    let pair = { (v: Any?) -> (Double, Double) in let d = doubles(v); return (d[0], d[1]) }
+    let emitters: [(String, Emitter)] = (j["emitters"] as? [[String: Any]] ?? []).map { e in
+      (e["name"] as! String, Emitter(
+        from: e["from"] as! String, at: e["at"] as! String, count: (e["count"] as! NSNumber).intValue, area: pair(e["area"]),
+        angle: pair(e["angle"]), speed: pair(e["speed"]), gravity: number(e["gravity"])!, drag: number(e["drag"])!,
+        spin: pair(e["spin"]), life: pair(e["life"]), fade: number(e["fade"])!, scale: pair(e["scale"]),
+        stagger: number(e["stagger"])!, seed: (e["seed"] as! NSNumber).intValue))
+    }
+    return Program(version: j["version"] as! String, targets: j["targets"] as! [String], properties: properties, animate: animate, machine: readMachine(j["machine"]!), emitters: emitters)
   }
 }
 
@@ -300,7 +336,8 @@ private func readTransition(_ v: Any) -> Transition {
     animate: (t["animate"] as! [[String: Any]]).map { ($0["key"] as! String, readMotion($0["motion"]!)) },
     step: (t["step"] as? [[String: Any]])?.map { ($0["key"] as! String, number($0["delta"])!) },
     commit: t["commit"] as? [String],
-    cues: readCues(t["cue"]))
+    cues: readCues(t["cue"]),
+    emit: t["emit"] as? [String] ?? [])
 }
 
 private func readMachine(_ v: Any) -> Machine {
@@ -353,5 +390,6 @@ private func readState(_ s: [String: Any]) -> State {
         pause: (timer["pause"] as? [[String: Any]] ?? []).map { TimerPause(on: $0["on"] as! String, off: $0["off"] as! String) })
     },
     machine: s["machine"].map(readMachine),
-    cues: readCues(s["cue"]))
+    cues: readCues(s["cue"]),
+    emit: s["emit"] as? [String] ?? [])
 }

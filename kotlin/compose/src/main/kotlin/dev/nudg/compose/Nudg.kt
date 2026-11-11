@@ -1,5 +1,9 @@
 package dev.nudg.compose
 
+import androidx.compose.runtime.key
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Box
+import dev.nudg.Piece
 import dev.nudg.FiredCue
 import androidx.compose.ui.platform.LocalView
 import android.view.View
@@ -102,6 +106,10 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     var leaving: Boolean by mutableStateOf(false)
         private set
 
+    /** The emitters' pieces flying at the last frame (1.4); [NudgEmitter] draws them. */
+    var pieces: List<Piece> by mutableStateOf(emptyList())
+        private set
+
     init {
         lifecycle.onState = {
             this.state = it
@@ -135,6 +143,7 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     internal fun frame(nanos: Long) {
         val t = time(nanos)
         values = runtime.sample(t)
+        if (runtime.program.emitters.isNotEmpty()) runtime.pieces().let { if (it.isNotEmpty() || pieces.isNotEmpty()) pieces = it }
         cues()
         moving = lifecycle.frame(t) // a timer may have fired; settle and exit are reported from here
         if (!moving) idle = true
@@ -240,6 +249,31 @@ fun rememberNudg(
     nudg.onExit = onExit
     LaunchedEffect(nudg) { nudg.play() }
     return nudg
+}
+
+/**
+ * An emitter's pieces (1.4), each drawn by [piece] and moved from the center of this box. Place it
+ * where the pieces start, for example over the button that celebrates.
+ *
+ *     Box { Button(...) {}; NudgEmitter(nudg, "confetti", Modifier.matchParentSize()) { p -> Box(Modifier.size(8.dp, 4.dp).background(Pink)) } }
+ */
+@Composable
+fun NudgEmitter(state: NudgState, name: String, modifier: Modifier = Modifier, piece: @Composable (Piece) -> Unit) {
+    Box(modifier, contentAlignment = Alignment.Center) {
+        for (p in state.pieces) {
+            if (p.emitter != name) continue
+            key(p.wave, p.index) {
+                Box(Modifier.graphicsLayer {
+                    translationX = (p.x * density).toFloat()
+                    translationY = (p.y * density).toFloat()
+                    rotationZ = p.rotation.toFloat()
+                    scaleX = p.scale.toFloat()
+                    scaleY = p.scale.toFloat()
+                    alpha = p.opacity.toFloat()
+                }) { piece(p) }
+            }
+        }
+    }
 }
 
 /** A nudg haptic intent (1.3) as Android's haptic feedback constant, the closest one this Android version has. */

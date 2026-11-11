@@ -4,7 +4,7 @@
 import { hexToOklab, isHexColor } from "./color.ts";
 import { interpolate } from "./map.ts";
 import { fromDurationBounce, fromStiffnessRatio } from "./spring.ts";
-import type { Cue, CueAmount, DelayInput, Measure,
+import type { Cue, CueAmount, DelayInput, Emitter, Measure,
   MeasuredEndpoint,
   Channels,
   Diagnostic,
@@ -79,12 +79,12 @@ interface LibraryEntry {
   origin: string;
 }
 
-const TOP_LEVEL_KEYS = ["$schema", "nudg", "import", "host", "targets", "values", "motions", "animate", "initial", "states", "regions", "when"];
+const TOP_LEVEL_KEYS = ["$schema", "nudg", "import", "host", "targets", "values", "motions", "animate", "emitters", "initial", "states", "regions", "when"];
 const MACHINE_KEYS = ["initial", "states", "regions"];
 /** A region's object: a machine that may also have machine-level `when`. */
 const REGION_KEYS = [...MACHINE_KEYS, "when"];
-const STATE_KEYS = ["set", "follow", "glide", "enter", "loop", "when", "cue", ...MACHINE_KEYS];
-const TRANSITION_KEYS = ["to", "nearest", "by", "momentum", "animate", "step", "commit", "cue"];
+const STATE_KEYS = ["set", "follow", "glide", "enter", "loop", "when", "cue", "emit", ...MACHINE_KEYS];
+const TRANSITION_KEYS = ["to", "nearest", "by", "momentum", "animate", "step", "commit", "cue", "emit"];
 const VALUE_KEYS = ["base", "min", "max"];
 const FOLLOW_KEYS = ["input", "range", "overdrag", "multiply"];
 const MAP_KEYS = ["map", "from", "to"];
@@ -139,7 +139,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-1.3.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-1.4.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -343,6 +343,7 @@ class ComponentCompiler {
     this.parseTargets(doc.targets);
     this.parseValues(doc.values);
     const animate = "animate" in doc ? this.parseAnimate(doc.animate, "/animate") : new Map<string, Motion>();
+    if ("emitters" in doc) this.parseEmitters(doc.emitters);
     if ("when" in doc && "regions" in doc) {
       r.error("machine-when-regions", "/when", "\"when\" next to \"regions\" has no states to switch between.", "Put \"when\" inside the region whose states it switches.");
     }
@@ -362,7 +363,93 @@ class ComponentCompiler {
       }
     }
     if (!machine) return undefined;
-    return { version: this.version, targets: [...this.targets], ...(this.host ? { host: this.host } : {}), properties: this.properties, animate, machine };
+    return { version: this.version, targets: [...this.targets], ...(this.host ? { host: this.host } : {}), properties: this.properties, animate, machine, ...(this.emitters.size ? { emitters: this.emitters } : {}) };
+  }
+
+  private emitters = new Map<string, Emitter>();
+  /** Declared emitter names, valid or not, so a bad one is reported once, where it is declared. */
+  private emitterNames = new Set<string>();
+
+  /** `"emitters": { "confetti": { "from": "button", "count": 24, ... } }` (1.4). */
+  private parseEmitters(raw: Json) {
+    const r = this.r;
+    if (!this.needsVersion("1.4", "/emitters", "\"emitters\"")) return;
+    if (!isObject(raw)) {
+      r.error("invalid-type", "/emitters", "\"emitters\" maps emitter names to how their pieces fly.", `For example: "emitters": { "confetti": { "from": "button", "count": 24 } }, with "confetti" also in "targets".`);
+      return;
+    }
+    for (const [name, spec] of Object.entries(raw)) {
+      if (name === "note" || name.startsWith("x-")) continue;
+      const p = ptr("/emitters", name);
+      if (!this.targets.has(name)) {
+        r.error("emitter-not-target", p, `Emitter "${name}" is not a target.`, `Add "${name}" to "targets": it is the view the host draws the pieces in.`);
+        continue;
+      }
+      this.usedTargets.add(name);
+      this.emitterNames.add(name);
+      if (!isObject(spec)) {
+        r.error("invalid-type", p, "An emitter is an object.", `{} for the defaults, or for example { "from": "button", "count": 24, "angle": [-150, -30] }.`);
+        continue;
+      }
+      r.keys(spec, p, ["from", "at", "count", "area", "angle", "speed", "gravity", "drag", "spin", "life", "fade", "scale", "stagger", "seed"]);
+      const e: Emitter = { from: name, at: "center", count: 20, area: [0, 0], angle: [-150, -30], speed: [300, 700], gravity: 1200, drag: 1, spin: [-540, 540], life: [0.8, 1.2], fade: 0.3, scale: [0.7, 1], stagger: 0, seed: 1 };
+      let ok = true;
+      const bad = (field: string, message: string, hint: string) => {
+        r.error("invalid-value", ptr(p, field), message, hint);
+        ok = false;
+      };
+      if ("from" in spec) {
+        if (typeof spec.from !== "string" || !this.checkTarget(spec.from, ptr(p, "from"))) ok = false;
+        else e.from = spec.from;
+      }
+      if ("at" in spec) {
+        if (!["center", "top", "bottom", "left", "right"].includes(spec.at as string)) bad("at", '"at" is "center", "top", "bottom", "left" or "right".', '"top" with an "area" as wide as the screen rains pieces from above.');
+        else e.at = spec.at as Emitter["at"];
+      }
+      if ("count" in spec) {
+        if (typeof spec.count !== "number" || !Number.isInteger(spec.count) || spec.count < 1 || spec.count > 200) bad("count", '"count" must be a whole number from 1 to 200.', "Celebrations read well with 12 to 40 pieces.");
+        else e.count = spec.count;
+      }
+      const range = (field: "angle" | "speed" | "spin" | "life" | "scale", positive = false) => {
+        if (!(field in spec)) return;
+        const v = spec[field];
+        const pair = typeof v === "number" ? [v, v] : Array.isArray(v) && v.length === 2 && v.every((x) => typeof x === "number" && Number.isFinite(x)) ? (v as number[]) : undefined;
+        if (!pair || pair[0] > pair[1] || (positive && pair[0] <= 0)) bad(field, `"${field}" must be a number or [low, high]${positive ? " above 0" : ""}.`, `For example "${field}": ${field === "angle" ? "[-150, -30]" : field === "life" ? "[0.9, 1.3]" : "[0.6, 1]"}.`);
+        else e[field] = [pair[0], pair[1]];
+      };
+      range("angle");
+      range("speed");
+      range("spin");
+      range("life", true);
+      range("scale");
+      if ("area" in spec) {
+        const v = spec.area;
+        if (!Array.isArray(v) || v.length !== 2 || !v.every((x) => typeof x === "number" && Number.isFinite(x) && x >= 0)) bad("area", '"area" is [width, height] in logical units, 0 or more.', 'For rain across a phone: "at": "top", "area": [400, 0].');
+        else e.area = [v[0] as number, v[1] as number];
+      }
+      for (const field of ["gravity", "drag", "fade", "stagger", "seed"] as const) {
+        if (!(field in spec)) continue;
+        const v = spec[field];
+        const valid = typeof v === "number" && Number.isFinite(v) && (field === "gravity" || v >= 0) && (field !== "seed" || Number.isInteger(v));
+        if (!valid) bad(field, field === "seed" ? '"seed" must be a whole number, 0 or more.' : `"${field}" must be a number${field === "gravity" ? "" : ", 0 or more"}.`, field === "gravity" ? "Units per second squared, downward: 1200 for confetti, negative for bubbles." : field === "drag" ? "1 slows pieces to a third in a second." : "Seconds.");
+        else e[field] = v as number;
+      }
+      if (ok) this.emitters.set(name, e);
+    }
+  }
+
+  /** `"emit": "confetti"` or a list (1.4), on a transition or a state. */
+  private parseEmit(raw: Json, p: string): string[] | undefined {
+    if (!this.needsVersion("1.4", p, "\"emit\"")) return undefined;
+    const list = Array.isArray(raw) ? raw : [raw];
+    const out: string[] = [];
+    list.forEach((name, i) => {
+      const ip = Array.isArray(raw) ? ptr(p, i) : p;
+      if (typeof name === "string" && this.emitters.has(name)) out.push(name);
+      else if (typeof name === "string" && this.emitterNames.has(name)) return;
+      else this.r.error("unknown-emitter", ip, `${JSON.stringify(name)} is not an emitter.`, this.emitters.size ? `Emitters are ${[...this.emitters.keys()].join(", ")}.` : `Declare it under "emitters", and in "targets".`);
+    });
+    return out;
   }
 
   private parseHost(raw: Json) {
@@ -1176,6 +1263,10 @@ class ComponentCompiler {
       const cues = this.parseCues(raw.cue, ptr(p, "cue"));
       if (cues?.length) state.cues = cues;
     }
+    if ("emit" in raw) {
+      const emit = this.parseEmit(raw.emit, ptr(p, "emit"));
+      if (emit?.length) state.emit = emit;
+    }
     if ("states" in raw || "regions" in raw || "initial" in raw) {
       const machine = this.parseMachine(raw, p);
       if (!machine) return undefined;
@@ -1502,10 +1593,14 @@ class ComponentCompiler {
       const cues = this.parseCues(raw.cue, ptr(p, "cue"));
       if (cues?.length) transition.cues = cues;
     }
+    if ("emit" in raw) {
+      const emit = this.parseEmit(raw.emit, ptr(p, "emit"));
+      if (emit?.length) transition.emit = emit;
+    }
     if ("step" in raw) transition.step = this.parseStep(raw.step, ptr(p, "step"));
     if ("commit" in raw) transition.commit = this.parseCommit(raw.commit, ptr(p, "commit"));
     if (typeof raw.to === "string") transition.to = raw.to;
-    else if (!("step" in raw) && !("commit" in raw)) {
+    else if (!("step" in raw) && !("commit" in raw) && !("cue" in raw) && !("emit" in raw)) {
       r.error("missing-to", p, "The transition has no \"to\" state.", "Add \"to\": \"<state name>\", or \"nearest\": [...] with \"by\".");
       return undefined;
     } else if ("to" in raw) {

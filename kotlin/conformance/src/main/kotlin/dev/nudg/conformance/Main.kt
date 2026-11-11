@@ -53,6 +53,17 @@ fun main(args: Array<String>) {
                 (expect["resting"] as? Boolean)?.let { if (rt.resting(t) != it) problems.add("resting at ${t}s: expected $it") }
                 (expect["settled"] as? Boolean)?.let { if (rt.settled(t) != it) problems.add("settled at ${t}s: expected $it") }
                 (expect["looping"] as? Boolean)?.let { if (rt.looping() != it) problems.add("looping at ${t}s: expected $it") }
+                // The pieces flying now (1.4).
+                (expect["pieces"] as? List<*>)?.let { expected ->
+                    val got = rt.pieces()
+                    fun close(a: Double, e: Any?) = (e as Double).let { Math.abs(a - it) <= 1e-6 * maxOf(1.0, Math.abs(it)) }
+                    val same = got.size == expected.size && got.zip(expected).all { (p, e) ->
+                        val m = e as Map<*, *>
+                        p.emitter == m["emitter"] && p.wave == (m["wave"] as Double).toInt() && p.index == (m["index"] as Double).toInt() &&
+                            close(p.x, m["x"]) && close(p.y, m["y"]) && close(p.rotation, m["rotation"]) && close(p.scale, m["scale"]) && close(p.opacity, m["opacity"])
+                    }
+                    if (!same) problems.add("pieces at ${t}s: got ${got.size} ${got.firstOrNull()}")
+                }
                 // Every cue that came due since the last step that listed cues (1.3).
                 (expect["cues"] as? List<*>)?.let { expected ->
                     val got = rt.takeCues()

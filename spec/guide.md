@@ -258,6 +258,29 @@ A cue fires a sound and/or a haptic at an exact moment: when a transition fires,
   - `throttle`, the least gap between two firings, for fast repeats.
 - **Cues on a state stop when the state is left.**
 
+## Particles (format 1.4)
+
+Confetti, sparkles and bursts are an emitter: many pieces from one place, each on its own seeded path.
+
+```json
+"targets": ["button", "confetti"],
+"emitters": { "confetti": { "from": "button", "count": 24, "angle": [-150, -30], "speed": [500, 900], "gravity": 1600, "drag": 1.2, "life": [0.9, 1.3] } },
+"when": { "host.celebrate": { "emit": "confetti", "cue": "success" } }
+```
+
+- **The emitter's name is a target too:** the view the pieces are drawn in.
+  - Web: an element with `data-nudg="confetti"`, laid over the area. Its children marked `data-nudg-piece` are the pieces' templates (strips, dots, emoji), used in turn.
+  - SwiftUI and Compose: `NudgEmitter(model, "confetti") { piece in … }`.
+  - React Native: `pieces("confetti")` with `pieceStyle(p)`.
+- **Fields** (a number or `[low, high]` range):
+  - where pieces start: `from` (a target), `at` (`center`, `top`, `bottom`, `left`, `right`), `area` (`[400, 0]` with `"at": "top"` rains from above);
+  - how many: `count` (12 to 40 reads well), `stagger`;
+  - how they fly: `angle` (−90 is up), `speed`, `gravity`, `drag`, `spin`;
+  - how they look: `life`, `fade`, `scale`;
+  - `seed`, which fixes where every piece goes.
+- **Colors and shapes are the templates', not the file's.** Under reduced motion nothing is emitted; pair `emit` with a `cue` or a state so the moment still shows.
+
+## Platform motion
 
 Libraries in `examples/motion/` carry the platforms' published spring values: `apple.nudg.json` (SwiftUI `smooth`, `snappy`, `bouncy`), `material-expressive.nudg.json` and `material-standard.nudg.json` (Material 3 `spatial-*` and `effects-*` tokens). Every platform library also defines the common names `standard`, `quick`, `gentle`, `playful` and `fade` (for color and opacity).
 
@@ -320,6 +343,7 @@ An app's motion is nudg files plus adapter calls. Before you write a timer, a wr
 | Two files on one element (a card that rises in and presses) | Bind both: transforms compose and opacities multiply; the element's own transform stays outermost. On React Native, `compose(a.bind("card"), b.bind("button"))`. |
 | Items one after another | `"delay": { "input": "host.index", "times": 0.06, "max": 0.5 }`, each item's player given `host.index` |
 | Reduced motion | Nothing: every adapter follows the system setting, live |
+| Confetti, sparkles, a burst out of a button | An emitter and `"emit"` in the file (1.4), drawn in a view the file names as a target. Never a piece-per-element loop of `animate()` calls or one player per piece. |
 | A sound or a vibration at a moment (a tap, a success, a shake's beats, a list item landing) | A cue in the file (`"cue": { "haptic": "success", "sound": "pop" }`), with the sound map in the adapter (`sounds`). Never `navigator.vibrate`, `new Audio()` or a haptics call in a timer of your own. |
 | A lift whose shadow deepens, a background that blurs | `shadowY`, `shadowBlur`, `shadowColor` and `blur` (1.3), animated like `y`. Never a CSS `box-shadow` or `filter` transition. |
 | An effect no nudg property draws (a shader input, a platform-only material) | A custom property: `"host": { "custom": ["glow"] }` and `"card.custom.glow": 0`. nudg moves it and the host draws it: on the web `var(--nudg-glow)`, on React Native `value("card.custom.glow")`, in SwiftUI and Compose from the model's values. First check that a built-in doesn't do it, and tell the person why you needed a custom property. |

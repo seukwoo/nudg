@@ -385,3 +385,43 @@ test("cues (1.3) play their haptic and sound in the browser and reach onCue, at 
     close();
   }
 });
+
+test("an emitter's pieces (1.4) are drawn from the host's templates around the start point, and gone after their life", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const { launchBrowser, waitFor } = await import("../src/node/cdp.ts");
+  const { serveIfLocal } = await import("../src/node/observe.ts");
+  const { url, close } = await serveIfLocal("test/fixtures/host/presence.html");
+  const browser = await launchBrowser(chrome!);
+  try {
+    await browser.send("Page.navigate", { url });
+    await waitFor(() => browser.evaluate("window.__player ? 'ready' : ''"), 15_000);
+    const result = await browser.evaluate(`(async () => {
+      const { playDoc } = await import("../../../dist/dom/index.js");
+      const doc = {
+        nudg: "1.4", host: { events: ["celebrate"] }, targets: ["button", "confetti"], values: { "button.scale": 1 },
+        emitters: { confetti: { from: "button", count: 6, life: [0.3, 0.4], speed: [100, 200], gravity: 0, fade: 0.1 } },
+        initial: "idle", states: { idle: { when: { "host.celebrate": { emit: "confetti" } } } },
+      };
+      const root = document.createElement("div");
+      root.style.cssText = "position:relative;width:300px;height:300px";
+      root.innerHTML = '<button data-nudg="button" style="position:absolute;left:100px;top:100px;width:40px;height:20px">Go</button><div data-nudg="confetti" style="position:absolute;inset:0;pointer-events:none"><i data-nudg-piece class="a" style="display:block;width:6px;height:6px"></i><b data-nudg-piece class="b"></b></div>';
+      document.body.append(root);
+      const layer = root.querySelector('[data-nudg="confetti"]');
+      const p = playDoc(doc, root);
+      p.send("host.celebrate");
+      await new Promise((r) => setTimeout(r, 80));
+      const drawn = [...layer.children].filter((c) => !c.hasAttribute("data-nudg-piece"));
+      const centers = drawn.map((n) => { const m = new DOMMatrix(getComputedStyle(n).transform); return [m.e, m.f]; });
+      const during = { drawn: drawn.length, classes: drawn.map((n) => n.className).join(","), templatesHidden: [...layer.querySelectorAll("[data-nudg-piece]")].every((t) => t.style.display === "none"), near: centers.every(([x, y]) => Math.hypot(x - 120, y - 110) < 60) };
+      await new Promise((r) => setTimeout(r, 600));
+      const after = [...layer.children].filter((c) => !c.hasAttribute("data-nudg-piece")).length;
+      p.destroy();
+      return { during, after, restored: layer.querySelector(".a").style.display };
+    })()`);
+    assert.deepEqual(result.during, { drawn: 6, classes: "a,b,a,b,a,b", templatesHidden: true, near: true });
+    assert.equal(result.after, 0, "pieces are removed after their life");
+    assert.equal(result.restored, "block", "destroy shows the templates again");
+  } finally {
+    await browser.close();
+    close();
+  }
+});

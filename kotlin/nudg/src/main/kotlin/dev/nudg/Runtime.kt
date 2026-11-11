@@ -42,6 +42,48 @@ private sealed interface GlidePhase {
 /** A loop running since its state was entered at [t0]. */
 private class ActiveLoop(val loop: Loop, val owner: State, val t0: Double)
 
+/** One flying piece of an emitter (1.4): where the host draws it, relative to the emitter's starting point. [rotation] in degrees. */
+data class Piece(val emitter: String, val wave: Int, val index: Int, val x: Double, val y: Double, val rotation: Double, val scale: Double, val opacity: Double)
+
+/** A number in [0, 1) from a seed, a wave, a piece's index and a field: the same 32-bit hash as every runtime. */
+fun pieceRandom(seed: Int, wave: Int, index: Int, field: Int): Double {
+    var h = seed * 0x9E3779B1.toInt() + wave * 0x85EBCA77.toInt() + index * 0xC2B2AE3D.toInt() + field * 0x27D4EB2F
+    h = h xor (h ushr 15)
+    h *= 0x2C1B3C6D
+    h = h xor (h ushr 12)
+    h *= 0x297A2D39
+    h = h xor (h ushr 15)
+    return (h.toLong() and 0xFFFFFFFFL) / 4294967296.0
+}
+
+/** Piece [index] of a wave, [age] seconds after its launch, or null before launch and after its life. */
+fun pieceAt(name: String, e: Emitter, wave: Int, index: Int, age: Double): Piece? {
+    fun u(field: Int) = pieceRandom(e.seed, wave, index, field)
+    fun pick(r: Pair<Double, Double>, field: Int) = r.first + u(field) * (r.second - r.first)
+    val life = pick(e.life, 3)
+    if (age < 0 || age > life) return null
+    val angle = Math.toRadians(pick(e.angle, 0))
+    val speed = pick(e.speed, 1)
+    val vx = speed * Math.cos(angle)
+    val vy = speed * Math.sin(angle)
+    val x0 = (u(5) - 0.5) * e.area.first
+    val y0 = (u(6) - 0.5) * e.area.second
+    val k = e.drag
+    val g = e.gravity
+    val x: Double
+    val y: Double
+    if (k > 1e-9) {
+        val decay = (1 - Math.exp(-k * age)) / k
+        x = x0 + vx * decay
+        y = y0 + (vy + g / k) * decay - (g / k) * age
+    } else {
+        x = x0 + vx * age
+        y = y0 + vy * age + 0.5 * g * age * age
+    }
+    val opacity = if (e.fade > 0 && age > life - e.fade) maxOf(0.0, (life - age) / e.fade) else 1.0
+    return Piece(name, wave, index, x, y, pick(e.spin, 2) * age, pick(e.scale, 4), opacity)
+}
+
 /** A cue that came due (1.3): when, and what to play. [intensity] is 0 to 1, [pitch] in semitones. */
 data class FiredCue(val t: Double, val sound: String?, val haptic: String?, val intensity: Double, val pitch: Double)
 
@@ -117,6 +159,10 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
     private var cueCursor = 0.0
     /** When each cue was last scheduled to fire, for its throttle (by identity). */
     private val lastCue = java.util.IdentityHashMap<Cue, Double>()
+    /** Waves of pieces (1.4), and how many each emitter has sent. */
+    private class Wave(val name: String, val wave: Int, val t0: Double)
+    private val waves = ArrayList<Wave>()
+    private val waveCount = HashMap<String, Int>()
 
     init {
         for ((key, prop) in program.properties) {
@@ -386,6 +432,14 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
         val after = activeStates()
         scheduled.removeAll { c -> val o = c.owner; o != null && c.t > t && ((o in before && o !in after) || entered.any { it === o }) }
         for (transition in fired) for (cue in transition.cues) schedule(cue, t, null)
+        // Emitters send a wave (1.4); under reduced motion, nothing flies.
+        if (!reduced) {
+            for (name in fired.flatMap { it.emit } + entered.flatMap { it.emit }) {
+                val n = waveCount[name] ?: 0
+                waveCount[name] = n + 1
+                waves.add(Wave(name, n, t))
+            }
+        }
         for (state in entered) {
             for (cue in state.cues) schedule(cue, t, state)
             for ((_, effect) in state.enter) {
@@ -904,7 +958,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
     /** True when every property has come to rest and no unpaused timer is counting down. */
     fun settled(t: Double, property: String? = null): Boolean {
         advanceTo(t)
-        if (property == null && (pending.any { it.pausedAt == null } || pressDue.isNotEmpty() || scheduled.isNotEmpty())) return false
+        if (property == null && (pending.any { it.pausedAt == null } || pressDue.isNotEmpty() || scheduled.isNotEmpty() || flying(t))) return false
         val keys = property?.let { listOf(it) } ?: program.properties.map { it.first }
         return keys.all { atRest(it, t) }
     }
@@ -912,6 +966,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
     /** True when every property has come to rest, whatever timers are pending: nothing is moving. */
     fun resting(t: Double): Boolean {
         advanceTo(t)
+        if (flying(t)) return false
         return program.properties.all { atRest(it.first, t) }
     }
 
@@ -920,6 +975,25 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
 
     /** True while an active state loops a property (v0.10): values change every frame though nothing is settling. */
     fun looping(): Boolean = loops.isNotEmpty()
+
+    private fun emitter(name: String) = program.emitters.first { it.first == name }.second
+
+    /** True while a wave has pieces still to launch or alive at [t] (1.4); drops the waves that are over. */
+    private fun flying(t: Double): Boolean {
+        waves.removeAll { w -> val e = emitter(w.name); t - w.t0 > (e.count - 1) * e.stagger + e.life.second }
+        return waves.isNotEmpty()
+    }
+
+    /** The pieces flying at the time the runtime was last advanced to (1.4), of one emitter or all. */
+    fun pieces(name: String? = null): List<Piece> {
+        val out = ArrayList<Piece>()
+        for (w in waves) {
+            if (name != null && w.name != name) continue
+            val e = emitter(w.name)
+            for (i in 0 until e.count) pieceAt(w.name, e, w.wave, i, now - w.t0 - i * e.stagger)?.let(out::add)
+        }
+        return out
+    }
 
     /** Whether one property has come to rest at [t]; see the spec's rest rule. */
     private fun atRest(key: String, t: Double): Boolean {

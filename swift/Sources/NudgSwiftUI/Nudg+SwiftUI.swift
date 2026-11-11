@@ -164,6 +164,47 @@ public final class NudgModel: ObservableObject {
   public var now: Date { clock() }
 }
 
+/**
+ An emitter's pieces (1.4), each drawn by `piece` and moved from the center of this view. Place it
+ where the pieces start, for example as an overlay on the button that celebrates.
+
+     Button("Save") { ... }.overlay(NudgEmitter(model, "confetti") { piece in
+       Rectangle().fill(piece.index % 2 == 0 ? .pink : .yellow).frame(width: 8, height: 4)
+     })
+ */
+public struct NudgEmitter<Content: View>: View {
+  @ObservedObject var model: NudgModel
+  let name: String
+  let piece: (Piece) -> Content
+
+  public init(_ model: NudgModel, _ name: String, @ViewBuilder piece: @escaping (Piece) -> Content) {
+    self.model = model
+    self.name = name
+    self.piece = piece
+  }
+
+  public var body: some View {
+    TimelineView(.animation(minimumInterval: nil, paused: model.settled(at: model.now) && !model.looping)) { _ in
+      let _ = model.values(at: model.now)
+      ZStack {
+        ForEach(model.runtime.pieces(name), id: \.key) { p in
+          piece(p)
+            .scaleEffect(CGFloat(p.scale))
+            .rotationEffect(.degrees(p.rotation))
+            .offset(x: CGFloat(p.x), y: CGFloat(p.y))
+            .opacity(p.opacity)
+        }
+      }
+      .allowsHitTesting(false)
+      .accessibilityHidden(true)
+    }
+  }
+}
+
+private extension Piece {
+  var key: String { "\(wave):\(index)" }
+}
+
 /** A nudg haptic intent (1.3) as UIKit's feedback; elsewhere there is nothing to play. */
 @MainActor
 private func playHaptic(_ name: String, _ intensity: Double) {

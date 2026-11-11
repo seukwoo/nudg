@@ -189,6 +189,8 @@ export interface Transition {
   commit?: string[];
   /** Cues when the transition fires (1.3). */
   cues?: Cue[];
+  /** Emitters that send out a wave when the transition fires (1.4). */
+  emit?: string[];
 }
 
 export interface TimerPause {
@@ -224,6 +226,8 @@ export interface State {
   machine?: Machine;
   /** Cues when the state is entered through a transition (1.3). */
   cues?: Cue[];
+  /** Emitters that send out a wave when the state is entered through a transition (1.4). */
+  emit?: string[];
 }
 
 export type Machine =
@@ -246,6 +250,39 @@ export interface HostDeclaration {
   custom?: string[];
 }
 
+/**
+ * An emitter (1.4): many short-lived pieces from one place. Each piece's path is closed form
+ * (launch velocity, linear drag, gravity, spin, a fade at the end of its life), with its
+ * numbers drawn from the seed, the wave and its index, so every runtime places it the same.
+ */
+export interface Emitter {
+  /** The target whose box the pieces start from. */
+  from: string;
+  /** Where on that box: its center or the middle of an edge. */
+  at: "center" | "top" | "bottom" | "left" | "right";
+  count: number;
+  /** A box around that point, in logical units, that pieces start anywhere in. */
+  area: [number, number];
+  /** Launch direction in degrees, 0 to the right and -90 up, from low to high. */
+  angle: [number, number];
+  /** Launch speed, units per second. */
+  speed: [number, number];
+  /** Units per second squared, downward. */
+  gravity: number;
+  /** Linear drag per second: velocity falls by e^(-drag × t). */
+  drag: number;
+  /** Degrees per second. */
+  spin: [number, number];
+  /** Seconds a piece lives. */
+  life: [number, number];
+  /** Seconds at the end of its life over which a piece fades out. */
+  fade: number;
+  scale: [number, number];
+  /** Seconds between one piece's launch and the next. */
+  stagger: number;
+  seed: number;
+}
+
 export interface Program {
   version: string;
   targets: string[];
@@ -255,6 +292,8 @@ export interface Program {
   properties: Map<string, Property>;
   animate: Map<string, Motion>;
   machine: Machine;
+  /** Emitters by name (1.4); each name is also a target, where its pieces are drawn. */
+  emitters?: Map<string, Emitter>;
 }
 
 /**

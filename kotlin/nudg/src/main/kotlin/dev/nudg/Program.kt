@@ -1,6 +1,6 @@
 package dev.nudg
 
-/** A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 10). */
+/** A compiled nudg program, read from the JSON that `nudg compile` writes (formats 1 to 11). */
 
 enum class PropertyKind { LENGTH, NUMBER, COLOR }
 
@@ -68,7 +68,29 @@ data class Follow(val input: String, val range: Pair<MeasuredEndpoint, MeasuredE
 data class Glide(val momentum: Double, val range: Pair<MeasuredEndpoint, MeasuredEndpoint>?)
 data class Nearest(val states: List<String>, val by: String, val momentum: Double)
 
-class Transition(val to: String?, val nearest: Nearest?, val animate: List<Pair<String, Motion>>, val step: List<Pair<String, Double>>?, val commit: List<String>?, val cues: List<Cue> = emptyList())
+class Transition(val to: String?, val nearest: Nearest?, val animate: List<Pair<String, Motion>>, val step: List<Pair<String, Double>>?, val commit: List<String>?, val cues: List<Cue> = emptyList(), val emit: List<String> = emptyList())
+
+/**
+ * An emitter (1.4): many short-lived pieces from one place, on closed-form paths whose numbers
+ * come from the seed, the wave and the piece's index, so every runtime places them the same.
+ */
+class Emitter(
+    val from: String,
+    /** "center", "top", "bottom", "left" or "right" of the [from] target's box. */
+    val at: String,
+    val count: Int,
+    val area: Pair<Double, Double>,
+    val angle: Pair<Double, Double>,
+    val speed: Pair<Double, Double>,
+    val gravity: Double,
+    val drag: Double,
+    val spin: Pair<Double, Double>,
+    val life: Pair<Double, Double>,
+    val fade: Double,
+    val scale: Pair<Double, Double>,
+    val stagger: Double,
+    val seed: Int,
+)
 data class TimerPause(val on: String, val off: String)
 class Timer(val key: String, val delay: Double, val transition: Transition, val pause: List<TimerPause>)
 
@@ -86,6 +108,8 @@ class State(
     val machine: Machine?,
     /** Cues when the state is entered through a transition (1.3). */
     val cues: List<Cue> = emptyList(),
+    /** Emitters that send out a wave when it is entered through a transition (1.4). */
+    val emit: List<String> = emptyList(),
 ) {
     fun transition(event: String) = `when`.firstOrNull { it.first == event }?.second
 }
@@ -97,7 +121,7 @@ sealed class Machine {
     class Regions(val regions: List<Pair<String, Machine>>) : Machine()
 }
 
-class Program(val version: String, val targets: List<String>, val properties: List<Pair<String, Property>>, val animate: Map<String, Motion>, val machine: Machine) {
+class Program(val version: String, val targets: List<String>, val properties: List<Pair<String, Property>>, val animate: Map<String, Motion>, val machine: Machine, val emitters: List<Pair<String, Emitter>> = emptyList()) {
     private val byKey = properties.toMap()
     fun property(key: String): Property = byKey.getValue(key)
 
@@ -109,7 +133,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
         }
 
         internal fun fromJson(j: Map<String, Any?>): Program {
-            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0)) { "Not a compiled nudg program (formats 1 to 10). Compile it with `nudg compile`." }
+            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0)) { "Not a compiled nudg program (formats 1 to 11). Compile it with `nudg compile`." }
             val properties = list(j["properties"]).map { p ->
                 obj(p).let { m ->
                     (m["key"] as String) to Property(
@@ -123,7 +147,18 @@ class Program(val version: String, val targets: List<String>, val properties: Li
                 }
             }
             val animate = list(j["animate"]).associate { a -> obj(a).let { (it["key"] as String) to motion(it["motion"]) } }
-            return Program(j["version"] as String, list(j["targets"]).map { it as String }, properties, animate, machine(j["machine"]))
+            fun pair(v: Any?) = doubles(v).let { it[0] to it[1] }
+            val emitters = list(j["emitters"]).map { e ->
+                obj(e).let { m ->
+                    (m["name"] as String) to Emitter(
+                        m["from"] as String, m["at"] as String, (m["count"] as Double).toInt(), pair(m["area"]),
+                        pair(m["angle"]), pair(m["speed"]), m["gravity"] as Double, m["drag"] as Double,
+                        pair(m["spin"]), pair(m["life"]), m["fade"] as Double, pair(m["scale"]),
+                        m["stagger"] as Double, (m["seed"] as Double).toInt(),
+                    )
+                }
+            }
+            return Program(j["version"] as String, list(j["targets"]).map { it as String }, properties, animate, machine(j["machine"]), emitters)
         }
 
         private fun obj(v: Any?) = v as Map<*, *>
@@ -186,6 +221,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
                 (t["step"] as? List<*>)?.map { s -> obj(s).let { (it["key"] as String) to (it["delta"] as Double) } },
                 (t["commit"] as? List<*>)?.map { it as String },
                 cues(t["cue"]),
+                list(t["emit"]).map { it as String },
             )
         }
 
@@ -243,6 +279,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
                 } },
                 s["machine"]?.let(::machine),
                 cues(s["cue"]),
+                list(s["emit"]).map { it as String },
             )
         }
     }

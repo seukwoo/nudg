@@ -1,0 +1,79 @@
+{
+  "conformance": "1.4",
+  "name": "Particles under reduced motion: nothing is emitted; the transition's other effects still happen",
+  "doc": {
+    "nudg": "1.4",
+    "host": {
+      "events": [
+        "celebrate"
+      ]
+    },
+    "targets": [
+      "button",
+      "confetti"
+    ],
+    "values": {
+      "button.scale": 1
+    },
+    "emitters": {
+      "confetti": {
+        "from": "button",
+        "count": 3,
+        "angle": [
+          -150,
+          -30
+        ],
+        "speed": [
+          500,
+          900
+        ],
+        "gravity": 1600,
+        "drag": 1.2,
+        "spin": [
+          -720,
+          720
+        ],
+        "life": [
+          0.6,
+          0.9
+        ],
+        "fade": 0.3,
+        "scale": [
+          0.6,
+          1
+        ],
+        "area": [
+          10,
+          4
+        ],
+        "stagger": 0.05,
+        "seed": 7
+      }
+    },
+    "initial": "idle",
+    "states": {
+      "idle": {
+        "when": {
+          "host.celebrate": {
+            "emit": "confetti",
+            "cue": "success"
+          }
+        }
+      }
+    }
+  },
+  "reducedMotion": true,
+  "steps": [
+    {
+      "t": 0.1,
+      "send": "host.celebrate"
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "pieces": [],
+        "settled": true
+      }
+    }
+  ]
+}

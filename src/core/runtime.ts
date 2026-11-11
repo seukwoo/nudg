@@ -10,9 +10,23 @@ import { CROSSING, DOUBLE_TAP, LONG_PRESS, SCROLL_SLOP, VERSIONS } from "./vocab
 
 /** Where a pinch's inputs start (v0.18): the ratio at 1, rotation and travel at 0. */
 const PINCH_START: [string, number][] = [["scale", 1], ["rotation", 0], ["x", 0], ["y", 0]];
-import type { Channels, Cue, CueAmount, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, PropertyMap, State, TimerPause, Transition } from "./types.ts";
+import type { Channels, Cue, CueAmount, Emitter, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, PropertyMap, State, TimerPause, Transition } from "./types.ts";
 
 export type Value = number | string;
+
+/** One flying piece of an emitter (1.4), at the runtime's current time: where the host draws it, relative to the emitter's starting point. */
+export interface Piece {
+  emitter: string;
+  /** Which emit it came from, counting from 0 per emitter. */
+  wave: number;
+  index: number;
+  x: number;
+  y: number;
+  /** Degrees. */
+  rotation: number;
+  scale: number;
+  opacity: number;
+}
 
 /** A cue that came due (1.3): when, and what to play. */
 export interface FiredCue {
@@ -80,6 +94,8 @@ export interface Runtime {
    * before the time the runtime was last advanced to.
    */
   takeCues(): FiredCue[];
+  /** The pieces flying at the time the runtime was last advanced to (1.4), of one emitter or all. */
+  pieces(emitter?: string): Piece[];
 }
 
 /** A property's behavior since its last change, evaluated in closed form. */
@@ -154,6 +170,9 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
   let cueCursor = 0;
   /** When each cue was last scheduled to fire, for its throttle. */
   const lastCue = new Map<Cue, number>();
+  /** Waves of pieces (1.4), and how many each emitter has sent. */
+  const waves: { name: string; wave: number; t0: number }[] = [];
+  const waveCount = new Map<string, number>();
   let order = 0;
   let now = 0;
   let reduced = options.reducedMotion === true;
@@ -422,6 +441,14 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       if (owner && scheduled[i].t > t && ((before.has(owner) && !after.has(owner)) || entered.includes(owner))) scheduled.splice(i, 1);
     }
     for (const transition of fired) for (const cue of transition.cues ?? []) schedule(cue, t);
+    // Emitters send a wave (1.4); under reduced motion, nothing flies.
+    if (!reduced) {
+      for (const name of [...fired.flatMap((tr) => tr.emit ?? []), ...entered.flatMap((st) => st.emit ?? [])]) {
+        const n = waveCount.get(name) ?? 0;
+        waveCount.set(name, n + 1);
+        waves.push({ name, wave: n, t0: t });
+      }
+    }
     for (const state of entered) {
       for (const cue of state.cues ?? []) schedule(cue, t, state);
       for (const effect of state.enter.values()) {
@@ -991,7 +1018,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
 
     settled(t, property) {
       advanceTo(t);
-      if (property === undefined && (pending.some((timer) => timer.pausedAt === undefined) || pressDue.size > 0 || scheduled.length > 0)) return false;
+      if (property === undefined && (pending.some((timer) => timer.pausedAt === undefined) || pressDue.size > 0 || scheduled.length > 0 || flying(t))) return false;
       const keys = property === undefined ? [...program.properties.keys()] : [property];
       return keys.every((key) => atRest(key, t));
     },
@@ -1004,10 +1031,35 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
 
     resting(t) {
       advanceTo(t);
+      if (flying(t)) return false;
       for (const key of program.properties.keys()) if (!atRest(key, t)) return false;
       return true;
     },
+
+    pieces(emitter) {
+      const t = now;
+      const out: Piece[] = [];
+      for (const w of waves) {
+        if (emitter !== undefined && w.name !== emitter) continue;
+        const e = program.emitters!.get(w.name)!;
+        for (let i = 0; i < e.count; i++) {
+          const piece = pieceAt(w.name, e, w.wave, i, t - w.t0 - i * e.stagger);
+          if (piece) out.push(piece);
+        }
+      }
+      return out;
+    },
   };
+
+  /** True while a wave has pieces still to launch or still alive at `t` (1.4); drops the waves that are over. */
+  function flying(t: number): boolean {
+    for (let i = waves.length - 1; i >= 0; i--) {
+      const w = waves[i];
+      const e = program.emitters!.get(w.name)!;
+      if (t - w.t0 > (e.count - 1) * e.stagger + e.life[1]) waves.splice(i, 1);
+    }
+    return waves.length > 0;
+  }
 
   /** Whether one property has come to rest at `t`; see the spec's rest rule. */
   function atRest(key: string, t: number): boolean {
@@ -1100,6 +1152,48 @@ function collectTargetInputs(machine: Machine, out: Set<string>) {
     for (const target of state.input.values()) out.add(target.input);
     if (state.machine) collectTargetInputs(state.machine, out);
   }
+}
+
+/**
+ * A number in [0, 1) from a seed, a wave, a piece's index and a field (1.4): the same 32-bit
+ * integer hash in every runtime, so pieces land in the same places everywhere.
+ */
+export function pieceRandom(seed: number, wave: number, index: number, field: number): number {
+  let h = (Math.imul(seed, 0x9e3779b1) + Math.imul(wave, 0x85ebca77) + Math.imul(index, 0xc2b2ae3d) + Math.imul(field, 0x27d4eb2f)) | 0;
+  h ^= h >>> 15;
+  h = Math.imul(h, 0x2c1b3c6d);
+  h ^= h >>> 12;
+  h = Math.imul(h, 0x297a2d39);
+  h ^= h >>> 15;
+  return (h >>> 0) / 4294967296;
+}
+
+/** Piece `index` of a wave, `age` seconds after its launch, or undefined before launch and after its life. */
+export function pieceAt(name: string, e: Emitter, wave: number, index: number, age: number): Piece | undefined {
+  const u = (field: number) => pieceRandom(e.seed, wave, index, field);
+  const pick = ([a, b]: [number, number], field: number) => a + u(field) * (b - a);
+  const life = pick(e.life, 3);
+  if (age < 0 || age > life) return undefined;
+  const angle = (pick(e.angle, 0) * Math.PI) / 180;
+  const speed = pick(e.speed, 1);
+  const vx = speed * Math.cos(angle);
+  const vy = speed * Math.sin(angle);
+  const x0 = (u(5) - 0.5) * e.area[0];
+  const y0 = (u(6) - 0.5) * e.area[1];
+  const k = e.drag;
+  const g = e.gravity;
+  let x: number;
+  let y: number;
+  if (k > 1e-9) {
+    const decay = (1 - Math.exp(-k * age)) / k;
+    x = x0 + vx * decay;
+    y = y0 + (vy + g / k) * decay - (g / k) * age;
+  } else {
+    x = x0 + vx * age;
+    y = y0 + vy * age + 0.5 * g * age * age;
+  }
+  const opacity = e.fade > 0 && age > life - e.fade ? Math.max(0, (life - age) / e.fade) : 1;
+  return { emitter: name, wave, index, x, y, rotation: pick(e.spin, 2) * age, scale: pick(e.scale, 4), opacity };
 }
 
 /** Inputs read by cues (1.3): intensity, pitch and delay from an input. */

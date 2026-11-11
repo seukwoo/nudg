@@ -77,6 +77,7 @@ const LIBRARIES: [RegExp, string, boolean?][] = [
   [/react-transition-group/, "nudgTransition(file) on the library's transition slot, or useNudg with exit / onExit"],
   [/@formkit\/auto-animate|react-flip-toolkit/, "layout (FLIP) animation of reordering lists: nudg's animated-list recipe covers insert and remove, not reorder", true],
   [/react-native-reanimated|["']moti["']/, "useNudg from @nudg/core/native"],
+  [/canvas-confetti|react-confetti|tsparticles|party-js/, "an emitter (1.4): \"emitters\" and \"emit\" in the file; pieces from data-nudg-piece templates"],
 ];
 
 /** nudg uses: call sites that put motion on nudg. */
@@ -106,7 +107,7 @@ function keyframesUse(name: string, body: string): { use: string; gap?: boolean 
   if (/box-shadow|filter\s*:\s*blur/.test(body)) return { use: "shadowX / shadowY / shadowBlur / shadowColor or blur (1.3), in a state's set and enter like any property" };
   if (/shake|wobble|jiggle|nope/.test(n)) return { use: "presets.shake(), played with release: \"settle\"" };
   if (/spin|rotat|load|pulse|blink|breath|shimmer|skeleton|bounce-?loop|float|wave|typing|dots/.test(n)) return { use: "a loop in a state (the spinner, skeleton or typing-indicator recipe)" };
-  if (/confetti|particle|burst|firework|sparkle/.test(n)) return { use: "particles: one player per piece today; nudg has no particle system yet (#118)", gap: true };
+  if (/confetti|particle|burst|firework|sparkle/.test(n)) return { use: "an emitter (1.4): \"emitters\" and \"emit\" in the file, drawn from data-nudg-piece templates" };
   if (/out|leave|exit|hide|close|dismiss/.test(n)) return { use: "an exit state with `exit` / onExit (unmount after the way out), or nudgTransition" };
   return { use: "useNudgOnce(presets.pop() / drop() / appear()), or entry keyframes in a file for this exact shape" };
 }

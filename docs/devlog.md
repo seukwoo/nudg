@@ -595,3 +595,9 @@ After 1.6.0, PlaySnack's motion code was read for what nudg should have done its
 
   Those are now left out or marked.
 - **Lesson:** The number only persuades if it is fair. Undercounting nudg would have made nudg look worse than it is, and overcounting what is outside would have sent agents after code that is fine. Both errors showed up on the first real app, not on the examples.
+
+## 2026-11-11: A section added in place of the heading it went before
+- **Problem:** The agent guide shipped in 1.9.0 without its "Platform motion" heading. The motion libraries' paragraph ended up under the new cues section.
+- **Cause:** The cues section was inserted by replacing the text `## Platform motion` with the new section, and the replacement didn't end with the heading again. Nothing checks the guide's structure, and the tests that read it only look for phrases.
+- **Resolution:** The heading is back, with the particles section before it. A new section now goes in by matching the heading and re-emitting it, and the diff of every doc edit is read before commit.
+- **Lesson:** Inserting before an anchor by replacing the anchor is an easy way to lose the anchor. Prefer appending after the previous section, or check that the anchor still exists after the edit.

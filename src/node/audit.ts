@@ -98,6 +98,8 @@ function blockAt(text: string, start: number): string {
 function keyframesUse(name: string, body: string): { use: string; gap?: boolean } {
   const n = name.toLowerCase();
   const props = [...new Set([...body.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1]))].filter((p) => !NUDG_CSS.has(p));
+  if (props.length === 1 && props[0] === "box-shadow" && /\b0\s+0\s+0\s+[1-9][\d.]*px/.test(body))
+    return { use: "a ring that spreads: a separate ring element whose scale grows as it fades does it today; a shadow property is planned", gap: true };
   if (props.length) return { use: `animates ${props.join(", ")}, which no nudg property moves yet`, gap: true };
   if (/shake|wobble|jiggle|nope/.test(n)) return { use: "presets.shake(), played with release: \"settle\"" };
   if (/spin|rotat|load|pulse|blink|breath|shimmer|skeleton|bounce-?loop|float|wave|typing|dots/.test(n)) return { use: "a loop in a state (the spinner, skeleton or typing-indicator recipe)" };
@@ -151,7 +153,7 @@ export function audit(files: { path: string; text: string }[]): Audit {
       // A transition of something that moves; colors and borders alone are left to CSS.
       const tr = /(?:^|[\s;{"'`])transition(?:-property)?\s*:\s*([^\s;}"'`][^;}"'`]*)/.exec(line) ?? /\btransition\s*:\s*["'`]([^"'`]+)/.exec(line);
       if (tr && /\b(all|transform|opacity|translate|scale|rotate|top|left|right|bottom|width|height|max-height)\b/.test(tr[1]) && !/\bnone\b/.test(tr[1]))
-        add(i, "css-transition", "a nudg file on the element (a preset, or playEach for every match)");
+        add(i, "css-transition", "a nudg file on the element (a preset, or playEach for every match); on an element nudg moves, the adapter already turns this off");
       if (/\.animate\(\s*[[{]/.test(line)) add(i, "web-animation", "playDoc(file, element) with entry keyframes or a transition");
       for (const [re, use, gap] of LIBRARIES) if (re.test(line) && /\b(import|require)\b/.test(line)) add(i, "motion-library", use, gap);
       if (/\.style\.(transform|opacity|translate|scale|rotate)\s*=(?!=)/.test(line) && !/=\s*["'`]{2}/.test(line))

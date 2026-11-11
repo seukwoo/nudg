@@ -244,3 +244,62 @@ test("a page that draws no frames (a hidden tab) still reaches the end: onSettle
     close();
   }
 });
+
+test("a page's CSS transition or animation on a property the file writes is turned off on the element, the rest kept, and put back after", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const { launchBrowser, waitFor } = await import("../src/node/cdp.ts");
+  const { serveIfLocal } = await import("../src/node/observe.ts");
+  const { url, close } = await serveIfLocal("test/fixtures/host/presence.html");
+  const browser = await launchBrowser(chrome!);
+  try {
+    await browser.send("Page.navigate", { url });
+    await waitFor(() => browser.evaluate("window.__player ? 'ready' : ''"), 15_000);
+    const result = await browser.evaluate(`(async () => {
+      const { playDoc, playEach } = await import("../../../dist/dom/index.js");
+      const { presets } = await import("../../../dist/index.js");
+      const warnings = [];
+      const warn = console.warn;
+      console.warn = (m) => warnings.push(m);
+      const css = document.createElement("style");
+      css.textContent = ".blk { transition: transform .3s ease, color .2s linear; } .any { transition: all .2s; } @keyframes wob { to { transform: rotate(10deg) } } @keyframes tint { to { color: red } } .wob { animation: wob 1s infinite, tint 1s infinite; }";
+      document.head.append(css);
+      const make = (cls) => { const b = document.createElement("button"); b.className = cls; document.body.append(b); return b; };
+      const cs = (el) => getComputedStyle(el);
+
+      const blk = make("blk");
+      const p = playDoc(presets.press(), blk);
+      const during = { property: cs(blk).transitionProperty, duration: cs(blk).transitionDuration };
+      p.destroy();
+      const after = { property: cs(blk).transitionProperty, inline: blk.style.transitionProperty };
+
+      const any = make("any");
+      const q = playDoc(presets.press(), any);
+      const all = cs(any).transitionProperty;
+      q.destroy();
+
+      const wob = make("wob");
+      const r = playDoc(presets.press(), wob);
+      const animations = cs(wob).animationName;
+      r.destroy();
+      const back = cs(wob).animationName;
+
+      // Many buttons with the same class say it once.
+      const each = playEach(presets.press(), ".blk");
+      const more = [make("blk"), make("blk")];
+      for (const b of more) b.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: 1, isPrimary: true, button: 0, pointerType: "touch" }));
+      each.stop();
+      console.warn = warn;
+      return { during, after, all, animations, back, warnings };
+    })()`);
+    assert.deepEqual(result.during, { property: "color", duration: "0.2s" });
+    assert.deepEqual(result.after, { property: "transform, color", inline: "" });
+    assert.ok(!/transform|opacity|\ball\b/.test(result.all) && /color/.test(result.all), `all keeps what nudg doesn't move: ${result.all}`);
+    assert.equal(result.animations, "tint");
+    assert.equal(result.back, "wob, tint");
+    assert.equal(result.warnings.filter((w: string) => w.includes(".blk")).length, 1, result.warnings.join("\n"));
+    assert.match(result.warnings.join("\n"), /\.blk has transition: transform from the page's styles, which would fight the motion of button.*remove it from the stylesheet/);
+    assert.match(result.warnings.join("\n"), /\.wob has animation: wob/);
+  } finally {
+    await browser.close();
+    close();
+  }
+});

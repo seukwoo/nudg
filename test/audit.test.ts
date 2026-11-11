@@ -7,7 +7,7 @@ import { audit, formatAudit } from "../src/node/audit.ts";
 
 test("audit finds motion outside nudg and names what does it", () => {
   const a = audit([
-    { path: "styles.css", text: ".btn { transition: transform .1s ease; }\n.link { transition: color .2s; }\n@keyframes popIn { from { opacity: 0; transform: scale(.8) } to { opacity: 1 } }\n@keyframes spin { to { transform: rotate(360deg) } }\n@keyframes glow {\n  from { box-shadow: 0 0 0 0 red }\n  to { box-shadow: 0 0 8px red }\n}\n@keyframes nope { 50% { transform: translateX(-8px) } }" },
+    { path: "styles.css", text: ".btn { transition: transform .1s ease; }\n.link { transition: color .2s; }\n@keyframes popIn { from { opacity: 0; transform: scale(.8) } to { opacity: 1 } }\n@keyframes spin { to { transform: rotate(360deg) } }\n@keyframes glow {\n  from { box-shadow: 0 0 0 0 red }\n  to { box-shadow: 0 0 8px red }\n}\n@keyframes nope { 50% { transform: translateX(-8px) } }\n@keyframes ring { from { box-shadow: 0 0 0 0 red } to { box-shadow: 0 0 0 12px transparent } }" },
     { path: "app.tsx", text: 'import { motion } from "framer-motion";\nel.animate([{ opacity: 0 }, { opacity: 1 }], 200);\nel.style.transform = `scale(${s})`;\nel.style.transform = "";\n<div style={{ transition: `opacity ${ms}ms ease` }} />' },
   ]);
   const kinds = a.findings.map((f) => `${f.file}:${f.line} ${f.kind}${f.gap ? " gap" : ""}`);
@@ -17,6 +17,7 @@ test("audit finds motion outside nudg and names what does it", () => {
     "styles.css:4 css-keyframes",
     "styles.css:5 css-keyframes gap",
     "styles.css:9 css-keyframes",
+    "styles.css:10 css-keyframes gap",
     "app.tsx:1 motion-library",
     "app.tsx:2 web-animation",
     "app.tsx:3 style-write",
@@ -27,6 +28,7 @@ test("audit finds motion outside nudg and names what does it", () => {
   assert.match(use(4), /loop in a state/);
   assert.match(use(5), /box-shadow, which no nudg property moves yet/);
   assert.match(use(9), /presets\.shake/);
+  assert.match(use(10), /separate ring element/);
   assert.equal(a.onNudg, 0);
   assert.equal(a.coverage, 0);
 });

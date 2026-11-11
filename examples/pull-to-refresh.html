@@ -39,7 +39,7 @@
     import { compileUrl, play } from "../dist/dom/index.js";
     const { program } = await compileUrl("./pull-to-refresh.nudg.json");
     const player = play(program, document.body, {
-      onState: (state) => state.includes("refreshing") && setTimeout(() => player.send("host.done"), 1500),
+      onState: (state) => state.includes("refreshing") && setTimeout(() => player.send("host.done"), 1500), // nudg-audit-ignore: stands in for the network
     });
   </script>
 </body>

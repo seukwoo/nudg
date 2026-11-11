@@ -131,6 +131,33 @@ Over MCP the same is `bundle`. Two versions that behave identically write nothin
 
 Each property gets a verdict: **imperceptible** (under a device pixel at 1×, or under about three frames), **subtle**, or **clear**. When nothing crosses the threshold it says so and proposes the next turn: look at an exaggerated version first, then dial it back. With `--html` the picture is real A/B filmstrips in two rows, same markup, same moments; without it, both curves on one graph (solid A, dashed B). `--labels now,bouncier` names the rows.
 
+### audit
+
+```sh
+nudg audit src
+```
+
+```text
+Motion on nudg: 49% (39 on nudg, 40 outside, in 189 files)
+24 CSS keyframes, 6 CSS transition, 5 frame loop, ...
+nudg covers 38 of 40; 2 need something nudg lacks (marked "gap"): report them to the nudg project rather than working around them.
+
+LastResult.tsx
+  310: CSS keyframes: @keyframes snkTrophyDrop { ... }
+      → useNudgOnce(presets.pop() / drop() / appear()), or entry keyframes in a file for this exact shape
+```
+
+Where an app's motion lives outside nudg, and what in nudg does each. It reads the source and never runs it. It finds:
+- CSS keyframes, and transitions of moving properties;
+- Web Animations (`element.animate`) and other motion libraries;
+- transforms and opacity written by hand;
+- frame loops;
+- timers and document listeners around players.
+
+A finding nudg can't replace yet (a keyframe animation of `box-shadow`, particles) is marked a gap, to report instead of working around. The first line is the share of motion on nudg: nudg files, calls to the adapters, and calls to the app's own helpers around them, against the findings.
+
+It is a heuristic, so it reports and never fails. A frame loop that feeds a player's `input` isn't counted. Mark a deliberate line with a `nudg-audit-ignore` comment on it or just above it. Dependencies, builds, tests and minified files are skipped. `--json` gives the findings as data, and over MCP it is `nudg_audit`.
+
 ### critique
 
 ```sh

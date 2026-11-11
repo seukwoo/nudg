@@ -154,19 +154,20 @@ export function playback(clip: Clip, media: HTMLMediaElement | undefined, onProg
     onProgress(1);
     onEnded();
   };
+  // The playback clock: it reports progress, which the chat passes to the player as host.progress.
   const tick = () => {
     // A recorded clip's own duration is often unknown (Infinity) until it has played through.
     const p = Math.min(1, now() / clip.duration);
     if (!(media && clip.url) && p >= 1) return end();
     onProgress(p);
-    frame = requestAnimationFrame(tick);
+    frame = requestAnimationFrame(tick); // nudg-audit-ignore: a clock, not motion
   };
   media?.addEventListener("ended", end);
   return {
     play() {
       if (media && clip.url) void media.play().catch(() => {});
       else since = performance.now();
-      frame = requestAnimationFrame(tick);
+      frame = requestAnimationFrame(tick); // nudg-audit-ignore: a clock, not motion
     },
     pause() {
       cancelAnimationFrame(frame);

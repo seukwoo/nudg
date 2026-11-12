@@ -51,7 +51,7 @@ test("lists the tools with input schemas", async () => {
   const { result } = await request("tools/list");
   assert.deepEqual(
     result.tools.map((t: { name: string }) => t.name),
-    ["nudg_guide", "nudg_recipe", "nudg_validate", "nudg_simulate", "nudg_plot", "nudg_compare", "nudg_render", "nudg_critique", "nudg_audit", "nudg_generate", "nudg_share", "nudg_observe"],
+    ["nudg_guide", "nudg_recipe", "nudg_validate", "nudg_simulate", "nudg_plot", "nudg_compare", "nudg_render", "nudg_critique", "nudg_audit", "nudg_from_css", "nudg_generate", "nudg_share", "nudg_observe"],
   );
   for (const tool of result.tools) assert.equal(tool.inputSchema.type, "object");
 });

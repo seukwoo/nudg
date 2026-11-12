@@ -18,6 +18,7 @@ import { materializeRevision } from "./node/git.ts";
 import { clearLog, formatSummary as formatLogSummary, logPath, readLog, record, shareableSummary, shareTip, shareUrl, struggle, summarize } from "./node/log.ts";
 import { installSkill, SKILL } from "./node/skill.ts";
 import { auditDir, formatAudit } from "./node/audit.ts";
+import { formatFromCss, fromCss } from "./core/from-css.ts";
 import { formatComparison, formatCritique, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
 import { comparePage, lastRuntimeInlined, readWithImports } from "./node/compare-page.ts";
 import { compilePath } from "./node/load.ts";
@@ -95,13 +96,21 @@ simulate and plot options
                             its targets, events, inputs and state paths (imports included), for
                             useNudg<XContract>(x). --check writes nothing and exits 1 if a module
                             is missing or stale (for CI). --out <file.ts> with one file.
-  upgrade <file...>         Raise each file's "nudg" version to the current format (1.2) once it
+  upgrade <file...>         Raise each file's "nudg" version to the current format (1.5) once it
                             validates; everything else in the file is kept as written.
                             --check writes nothing and exits 1 if a file is older (for CI).
   audit [dir]               Where an app's motion lives outside nudg (CSS keyframes and
                             transitions, Web Animations, other libraries, hand-written styles,
                             frame loops, timers around players), what in nudg does each, and
                             the share of motion on nudg. Gaps nudg can't cover are marked.
+  from-css <file> <name>    Turn a CSS @keyframes (in a .css file or a CSS-in-JS string) into a
+                            nudg file, with its timing from the animation line that plays it,
+                            and prove it moves the same: the largest difference per property
+                            over 60 samples. Past the limits it writes nothing and says why.
+                            --out <file> writes it (else stdout). --animation "0.6s ease-out"
+                            gives or overrides the timing. When the keyframes overshoot, a
+                            fitted spring is offered: --spring writes it, --exact the keyframes;
+                            in a terminal it asks. --target <name> (default content).
   critique <file...>        Whether the motion is good, not only valid: each transition checked
                             against the platforms' motion guidelines and accessibility rules
                             (slow transitions, late press feedback, invisible changes, bouncy
@@ -170,7 +179,7 @@ function parseArgs(argv: string[]): Args {
       continue;
     }
     const [name, inline] = arg.slice(2).split(/=(.*)/s, 2);
-    const boolean = ["json", "help", "reduced-motion", "open", "clear", "path", "print", "user", "share", "strict", "source", "check", "gaps"].includes(name);
+    const boolean = ["json", "help", "reduced-motion", "open", "clear", "path", "print", "user", "share", "strict", "source", "check", "gaps", "spring", "exact"].includes(name);
     const value = boolean ? "" : (inline ?? argv[++i]);
     if (value === undefined || (!boolean && (value === "" || value.startsWith("--")))) fail(`Option --${name} needs a value.`);
     flags.set(name, [...(flags.get(name) ?? []), value]);
@@ -722,6 +731,39 @@ if (command === "audit") {
   process.stdout.write((json ? JSON.stringify({ ok: true, ...result }, null, 2) : formatAudit(result)) + "\n");
   process.exit(0);
 }
+if (command === "from-css") {
+  const [file, name] = args.positional;
+  if (!file || !name || args.positional.length > 2) fail("from-css takes a source file and a @keyframes name.");
+  if (!existsSync(file)) fail(`${file} doesn't exist.`);
+  if (args.flags.has("spring") && args.flags.has("exact")) fail("Pass --spring or --exact, not both.");
+  const result = fromCss(readFileSync(file, "utf8"), name, { animation: args.flags.get("animation")?.at(-1), target: args.flags.get("target")?.at(-1) });
+  let choice: "exact" | "spring" = args.flags.has("spring") && result.spring ? "spring" : "exact";
+  if (args.flags.has("spring") && !result.spring && result.doc) process.stderr.write("No spring offered: the keyframes don't overshoot. Writing the exact conversion.\n");
+  if (json) {
+    process.stdout.write(JSON.stringify({ ok: !!result.doc, ...result }, null, 2) + "\n");
+    process.exit(result.doc ? 0 : 1);
+  }
+  process.stderr.write(formatFromCss(name, result) + "\n");
+  if (!result.doc) process.exit(1);
+  if (result.spring && !args.flags.has("spring") && !args.flags.has("exact")) {
+    if (process.stdin.isTTY && process.stderr.isTTY) {
+      const { createInterface } = await import("node:readline/promises");
+      const rl = createInterface({ input: process.stdin, output: process.stderr });
+      const answer = (await rl.question("Write the exact keyframes (e) or the spring (s)? [e] ")).trim().toLowerCase();
+      rl.close();
+      if (answer.startsWith("s")) choice = "spring";
+    } else process.stderr.write("Writing the exact keyframes. Pass --spring for the spring.\n");
+  }
+  const doc = choice === "spring" ? result.spring!.doc : result.doc;
+  if (choice === "spring") process.stderr.write(`Wrote the spring for ${result.spring!.properties.join(", ")}: it moves a little differently from the CSS. Compare both with nudg compare.\n`);
+  const text = JSON.stringify(doc, null, 2) + "\n";
+  const out = args.flags.get("out")?.at(-1);
+  if (out) {
+    writeFileSync(out, text);
+    process.stderr.write(`Wrote ${out}.\n`);
+  } else process.stdout.write(text);
+  process.exit(0);
+}
 if (command === "compare") process.exit(await runCompare(args, json));
 if (command === "recipe") {
   if (args.positional.length > 1) fail("recipe takes at most one name.");
@@ -808,4 +850,4 @@ if (command === "mcp") {
   await serveMcp();
   process.exit(0);
 }
-fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, compile, generate, upgrade, critique, audit, observe, recipe, preset, log, skill, mcp.`);
+fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, compile, generate, upgrade, critique, audit, from-css, observe, recipe, preset, log, skill, mcp.`);

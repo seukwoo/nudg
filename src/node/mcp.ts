@@ -2,6 +2,7 @@
 // as the CLI as tools, so an agent can write, check, and look at interactions.
 
 import { auditDir, formatAudit } from "./audit.ts";
+import { formatFromCss, fromCss } from "../core/from-css.ts";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, extname, join, resolve } from "node:path";
@@ -41,7 +42,7 @@ const PACKAGE_VERSION: string = (() => {
 
 const INSTRUCTIONS = `nudg files (*.nudg.json) describe UI interactions: states, events, and spring or tween motion.
 When the person names a standard UI pattern such as a switch, sheet, video chat, or media player, call nudg_recipe first. It gives the expected parts, states, events, host responsibilities, motion and a validated starter without expanding the runtime vocabulary. Before writing a new file, or using fields the file in front of you doesn't show, call nudg_guide. After writing a new file, call nudg_validate and apply its hints until it reports no errors; after editing an existing one, nudg_compare (below) does that check.
-When you change motion for a person to judge, call nudg_compare with the version before and after: it says first whether the difference is perceptible, then shows both side by side (real A/B filmstrips when the host page's HTML is given; in a SwiftUI or Compose app, bundle writes it for NudgCompare to play on the app's own views). It also checks the changed version: errors come back with the validator's hints, and guideline warnings the change brings are listed under the headline, so after an edit it replaces separate validate and critique calls. Pass its headline on to the person; if it suggests an exaggerated version, offer that. When nudg_compare says a change has taken several rounds, ask the person once whether they'd share what made it hard; if they agree, call nudg_share with their words and give them the link (they submit it; never claim it was sent). After writing a new file, call nudg_critique once and fix its warnings: it checks the motion against the platforms' guidelines (too slow, late press feedback, invisible, bouncy fades, slow exits). Use nudg_simulate for numbers, nudg_plot for one version's graph, nudg_render for one version's frames. The file says what should happen; nudg_observe says what the real page showed: after wiring a file into an app, or when the person says it doesn't look right, call it with the running page's URL and the file, and report what it found (a page that never shows the motion, an element that unmounts mid-motion, a CSS transition fighting the spring). After wiring nudg into an app, call nudg_audit: it lists motion still outside nudg with what replaces it, and gaps nudg can't cover yet. When wiring a file into an app, use the adapter's own lifecycle and composition (the guide's "Wire it without glue"): onSettle and onExit instead of timers, exit for unmounting after the way out, no style writes or CSS animation on elements nudg moves.`;
+When you change motion for a person to judge, call nudg_compare with the version before and after: it says first whether the difference is perceptible, then shows both side by side (real A/B filmstrips when the host page's HTML is given; in a SwiftUI or Compose app, bundle writes it for NudgCompare to play on the app's own views). It also checks the changed version: errors come back with the validator's hints, and guideline warnings the change brings are listed under the headline, so after an edit it replaces separate validate and critique calls. Pass its headline on to the person; if it suggests an exaggerated version, offer that. When nudg_compare says a change has taken several rounds, ask the person once whether they'd share what made it hard; if they agree, call nudg_share with their words and give them the link (they submit it; never claim it was sent). After writing a new file, call nudg_critique once and fix its warnings: it checks the motion against the platforms' guidelines (too slow, late press feedback, invisible, bouncy fades, slow exits). Use nudg_simulate for numbers, nudg_plot for one version's graph, nudg_render for one version's frames. The file says what should happen; nudg_observe says what the real page showed: after wiring a file into an app, or when the person says it doesn't look right, call it with the running page's URL and the file, and report what it found (a page that never shows the motion, an element that unmounts mid-motion, a CSS transition fighting the spring). After wiring nudg into an app, call nudg_audit: it lists motion still outside nudg with what replaces it, and gaps nudg can't cover yet. Convert each CSS @keyframes it lists with nudg_from_css, which proves the file moves the same, rather than rewriting it by hand. When wiring a file into an app, use the adapter's own lifecycle and composition (the guide's "Wire it without glue"): onSettle and onExit instead of timers, exit for unmounting after the way out, no style writes or CSS animation on elements nudg moves.`;
 
 type Json = Record<string, unknown>;
 type Content = { type: "text"; text: string } | { type: "image"; data: string; mimeType: string };
@@ -195,6 +196,23 @@ const TOOLS = [
     title: "Where motion lives outside nudg",
     description: "Scans an app's source for motion that isn't on nudg: CSS keyframes and transitions of moving properties, Web Animations, other motion libraries, styles written by hand, frame loops, and timers or document listeners around players. Each finding names what in nudg does it, or is marked a gap when nudg can't yet (report those to the nudg project instead of working around them). Starts with the share of motion on nudg. Call it after wiring nudg into an app, and before adding motion of your own.",
     inputSchema: { type: "object", properties: { dir: { type: "string", description: "The directory to scan, default the working directory." } } },
+    annotations: { readOnlyHint: true },
+  },
+  {
+    name: "nudg_from_css",
+    title: "CSS keyframes to a nudg file",
+    description: "Turns one CSS @keyframes (in a .css file or a CSS-in-JS string) into a nudg file, with the duration, delay, timing, iterations and direction read from the animation line that plays it, and proves it moves the same: the largest difference per property over 60 samples. Past the limits (0.5 px, 0.5°, 0.01) it returns no file and names each reason; never approximate around them by hand. Use it for every @keyframes nudg_audit reports instead of rewriting them. When the result offers a spring (keyframes that overshoot), show the person both, with how far the spring strays from the CSS, and ask which to keep; never choose the spring yourself.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "The source file that holds the @keyframes block." },
+        css: { type: "string", description: "The source text instead of a path." },
+        name: { type: "string", description: "The @keyframes name." },
+        animation: { type: "string", description: "The animation line's timing, when the source has none or it holds values only the app knows, e.g. \"0.6s ease-out\"." },
+        target: { type: "string", description: "The nudg target name, default content." },
+      },
+      required: ["name"],
+    },
     annotations: { readOnlyHint: true },
   },
   {
@@ -381,6 +399,18 @@ async function runTool(name: string, args: Json): Promise<ToolResult> {
         const dir = optionalString(args.dir, "dir") ?? process.cwd();
         const result = auditDir(dir);
         return { content: [text(formatAudit(result))], structuredContent: result as unknown as Json };
+      }
+      case "nudg_from_css": {
+        const name = optionalString(args.name, "name");
+        if (!name) throw new Error("name is required: the @keyframes name.");
+        const path = optionalString(args.path, "path");
+        const css = optionalString(args.css, "css");
+        if (!path === !css) throw new Error("Pass the source as path or as css, not both.");
+        const result = fromCss(css ?? readFileSync(resolve(path!), "utf8"), name, { animation: optionalString(args.animation, "animation"), target: optionalString(args.target, "target") });
+        let body = formatFromCss(name, result);
+        if (result.doc) body += "\n\nThe exact conversion:\n" + JSON.stringify(result.doc, null, 2);
+        if (result.spring) body += "\n\nThe spring version (offer it; the person chooses):\n" + JSON.stringify(result.spring.doc, null, 2);
+        return { content: [text(body)], structuredContent: result as unknown as Json };
       }
       case "nudg_generate": {
         const { program, label } = loadProgram(args);

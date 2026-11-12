@@ -55,13 +55,21 @@ simulate and plot options
                             its targets, events, inputs and state paths (imports included), for
                             useNudg<XContract>(x). --check writes nothing and exits 1 if a module
                             is missing or stale (for CI). --out <file.ts> with one file.
-  upgrade <file...>         Raise each file's "nudg" version to the current format (1.2) once it
+  upgrade <file...>         Raise each file's "nudg" version to the current format (1.5) once it
                             validates; everything else in the file is kept as written.
                             --check writes nothing and exits 1 if a file is older (for CI).
   audit [dir]               Where an app's motion lives outside nudg (CSS keyframes and
                             transitions, Web Animations, other libraries, hand-written styles,
                             frame loops, timers around players), what in nudg does each, and
                             the share of motion on nudg. Gaps nudg can't cover are marked.
+  from-css <file> <name>    Turn a CSS @keyframes (in a .css file or a CSS-in-JS string) into a
+                            nudg file, with its timing from the animation line that plays it,
+                            and prove it moves the same: the largest difference per property
+                            over 60 samples. Past the limits it writes nothing and says why.
+                            --out <file> writes it (else stdout). --animation "0.6s ease-out"
+                            gives or overrides the timing. When the keyframes overshoot, a
+                            fitted spring is offered: --spring writes it, --exact the keyframes;
+                            in a terminal it asks. --target <name> (default content).
   critique <file...>        Whether the motion is good, not only valid: each transition checked
                             against the platforms' motion guidelines and accessibility rules
                             (slow transitions, late press feedback, invisible changes, bouncy

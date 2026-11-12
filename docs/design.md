@@ -627,7 +627,7 @@ Proposed order: shadow and blur with custom properties, then cues, then particle
 
 ## Proposal: CSS keyframes in, a nudg file out
 
-Status: proposed 2026-11-12; the format part decided the same day. With [#150](https://github.com/seukwoo/nudg/pull/150), `nudg audit` puts PlaySnack at 45%: 40 motions on nudg, 48 outside. All 48 are things nudg already does, and 37 of them are CSS `@keyframes`. The audit says to rewrite each one as entry keyframes, and an agent rewriting 37 of them by hand reads percentages, transform lists and timing lines, and gets some of them subtly wrong without anyone seeing it. The conversion is mechanical, so a tool should do it and show that the result matches.
+Status: decided 2026-11-12 and implemented: format 1.5 ([#152](https://github.com/seukwoo/nudg/pull/152)) and `nudg from-css`. With [#150](https://github.com/seukwoo/nudg/pull/150), `nudg audit` puts PlaySnack at 45%: 40 motions on nudg, 48 outside. All 48 are things nudg already does, and 37 of them are CSS `@keyframes`. The audit says to rewrite each one as entry keyframes, and an agent rewriting 37 of them by hand reads percentages, transform lists and timing lines, and gets some of them subtly wrong without anyone seeing it. The conversion is mechanical, so a tool should do it and show that the result matches.
 
 ### What it does
 

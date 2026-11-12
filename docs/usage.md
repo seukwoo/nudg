@@ -144,7 +144,7 @@ nudg covers 38 of 40; 2 need something nudg lacks (marked "gap"): report them to
 
 LastResult.tsx
   310: CSS keyframes: @keyframes snkTrophyDrop { ... }
-      → useNudgOnce(presets.pop() / drop() / appear()), or entry keyframes in a file for this exact shape
+      → nudg from-css LastResult.tsx snkTrophyDrop (a checked nudg file that moves the same); or useNudgOnce(presets.drop())
 ```
 
 Where an app's motion lives outside nudg, and what in nudg does each. It reads the source and never runs it. It finds:
@@ -157,6 +157,56 @@ Where an app's motion lives outside nudg, and what in nudg does each. It reads t
 A finding nudg can't replace yet (a keyframe animation of `box-shadow`, particles) is marked a gap, to report instead of working around. The first line is the share of motion on nudg: nudg files, calls to the adapters, and calls to the app's own helpers around them, against the findings.
 
 It is a heuristic, so it reports and never fails. A frame loop that feeds a player's `input` isn't counted. Mark a deliberate line with a `nudg-audit-ignore` comment on it or just above it. Dependencies, builds, tests and minified files are skipped. `--json` gives the findings as data, and over MCP it is `nudg_audit`.
+
+### from-css
+
+```sh
+nudg from-css src/Ceremony.tsx snkRoll --out roll.nudg.json
+```
+
+```text
+@keyframes snkRoll: converted, within the limits.
+  y: at most 0px from the CSS (limit 0.5px)
+  scale: at most 0 from the CSS (limit 0.01)
+  opacity: at most 0 from the CSS (limit 0.01)
+  Play it with useNudgOnce(file) in React, or playDoc(file, element, { start: "host.show", release: "settle" }).
+  · "opacity" has no 100% frame: it ends at the element's own value, taken as 1.
+  A spring makes the same overshoot and carries on naturally when interrupted, but moves a little differently: y: spring {"duration":0.12,"bounce":0.3}, up to 5.81px from the CSS (16% of its travel).
+Write the exact keyframes (e) or the spring (s)? [e]
+```
+
+It turns one CSS `@keyframes` block into a nudg file, so moving an app's CSS animations onto nudg is a command per animation instead of a rewrite. The source may be a `.css` file or a CSS-in-JS string.
+
+**What it reads.**
+- **The frames:**
+  - `transform` (translate, rotate and scale, in that order), and the `translate`, `rotate` and `scale` properties;
+  - `opacity`, `width`, `height`, `background-color`;
+  - `filter: blur()` and `box-shadow`;
+  - `animation-timing-function` inside a frame.
+- **The timing:** read from the `animation` line that plays the block (duration, delay, timing function, iteration count, direction, fill mode). `--animation "0.6s ease-out"` gives or overrides it.
+
+**What it writes.** A file in the presets' shape: `hidden` (the first frame) to `shown` (the last) on `host.show`, with entry keyframes in between (format 1.5).
+- A percentage translate becomes a measure of the element's own size (`translateX(-100%)` → `{ "measure": "content.width", "times": -1 }`).
+- A frame's timing function becomes that frame's `ease`.
+- A delay becomes a hold at the first frame.
+- A whole iteration count is unrolled.
+- `infinite` becomes a loop, and `alternate` a cycle out and back.
+
+**The proof.** It compiles the file, plays it, and samples the CSS and nudg at 60 points, at two element sizes. It writes the file only within 0.5 px, 0.5° and 0.01. Past the limits it writes nothing and says why:
+- a translate after a rotate or scale;
+- `steps()`;
+- a shadow spread or inset;
+- a property no nudg property moves;
+- a value only the app knows (`${...}`, `var()`, `color-mix()`).
+
+Colors are a note rather than a limit: CSS blends in sRGB and nudg in OKLab, so the colors in between differ by design.
+
+**A spring, when the keyframes overshoot.** Keyframes that pass their end and come back (1 → 1.32 → 0.94 → 1.06 → 1) are a spring written out by hand. A spring carries on naturally when the motion is interrupted, but it moves a little differently. So the tool offers a fitted one beside the exact conversion and says how far it strays:
+- in a terminal it asks;
+- `--spring` or `--exact` decides in advance;
+- over MCP (`nudg_from_css`) both come back, and the agent asks the person.
+
+`--json` gives the whole result as data.
 
 ### critique
 

@@ -690,7 +690,13 @@ A constant offset is not motion: `golfCheerT` keeps `translateX(-50%)` in every 
 - **A converter, or better hints only?** Proposed: a converter. A hint still leaves the hand rewrite, where the mistakes happen. The proof is what lets the person accept 37 files without opening each one.
 - **Close enough, or exact?** Proposed: the file is written only within the limits above, and the report always says how close it is. A converter that quietly approximates would move motion into nudg, but it would change the motion.
 - **Format changes:** measured values and a per-frame ease, in format 1.5 (decided 2026-11-12: if the converter needs them, the format gains them properly).
-- **Spring fitting:** should the tool suggest a spring when the keyframes look like an overshoot (`snkPop`: 1, 1.32, 0.94, 1.06, 1)? Proposed: as an extra line in the report, never in place of the exact conversion. A spring responds to interruption better, but it is a different motion, and the person should judge it with `compare`.
+- **Spring fitting** (decided 2026-11-12: offer it, and ask).
+  - **When it applies:** keyframes that overshoot and settle, like `snkPop` (1, 1.32, 0.94, 1.06, 1). A spring makes that shape by itself, and it carries on naturally when interrupted.
+  - **What the tool returns:** the exact conversion, and next to it a spring version with its fitted stiffness and damping, plus how far it strays from the CSS.
+  - **Who chooses:** the person, never the tool.
+    - The CLI asks which one to write. `--spring` or `--exact` answers in advance.
+    - The MCP tool returns both, and its instructions tell the agent to show the choice and ask.
+    - Whichever is written, the report says that the spring version moves differently from the original.
 
 ## Open questions
 

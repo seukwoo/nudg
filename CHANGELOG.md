@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.11.0
+
+CSS animations move onto nudg by command. `nudg from-css` turns a CSS `@keyframes` block into a nudg file and proves it moves the same, and format 1.5 gives entry keyframes what CSS keyframes say: values measured from the element's size, and an ease per frame. On PlaySnack, 37 of 42 keyframes convert as they are. Files from 1.4 and earlier read as before. A compiled program that uses the new keyframes is format 12.
 
 - **`nudg from-css`: CSS keyframes in, a checked nudg file out.**
   - **What it reads:** one `@keyframes` block (from a `.css` file or a CSS-in-JS string) and the `animation` line that plays it.

@@ -196,6 +196,8 @@ Use keyframes for a precisely authored transient response, such as a multi-beat 
 
 The current value is implicit at 0 and the state's target is implicit at 1. Re-entry restarts from the current position; interruption hands the current velocity to the next ordinary motion. Keep keyframes inline under `enter`; use a kick when a physical impulse is enough.
 
+From format 1.5 a frame may be measured from the element's size, as CSS's percentage translate is: `{ "at": 0.6, "value": { "measure": "menu.width", "times": 0.05 } }`. A frame may also carry its own `ease`, which times the leg after it (a bounce rises with `out` and falls with `in`); loop frames take `ease` too. Give a keyframed property a motion in `animate` as well: after a jump, the keyframes would start at the target. Moving a CSS `@keyframes`? Don't rewrite it: `nudg_from_css` converts it and proves the result moves the same.
+
 ## Measured follow and map endpoints (format 0.9)
 
 Reuse a measured layout value where a drag bound or map source point would otherwise duplicate a pixel constant:

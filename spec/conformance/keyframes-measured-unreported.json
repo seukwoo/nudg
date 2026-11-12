@@ -1,0 +1,70 @@
+{
+  "conformance": "1.5",
+  "name": "Keyframes (1.5): a measured frame not reported yet is left out; its neighbours join",
+  "doc": {
+    "nudg": "1.5",
+    "targets": [
+      "menu"
+    ],
+    "values": {
+      "menu.x": -50
+    },
+    "animate": {
+      "menu.x": {
+        "tween": {
+          "duration": 0.3,
+          "ease": "out"
+        }
+      }
+    },
+    "initial": "hidden",
+    "when": {
+      "host.show": "shown"
+    },
+    "states": {
+      "hidden": {},
+      "shown": {
+        "set": {
+          "menu.x": 0
+        },
+        "enter": {
+          "menu.x": {
+            "keyframes": [
+              {
+                "at": 0.6,
+                "value": {
+                  "measure": "menu.width",
+                  "times": 0.05
+                }
+              }
+            ],
+            "duration": 0.5,
+            "ease": "out"
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0.1,
+      "send": "host.show"
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "values": {
+          "menu.x": -34.581696666
+        }
+      }
+    },
+    {
+      "t": 0.4,
+      "expect": {
+        "values": {
+          "menu.x": -10.743046938
+        }
+      }
+    }
+  ]
+}

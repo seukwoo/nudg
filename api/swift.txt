@@ -55,6 +55,8 @@ public var delayInput: DelayInput?
 public struct Keyframe
 public let at: Double
 public let value: [Double]
+public var measure: Measure?
+public var ease: Ease?
 public var cues: [Cue]
 public enum CueAmount
 public final class Cue
@@ -80,7 +82,7 @@ public let plus: Double
 public enum MeasuredEndpoint
 public struct Loop
 public let to: MeasuredEndpoint
-public let frames: [(at: Double, value: MeasuredEndpoint)]
+public let frames: [(at: Double, value: MeasuredEndpoint, ease: Ease?)]
 public let duration: Double
 public let ease: Ease
 public let delay: Double

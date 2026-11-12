@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Format 1.5: keyframes that say what CSS says.** It brings entry keyframes up to what CSS `@keyframes` express, so a converted animation moves exactly as it did:
+  - **Measured values.** A frame may be measured from layout (`{ "measure": "menu.width", "times": -1 }` is `translateX(-100%)`). It is read as the frame plays, so a resize during the sequence moves it.
+  - **An ease per frame.** A frame's own `ease` times the leg after it, in entry keyframes and in loops: a bounce rises with `out` and falls with `in`.
+  - TypeScript, Swift and Kotlin share the new conformance cases `keyframes-measured`, `keyframes-measured-unreported`, `keyframes-ease` and `validation-1.5`.
+  - A compiled program that uses either is format 12.
 - **`nudg audit` leaves out code that moves nothing.** A frame loop counts only when something near it moves on screen (a style, a transform, a scroll, a setter of a moving value), so a frame clock, a re-render throttle or a measurement run isn't reported. Neither is a style set on an element the code just created (a hidden copy box), or `new Audio(...)` for a song or preview the person plays. On PlaySnack this took 10 of 58 findings out: they weren't motion.
 
 ## 1.10.0

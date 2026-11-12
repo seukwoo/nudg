@@ -59,7 +59,12 @@ export interface DelayInput {
 export interface Keyframe {
   /** Normalized time strictly between 0 and 1; the current value and state target are implicit endpoints. */
   at: number;
+  /** For a measured frame (1.5), a placeholder; `measure` holds the value. */
   value: Channels;
+  /** A value read from layout (1.5), resolved as the frame plays; left out until reported. */
+  measure?: Measure;
+  /** The ease of the leg after this frame (1.5), instead of the effect's. */
+  ease?: Ease;
   /** Cues on this beat (1.3). */
   cues?: Cue[];
 }
@@ -104,7 +109,7 @@ export interface Loop {
   /** The offset at the end of a cycle: 360 for a turning spinner, 0 for a pulse. */
   to: MeasuredEndpoint;
   /** Points strictly inside the cycle, in normalized time. */
-  frames: { at: number; value: MeasuredEndpoint; cues?: Cue[] }[];
+  frames: { at: number; value: MeasuredEndpoint; ease?: Ease; cues?: Cue[] }[];
   /** Seconds per cycle. */
   duration: number;
   ease: Ease;

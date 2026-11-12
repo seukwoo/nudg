@@ -1,0 +1,133 @@
+{
+  "conformance": "1.5",
+  "name": "Keyframes (1.5): a frame measured from the element's size, read live as layout changes",
+  "doc": {
+    "nudg": "1.5",
+    "targets": [
+      "menu"
+    ],
+    "values": {
+      "menu.x": {
+        "measure": "menu.width",
+        "times": -1
+      }
+    },
+    "animate": {
+      "menu.x": {
+        "tween": {
+          "duration": 0.3,
+          "ease": "out"
+        }
+      }
+    },
+    "initial": "hidden",
+    "when": {
+      "host.show": "shown"
+    },
+    "states": {
+      "hidden": {},
+      "shown": {
+        "set": {
+          "menu.x": 0
+        },
+        "enter": {
+          "menu.x": {
+            "keyframes": [
+              {
+                "at": 0.6,
+                "value": {
+                  "measure": "menu.width",
+                  "times": 0.05
+                }
+              }
+            ],
+            "duration": 0.5,
+            "ease": "out"
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "input": "menu.layout.width",
+      "value": 200
+    },
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "hidden"
+        ],
+        "values": {
+          "menu.x": -200
+        }
+      }
+    },
+    {
+      "t": 0.1,
+      "send": "host.show"
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "state": [
+          "shown"
+        ],
+        "values": {
+          "menu.x": -97.446709431
+        }
+      }
+    },
+    {
+      "t": 0.3,
+      "expect": {
+        "state": [
+          "shown"
+        ],
+        "values": {
+          "menu.x": -22.794423408
+        }
+      }
+    },
+    {
+      "t": 0.32,
+      "input": "menu.layout.width",
+      "value": 300
+    },
+    {
+      "t": 0.35,
+      "expect": {
+        "values": {
+          "menu.x": 5.432871654
+        }
+      }
+    },
+    {
+      "t": 0.45,
+      "expect": {
+        "values": {
+          "menu.x": 9.327928038
+        }
+      }
+    },
+    {
+      "t": 0.55,
+      "expect": {
+        "values": {
+          "menu.x": 1.401969761
+        }
+      }
+    },
+    {
+      "t": 0.7,
+      "expect": {
+        "values": {
+          "menu.x": 0
+        },
+        "resting": true
+      }
+    }
+  ]
+}

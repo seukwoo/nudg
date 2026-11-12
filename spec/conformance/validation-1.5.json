@@ -1,0 +1,280 @@
+{
+  "conformance": "1.5",
+  "name": "Validator (1.5): measured entry keyframes and an ease per frame",
+  "documents": [
+    {
+      "name": "valid",
+      "doc": {
+        "nudg": "1.5",
+        "targets": [
+          "menu"
+        ],
+        "values": {
+          "menu.x": 0,
+          "menu.color": "#ffffff"
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "enter": {
+              "menu.x": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": {
+                      "measure": "menu.width",
+                      "times": 0.1
+                    },
+                    "ease": "in"
+                  }
+                ],
+                "duration": 0.3
+              },
+              "menu.color": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": "#ff0000",
+                    "ease": "out"
+                  }
+                ],
+                "duration": 0.3
+              }
+            }
+          }
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "1.4",
+        "targets": [
+          "menu"
+        ],
+        "values": {
+          "menu.x": 0,
+          "menu.color": "#ffffff"
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "enter": {
+              "menu.x": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": {
+                      "measure": "menu.width",
+                      "times": 0.1
+                    },
+                    "ease": "in"
+                  }
+                ],
+                "duration": 0.3
+              },
+              "menu.color": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": "#ff0000",
+                    "ease": "out"
+                  }
+                ],
+                "duration": 0.3
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/states/shown/enter/menu.x/keyframes/0/value"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/shown/enter/menu.x/keyframes/0/ease"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/shown/enter/menu.color/keyframes/0/ease"
+        }
+      ]
+    },
+    {
+      "name": "unknown-ease",
+      "doc": {
+        "nudg": "1.5",
+        "targets": [
+          "menu"
+        ],
+        "values": {
+          "menu.x": 0,
+          "menu.color": "#ffffff"
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "enter": {
+              "menu.x": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": {
+                      "measure": "menu.width",
+                      "times": 0.1
+                    },
+                    "ease": "bouncy"
+                  }
+                ],
+                "duration": 0.3
+              },
+              "menu.color": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": "#ff0000",
+                    "ease": "out"
+                  }
+                ],
+                "duration": 0.3
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-ease",
+          "path": "/states/shown/enter/menu.x/keyframes/0/ease"
+        }
+      ]
+    },
+    {
+      "name": "measured-color",
+      "doc": {
+        "nudg": "1.5",
+        "targets": [
+          "menu"
+        ],
+        "values": {
+          "menu.x": 0,
+          "menu.color": "#ffffff"
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "enter": {
+              "menu.x": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": {
+                      "measure": "menu.width",
+                      "times": 0.1
+                    },
+                    "ease": "in"
+                  }
+                ],
+                "duration": 0.3
+              },
+              "menu.color": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": {
+                      "measure": "menu.width"
+                    },
+                    "ease": "out"
+                  }
+                ],
+                "duration": 0.3
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/states/shown/enter/menu.color/keyframes/0/value"
+        }
+      ]
+    },
+    {
+      "name": "unknown-target",
+      "doc": {
+        "nudg": "1.5",
+        "targets": [
+          "menu"
+        ],
+        "values": {
+          "menu.x": 0,
+          "menu.color": "#ffffff"
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "enter": {
+              "menu.x": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": {
+                      "measure": "panel.width"
+                    },
+                    "ease": "in"
+                  }
+                ],
+                "duration": 0.3
+              },
+              "menu.color": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": "#ff0000",
+                    "ease": "out"
+                  }
+                ],
+                "duration": 0.3
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-target",
+          "path": "/states/shown/enter/menu.x/keyframes/0/value/measure"
+        }
+      ]
+    }
+  ]
+}

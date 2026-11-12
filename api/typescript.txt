@@ -32,9 +32,9 @@ export interface HostSummary { properties: Record<string, PropertySummary & { ch
 export interface HoverOptions { target?: string; lift?: number; scale?: number; motion?: SpringOptions; }
 export interface InitialOptions { state?: string[]; inputs?: Record<string, number>; }
 export interface InputTarget { input: string; times: number; plus: number; }
-export interface Keyframe { at: number; value: Channels; cues?: Cue[]; }
+export interface Keyframe { at: number; value: Channels; measure?: Measure; ease?: Ease; cues?: Cue[]; }
 export interface KeyframesEffect { kind: "keyframes"; frames: Keyframe[]; duration: number; ease: Ease; }
-export interface Loop { to: MeasuredEndpoint; frames: { at: number; value: MeasuredEndpoint; cues?: Cue[]; }[]; duration: number; ease: Ease; delay: number; wrap?: number; }
+export interface Loop { to: MeasuredEndpoint; frames: { at: number; value: MeasuredEndpoint; ease?: Ease; cues?: Cue[]; }[]; duration: number; ease: Ease; delay: number; wrap?: number; }
 export type Machine = { kind: "states"; initial: string; states: Map<string, State>; when: Map<string, Transition>; } | { kind: "regions"; regions: Map<string, Machine>; };
 export interface Measure { target: string; of: "x" | "y" | "width" | "height" | "naturalWidth" | "naturalHeight"; times: number; plus: number; }
 export type MeasuredEndpoint = number | Measure;
@@ -42,7 +42,7 @@ export interface MeasuredTransition { from: string; event: string; to: string; p
 export type Motion = SpringMotion | TweenMotion;
 export interface NudgContract { targets: string; events: string; inputs: string; states: string; }
 export type NudgDocument = Record<string, unknown>;
-export declare const PROGRAM_FORMAT = 11;
+export declare const PROGRAM_FORMAT = 12;
 export declare const PROPERTIES: Record<string, PropertyKind>;
 export type Perceptibility = "imperceptible" | "subtle" | "clear";
 export interface Piece { emitter: string; wave: number; index: number; x: number; y: number; rotation: number; scale: number; opacity: number; }
@@ -80,7 +80,7 @@ export interface ToastOptions { target?: string; duration?: number; rise?: numbe
 export interface ToggleOptions { knob?: string; track?: string; travel?: number; colors?: [string, string]; motion?: SpringOptions; initial?: "off" | "on"; }
 export interface Transition { to?: string; nearest?: { states: string[]; by: string; momentum: number; }; animate: Map<string, Motion>; step?: Map<string, number>; commit?: string[]; cues?: Cue[]; emit?: string[]; }
 export interface TweenMotion { kind: "tween"; duration: number; ease: Ease; delay?: number; delayInput?: DelayInput; }
-export declare const VERSION = "1.4";
+export declare const VERSION = "1.5";
 export type Value = number | string;
 export declare function actionTarget(program: Program, action: string): string;
 export declare function actionsToEvents(targetOf: string | ((action: string) => string), marks: HostMark[]): { t: number; event: string; }[];

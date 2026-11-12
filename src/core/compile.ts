@@ -4,7 +4,7 @@
 import { hexToOklab, isHexColor } from "./color.ts";
 import { interpolate } from "./map.ts";
 import { fromDurationBounce, fromStiffnessRatio } from "./spring.ts";
-import type { Cue, CueAmount, DelayInput, Emitter, Measure,
+import type { Cue, CueAmount, DelayInput, Emitter, Keyframe, Measure,
   MeasuredEndpoint,
   Channels,
   Diagnostic,
@@ -139,7 +139,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-1.4.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-1.5.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -969,7 +969,7 @@ class ComponentCompiler {
               ok = false;
               return;
             }
-            r.keys(frame, fp, ["at", "value", "cue"]);
+            r.keys(frame, fp, ["at", "value", "ease", "cue"]);
             const at = frame.at;
             if (typeof at !== "number" || !Number.isFinite(at) || at <= 0 || at >= 1 || at <= previous) {
               r.error("invalid-keyframe-time", ptr(fp, "at"), '"at" must increase strictly between 0 and 1.', "The cycle starts at 0 with offset 0 and ends at 1 with \"to\"; put the points in between in ascending order.");
@@ -982,8 +982,16 @@ class ComponentCompiler {
               ok = false;
               return;
             }
+            const frameEase = this.frameEase(frame, fp);
+            if (frameEase === null) {
+              ok = false;
+              return;
+            }
             const cues = "cue" in frame ? this.parseCues(frame.cue, ptr(fp, "cue")) : undefined;
-            frames.push(cues?.length ? { at, value: point, cues } : { at, value: point });
+            const out: Loop["frames"][number] = { at, value: point };
+            if (frameEase) out.ease = frameEase;
+            if (cues?.length) out.cues = cues;
+            frames.push(out);
             previous = at;
           });
         }
@@ -1026,6 +1034,13 @@ class ComponentCompiler {
     return out;
   }
 
+  /** A frame's own ease (1.5): undefined when it has none, null when it is invalid. */
+  private frameEase(frame: JsonObject, fp: string): Ease | undefined | null {
+    if (!("ease" in frame)) return undefined;
+    if (!this.needsVersion("1.5", ptr(fp, "ease"), "An ease on a keyframe")) return null;
+    return parseEase(frame.ease, ptr(fp, "ease"), this.r) ?? null;
+  }
+
   private parseKeyframes(kind: PropertyKind, key: string, raw: JsonObject, p: string): KeyframesEffect | undefined {
     const r = this.r;
     if (["kick", "spring", "tween"].some((name) => name in raw)) {
@@ -1046,7 +1061,7 @@ class ComponentCompiler {
         r.error("invalid-keyframes", fp, "A keyframe must have normalized time and a value.", 'Write { "at": 0.5, "value": 8 }.');
         return;
       }
-      r.keys(frame, fp, ["at", "value", "cue"]);
+      r.keys(frame, fp, ["at", "value", "ease", "cue"]);
       const at = frame.at;
       let ok = true;
       if (typeof at !== "number" || !Number.isFinite(at) || at <= 0 || at >= 1 || at <= previous) {
@@ -1057,10 +1072,21 @@ class ComponentCompiler {
         r.error("invalid-keyframes", ptr(fp, "value"), "The keyframe has no value.", `Add a value valid for "${key}".`);
         ok = false;
       }
-      const value = "value" in frame ? this.parseValue(kind, key, frame.value, ptr(fp, "value")) : undefined;
+      // A value measured from layout (1.5), in a numeric property: CSS's translateX(-100%).
+      let measure: Measure | undefined;
+      let value: Channels | undefined;
+      if ("value" in frame && kind !== "color" && isObject(frame.value) && "measure" in frame.value) {
+        if (this.needsVersion("1.5", ptr(fp, "value"), "A measured keyframe")) measure = this.parseMeasure(kind, key, frame.value, ptr(fp, "value"));
+        if (measure) value = [0];
+      } else if ("value" in frame) value = this.parseValue(kind, key, frame.value, ptr(fp, "value"));
+      const frameEase = this.frameEase(frame, fp);
       const cues = "cue" in frame ? this.parseCues(frame.cue, ptr(fp, "cue")) : undefined;
-      if (ok && value) {
-        frames.push(cues?.length ? { at: at as number, value, cues } : { at: at as number, value });
+      if (ok && value && frameEase !== null) {
+        const out: Keyframe = { at: at as number, value };
+        if (measure) out.measure = measure;
+        if (frameEase) out.ease = frameEase;
+        if (cues?.length) out.cues = cues;
+        frames.push(out);
         previous = at as number;
       }
     });

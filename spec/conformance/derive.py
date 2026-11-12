@@ -29,6 +29,7 @@ EASES = {
     "linear": None,
     "in-out": (0.42, 0, 0.58, 1),
     "out": (0, 0, 0.58, 1),
+    "in": (0.42, 0, 1, 1),
 }
 
 
@@ -2895,6 +2896,134 @@ def validation_v1_4_cases():
     })
 
 
+# --- 1.5: measured entry keyframes, an ease per frame ------------------------
+
+def legs_at(points, eases, duration, t0, t, h=1e-6):
+    """Keyframes through `points` [(at, value)], each leg with its own ease; value and velocity."""
+    def pos(time):
+        u = (time - t0) / duration
+        if u >= 1:
+            return points[-1][1]
+        for (a0, v0), (a1, v1), e in zip(points, points[1:], eases):
+            if u <= a1:
+                return v0 + (v1 - v0) * ease_at(e, max(0.0, (u - a0) / (a1 - a0)))
+        return points[-1][1]
+    return pos(t), (pos(t + h) - pos(t - h)) / (2 * h)
+
+
+def keyframe_v1_5_cases():
+    # A menu slides in from its own width off screen, overshoots by 5% of it and settles:
+    # CSS's translateX(-100%) -> translateX(5%) -> none. The frame reads the width live.
+    doc = {
+        "nudg": "1.5",
+        "targets": ["menu"],
+        "values": {"menu.x": {"measure": "menu.width", "times": -1}},
+        # Keyframes start from the value before the state changed, as long as the change has a motion.
+        "animate": {"menu.x": {"tween": {"duration": 0.3, "ease": "out"}}},
+        "initial": "hidden",
+        "when": {"host.show": "shown"},
+        "states": {
+            "hidden": {},
+            "shown": {
+                "set": {"menu.x": 0},
+                "enter": {"menu.x": {"keyframes": [{"at": 0.6, "value": {"measure": "menu.width", "times": 0.05}}], "duration": 0.5, "ease": "out"}},
+            },
+        },
+    }
+    steps = [{"t": 0, "input": "menu.layout.width", "value": 200},
+             {"t": 0, "expect": {"state": ["hidden"], "values": {"menu.x": -200}}},
+             {"t": 0.1, "send": "host.show"}]
+    eases = [EASES["out"], EASES["out"]]
+    for t in (0.2, 0.3):
+        steps.append({"t": t, "expect": {"state": ["shown"], "values": {"menu.x": round(legs_at([(0, -200), (0.6, 10), (1, 0)], eases, 0.5, 0.1, t)[0], 9)}}})
+    # A relayout during the sequence moves the frame with it; the start stays where entry sampled it.
+    steps.append({"t": 0.32, "input": "menu.layout.width", "value": 300})
+    for t in (0.35, 0.45, 0.55):
+        steps.append({"t": t, "expect": {"values": {"menu.x": round(legs_at([(0, -200), (0.6, 15), (1, 0)], eases, 0.5, 0.1, t)[0], 9)}}})
+    steps.append({"t": 0.7, "expect": {"values": {"menu.x": 0}, "resting": True}})
+    write("keyframes-measured", {
+        "conformance": "1.5",
+        "name": "Keyframes (1.5): a frame measured from the element's size, read live as layout changes",
+        "doc": doc,
+        "steps": steps,
+    })
+
+    # Not reported yet: the measured frame is left out and its neighbours join.
+    unreported = json.loads(json.dumps(doc))
+    unreported["values"]["menu.x"] = -50
+    steps = [{"t": 0.1, "send": "host.show"}]
+    for t in (0.2, 0.4):
+        steps.append({"t": t, "expect": {"values": {"menu.x": round(legs_at([(0, -50), (1, 0)], [EASES["out"]], 0.5, 0.1, t)[0], 9)}}})
+    write("keyframes-measured-unreported", {
+        "conformance": "1.5",
+        "name": "Keyframes (1.5): a measured frame not reported yet is left out; its neighbours join",
+        "doc": unreported,
+        "steps": steps,
+    })
+
+    # A bounce: up with ease-out, down with ease-in. A frame's ease times the leg after it;
+    # the effect's ease times the first leg and any frame without one. Loops read it the same way.
+    bounce = {
+        "nudg": "1.5",
+        "targets": ["ball", "dot"],
+        "values": {"ball.y": 0, "dot.y": 0},
+        "initial": "idle",
+        "when": {"host.hop": "hop"},
+        "states": {
+            "idle": {},
+            "hop": {
+                "enter": {"ball.y": {"keyframes": [{"at": 0.4, "value": -40, "ease": "in"}, {"at": 0.7, "value": -12}], "duration": 0.6, "ease": "out"}},
+                "loop": {"dot.y": {"keyframes": [{"at": 0.5, "value": -8, "ease": "in"}], "duration": 0.4, "ease": "out"}},
+            },
+        },
+    }
+    steps = [{"t": 0.1, "send": "host.hop"}]
+    for t in (0.15, 0.25, 0.32, 0.4, 0.5, 0.65):
+        ball = legs_at([(0, 0), (0.4, -40), (0.7, -12), (1, 0)], [EASES["out"], EASES["in"], EASES["out"]], 0.6, 0.1, t)[0]
+        u = ((t - 0.1) % 0.4) / 0.4
+        dot = -8 * ease_at(EASES["out"], u / 0.5) if u <= 0.5 else -8 + 8 * ease_at(EASES["in"], (u - 0.5) / 0.5)
+        steps.append({"t": t, "expect": {"state": ["hop"], "values": {"ball.y": round(ball, 9), "dot.y": round(dot, 9)}}})
+    write("keyframes-ease", {
+        "conformance": "1.5",
+        "name": "Keyframes (1.5): a frame's ease times the leg after it, in entry keyframes and loops",
+        "doc": bounce,
+        "steps": steps,
+    })
+
+
+def validation_v1_5_cases():
+    base = {
+        "nudg": "1.5", "targets": ["menu"], "values": {"menu.x": 0, "menu.color": "#ffffff"},
+        "initial": "idle",
+        "states": {
+            "idle": {"when": {"host.show": "shown"}},
+            "shown": {"enter": {
+                "menu.x": {"keyframes": [{"at": 0.5, "value": {"measure": "menu.width", "times": 0.1}, "ease": "in"}], "duration": 0.3},
+                "menu.color": {"keyframes": [{"at": 0.5, "value": "#ff0000", "ease": "out"}], "duration": 0.3},
+            }},
+        },
+    }
+
+    def doc():
+        return json.loads(json.dumps(base))
+
+    kf = "/states/shown/enter/menu.x/keyframes/0"
+    out = [("valid", doc(), [])]
+    d = doc(); d["nudg"] = "1.4"
+    out.append(("needs-version", d, [("needs-version", kf + "/value"), ("needs-version", kf + "/ease"), ("needs-version", "/states/shown/enter/menu.color/keyframes/0/ease")]))
+    d = doc(); d["states"]["shown"]["enter"]["menu.x"]["keyframes"][0]["ease"] = "bouncy"
+    out.append(("unknown-ease", d, [("unknown-ease", kf + "/ease")]))
+    d = doc(); d["states"]["shown"]["enter"]["menu.color"]["keyframes"][0]["value"] = {"measure": "menu.width"}
+    out.append(("measured-color", d, [("invalid-value", "/states/shown/enter/menu.color/keyframes/0/value")]))
+    d = doc(); d["states"]["shown"]["enter"]["menu.x"]["keyframes"][0]["value"] = {"measure": "panel.width"}
+    out.append(("unknown-target", d, [("unknown-target", kf + "/value/measure")]))
+    write("validation-1.5", {
+        "conformance": "1.5",
+        "name": "Validator (1.5): measured entry keyframes and an ease per frame",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 if __name__ == "__main__":
     toggle_cases()
     spring_form_cases()
@@ -2947,5 +3076,7 @@ if __name__ == "__main__":
     validation_v1_3_cases()
     particle_cases()
     validation_v1_4_cases()
+    keyframe_v1_5_cases()
+    validation_v1_5_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

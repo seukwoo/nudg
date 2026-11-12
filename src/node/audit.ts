@@ -86,6 +86,12 @@ const NUDG_USE = /\b(useNudg|useNudgOnce|playDoc|playEach|nudgTransition|createP
 /** CSS properties a nudg file can move (x, y, rotation, scale, opacity, width, height, background color; shadow and blur from 1.3). */
 const NUDG_CSS = new Set(["transform", "translate", "rotate", "scale", "opacity", "width", "height", "background", "background-color", "offset", "easing", "animation-timing-function", "box-shadow", "filter"]);
 
+/** Something that moves on screen, near a frame loop: a style, a transform, a scroll, or a setter of a moving value. */
+const MOVES = /\.style\b|style=\{|\.setProperty\(|transform|translate|opacity|scroll(To|Top|Left|By)\b|\bset(X|Y|Pos|Position|Offset|Scale|Rotation|Angle|Opacity|Progress|Height|Width|Top|Left|On|Shown|Visible)\b|\.(x|y|left|top)\s*=(?!=)/;
+
+/** Playback the person started: music, a preview, a recording. */
+const MEDIA = /preview|song|track|music|bgm|playlist|podcast|recording|voice/i;
+
 /** The body of the @keyframes block that starts at `start`, by brace counting. */
 function blockAt(text: string, start: number): string {
   const open = text.indexOf("{", start);
@@ -164,15 +170,21 @@ export function audit(files: { path: string; text: string }[]): Audit {
         add(i, "css-transition", "a nudg file on the element (a preset, or playEach for every match); on an element nudg moves, the adapter already turns this off");
       if (/\.animate\(\s*[[{]/.test(line)) add(i, "web-animation", "playDoc(file, element) with entry keyframes or a transition");
       for (const [re, use, gap] of LIBRARIES) if (re.test(line) && /\b(import|require)\b/.test(line)) add(i, "motion-library", use, gap);
-      if (/\.style\.(transform|opacity|translate|scale|rotate)\s*=(?!=)/.test(line) && !/=\s*["'`]{2}/.test(line))
+      const style = /\.style\.(transform|opacity|translate|scale|rotate)\s*=(?!=)/.exec(line);
+      // Not motion: clearing a style, or setting up an element this code just made (a hidden copy box).
+      const made = style && new RegExp(`\\b${/([\w$]+)\.style\./.exec(line)?.[1]}\\s*=\\s*document\\.createElement\\(`).test(lines.slice(Math.max(0, i - 6), i).join("\n"));
+      if (style && !/=\s*["'`]{2}/.test(line) && !made)
         add(i, "style-write", "let a player write it: a file's values for the element, or an input the file maps (input(\"host.progress\", v))");
       const near = (before: number, after: number) => lines.slice(Math.max(0, i - before), i + after + 1).join("\n");
       // A loop that samples app values into a player (`input(...)`) is how nudg is meant to be fed.
-      if (/requestAnimationFrame\s*\(/.test(line) && !/\.input\(\s*["'`]/.test(near(8, 2))) add(i, "frame-loop", "if it moves something: a follow or map from an input, or a loop in a state (physics and canvas scenes are outside nudg); if it doesn't, mark it nudg-audit-ignore");
+      // A loop that moves nothing on screen (a frame clock, a re-render throttle, a measurement) isn't motion.
+      if (/requestAnimationFrame\s*\(/.test(line) && !/\.input\(\s*["'`]/.test(near(8, 2)) && MOVES.test(near(12, 6))) add(i, "frame-loop", "if it moves something: a follow or map from an input, or a loop in a state (physics and canvas scenes are outside nudg); if it doesn't, mark it nudg-audit-ignore");
       // Only timers that do motion's work: sending to a player, letting it go, unmounting, styling.
       if (usesNudg && /\bsetTimeout\s*\(/.test(line) && /\.send\(|\.destroy\(|\.remove\(|[Mm]ounted|unmount|\.style\b|letGo|[Cc]lose\(/.test(near(0, 2)))
         add(i, "timer-glue", "onSettle / onExit, release: \"settle\", after:<time> in the file, or delay.input; not a timer");
       // Sound and haptics played by hand, which a cue would time with the motion (1.3).
+      // A song or clip the person plays is media, not a cue (new Audio(song.previewUrl)).
+      if (/new Audio\s*\(/.test(line) && MEDIA.test(near(4, 2))) continue;
       if (/navigator\.vibrate\s*\(|new Audio\s*\(|\.playHaptics\s*\(|\b(impactAsync|notificationAsync|selectionAsync)\s*\(|performHapticFeedback\s*\(|UI(Impact|Selection|Notification)FeedbackGenerator\b/.test(line) || (/\b(import|require)\b/.test(line) && /["'](howler|expo-haptics|react-native-haptic-feedback|use-sound)["']/.test(line)))
         add(i, "feedback", "a cue in the file (\"cue\": { \"haptic\": \"success\", \"sound\": \"pop\" }) with the adapter's sound map; nudg fires it on the same frame as the motion");
       if (usesNudg && /addEventListener\(\s*["']pointerdown["']/.test(line) && /capture/.test(lines.slice(i, i + 20).join("\n")))

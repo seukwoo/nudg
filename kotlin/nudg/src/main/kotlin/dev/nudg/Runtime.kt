@@ -20,7 +20,7 @@ sealed interface Value {
 
 private sealed interface Segment {
     data class MotionSeg(val t0: Double, val from: List<Double>, val v0: List<Double>, val to: List<Double>, val motion: Motion?) : Segment
-    data class KeyframesSeg(val t0: Double, val from: List<Double>, val to: List<Double>, val frames: List<Keyframe>, val duration: Double, val ease: Ease, val owner: State) : Segment
+    data class KeyframesSeg(val key: String, val t0: Double, val from: List<Double>, val to: List<Double>, val frames: List<Keyframe>, val duration: Double, val ease: Ease, val owner: State) : Segment
     data class FollowSeg(val key: String, val t0: Double, val anchor: Double, val input0: Double, val follow: Follow, val owner: State) : Segment
     /** A property slowing down from [v0] (v0.16), and settling at a range bound if it reaches one. */
     data class GlideSeg(val key: String, val t0: Double, val x0: Double, val v0: Double, val glide: Glide, val owner: State) : Segment
@@ -552,7 +552,8 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
             val (a1, v1) = points[i]
             if (u > a1) continue
             val p = (u - a0) / (a1 - a0)
-            return v0 + (v1 - v0) * easeAt(loop.ease, p) to (v1 - v0) * easeSlope(loop.ease, p) / ((a1 - a0) * loop.duration)
+            val ease = (if (i >= 2) loop.frameEases.getOrNull(i - 2) else null) ?: loop.ease
+            return v0 + (v1 - v0) * easeAt(ease, p) to (v1 - v0) * easeSlope(ease, p) / ((a1 - a0) * loop.duration)
         }
         return points.last().second to 0.0
     }
@@ -565,17 +566,28 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
         return listOf(pos[0] + offset) to listOf(vel[0] + rate)
     }
 
+    /**
+     * Entry keyframes at [t]. Measured frames (1.5) resolve now, so they follow relayout; one not
+     * reported yet is left out. Each leg takes the ease of the frame it starts from, else the effect's.
+     */
     private fun evaluateKeyframes(seg: Segment.KeyframesSeg, t: Double): Pair<List<Double>, List<Double>> {
         val u = (t - seg.t0) / seg.duration
         if (u >= 1) return seg.to to seg.to.map { 0.0 }
-        val points = listOf(Keyframe(0.0, seg.from)) + seg.frames + Keyframe(1.0, seg.to)
+        val points = ArrayList<Keyframe>()
+        points.add(Keyframe(0.0, seg.from))
+        for (frame in seg.frames) {
+            val m = frame.measure
+            if (m == null) points.add(frame) else measured(seg.key, m)?.let { points.add(Keyframe(frame.at, listOf(it), ease = frame.ease)) }
+        }
+        points.add(Keyframe(1.0, seg.to))
         for (i in 1 until points.size) {
             val a = points[i - 1]
             val b = points[i]
             if (u > b.at) continue
             val local = maxOf(0.0, (u - a.at) / (b.at - a.at))
-            val progress = easeAt(seg.ease, local)
-            val slope = easeSlope(seg.ease, local) / ((b.at - a.at) * seg.duration)
+            val legEase = a.ease ?: seg.ease
+            val progress = easeAt(legEase, local)
+            val slope = easeSlope(legEase, local) / ((b.at - a.at) * seg.duration)
             return a.value.zip(b.value) { from, to -> from + (to - from) * progress } to a.value.zip(b.value) { from, to -> (to - from) * slope }
         }
         return seg.to to seg.to.map { 0.0 }
@@ -738,7 +750,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
                 }
                 val (pos, v) = evaluate(seg, t)
                 when (effect) {
-                    is EntryEffect.Keyframes -> segments[key] = Segment.KeyframesSeg(t, pos, to, effect.frames, effect.duration, effect.ease, s)
+                    is EntryEffect.Keyframes -> segments[key] = Segment.KeyframesSeg(key, t, pos, to, effect.frames, effect.duration, effect.ease, s)
                     is EntryEffect.Kick -> {
                         val vel = v.toMutableList()
                         val kick = effect.motion

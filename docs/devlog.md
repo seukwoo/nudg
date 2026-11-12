@@ -601,3 +601,9 @@ After 1.6.0, PlaySnack's motion code was read for what nudg should have done its
 - **Cause:** The cues section was inserted by replacing the text `## Platform motion` with the new section, and the replacement didn't end with the heading again. Nothing checks the guide's structure, and the tests that read it only look for phrases.
 - **Resolution:** The heading is back, with the particles section before it. A new section now goes in by matching the heading and re-emitting it, and the diff of every doc edit is read before commit.
 - **Lesson:** Inserting before an anchor by replacing the anchor is an easy way to lose the anchor. Prefer appending after the previous section, or check that the anchor still exists after the edit.
+
+## 2026-11-12: Keyframes after a jump start at the target
+- **Problem:** The first `keyframes-measured` case described a menu that slides in from off screen. It came out wrong: the slide started at the end, not from `-width`.
+- **Cause:** The file had no `animate` entry for `menu.x`, so the state change was a jump. Entry keyframes start from "the property's exact current value", and right after a jump that value is already the target. With any motion (even a tween about to be replaced), the current value is still the old one, and the keyframes start there. This has been true since 0.8. It never showed up because every keyframed property in the examples also had a motion.
+- **Resolution:** The case gives `menu.x` a motion, as presets do. The converter planned in design.md ("CSS keyframes in, a nudg file out") must write one too. The semantics are unchanged: they are conformance-tested in three runtimes.
+- **Lesson:** "Current value" depends on what the transition did first. A file that reads like CSS (from, frames, to) needs the from-state's value to survive the transition, so tools that write keyframes should always pair them with a motion.

@@ -1,0 +1,132 @@
+{
+  "conformance": "1.5",
+  "name": "Keyframes (1.5): a frame's ease times the leg after it, in entry keyframes and loops",
+  "doc": {
+    "nudg": "1.5",
+    "targets": [
+      "ball",
+      "dot"
+    ],
+    "values": {
+      "ball.y": 0,
+      "dot.y": 0
+    },
+    "initial": "idle",
+    "when": {
+      "host.hop": "hop"
+    },
+    "states": {
+      "idle": {},
+      "hop": {
+        "enter": {
+          "ball.y": {
+            "keyframes": [
+              {
+                "at": 0.4,
+                "value": -40,
+                "ease": "in"
+              },
+              {
+                "at": 0.7,
+                "value": -12
+              }
+            ],
+            "duration": 0.6,
+            "ease": "out"
+          }
+        },
+        "loop": {
+          "dot.y": {
+            "keyframes": [
+              {
+                "at": 0.5,
+                "value": -8,
+                "ease": "in"
+              }
+            ],
+            "duration": 0.4,
+            "ease": "out"
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0.1,
+      "send": "host.hop"
+    },
+    {
+      "t": 0.15,
+      "expect": {
+        "state": [
+          "hop"
+        ],
+        "values": {
+          "ball.y": -12.807328685,
+          "dot.y": -3.025105047
+        }
+      }
+    },
+    {
+      "t": 0.25,
+      "expect": {
+        "state": [
+          "hop"
+        ],
+        "values": {
+          "ball.y": -32.319122057,
+          "dot.y": -7.252282794
+        }
+      }
+    },
+    {
+      "t": 0.32,
+      "expect": {
+        "state": [
+          "hop"
+        ],
+        "values": {
+          "ball.y": -39.5193095,
+          "dot.y": -7.863787123
+        }
+      }
+    },
+    {
+      "t": 0.4,
+      "expect": {
+        "state": [
+          "hop"
+        ],
+        "values": {
+          "ball.y": -35.627410212,
+          "dot.y": -5.477145499
+        }
+      }
+    },
+    {
+      "t": 0.5,
+      "expect": {
+        "state": [
+          "hop"
+        ],
+        "values": {
+          "ball.y": -16.971540044,
+          "dot.y": -0.0
+        }
+      }
+    },
+    {
+      "t": 0.65,
+      "expect": {
+        "state": [
+          "hop"
+        ],
+        "values": {
+          "ball.y": -1.355390599,
+          "dot.y": -7.252282794
+        }
+      }
+    }
+  ]
+}

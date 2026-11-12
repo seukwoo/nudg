@@ -21,7 +21,8 @@ sealed interface Motion {
     data class Tween(val duration: Double, val ease: Ease, override val delay: Double = 0.0, override val delayInput: DelayInput? = null) : Motion
 }
 
-data class Keyframe(val at: Double, val value: List<Double>, val cues: List<Cue> = emptyList())
+/** An entry keyframe. A measured frame (1.5) holds a placeholder [value] and its [measure]; [ease] times the leg after it (1.5). */
+data class Keyframe(val at: Double, val value: List<Double>, val cues: List<Cue> = emptyList(), val measure: Measure? = null, val ease: Ease? = null)
 
 /** A number, or one read from an app input when the cue fires (1.3): input × times + plus. */
 sealed interface CueAmount {
@@ -54,7 +55,8 @@ sealed interface MeasuredEndpoint {
     data class Measured(val measure: Measure) : MeasuredEndpoint
 }
 /** A periodic offset added to a property while its state is active (v0.10). */
-data class Loop(val to: MeasuredEndpoint, val frames: List<Pair<Double, MeasuredEndpoint>>, val duration: Double, val ease: Ease, val delay: Double, val wrap: Double?, val cues: List<Pair<Double, List<Cue>>> = emptyList())
+/** A loop. [frameEases] holds each frame's own ease (1.5), in the order of [frames]; null takes [ease]. */
+data class Loop(val to: MeasuredEndpoint, val frames: List<Pair<Double, MeasuredEndpoint>>, val duration: Double, val ease: Ease, val delay: Double, val wrap: Double?, val cues: List<Pair<Double, List<Cue>>> = emptyList(), val frameEases: List<Ease?> = emptyList())
 /** A map's value at one point: channels, or a measured number (v0.11). */
 sealed interface MapValue {
     data class Channels(val values: List<Double>) : MapValue
@@ -133,7 +135,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
         }
 
         internal fun fromJson(j: Map<String, Any?>): Program {
-            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0)) { "Not a compiled nudg program (formats 1 to 11). Compile it with `nudg compile`." }
+            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0)) { "Not a compiled nudg program (formats 1 to 12). Compile it with `nudg compile`." }
             val properties = list(j["properties"]).map { p ->
                 obj(p).let { m ->
                     (m["key"] as String) to Property(
@@ -206,7 +208,13 @@ class Program(val version: String, val targets: List<String>, val properties: Li
         private fun entryEffect(v: Any?): EntryEffect {
             val e = obj(v)
             if (e["kind"] == "keyframes") {
-                val frames = list(e["frames"]).map { f -> obj(f).let { Keyframe(it["at"] as Double, doubles(it["value"]), cues(it["cue"])) } }
+                val frames = list(e["frames"]).map { f ->
+                    obj(f).let {
+                        // A measured frame (format 12) is the measure object in place of channels.
+                        val m = (it["value"] as? Map<*, *>)?.let(::measure)
+                        Keyframe(it["at"] as Double, if (m == null) doubles(it["value"]) else listOf(0.0), cues(it["cue"]), m, it["ease"]?.let(::ease))
+                    }
+                }
                 return EntryEffect.Keyframes(frames, e["duration"] as Double, ease(e["ease"]))
             }
             return EntryEffect.Kick(motion(v))
@@ -265,6 +273,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
                             l["delay"] as? Double ?: 0.0,
                             l["wrap"] as? Double,
                             list(l["frames"]).mapNotNull { f -> obj(f).let { if (it["cue"] == null) null else (it["at"] as Double) to cues(it["cue"]) } },
+                            list(l["frames"]).map { f -> obj(f)["ease"]?.let(::ease) },
                         )
                     }
                 },

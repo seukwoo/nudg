@@ -1,0 +1,121 @@
+{
+ "nudgProgram": 12,
+ "version": "1.5",
+ "targets": [
+  "ball",
+  "dot"
+ ],
+ "properties": [
+  {
+   "key": "ball.y",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "dot.y",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [],
+ "machine": {
+  "kind": "states",
+  "initial": "idle",
+  "states": [
+   {
+    "name": "idle",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [],
+    "timers": []
+   },
+   {
+    "name": "hop",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [
+     {
+      "key": "ball.y",
+      "effect": {
+       "kind": "keyframes",
+       "frames": [
+        {
+         "at": 0.4,
+         "value": [
+          -40
+         ],
+         "ease": [
+          0.42,
+          0,
+          1,
+          1
+         ]
+        },
+        {
+         "at": 0.7,
+         "value": [
+          -12
+         ]
+        }
+       ],
+       "duration": 0.6,
+       "ease": [
+        0,
+        0,
+        0.58,
+        1
+       ]
+      }
+     }
+    ],
+    "loop": [
+     {
+      "key": "dot.y",
+      "to": 0,
+      "frames": [
+       {
+        "at": 0.5,
+        "value": -8,
+        "ease": [
+         0.42,
+         0,
+         1,
+         1
+        ]
+       }
+      ],
+      "duration": 0.4,
+      "ease": [
+       0,
+       0,
+       0.58,
+       1
+      ],
+      "delay": 0
+     }
+    ],
+    "when": [],
+    "timers": []
+   }
+  ],
+  "when": [
+   {
+    "event": "host.hop",
+    "animate": [],
+    "to": "hop"
+   }
+  ]
+ }
+}

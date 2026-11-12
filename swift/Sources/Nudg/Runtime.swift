@@ -17,14 +17,14 @@ private indirect enum Segment {
   case motion(t0: Double, from: [Double], v0: [Double], to: [Double], motion: Motion?)
   /** A motion that starts at `t0` (v0.12); until then the property does what `prev` does. */
   case delayed(t0: Double, prev: Segment, to: [Double], motion: Motion)
-  case keyframes(t0: Double, from: [Double], to: [Double], frames: [Keyframe], duration: Double, ease: Ease, owner: State)
+  case keyframes(key: String, t0: Double, from: [Double], to: [Double], frames: [Keyframe], duration: Double, ease: Ease, owner: State)
   case follow(key: String, t0: Double, anchor: Double, input0: Double, follow: Follow, owner: State)
   /** A property slowing down from `v0` (v0.16), and settling at a range bound if it reaches one. */
   case glide(key: String, t0: Double, x0: Double, v0: Double, glide: Glide, owner: State)
   var isKeyframes: Bool { if case .keyframes = self { return true }; return false }
   var to: [Double]? {
     switch self {
-    case let .motion(_, _, _, to, _), let .keyframes(_, _, to, _, _, _, _), let .delayed(_, _, to, _): return to
+    case let .motion(_, _, _, to, _), let .keyframes(_, _, _, to, _, _, _, _), let .delayed(_, _, to, _): return to
     case .follow, .glide: return nil
     }
   }
@@ -568,8 +568,8 @@ public final class Runtime {
       return ([value], [velocityAt(follow.input, t) * factor * gain])
     case let .motion(t0, from, v0, to, motion):
       return evaluateMotion(t0: t0, from: from, v0: v0, to: to, motion: motion, t: t)
-    case let .keyframes(t0, from, to, frames, duration, ease, _):
-      return evaluateKeyframes(t0: t0, from: from, to: to, frames: frames, duration: duration, ease: ease, t: t)
+    case let .keyframes(key, t0, from, to, frames, duration, ease, _):
+      return evaluateKeyframes(key: key, t0: t0, from: from, to: to, frames: frames, duration: duration, ease: ease, t: t)
     case let .delayed(t0, prev, to, motion):
       if t < t0 { return evaluate(prev, t) }
       let (from, v0) = evaluate(prev, t0)
@@ -587,16 +587,17 @@ public final class Runtime {
     let loop = running.loop
     let local = t - running.t0 - loop.delay
     if local < 0 { return (0, 0) }
-    var points: [(at: Double, value: Double)] = [(0, 0)]
-    for frame in loop.frames + [(at: 1, value: loop.to)] {
+    var points: [(at: Double, value: Double, ease: Ease?)] = [(0, 0, nil)]
+    for frame in loop.frames + [(at: 1, value: loop.to, ease: nil)] {
       guard let value = endpoint(key, frame.value) else { return (0, 0) }
-      points.append((frame.at, value))
+      points.append((frame.at, value, frame.ease))
     }
     let u = (local - loop.duration * (local / loop.duration).rounded(.down)) / loop.duration
     for i in 1..<points.count where u <= points[i].at {
       let a = points[i - 1], b = points[i]
       let p = (u - a.at) / (b.at - a.at)
-      return (a.value + (b.value - a.value) * easeAt(loop.ease, p), (b.value - a.value) * easeSlope(loop.ease, p) / ((b.at - a.at) * loop.duration))
+      let ease = a.ease ?? loop.ease
+      return (a.value + (b.value - a.value) * easeAt(ease, p), (b.value - a.value) * easeSlope(ease, p) / ((b.at - a.at) * loop.duration))
     }
     return (points[points.count - 1].value, 0)
   }
@@ -609,15 +610,23 @@ public final class Runtime {
     return ([pos[0] + offset], [vel[0] + rate])
   }
 
-  private func evaluateKeyframes(t0: Double, from: [Double], to: [Double], frames: [Keyframe], duration: Double, ease: Ease, t: Double) -> ([Double], [Double]) {
+  /// Entry keyframes at `t`. Measured frames (1.5) resolve now, so they follow relayout; one not
+  /// reported yet is left out. Each leg takes the ease of the frame it starts from, else the effect's.
+  private func evaluateKeyframes(key: String, t0: Double, from: [Double], to: [Double], frames: [Keyframe], duration: Double, ease: Ease, t: Double) -> ([Double], [Double]) {
     let u = (t - t0) / duration
     if u >= 1 { return (to, to.map { _ in 0 }) }
-    let points = [Keyframe(at: 0, value: from)] + frames + [Keyframe(at: 1, value: to)]
+    var points = [Keyframe(at: 0, value: from)]
+    for frame in frames {
+      guard let m = frame.measure else { points.append(frame); continue }
+      if let value = measured(key, m) { points.append(Keyframe(at: frame.at, value: [value], ease: frame.ease)) }
+    }
+    points.append(Keyframe(at: 1, value: to))
     for i in 1..<points.count where u <= points[i].at {
       let a = points[i - 1], b = points[i]
       let local = max(0, (u - a.at) / (b.at - a.at))
-      let progress = easeAt(ease, local)
-      let slope = easeSlope(ease, local) / ((b.at - a.at) * duration)
+      let legEase = a.ease ?? ease
+      let progress = easeAt(legEase, local)
+      let slope = easeSlope(legEase, local) / ((b.at - a.at) * duration)
       return (zip(a.value, b.value).map { $0 + ($1 - $0) * progress }, zip(a.value, b.value).map { ($1 - $0) * slope })
     }
     return (to, to.map { _ in 0 })
@@ -742,9 +751,9 @@ public final class Runtime {
         continue
       }
       let to = targets[key]!
-      if case let .keyframes(t0, from, _, frames, duration, ease, owner) = segment,
+      if case let .keyframes(_, t0, from, _, frames, duration, ease, owner) = segment,
          activeStates.contains(ObjectIdentifier(owner)), !isEntered(owner), handoff[key] == nil {
-        segments[key] = .keyframes(t0: t0, from: from, to: to, frames: frames, duration: duration, ease: ease, owner: owner)
+        segments[key] = .keyframes(key: key, t0: t0, from: from, to: to, frames: frames, duration: duration, ease: ease, owner: owner)
         continue
       }
       if let current = segment.to, current == to, handoff[key] == nil, !segment.isKeyframes { continue }
@@ -776,7 +785,7 @@ public final class Runtime {
         let (pos, v) = evaluate(segment, t)
         switch effect {
         case let .keyframes(frames, duration, ease):
-          segments[key] = .keyframes(t0: t, from: pos, to: to, frames: frames, duration: duration, ease: ease, owner: state)
+          segments[key] = .keyframes(key: key, t0: t, from: pos, to: to, frames: frames, duration: duration, ease: ease, owner: state)
         case let .kick(kick):
           var vel = v
           if case let .spring(_, _, _, k, _, _) = kick { vel[0] += k ?? 0 }
@@ -1051,7 +1060,7 @@ public final class Runtime {
       case let .settling(start, from, v, bound, motion): segment = .motion(t0: start, from: [from], v0: [v], to: [bound], motion: motion)
       }
     }
-    if case let .keyframes(t0, _, _, _, duration, _, _) = segment { return t - t0 >= duration }
+    if case let .keyframes(_, t0, _, _, _, duration, _, _) = segment { return t - t0 >= duration }
     guard case let .motion(t0, from, v0, to, motion) = segment, let motion else { return true }
     switch motion {
     case let .tween(duration, _, _, _): return t - t0 >= duration

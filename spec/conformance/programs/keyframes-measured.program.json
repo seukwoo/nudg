@@ -1,0 +1,106 @@
+{
+ "nudgProgram": 12,
+ "version": "1.5",
+ "targets": [
+  "menu"
+ ],
+ "properties": [
+  {
+   "key": "menu.x",
+   "kind": "length",
+   "base": [
+    0
+   ],
+   "measure": {
+    "target": "menu",
+    "of": "width",
+    "times": -1,
+    "plus": 0
+   }
+  }
+ ],
+ "animate": [
+  {
+   "key": "menu.x",
+   "motion": {
+    "kind": "tween",
+    "duration": 0.3,
+    "ease": [
+     0,
+     0,
+     0.58,
+     1
+    ]
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "hidden",
+  "states": [
+   {
+    "name": "hidden",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [],
+    "timers": []
+   },
+   {
+    "name": "shown",
+    "set": [
+     {
+      "key": "menu.x",
+      "value": [
+       0
+      ]
+     }
+    ],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [
+     {
+      "key": "menu.x",
+      "effect": {
+       "kind": "keyframes",
+       "frames": [
+        {
+         "at": 0.6,
+         "value": {
+          "target": "menu",
+          "of": "width",
+          "times": 0.05,
+          "plus": 0
+         }
+        }
+       ],
+       "duration": 0.5,
+       "ease": [
+        0,
+        0,
+        0.58,
+        1
+       ]
+      }
+     }
+    ],
+    "loop": [],
+    "when": [],
+    "timers": []
+   }
+  ],
+  "when": [
+   {
+    "event": "host.show",
+    "animate": [],
+    "to": "shown"
+   }
+  ]
+ }
+}

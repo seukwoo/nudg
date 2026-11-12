@@ -37,7 +37,12 @@ public enum Motion {
 
 public struct Keyframe {
   public let at: Double
+  /** For a measured frame (1.5), a placeholder; `measure` holds the value. */
   public let value: [Double]
+  /** A value read from layout (1.5), resolved as the frame plays; left out until reported. */
+  public var measure: Measure? = nil
+  /** The ease of the leg after this frame (1.5), instead of the effect's. */
+  public var ease: Ease? = nil
   /** Cues on this beat (1.3). */
   public var cues: [Cue] = []
 }
@@ -92,7 +97,7 @@ public enum MeasuredEndpoint {
 /** A periodic offset added to a property while its state is active (v0.10). */
 public struct Loop {
   public let to: MeasuredEndpoint
-  public let frames: [(at: Double, value: MeasuredEndpoint)]
+  public let frames: [(at: Double, value: MeasuredEndpoint, ease: Ease?)]
   public let duration: Double
   public let ease: Ease
   public let delay: Double
@@ -241,7 +246,7 @@ public struct Program {
 
   /** Reads `nudg compile` output. */
   public static func decode(_ data: Data) throws -> Program {
-    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...11).contains(format) else {
+    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...12).contains(format) else {
       throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 11). Compile it with `nudg compile`.")
     }
     let properties: [(String, Property)] = (j["properties"] as! [[String: Any]]).map { p in
@@ -321,7 +326,11 @@ private func readEase(_ v: Any?) -> Ease {
 private func readEntryEffect(_ v: Any) -> EntryEffect {
   let effect = v as! [String: Any]
   if (effect["kind"] as? String) == "keyframes" {
-    let frames = (effect["frames"] as! [[String: Any]]).map { Keyframe(at: number($0["at"])!, value: doubles($0["value"]), cues: readCues($0["cue"])) }
+    let frames = (effect["frames"] as! [[String: Any]]).map { f in
+      // A measured frame (format 12) is the measure object in place of channels.
+      let measure = (f["value"] as? [String: Any]).map(readMeasure)
+      return Keyframe(at: number(f["at"])!, value: measure == nil ? doubles(f["value"]) : [0], measure: measure, ease: f["ease"].map(readEase), cues: readCues(f["cue"]))
+    }
     return .keyframes(frames: frames, duration: number(effect["duration"])!, ease: readEase(effect["ease"]))
   }
   return .kick(readMotion(v))
@@ -374,7 +383,7 @@ private func readState(_ s: [String: Any]) -> State {
     loop: (s["loop"] as? [[String: Any]] ?? []).map { l in
       (l["key"] as! String, Loop(
         to: readEndpoint(l["to"]!),
-        frames: (l["frames"] as! [[String: Any]]).map { (at: number($0["at"])!, value: readEndpoint($0["value"]!)) },
+        frames: (l["frames"] as! [[String: Any]]).map { (at: number($0["at"])!, value: readEndpoint($0["value"]!), ease: $0["ease"].map(readEase)) },
         duration: number(l["duration"])!,
         ease: readEase(l["ease"]),
         delay: number(l["delay"]) ?? 0,

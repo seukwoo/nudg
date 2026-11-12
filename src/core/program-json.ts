@@ -4,27 +4,31 @@
 // of entries, because order matters (regions, states) and not every JSON reader keeps
 // object key order.
 
-import type { Cue, Emitter, EntryEffect, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
+import type { Channels, Cue, Ease, Emitter, EntryEffect, Follow, Glide, Keyframe, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
 import { animateMaps } from "./walk.ts";
 
-export const PROGRAM_FORMAT = 11;
+export const PROGRAM_FORMAT = 12;
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
 /** Set while a program is written, when it holds a cue (format 10). */
 let wroteCues = false;
+/** Set while a program is written, when a keyframe is measured or has its own ease (format 12). */
+let wroteFrames = false;
 
 /**
  * Program format 8 is frozen with 1.0; 9 adds a delay read from an input (1.2); 10 adds cues
- * (1.3). A program says the oldest format that has everything it uses, so older runtimes
+ * (1.3); 11 adds emitters (1.4); 12 adds measured entry keyframes and an ease per frame (1.5).
+ * A program says the oldest format that has everything it uses, so older runtimes
  * still read every program that doesn't use what they lack.
  */
 export function programToJson(program: Program): Json {
   wroteCues = false;
+  wroteFrames = false;
   const written = machine(program.machine);
   const delayInput = animateMaps(program).some((t) => [...t.values()].some((m) => m.delayInput));
   const out: Record<string, Json> = {
-    nudgProgram: program.emitters ? 11 : wroteCues ? 10 : delayInput ? 9 : 8,
+    nudgProgram: wroteFrames ? 12 : program.emitters ? 11 : wroteCues ? 10 : delayInput ? 9 : 8,
     version: program.version,
     targets: program.targets,
     properties: [...program.properties].map(([key, p]) => ({ key, ...property(p) })),
@@ -55,7 +59,7 @@ const readCues = (j: any): Cue[] | undefined => (Array.isArray(j) ? j.map((c: an
 
 export function programFromJson(json: unknown): Program {
   const j = json as Record<string, any>;
-  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
   return {
     version: j.version,
     targets: j.targets,
@@ -104,14 +108,42 @@ function readMotion(j: any): Motion {
   return { ...rest, delayInput: { input: delay.input, times: delay.times ?? 1, plus: delay.plus ?? 0, ...(delay.max === undefined ? {} : { max: delay.max }) } } as Motion;
 }
 
+const easeJson = (e: Ease): Json => (e === "linear" ? "linear" : [...e]);
+
+/** A frame of entry keyframes or a loop: a measured value is the measure object (format 12). */
+function frame(f: { at: number; value: Channels | MeasuredEndpoint; measure?: Measure; ease?: Ease; cues?: Cue[] }): Json {
+  const out: Record<string, Json> = { at: f.at, value: f.measure ? measure(f.measure) : Array.isArray(f.value) ? f.value : endpoint(f.value) };
+  if (f.measure) wroteFrames = true;
+  if (f.ease) {
+    wroteFrames = true;
+    out.ease = easeJson(f.ease);
+  }
+  if (f.cues) out.cue = cues(f.cues);
+  return out;
+}
+
+function readFrame(j: any): Keyframe {
+  const out: Keyframe = Array.isArray(j.value) ? { at: j.at, value: j.value } : { at: j.at, value: [0], measure: readEndpoint(j.value) as Measure };
+  if (j.ease) out.ease = j.ease;
+  if (j.cue) out.cues = readCues(j.cue);
+  return out;
+}
+
+function readLoopFrame(j: any): Loop["frames"][number] {
+  const out: Loop["frames"][number] = { at: j.at, value: readEndpoint(j.value) };
+  if (j.ease) out.ease = j.ease;
+  if (j.cue) out.cues = readCues(j.cue);
+  return out;
+}
+
 function entryEffect(effect: EntryEffect): Json {
   if (effect.kind !== "keyframes") return motion(effect);
-  return { kind: "keyframes", frames: effect.frames.map((frame): Json => (frame.cues ? { at: frame.at, value: frame.value, cue: cues(frame.cues) } : { at: frame.at, value: frame.value })), duration: effect.duration, ease: effect.ease === "linear" ? "linear" : [...effect.ease] };
+  return { kind: "keyframes", frames: effect.frames.map(frame), duration: effect.duration, ease: easeJson(effect.ease) };
 }
 
 function readEntryEffect(effect: any): EntryEffect {
   return effect.kind === "keyframes"
-    ? { kind: "keyframes", frames: effect.frames.map((frame: any) => (frame.cue ? { at: frame.at, value: frame.value, cues: readCues(frame.cue) } : { at: frame.at, value: frame.value })), duration: effect.duration, ease: effect.ease }
+    ? { kind: "keyframes", frames: effect.frames.map(readFrame), duration: effect.duration, ease: effect.ease }
     : (effect as Motion & EntryEffect);
 }
 
@@ -164,13 +196,13 @@ function readState(j: any): State {
 }
 
 function loop(l: Loop): Record<string, Json> {
-  const out: Record<string, Json> = { to: endpoint(l.to), frames: l.frames.map((frame): Json => (frame.cues ? { at: frame.at, value: endpoint(frame.value), cue: cues(frame.cues) } : { at: frame.at, value: endpoint(frame.value) })), duration: l.duration, ease: l.ease === "linear" ? "linear" : [...l.ease], delay: l.delay };
+  const out: Record<string, Json> = { to: endpoint(l.to), frames: l.frames.map(frame), duration: l.duration, ease: l.ease === "linear" ? "linear" : [...l.ease], delay: l.delay };
   if (l.wrap !== undefined) out.wrap = l.wrap;
   return out;
 }
 
 function readLoop(j: any): Loop {
-  const l: Loop = { to: readEndpoint(j.to), frames: j.frames.map((frame: any) => (frame.cue ? { at: frame.at, value: readEndpoint(frame.value), cues: readCues(frame.cue) } : { at: frame.at, value: readEndpoint(frame.value) })), duration: j.duration, ease: j.ease, delay: j.delay ?? 0 };
+  const l: Loop = { to: readEndpoint(j.to), frames: j.frames.map(readLoopFrame), duration: j.duration, ease: j.ease, delay: j.delay ?? 0 };
   if (j.wrap !== undefined) l.wrap = j.wrap;
   return l;
 }

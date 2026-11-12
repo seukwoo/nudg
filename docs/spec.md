@@ -1,6 +1,6 @@
 # The nudg format, version 1.2
 
-The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [conformance suite](../spec/conformance/), the [JSON Schema](../spec/nudg-1.4.schema.json) describes the structure for editors, and every validator code is listed in the [error reference](errors.md). For the reasoning behind the format, see [Design](design.md).
+The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [conformance suite](../spec/conformance/), the [JSON Schema](../spec/nudg-1.5.schema.json) describes the structure for editors, and every validator code is listed in the [error reference](errors.md). For the reasoning behind the format, see [Design](design.md).
 
 **Stability.** Format 1.0 is stable. Within 1.x, files only gain: new fields, events, inputs and error codes may appear in a later 1.x version, but nothing a 1.0 file says changes meaning; a file opts into a 1.x version's rules by declaring it. Runtimes read every earlier version (0.1 to 1.0) unchanged; each was a superset of the one before, and `nudg upgrade` raises a file to the current version, 1.2. The [appendix](#appendix-format-history) lists what each version added.
 
@@ -30,7 +30,7 @@ The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [
 
 A nudg file is strict JSON with the extension `.nudg.json`. Every platform already parses it, JSON Schema describes it, and LLMs write it reliably, so there is no parser to maintain and nothing new to learn. A friendlier syntax can be added later as sugar that compiles to the same model, but JSON stays the source of truth.
 
-A file may start with `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.4.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
+A file may start with `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.5.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
 
 JSON has no comments. Instead, any object may carry a `note` string. Runtimes ignore it. Unlike a comment, a note survives tools rewriting the file, and an AI can read it as part of the data.
 
@@ -156,7 +156,7 @@ In `values`, a property can be computed from another property or an input instea
 
 ### Measured values
 
-The core never measures; the host reports [layout](#layout-inputs), the same way it reports the pointer. `{ "measure": "target.measurement", "times"?, "plus"? }` may stand for a number in `values`, in a state's `set`, in `follow` and `glide` ranges, in `map` points and values, and in loop values.
+The core never measures; the host reports [layout](#layout-inputs), the same way it reports the pointer. `{ "measure": "target.measurement", "times"?, "plus"? }` may stand for a number in `values`, in a state's `set`, in `follow` and `glide` ranges, in `map` points and values, in loop values, and (1.5) in entry keyframe values.
 
 - **Positions align.** `{ "measure": "tab2.x" }` on `underline.x` is `tab2.layout.x - underline.layout.x`: the translation that puts the underline's box where tab2's box is. A position measures only into the same axis (`x` into `.x`, `y` into `.y`).
 - **Sizes are the size.** `{ "measure": "panel.naturalHeight" }` on `panel.height` is the panel's natural height. A size may go into any numeric property.
@@ -352,6 +352,8 @@ A motion in `animate` (top level or a transition's) may have `delay`, a time of 
 
 - The property's exact current value is the implicit frame at `at: 0`; the active state's resolved target is the implicit frame at `at: 1`. Files list only strictly increasing intermediate points between them.
 - `duration` is greater than zero. `ease` uses the tween names or cubic Bézier form, defaults to `linear`, and applies independently to each leg.
+- **An ease per frame (1.5).** A frame's own `ease` times the leg that starts at it, as CSS's `animation-timing-function` inside a keyframe does; the effect's `ease` times the first leg and every frame without one. A bounce rises with `out` and falls with `in`: `[{ "at": 0.4, "value": -40, "ease": "in" }]` with `"ease": "out"`. Loop frames take `ease` the same way.
+- **Measured frames (1.5).** In a numeric property a frame's value may be [measured](#measured-values): `{ "measure": "menu.width", "times": 0.05 }` is CSS's `translateX(5%)`. It resolves as the frame plays, so a relayout during the sequence moves it. A measured frame not reported yet is left out, and its neighbours join. Colors can't be measured.
 - Re-entering the state samples the current value and restarts the sequence without a position jump. Leaving while it plays samples both position and velocity; the destination's ordinary spring can carry that velocity forward.
 - A transition in an unrelated parallel region does not interrupt the sequence. Relayout updates its implicit final target without restarting it.
 - Keyframes are inline entry effects, not named motions and not transition `animate`.
@@ -536,7 +538,7 @@ Settle is reported from the frame loop, never from inside the call that sent the
 
 ## Appendix: format history
 
-Each version added to the one before and kept everything it had. A 1.2 runtime reads them all; `nudg upgrade` raises a file to 1.2. The conformance cases named here define each addition across TypeScript, Swift and Kotlin; compiled programs gained a format when they needed new fields.
+Each version added to the one before and kept everything it had. A 1.5 runtime reads them all; `nudg upgrade` raises a file to 1.5. The conformance cases named here define each addition across TypeScript, Swift and Kotlin; compiled programs gained a format when they needed new fields.
 
 | Format | Added | Conformance | Program |
 |---|---|---|---|
@@ -561,5 +563,8 @@ Each version added to the one before and kept everything it had. A 1.2 runtime r
 | 1.0 | Nothing new: 0.18, frozen and declared stable | the whole suite | 8 |
 | 1.1 | Under reduced motion, opacity loops keep playing | `loop-fade`, `loop-reduced-fade`, `loop-reduced-fade-1.0` | 8 |
 | 1.2 | A delay read from an app input | `delay-input`, `delay-input-max`, `validation-1.2` | 9, only when used |
+| 1.3 | Shadow, blur, custom properties; cues for sound and haptics | `shadow-blur-custom`, `cue*`, `validation-1.3` | 10, only when cues are used |
+| 1.4 | Particles: `emitters` and `emit` | `particles*`, `validation-1.4` | 11, only when used |
+| 1.5 | Measured entry keyframes, an ease per keyframe | `keyframes-measured*`, `keyframes-ease`, `validation-1.5` | 12, only when used |
 
 The `rest` case defines rest and lifecycle across all of them. Before 0.5, `map` and `follow` read only properties and drag inputs; before 0.9, ranges and map points were numbers; and so on: a feature used in a file that declares an older version is a `needs-version` error whose hint names the version that added it.

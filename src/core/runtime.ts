@@ -10,7 +10,7 @@ import { CROSSING, DOUBLE_TAP, LONG_PRESS, SCROLL_SLOP, VERSIONS } from "./vocab
 
 /** Where a pinch's inputs start (v0.18): the ratio at 1, rotation and travel at 0. */
 const PINCH_START: [string, number][] = [["scale", 1], ["rotation", 0], ["x", 0], ["y", 0]];
-import type { Channels, Cue, CueAmount, Emitter, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, PropertyMap, State, TimerPause, Transition } from "./types.ts";
+import type { Channels, Cue, CueAmount, Ease, Emitter, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, PropertyMap, State, TimerPause, Transition } from "./types.ts";
 
 export type Value = number | string;
 
@@ -101,7 +101,7 @@ export interface Runtime {
 /** A property's behavior since its last change, evaluated in closed form. */
 type Segment =
   | { kind: "motion"; t0: number; from: Channels; v0: Channels; to: Channels; motion?: Motion }
-  | { kind: "keyframes"; t0: number; from: Channels; to: Channels; frames: { at: number; value: Channels }[]; duration: number; ease: import("./types.ts").Ease; owner: State }
+  | { kind: "keyframes"; key: string; t0: number; from: Channels; to: Channels; frames: import("./types.ts").Keyframe[]; duration: number; ease: Ease; owner: State }
   | { kind: "follow"; key: string; t0: number; anchor: number; input0: number; follow: Follow; owner: State }
   /** A property slowing down from `v0` (v0.16), and settling at a range bound if it reaches one. */
   | { kind: "glide"; key: string; t0: number; x0: number; v0: number; glide: Glide; owner: State }
@@ -549,7 +549,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       }
       return [[value], [velocityAt(follow.input, t) * factor * gain]];
     }
-    if (segment.kind === "keyframes") return evaluateKeyframes(segment, t);
+    if (segment.kind === "keyframes") return evaluateKeyframes(segment, t, (m) => measured(segment.key, m));
     if (segment.kind === "glide") {
       const s = glideState(segment, t);
       return "motion" in s ? evaluateMotion(s.motion, t) : [[s.pos], [s.vel]];
@@ -572,11 +572,11 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     const { loop } = active;
     const local = t - active.t0 - loop.delay;
     if (local < 0) return [0, 0];
-    const points: { at: number; value: number }[] = [{ at: 0, value: 0 }];
+    const points: { at: number; value: number; ease?: Ease }[] = [{ at: 0, value: 0 }];
     for (const frame of [...loop.frames, { at: 1, value: loop.to }]) {
       const value = endpoint(key, frame.value);
       if (value === undefined) return [0, 0];
-      points.push({ at: frame.at, value });
+      points.push({ at: frame.at, value, ease: "ease" in frame ? frame.ease : undefined });
     }
     const u = (local - loop.duration * Math.floor(local / loop.duration)) / loop.duration;
     for (let i = 1; i < points.length; i++) {
@@ -584,7 +584,8 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       const b = points[i];
       if (u > b.at) continue;
       const local = (u - a.at) / (b.at - a.at);
-      return [a.value + (b.value - a.value) * easeAt(loop.ease, local), ((b.value - a.value) * easeSlope(loop.ease, local)) / ((b.at - a.at) * loop.duration)];
+      const ease = a.ease ?? loop.ease;
+      return [a.value + (b.value - a.value) * easeAt(ease, local), ((b.value - a.value) * easeSlope(ease, local)) / ((b.at - a.at) * loop.duration)];
     }
     return [points[points.length - 1].value, 0];
   }
@@ -750,7 +751,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
         if (segment.kind === "follow" || segment.kind === "glide") continue;
         const [pos, vel] = evaluate(segment, t);
         if (effect.kind === "keyframes") {
-          segments.set(key, { kind: "keyframes", t0: t, from: pos, to: segment.to, frames: effect.frames, duration: effect.duration, ease: effect.ease, owner: state });
+          segments.set(key, { kind: "keyframes", key, t0: t, from: pos, to: segment.to, frames: effect.frames, duration: effect.duration, ease: effect.ease, owner: state });
         } else {
           vel[0] += effect.kick ?? 0;
           segments.set(key, { kind: "motion", t0: t, from: pos, v0: vel, to: segment.to, motion: effect });
@@ -964,6 +965,8 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
           for (const [key, follow] of state.follow) {
             for (const point of follow.range ?? []) if (typeof point !== "number") for (const name of inputsOf(key, point)) out.add(name);
           }
+          for (const [key, effect] of state.enter) if (effect.kind === "keyframes") for (const f of effect.frames) if (f.measure) for (const name of inputsOf(key, f.measure)) out.add(name);
+          for (const [key, loop] of state.loop) for (const point of [loop.to, ...loop.frames.map((f) => f.value)]) if (typeof point !== "number") for (const name of inputsOf(key, point)) out.add(name);
           if (state.machine) walk(state.machine);
         }
       };
@@ -1112,17 +1115,31 @@ function evaluateMotion(segment: Segment & { kind: "motion" }, t: number): [Chan
   return [pos, vel];
 }
 
-function evaluateKeyframes(segment: Segment & { kind: "keyframes" }, t: number): [Channels, Channels] {
+/**
+ * Entry keyframes at `t`. Measured frames (1.5) resolve now, so they follow relayout; one not
+ * reported yet is left out. Each leg takes the ease of the frame it starts from, else the effect's.
+ */
+function evaluateKeyframes(segment: Segment & { kind: "keyframes" }, t: number, resolve: (m: Measure) => number | undefined): [Channels, Channels] {
   const u = (t - segment.t0) / segment.duration;
   if (u >= 1) return [segment.to.slice(), segment.to.map(() => 0)];
-  const points = [{ at: 0, value: segment.from }, ...segment.frames, { at: 1, value: segment.to }];
+  const points: { at: number; value: Channels; ease?: Ease }[] = [{ at: 0, value: segment.from }];
+  for (const frame of segment.frames) {
+    if (!frame.measure) {
+      points.push(frame);
+      continue;
+    }
+    const value = resolve(frame.measure);
+    if (value !== undefined) points.push({ at: frame.at, value: [value], ease: frame.ease });
+  }
+  points.push({ at: 1, value: segment.to });
   for (let i = 1; i < points.length; i++) {
     const a = points[i - 1];
     const b = points[i];
     if (u > b.at) continue;
     const local = Math.max(0, (u - a.at) / (b.at - a.at));
-    const progress = easeAt(segment.ease, local);
-    const slope = easeSlope(segment.ease, local) / ((b.at - a.at) * segment.duration);
+    const ease = a.ease ?? segment.ease;
+    const progress = easeAt(ease, local);
+    const slope = easeSlope(ease, local) / ((b.at - a.at) * segment.duration);
     return [a.value.map((value, channel) => value + (b.value[channel] - value) * progress), a.value.map((value, channel) => (b.value[channel] - value) * slope)];
   }
   return [segment.to.slice(), segment.to.map(() => 0)];

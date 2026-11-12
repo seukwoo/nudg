@@ -19,6 +19,8 @@ export type { HostJudgement, HostMark, HostSample, HostSeries, HostSummary } fro
 export type { Plot, PlotOptions } from "./core/plot.ts";
 export { presets, press, hover, toggle, toast, appear, pop, drop, shake } from "./core/presets.ts";
 export type { NudgDocument, PresetName, PressOptions, HoverOptions, ToggleOptions, ToastOptions, AppearOptions, PopOptions, DropOptions, ShakeOptions, SpringOptions } from "./core/presets.ts";
+export { formatFromCss, fromCss } from "./core/from-css.ts";
+export type { CssConversion, CssDifference, FromCssOptions } from "./core/from-css.ts";
 export { simulate } from "./core/simulate.ts";
 export type { PropertySummary, Sample, Simulation, SimulateOptions, TimedEvent } from "./core/simulate.ts";
 export { EVENTS, PROPERTIES, VERSION } from "./core/vocabulary.ts";

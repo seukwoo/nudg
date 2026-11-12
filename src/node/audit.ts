@@ -162,7 +162,8 @@ export function audit(files: { path: string; text: string }[]): Audit {
       const kf = /@(?:-webkit-)?keyframes\s+([\w-]+)/.exec(line);
       if (kf) {
         const k = keyframesUse(kf[1], blockAt(text, offsets[i] + kf.index));
-        add(i, "css-keyframes", k.use, k.gap);
+        // The converter writes the exact file and proves it moves the same.
+        add(i, "css-keyframes", k.gap ? k.use : `nudg from-css ${path} ${kf[1]} (a checked nudg file that moves the same); or ${k.use}`, k.gap);
       }
       // A transition of something that moves; colors and borders alone are left to CSS.
       const tr = /(?:^|[\s;{"'`])transition(?:-property)?\s*:\s*([^\s;}"'`][^;}"'`]*)/.exec(line) ?? /\btransition\s*:\s*["'`]([^"'`]+)/.exec(line);

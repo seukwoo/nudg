@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **`nudg from-css`: CSS keyframes in, a checked nudg file out.**
+  - **What it reads:** one `@keyframes` block (from a `.css` file or a CSS-in-JS string) and the `animation` line that plays it.
+  - **What it writes:** a nudg file, entry keyframes for a one-off and a loop for `infinite`.
+  - **The proof:** it samples the CSS and nudg at 60 points, at two sizes, and writes the file only within 0.5 px, 0.5° and 0.01. Otherwise it says what it can't convert exactly and why.
+  - **A spring for an overshoot:** when the keyframes overshoot, it offers a fitted spring beside the exact conversion, says how far the spring strays from the CSS, and asks. The CLI asks in a terminal; the MCP tool `nudg_from_css` returns both, and the agent asks the person.
+  - **Audit:** `nudg audit` now points every convertible `@keyframes` at the exact command.
 - **Format 1.5: keyframes that say what CSS says.** It brings entry keyframes up to what CSS `@keyframes` express, so a converted animation moves exactly as it did:
   - **Measured values.** A frame may be measured from layout (`{ "measure": "menu.width", "times": -1 }` is `translateX(-100%)`). It is read as the frame plays, so a resize during the sequence moves it.
   - **An ease per frame.** A frame's own `ease` times the leg after it, in entry keyframes and in loops: a bounce rises with `out` and falls with `in`.

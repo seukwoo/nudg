@@ -8,6 +8,8 @@ export interface CompileResult { program?: Program; motions: Map<string, Motion>
 export interface Contract { targets: string[]; events: string[]; inputs: string[]; states: string[]; }
 export interface CritiqueFinding { code: string; severity: CritiqueSeverity; path: string; message: string; hint: string; source: string; }
 export type CritiqueSeverity = "warning" | "suggestion";
+export interface CssConversion { doc?: JsonObject; play?: string; differences: CssDifference[]; problems: string[]; notes: string[]; spring?: { doc: JsonObject; properties: string[]; differences: CssDifference[]; summary: string; }; }
+export interface CssDifference { property: string; max: number; unit: "px" | "deg" | "" | "ΔE"; at: number; limit: number; }
 export interface Cue { sound?: string; haptic?: string; intensity?: CueAmount; pitch?: CueAmount; delay?: number | DelayInput; repeat?: { count: number; every: number; }; throttle?: number; }
 export type CueAmount = number | { input: string; times: number; plus: number; };
 export declare const DRAG_SLOP = 4;
@@ -20,6 +22,7 @@ export interface Emitter { from: string; at: "center" | "top" | "bottom" | "left
 export type EntryEffect = SpringMotion | KeyframesEffect;
 export interface FiredCue { t: number; sound?: string; haptic?: string; intensity: number; pitch: number; }
 export interface Follow { input: string; range?: [MeasuredEndpoint, MeasuredEndpoint]; overdrag: number; multiply?: boolean; }
+export interface FromCssOptions { target?: string; animation?: string; size?: [number, number]; }
 export interface Glide { momentum: number; range?: [MeasuredEndpoint, MeasuredEndpoint]; }
 export interface HeadlessOptions<C extends NudgContract = NudgContract> { host: PlayerHost; state?: C["states"][]; reducedMotion?: boolean; speed?: number; onFrame?: (values: Record<string, Value>) => void; onState?: (state: C["states"][]) => void; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; onCue?: (cue: FiredCue) => void; }
 export interface HeadlessPlayer<C extends NudgContract = NudgContract> { readonly runtime: Runtime; send(event: C["events"]): boolean; input(name: C["inputs"], value: number): boolean; values(): Record<string, Value>; present(): boolean; leaving(): boolean; now(): number; setReducedMotion(on: boolean): void; destroy(): void; }
@@ -100,6 +103,8 @@ export declare function didYouMean(input: string, candidates: string[]): string 
 export declare function dragAxes(program: Program): Map<string, "x" | "y">;
 export declare function draggableTargets(program: Program): Set<string>;
 export declare function drop(options?: DropOptions): NudgDocument;
+export declare function formatFromCss(name: string, c: CssConversion): string;
+export declare function fromCss(source: string, name: string, options?: FromCssOptions): CssConversion;
 export declare function handledEvents(program: Program): Set<string>;
 export declare function hover(options?: HoverOptions): NudgDocument;
 export declare function initialValues(program: Program, options?: InitialOptions): Record<string, Value>;

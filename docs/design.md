@@ -625,6 +625,66 @@ Proposed order: shadow and blur with custom properties, then cues, then particle
 - **Particles as a top-level `emitters` block, or as a target kind?** Proposed: `emitters`, because a piece isn't a target the host binds one by one.
 - **Releases:** one format version for all four, or one each? Proposed: one each, in the order above, each as soon as it is ready.
 
+## Proposal: CSS keyframes in, a nudg file out
+
+Status: proposed 2026-11-12. With [#150](https://github.com/seukwoo/nudg/pull/150), `nudg audit` puts PlaySnack at 45%: 40 motions on nudg, 48 outside. All 48 are things nudg already does, and 37 of them are CSS `@keyframes`. The audit says to rewrite each one as entry keyframes, and an agent rewriting 37 of them by hand reads percentages, transform lists and timing lines, and gets some of them subtly wrong without anyone seeing it. The conversion is mechanical, so a tool should do it and show that the result matches.
+
+### What it does
+
+- **Input.**
+  - The input is a source file and a keyframes name: `nudg from-css src/Ceremony.tsx snkPop`. It may also be a CSS snippet.
+  - The source may be a `.css` file or a CSS-in-JS template string, as PlaySnack's are. A `${...}` interpolation in a value is reported, never guessed.
+  - The tool finds the `animation` line that uses the name in the same source and reads its duration, timing function, delay, iteration count, direction and fill mode from it. A flag supplies any of them that it can't find.
+- **Output.**
+  - It writes a nudg file in the shape of the presets: a `hidden` state holding the 0% values, and a `shown` state holding the 100% values, with `enter` keyframes for every frame in between. `host.show` goes from `hidden` to `shown`.
+  - `useNudgOnce(file)` or `playDoc(file, el, { start: "host.show", release: "settle" })` then plays it.
+  - It maps the CSS to nudg properties:
+    - `translateX` / `translateY` become `x` / `y`;
+    - `scale` becomes `scale`, or `scaleX` / `scaleY`;
+    - `rotate` becomes `rotation`;
+    - `opacity`, `background-color`, `box-shadow` and `filter: blur()` map to their 1.3 properties.
+  - It maps the timing:
+    - **Held frames** (`20%, 70% { ... }`): two frames with the same value.
+    - **`transform: none`**: the identity values.
+    - **A property missing from some frames**: CSS interpolates it between the frames that name it, so the tool keeps only the frames that name it.
+    - **A delay**: the tool adds a hold at the start.
+    - **`infinite`**: a loop in a state, not an entry.
+    - **`alternate`**: a loop cycle out and back.
+    - **A name that ends hidden** (`to { opacity: 0 }`): an exit state.
+  - Several animations on one element become one file. Ceremony's `snkNum` with `snkNumFade` is one example; one entry per property, each with its own length.
+- **Proof.**
+  - The tool samples the CSS animation and the nudg program at 60 points and prints the largest difference for each property. It computes CSS interpolation itself: linear between frames, with the frame's timing function.
+  - Above a set limit (0.5 px, 0.5°, 0.01 of scale or opacity), it doesn't write the file. Instead it names the frame and the reason.
+- **Where.**
+  - The converter is a pure function in `src/core` (text in, document and report out), so it can also run in a browser.
+  - It is available as the `nudg from-css` CLI command and as the MCP tool `nudg_from_css`.
+  - The audit's hint for a convertible `@keyframes` becomes the exact command to run.
+
+### What it reports instead of converting
+
+These are the cases where the result would not be exact. The tool names them, and someone decides each one.
+
+- **A percentage translate** (`translateY(-70%)`).
+  - In nudg this is a measure of the element's own size, and entry keyframes take only numbers today.
+  - In PlaySnack:
+    - `snkRoll` moves by a share of its height;
+    - `golfCheerT` keeps `translateX(-50%)` for centering in every frame, which is the element's resting offset rather than motion.
+  - The tool handles a constant offset by leaving it out and saying it belongs in a base value. It reports a moving one.
+- **Transforms in a different order** from nudg's fixed one: a translate after a rotate or scale.
+- **Per-frame timing functions** (`animation-timing-function` inside a frame) that differ from frame to frame. nudg keyframes use one ease for every leg.
+- **Other values the tool can't map:**
+  - properties nudg has no property for (the audit already suggests a custom property);
+  - `steps()`;
+  - a `box-shadow` spread or `inset`;
+  - interpolated values.
+
+### Choices
+
+- **A converter, or better hints only?** Proposed: a converter. A hint still leaves the hand rewrite, where the mistakes happen. The proof is what lets the person accept 37 files without opening each one.
+- **Close enough, or exact?** Proposed: the file is written only within the limits above, and the report always says how close it is. A converter that quietly approximates would move motion into nudg, but it would change the motion.
+- **Format changes for the reported cases** (measured values in entry keyframes, an ease per frame)? Proposed: not now. Decide each one when PlaySnack's migration ([playsnack#1008](https://github.com/playsnack/playsnack/issues/1008)) shows how many keyframes need it.
+- **Spring fitting:** should the tool suggest a spring when the keyframes look like an overshoot (`snkPop`: 1, 1.32, 0.94, 1.06, 1)? Proposed: as an extra line in the report, never in place of the exact conversion. A spring responds to interruption better, but it is a different motion, and the person should judge it with `compare`.
+
 ## Open questions
 
 These are unresolved design choices. Scheduling and completion status live in the [roadmap](roadmap.md); examples of possible syntax below are proposals.

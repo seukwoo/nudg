@@ -179,7 +179,7 @@ It turns one CSS `@keyframes` block into a nudg file, so moving an app's CSS ani
 
 **What it reads.**
 - **The frames:**
-  - `transform` (translate, rotate and scale, in that order), and the `translate`, `rotate` and `scale` properties;
+  - `transform`, and the `translate`, `rotate` and `scale` properties. A transform list in any order is composed and read back as nudg draws it (translate, rotate, scale), so a translate after a turn becomes the turned translate. Between frames, the proof follows CSS's own function-by-function blending;
   - `opacity`, `width`, `height`, `background-color`;
   - `filter: blur()` and `box-shadow`;
   - `animation-timing-function` inside a frame.
@@ -193,7 +193,8 @@ It turns one CSS `@keyframes` block into a nudg file, so moving an app's CSS ani
 - `infinite` becomes a loop, and `alternate` a cycle out and back.
 
 **The proof.** It compiles the file, plays it, and samples the CSS and nudg at 60 points, at two element sizes. It writes the file only within 0.5 px, 0.5° and 0.01. Past the limits it writes nothing and says why:
-- a translate after a rotate or scale;
+- a transform path that curves away from nudg's between frames (a large turn with a translate after it);
+- a skew (a rotate after a non-uniform scale), measured as how far a corner leans;
 - `steps()`;
 - a shadow spread or inset;
 - a property no nudg property moves;

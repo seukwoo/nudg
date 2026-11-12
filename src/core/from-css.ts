@@ -66,7 +66,12 @@ const CSS_EASES: Record<string, Ease> = {
 
 /** A nudg property and its value at one frame. Lengths may be a share of the element's own size. */
 type Length = { px: number; width?: number; height?: number };
-type Value = number | Length | string;
+/** One CSS transform function, by its primitive: translate, rotate or scale. */
+type Fn = { k: "t"; x: Length; y: Length } | { k: "r"; a: number } | { k: "s"; x: number; y: number };
+type Part = "x" | "y" | "rotation" | "scale" | "scaleX" | "scaleY" | "shear";
+/** A frame's transform list, read as one nudg property. CSS interpolates the list, not the parts. */
+type TList = { fns: Fn[]; part: Part };
+type Value = number | Length | string | TList;
 
 interface Frame {
   at: number;
@@ -128,8 +133,8 @@ export function fromCss(source: string, name: string, options: FromCssOptions = 
       const s = f.values.get("scale");
       if (s === undefined) continue;
       f.values.delete("scale");
-      f.values.set("scaleX", s);
-      f.values.set("scaleY", s);
+      f.values.set("scaleX", isList(s) ? { fns: s.fns, part: "scaleX" } : s);
+      f.values.set("scaleY", isList(s) ? { fns: s.fns, part: "scaleY" } : s);
     }
   }
   // A property that never changes and is the element's own value isn't part of the motion.
@@ -147,7 +152,8 @@ export function fromCss(source: string, name: string, options: FromCssOptions = 
   }
   // A property CSS doesn't name at 0% or 100% runs from or to the element's own value.
   for (const [prop, list] of tracks) {
-    const own = KINDS[prop].own;
+    // A transform part runs from or to the element's own transform: none, an empty list.
+    const own: Value = list.some((f) => isList(f.values.get(prop)!)) ? { fns: [], part: prop as Part } : KINDS[prop].own;
     if (own === "") {
       if (list[0].at !== 0 || list[list.length - 1].at !== 1) problems.push(`"${prop}" isn't set at 0% and 100%, so CSS runs from the element's own color, which only the page knows. Add it to both.`);
       continue;
@@ -193,7 +199,13 @@ export function fromCss(source: string, name: string, options: FromCssOptions = 
       if (d.max > 0.02) notes.push(`"${d.property}" passes through different colors on the way (ΔE ${round(d.max, 3)} at ${round(d.at, 3)} s): CSS blends in sRGB, nudg in OKLab, which keeps the brightness even.`);
       continue;
     }
-    if (d.max > d.limit) problems.push(`"${d.property}" is ${round(d.max, 3)}${d.unit} off at ${round(d.at, 3)} s (the limit is ${d.limit}${d.unit}).`);
+    if (d.property === "skew" && d.max > d.limit) problems.push(`CSS skews the element (a rotate after a non-uniform scale): a corner leans ${round(d.max, 3)}px at ${round(d.at, 3)} s, and nudg draws no skew (the limit is ${d.limit}px). Scale uniformly where it rotates, or scale after the rotate.`);
+    else if (d.max === Infinity) problems.push(`"${d.property}": at ${round(d.at, 3)} s CSS's transform can't be read back as translate, rotate and scale.`);
+    else if (d.max > d.limit)
+      problems.push(
+        `"${d.property}" is ${round(d.max, 3)}${d.unit} off at ${round(d.at, 3)} s (the limit is ${d.limit}${d.unit})` +
+          (["x", "y", "rotation", "scale", "scaleX", "scaleY"].includes(d.property) ? ": CSS blends the transform lists function by function, and between these frames that path differs from nudg's. Add a frame in between, or put the translate first." : "."),
+      );
   }
   if (problems.length) return out;
   out.doc = doc;
@@ -217,6 +229,7 @@ function findKeyframes(source: string, name: string): string | undefined {
 }
 
 function parseFrames(block: string, problems: string[]): Frame[] | undefined {
+  problems_ = problems;
   const byAt = new Map<number, Frame>();
   const re = /([^{}]+)\{([^{}]*)\}/g;
   let m: RegExpExecArray | null;
@@ -250,6 +263,7 @@ function parseDeclarations(body: string, frame: Frame, sel: string, problems: st
     const where = `${sel} ${prop}`;
     switch (prop) {
       case "transform":
+        if (["x", "y", "rotation", "scale", "scaleX", "scaleY"].some((p) => frame.values.has(p) && !isList(frame.values.get(p)!))) problems.push(`${where}: transform beside the translate, rotate or scale property; CSS applies both. Use one of them.`);
         parseTransform(value, frame, where, problems);
         break;
       case "translate": {
@@ -300,62 +314,152 @@ function parseDeclarations(body: string, frame: Frame, sel: string, problems: st
 }
 
 function set(frame: Frame, prop: string, value: Value | undefined) {
-  if (value !== undefined) frame.values.set(prop, value);
+  if (value === undefined) return;
+  if (frame.values.has(prop) && isList(frame.values.get(prop)!)) problems_.push(`${prop}: set by transform and by its own property; CSS applies both. Use one of them.`);
+  frame.values.set(prop, value);
 }
 
-/** nudg draws translate, then rotate, then scale; a list in that order (or uniform scale before rotate) maps exactly. */
+function isList(v: Value): v is TList {
+  return typeof v === "object" && "fns" in v;
+}
+
+/** Problems found while setting values, collected by parseFrames. */
+let problems_: string[] = [];
+
+/**
+ * A transform list, kept as CSS wrote it: CSS interpolates function by function, so the
+ * proof needs the list. Its value at a frame is the list composed and read back in nudg's
+ * order (translate, then rotate, then scale): a translate after a turn becomes the turned
+ * translate. Only a skew (a rotate after a non-uniform scale) has no nudg equivalent.
+ */
 function parseTransform(value: string, frame: Frame, where: string, problems: string[]) {
-  const v = { x: 0 as Value, y: 0 as Value, rotation: 0, sx: 1, sy: 1 };
+  const fns: Fn[] = [];
   if (value !== "none") {
-    const fns = [...value.matchAll(/([a-zA-Z0-9]+)\(([^)]*)\)/g)];
-    if (fns.map((f) => f[0]).join("").replace(/\s/g, "") !== value.replace(/\s/g, "")) {
+    const found = [...value.matchAll(/([a-zA-Z0-9]+)\(([^)]*)\)/g)];
+    if (found.map((f) => f[0]).join("").replace(/\s/g, "") !== value.replace(/\s/g, "")) {
       problems.push(`${where}: "${value}" isn't a list of transform functions.`);
       return;
     }
-    let stage = 0; // 0 translate, 1 rotate or scale
-    let nonUniform = false;
-    for (const [, fn, raw] of fns) {
-      const args = raw.split(",").map((s) => s.trim());
-      const kind = fn.startsWith("translate") ? "t" : fn.startsWith("rotate") ? "r" : fn.startsWith("scale") ? "s" : "?";
-      if (kind === "?" || fn === "translateZ" || fn === "translate3d" || fn === "scale3d" || fn === "scaleZ" || fn === "rotateX" || fn === "rotateY" || fn === "rotate3d") {
+    for (const [, fn, raw] of found) {
+      const args = raw.split(",").map((x) => x.trim());
+      const len = (r: string | undefined, axis: "width" | "height"): Length => asLength(length(r ?? "0px", axis, where, problems) ?? 0);
+      if (fn === "translate") fns.push({ k: "t", x: len(args[0], "width"), y: len(args[1], "height") });
+      else if (fn === "translateX") fns.push({ k: "t", x: len(args[0], "width"), y: { px: 0 } });
+      else if (fn === "translateY") fns.push({ k: "t", x: { px: 0 }, y: len(args[0], "height") });
+      else if (fn === "rotate" || fn === "rotateZ") fns.push({ k: "r", a: angle(args[0], where, problems) ?? 0 });
+      else if (fn === "scale") {
+        const a = number(args[0], where, problems) ?? 1;
+        fns.push({ k: "s", x: a, y: args[1] === undefined ? a : number(args[1], where, problems) ?? a });
+      } else if (fn === "scaleX") fns.push({ k: "s", x: number(args[0], where, problems) ?? 1, y: 1 });
+      else if (fn === "scaleY") fns.push({ k: "s", x: 1, y: number(args[0], where, problems) ?? 1 });
+      else {
         problems.push(`${where}: ${fn}() has no nudg property (nudg moves in 2D: translate, rotate, scale).`);
         return;
       }
-      if (kind === "t" && stage > 0) {
-        problems.push(`${where}: a translate after a rotate or scale ("${value}") moves along the turned or scaled axes; nudg translates first. Put the translate first, adjusted for the turn or scale.`);
-        return;
-      }
-      if (kind === "r" && nonUniform) {
-        problems.push(`${where}: a rotate after a non-uniform scale ("${value}") skews; nudg rotates before it scales.`);
-        return;
-      }
-      if (kind === "t") {
-        if (fn === "translate") {
-          v.x = add(v.x, length(args[0], "width", where, problems));
-          v.y = add(v.y, length(args[1] ?? "0px", "height", where, problems));
-        } else if (fn === "translateX") v.x = add(v.x, length(args[0], "width", where, problems));
-        else if (fn === "translateY") v.y = add(v.y, length(args[0], "height", where, problems));
-      } else if (kind === "r") {
-        const r = angle(args[0], where, problems) ?? 0;
-        v.rotation += r;
-        // An identity before a translate changes nothing.
-        if (r !== 0) stage = 1;
-      } else {
-        const a = number(args[0], where, problems) ?? 1;
-        const b = fn === "scale" ? number(args[1] ?? args[0], where, problems) ?? a : 1;
-        if (fn === "scaleX") v.sx *= a;
-        else if (fn === "scaleY") v.sy *= a;
-        else (v.sx *= a, v.sy *= b);
-        if (v.sx !== v.sy) nonUniform = true;
-        if (a !== 1 || b !== 1) stage = 1;
-      }
     }
   }
-  frame.values.set("x", v.x);
-  frame.values.set("y", v.y);
-  frame.values.set("rotation", v.rotation);
-  if (v.sx === v.sy) frame.values.set("scale", v.sx);
-  else (frame.values.set("scaleX", v.sx), frame.values.set("scaleY", v.sy));
+  // A skew (a rotate after a non-uniform scale) is measured by the proof, in pixels at the corners.
+  const parts = decompose(fns)!;
+  for (const part of ["x", "y", "rotation"] as const) frame.values.set(part, { fns, part });
+  if (Math.abs(parts.scaleX - parts.scaleY) < 1e-12) frame.values.set("scale", { fns, part: "scale" });
+  else (frame.values.set("scaleX", { fns, part: "scaleX" }), frame.values.set("scaleY", { fns, part: "scaleY" }));
+}
+
+function asLength(v: Value): Length {
+  return typeof v === "number" ? { px: v } : (v as Length);
+}
+
+function scaleLength(v: Length, k: number): Length {
+  const out: Length = { px: v.px * k };
+  if (v.width !== undefined) out.width = v.width * k;
+  if (v.height !== undefined) out.height = v.height * k;
+  return out;
+}
+
+function addLength(a: Length, b: Length): Length {
+  return asLength(add(a, b));
+}
+
+/**
+ * The list composed (CSS multiplies left to right, so the last function applies first) and
+ * read back as nudg draws it: translate, rotate, scale. Undefined when it skews.
+ */
+type Parts = { x: Length; y: Length; rotation: number; scaleX: number; scaleY: number; shear: number };
+
+function decompose(fns: Fn[]): Parts | undefined {
+  let [a, b, c, d] = [1, 0, 0, 1];
+  let tx: Length = { px: 0 };
+  let ty: Length = { px: 0 };
+  let turned = 0;
+  for (const f of fns) {
+    if (f.k === "t") {
+      tx = addLength(tx, addLength(scaleLength(f.x, a), scaleLength(f.y, c)));
+      ty = addLength(ty, addLength(scaleLength(f.x, b), scaleLength(f.y, d)));
+    } else {
+      const [na, nb, nc, nd] = f.k === "r" ? [Math.cos((f.a * Math.PI) / 180), Math.sin((f.a * Math.PI) / 180), -Math.sin((f.a * Math.PI) / 180), Math.cos((f.a * Math.PI) / 180)] : [f.x, 0, 0, f.y];
+      [a, b, c, d] = [a * na + c * nb, b * na + d * nb, a * nc + c * nd, b * nc + d * nd];
+      if (f.k === "r") turned += f.a;
+    }
+  }
+  const scaleX = Math.hypot(a, b);
+  if (scaleX < 1e-12) {
+    // Scaled to nothing (scale(0) to pop in from a point): read the parts as written.
+    const sx = fns.reduce((p, f) => (f.k === "s" ? p * f.x : p), 1);
+    const sy = fns.reduce((p, f) => (f.k === "s" ? p * f.y : p), 1);
+    return { x: tx, y: ty, rotation: turned, scaleX: sx, scaleY: sy, shear: 0 };
+  }
+  const scaleY = (a * d - b * c) / scaleX;
+  // How far the y axis leans off square, per unit of height: a skew nudg can't draw.
+  const shear = (a * c + b * d) / scaleX;
+  // Keep whole turns as written (rotate(360deg) spins); a mirrored scale reads its angle back.
+  const read = (Math.atan2(b, a) * 180) / Math.PI;
+  const off = ((turned - read) % 360 + 540) % 360 - 180;
+  const rotation = Math.abs(off) < 1e-6 ? turned : read;
+  return { x: tx, y: ty, rotation, scaleX, scaleY, shear };
+}
+
+/** A value with its transform list read back: a number, a length or a color. */
+function plain(v: Value): number | Length | string {
+  if (typeof v !== "object" || !("fns" in v)) return v;
+  const p = decompose(v.fns)!;
+  const out = v.part === "scale" ? p.scaleX : p[v.part];
+  return typeof out === "number" ? out : out.width === undefined && out.height === undefined ? out.px : out;
+}
+
+/** CSS's own interpolation of two transform lists at progress `k`, read back as one part. */
+function transformAt(from: TList, to: TList, k: number, size: [number, number]): number {
+  let A = from.fns;
+  let B = to.fns;
+  const identity = (f: Fn): Fn => (f.k === "t" ? { k: "t", x: { px: 0 }, y: { px: 0 } } : f.k === "r" ? { k: "r", a: 0 } : { k: "s", x: 1, y: 1 });
+  // A shorter list (none is empty) is padded with identity functions when the rest match.
+  if (A.length < B.length && A.every((f, i) => f.k === B[i].k)) A = [...A, ...B.slice(A.length).map(identity)];
+  if (B.length < A.length && B.every((f, i) => f.k === A[i].k)) B = [...B, ...A.slice(B.length).map(identity)];
+  const part = (p: Parts | undefined): number => {
+    if (!p) return NaN;
+    const v = from.part === "scale" ? p.scaleX : p[from.part];
+    return typeof v === "number" ? v : (resolve(v, size) as number);
+  };
+  if (A.length === B.length && A.every((f, i) => f.k === B[i].k)) {
+    const mix = A.map((f, i): Fn => {
+      const g = B[i];
+      if (f.k === "t" && g.k === "t") return { k: "t", x: addLength(scaleLength(f.x, 1 - k), scaleLength(g.x, k)), y: addLength(scaleLength(f.y, 1 - k), scaleLength(g.y, k)) };
+      if (f.k === "r" && g.k === "r") return { k: "r", a: f.a + (g.a - f.a) * k };
+      const fs = f as Fn & { k: "s" };
+      const gs = g as Fn & { k: "s" };
+      return { k: "s", x: fs.x + (gs.x - fs.x) * k, y: fs.y + (gs.y - fs.y) * k };
+    });
+    return part(decompose(mix));
+  }
+  // Lists that don't match interpolate as matrices: decomposed, the angle the short way round.
+  const p0 = decompose(A);
+  const p1 = decompose(B);
+  if (!p0 || !p1) return NaN;
+  const r0 = (((p0.rotation % 360) + 540) % 360) - 180;
+  let r1 = (((p1.rotation % 360) + 540) % 360) - 180;
+  if (r1 - r0 > 180) r1 -= 360;
+  if (r0 - r1 > 180) r1 += 360;
+  const lerp = (x: number, y: number) => x + (y - x) * k;
+  return part({ x: addLength(scaleLength(p0.x, 1 - k), scaleLength(p1.x, k)), y: addLength(scaleLength(p0.y, 1 - k), scaleLength(p1.y, k)), rotation: lerp(r0, r1), scaleX: lerp(p0.scaleX, p1.scaleX), scaleY: lerp(p0.scaleY, p1.scaleY), shear: lerp(p0.shear, p1.shear) });
 }
 
 function parseShadow(value: string, frame: Frame, where: string, problems: string[]) {
@@ -387,8 +491,10 @@ function length(raw: string, axis: "width" | "height" | undefined, where: string
   return undefined;
 }
 
-function add(a: Value, b: Value | undefined): Value {
-  if (b === undefined) return a;
+function add(a0: Value, b0: Value | undefined): Value {
+  if (b0 === undefined) return a0;
+  const a = plain(a0);
+  const b = plain(b0);
   const la = typeof a === "number" ? { px: a } : (a as Length);
   const lb = typeof b === "number" ? { px: b } : (b as Length);
   const sum: Length = { px: la.px + lb.px };
@@ -471,6 +577,8 @@ function findAnimation(source: string, name: string, override: string | undefine
   for (const token of splitTop(line, " ")) {
     if (token === name) continue;
     if (/\$\{/.test(token)) {
+      // A value only the app knows is fine when the override gives it.
+      if (override) continue;
       problems.push(`The animation line has "${token}", a value only the app knows. Pass the line with numbers, e.g. --animation "0.3s ease".`);
       continue;
     }
@@ -540,12 +648,16 @@ function sameEase(a: Ease, b: Ease): boolean {
 }
 
 function sameValue(a: Value, b: Value): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+  const x = plain(a);
+  const y = plain(b);
+  if (typeof x === "number" && typeof y === "number") return Math.abs(x - y) < 1e-9;
+  return JSON.stringify(x) === JSON.stringify(y);
 }
 
 // --- writing nudg ----------------------------------------------------------------
 
-function nudgValue(target: string, v: Value): Json {
+function nudgValue(target: string, value: Value): Json {
+  const v = plain(value);
   if (typeof v === "number" || typeof v === "string") return typeof v === "number" ? round(v, 6) : v;
   const parts = (["width", "height"] as const).filter((k) => v[k] !== undefined);
   if (parts.length !== 1) return null;
@@ -651,7 +763,8 @@ function loopDoc(tracks: Map<string, Frame[]>, a: Animation, target: string, pro
   return { nudg: VERSION, targets: [target], values, initial: "playing", states: { playing: { loop } } };
 }
 
-function negate(v: Value): Value {
+function negate(v0: Value): Value {
+  const v = plain(v0);
   if (typeof v === "number") return -v;
   const l = v as Length;
   const out: Length = { px: -l.px };
@@ -662,22 +775,27 @@ function negate(v: Value): Value {
 
 // --- the proof -------------------------------------------------------------------
 
-function resolve(v: Value, size: [number, number]): number | string {
+function resolve(v0: Value, size: [number, number]): number | string {
+  const v = plain(v0);
   if (typeof v === "number" || typeof v === "string") return v;
   return v.px + (v.width ?? 0) * size[0] + (v.height ?? 0) * size[1];
 }
 
 /** What CSS shows for one property at `t` seconds after the animation starts. */
 function cssAt(list: Frame[], a: Animation, t: number, size: [number, number]): number | number[] {
-  const cycles = a.iterations === Infinity ? Math.max(1, Math.ceil((t - a.delay) / a.duration) + 1) : a.iterations;
+  // An infinite animation repeats one period (two cycles when it alternates), starting over each time.
+  const infinite = a.iterations === Infinity;
+  const cycles = infinite ? (a.direction === "alternate" || a.direction === "alternate-reverse" ? 2 : 1) : a.iterations;
   const points = unroll(list, a, cycles);
   const span = a.duration * cycles;
-  const u = Math.min(1, Math.max(0, (t - a.delay) / span));
+  const local = t - a.delay;
+  const u = infinite ? (local <= 0 ? 0 : (local % span) / span) : Math.min(1, Math.max(0, local / span));
   for (let i = 1; i < points.length; i++) {
     const p0 = points[i - 1];
     const p1 = points[i];
     if (u > p1.at) continue;
     const k = easeAt(p0.ease, (u - p0.at) / (p1.at - p0.at || 1));
+    if (isList(p0.value) && isList(p1.value)) return transformAt(p0.value, p1.value, k, size);
     const v0 = resolve(p0.value, size);
     const v1 = resolve(p1.value, size);
     if (typeof v0 === "string" || typeof v1 === "string") {
@@ -714,11 +832,29 @@ function prove(doc: JsonObject, tracks: Map<string, Frame[]>, a: Animation, targ
       const css = cssAt(list, a, t, size);
       const nudg = sample[`${target}.${prop}`];
       const unit = KINDS[prop].unit;
-      const diff = Array.isArray(css) ? Math.hypot(...hexToOklab(String(nudg)).slice(0, 3).map((c, j) => c - css[j])) : Math.abs(Number(nudg) - css);
+      const raw = Array.isArray(css) ? Math.hypot(...hexToOklab(String(nudg)).slice(0, 3).map((c, j) => c - css[j])) : Math.abs(Number(nudg) - css);
+      // NaN: CSS skews here, which no nudg property draws.
+      const diff = Number.isNaN(raw) ? Infinity : raw;
       const d = out.get(prop) ?? { property: prop, max: 0, unit, at: 0, limit: LIMITS[unit] ?? 0 };
       if (diff > d.max) Object.assign(d, { max: diff, at: t });
       out.set(prop, d);
     }
+  }
+  // nudg draws no skew, so CSS's skew is the difference itself: how far a corner leans, in px.
+  const list = [...tracks.values()].find((l) => l.some((f) => isList(f.values.values().next().value!)));
+  if (list) {
+    const shear = list.map((f): Frame => {
+      const v = f.values.values().next().value!;
+      return { ...f, values: new Map([["shear", isList(v) ? { fns: v.fns, part: "shear" as Part } : 0]]) };
+    });
+    const d: CssDifference = { property: "skew", max: 0, unit: "px", at: 0, limit: LIMITS.px };
+    for (let i = 0; i <= SAMPLES; i++) {
+      const t = (span * i) / SAMPLES;
+      const lean = Math.abs(cssAt(shear, a, t, size) as number) * (size[1] / 2);
+      const diff = Number.isNaN(lean) ? Infinity : lean;
+      if (diff > d.max) Object.assign(d, { max: diff, at: t });
+    }
+    if (d.max > 1e-9) out.set("skew", d);
   }
   return [...out.values()].map((d) => ({ ...d, max: round(d.max, 6), at: round(d.at, 6) }));
 }
@@ -809,7 +945,8 @@ function round(n: number, digits: number): number {
   return Math.round(n * f) / f;
 }
 
-function show(v: Value): string {
+function show(v0: Value): string {
+  const v = plain(v0);
   return typeof v === "object" ? JSON.stringify(v) : String(v);
 }
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **`nudg audit` leaves out code that moves nothing.** A frame loop counts only when something near it moves on screen (a style, a transform, a scroll, a setter of a moving value), so a frame clock, a re-render throttle or a measurement run isn't reported. Neither is a style set on an element the code just created (a hidden copy box), or `new Audio(...)` for a song or preview the person plays. On PlaySnack this took 10 of 58 findings out: they weren't motion.
+
 ## 1.10.0
 
 Particles. Format 1.4 lets a file send confetti out of a button, sparkles around a badge or rain from the top of a screen. Every piece flies on a seeded path that TypeScript, Swift and Kotlin compute the same way, so a burst looks the same on every platform and can be compared and tested. It completes the feedback the 1.3 design set out: motion, sound, touch and particles from one file, on one clock. Files from 1.3 and earlier read as before. A compiled program with emitters is format 11.

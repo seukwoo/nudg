@@ -40,7 +40,7 @@ test("audit counts nudg uses, the app's own helpers around nudg, and leaves out 
     { path: "press.nudg.json", text: '{ "host": { "custom": ["glow"] } }' },
     { path: "motion/sheet.ts", text: 'import { useNudg } from "@nudg/core/react";\nexport function useSheet() { return useNudg(sheet); }\nexport const shake = (el) => playDoc(doc, el);' },
     { path: "Sheet.tsx", text: "const s = useSheet();\nshake(field);\nshake(other);" },
-    { path: "glue.ts", text: 'import { playDoc } from "@nudg/core/dom";\nsetTimeout(() => p.destroy(), 900);\nsetTimeout(() => setCount(1), 900);\nrequestAnimationFrame(tick);\n// nudg-audit-ignore: a clock\nrequestAnimationFrame(clock);' },
+    { path: "glue.ts", text: 'import { playDoc } from "@nudg/core/dom";\nsetTimeout(() => p.destroy(), 900);\nsetTimeout(() => setCount(1), 900);\nrequestAnimationFrame(() => setOffset(drag()));\n// nudg-audit-ignore: a clock\nrequestAnimationFrame(clock);' },
     { path: "meter.ts", text: 'const tick = () => {\n  p.input("host.level", level());\n  requestAnimationFrame(tick);\n};' },
     { path: "bundle.js", text: "x".repeat(4000) + "@keyframes a{}" },
   ]);
@@ -56,6 +56,17 @@ test("audit flags sound and haptics played by hand, which cues would time with t
   const a = audit([{ path: "sfx.ts", text: 'import { Howl } from "howler";\nnavigator.vibrate(20);\nconst a = new Audio("/pop.mp3");\nawait Haptics.impactAsync(Light);' }]);
   assert.deepEqual(a.findings.map((f) => `${f.line} ${f.kind}`), ["1 feedback", "2 feedback", "3 feedback", "4 feedback"]);
   assert.match(a.findings[0].use, /a cue in the file/);
+});
+
+test("audit leaves out code that moves nothing: frame clocks, set-up styles, media playback", () => {
+  const a = audit([
+    { path: "governor.ts", text: "const step = (ts) => {\n  requestAnimationFrame(step);\n  const s = gov.frame(ts);\n  if (s) apply(s.level);\n};\nrequestAnimationFrame(step);" },
+    { path: "log.tsx", text: "if (!raf) raf = requestAnimationFrame(() => { raf = 0; setVersion((v) => v + 1); });" },
+    { path: "copy.ts", text: 'const ta = document.createElement("textarea");\nta.value = text;\nta.style.position = "fixed";\nta.style.opacity = "0";' },
+    { path: "songs.tsx", text: "const preview = (song) => {\n  const next = new Audio(song.previewUrl);\n};" },
+    { path: "toast.tsx", text: "const id = requestAnimationFrame(() => setOn(true));\n<div style={{ opacity: on ? 1 : 0 }} />" },
+  ]);
+  assert.deepEqual(a.findings.map((f) => `${f.file}:${f.line} ${f.kind}`), ["toast.tsx:1 frame-loop"]);
 });
 
 test("the messenger example has all its motion on nudg", () => {

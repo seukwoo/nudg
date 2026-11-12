@@ -53,7 +53,10 @@ test("from-css repeats a whole count when the cycle ends where it starts", () =>
 
 test("from-css refuses what it can't convert exactly, and says why", () => {
   const reasons = (k: string, a = "x .4s") => fromCss(css(k.replace("@keyframes x", "@keyframes x"), a), "x").problems.join(" | ");
-  assert.match(reasons("@keyframes x { from { transform: rotate(20deg) translateX(10px) } to { transform: none } }"), /translate after a rotate/);
+  // A big turn with a translate after it curves the path between frames, past the limit.
+  assert.match(reasons("@keyframes x { from { transform: rotate(20deg) translateX(10px) } to { transform: none } }"), /path differs from nudg's/);
+  // A rotate after a non-uniform scale skews; the proof says how far a corner leans.
+  assert.match(reasons("@keyframes x { from { transform: scale(1.4, .7) rotate(20deg) } to { transform: none } }"), /a corner leans [\d.]+px/);
   assert.match(reasons("@keyframes x { from { opacity: 0 } to { opacity: 1 } }", "x .4s steps(4)"), /steps/);
   assert.match(reasons("@keyframes x { from { box-shadow: 0 0 0 0 #000 } to { box-shadow: 0 0 0 12px #0000 } }"), /spread/);
   assert.match(reasons("@keyframes x { from { color: red } to { color: blue } }"), /no nudg property moves "color"/);
@@ -80,3 +83,21 @@ test("audit points each convertible @keyframes at from-css", () => {
   const a = audit([{ path: "a.css", text: "@keyframes rise { from { transform: translateY(8px) } to { transform: none } }" }]);
   assert.match(a.findings[0].use, /^nudg from-css a\.css rise/);
 });
+
+test("from-css reads a transform list back in nudg's order, and proves the path CSS blends", () => {
+  // A small turn, then a translate: the translate is turned with it, and the path stays within half a pixel.
+  const c = fromCss(css("@keyframes go { 0% { transform: scale(2) rotate(-10deg) } 40% { transform: rotate(2deg) translateX(-4px) } 70% { transform: rotate(-2deg) translateX(4px) } 100% { transform: none } }", "go .9s linear"), "go");
+  assert.deepEqual(c.problems, []);
+  const x = (c.doc as any).states.shown.enter["content.x"].keyframes;
+  assert.ok(Math.abs(x[0].value - -4 * Math.cos((2 * Math.PI) / 180)) < 1e-6, JSON.stringify(x));
+  assert.ok(c.differences.every((d) => d.max <= d.limit), JSON.stringify(c.differences));
+  // Popping in from a point: scale(0) has no angle to read back, so the parts are read as written.
+  const twinkle = fromCss(css("@keyframes tw { 0% { transform: scale(0) rotate(-90deg) } 60% { transform: scale(1.5) rotate(15deg) } 100% { transform: scale(1) rotate(0) } }", "tw .6s"), "tw");
+  assert.deepEqual(twinkle.problems, []);
+  assert.equal((twinkle.doc as any).values["content.rotation"], -90);
+  // Whole turns are kept, so a spin spins.
+  const spin = fromCss(css("@keyframes s { to { transform: rotate(1turn) } }", "s 1s linear infinite"), "s");
+  assert.deepEqual(spin.problems, []);
+  assert.equal((spin.doc as any).states.playing.loop["content.rotation"].to, 360);
+});
+

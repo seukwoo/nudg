@@ -627,7 +627,7 @@ Proposed order: shadow and blur with custom properties, then cues, then particle
 
 ## Proposal: CSS keyframes in, a nudg file out
 
-Status: proposed 2026-11-12. With [#150](https://github.com/seukwoo/nudg/pull/150), `nudg audit` puts PlaySnack at 45%: 40 motions on nudg, 48 outside. All 48 are things nudg already does, and 37 of them are CSS `@keyframes`. The audit says to rewrite each one as entry keyframes, and an agent rewriting 37 of them by hand reads percentages, transform lists and timing lines, and gets some of them subtly wrong without anyone seeing it. The conversion is mechanical, so a tool should do it and show that the result matches.
+Status: proposed 2026-11-12; the format part decided the same day. With [#150](https://github.com/seukwoo/nudg/pull/150), `nudg audit` puts PlaySnack at 45%: 40 motions on nudg, 48 outside. All 48 are things nudg already does, and 37 of them are CSS `@keyframes`. The audit says to rewrite each one as entry keyframes, and an agent rewriting 37 of them by hand reads percentages, transform lists and timing lines, and gets some of them subtly wrong without anyone seeing it. The conversion is mechanical, so a tool should do it and show that the result matches.
 
 ### What it does
 
@@ -660,29 +660,36 @@ Status: proposed 2026-11-12. With [#150](https://github.com/seukwoo/nudg/pull/15
   - It is available as the `nudg from-css` CLI command and as the MCP tool `nudg_from_css`.
   - The audit's hint for a convertible `@keyframes` becomes the exact command to run.
 
-### What it reports instead of converting
+### What the format gains for it (1.5)
 
-These are the cases where the result would not be exact. The tool names them, and someone decides each one.
+Two things CSS keyframes do that nudg entry keyframes can't yet. The converter mustn't approximate them, so the format gains them. A tool that rounds a slide-in off isn't one people can trust.
 
-- **A percentage translate** (`translateY(-70%)`).
-  - In nudg this is a measure of the element's own size, and entry keyframes take only numbers today.
-  - In PlaySnack:
-    - `snkRoll` moves by a share of its height;
-    - `golfCheerT` keeps `translateX(-50%)` for centering in every frame, which is the element's resting offset rather than motion.
-  - The tool handles a constant offset by leaving it out and saying it belongs in a base value. It reports a moving one.
-- **Transforms in a different order** from nudg's fixed one: a translate after a rotate or scale.
-- **Per-frame timing functions** (`animation-timing-function` inside a frame) that differ from frame to frame. nudg keyframes use one ease for every leg.
-- **Other values the tool can't map:**
-  - properties nudg has no property for (the audit already suggests a custom property);
-  - `steps()`;
-  - a `box-shadow` spread or `inset`;
-  - interpolated values.
+- **Values measured from the element's size in entry keyframes.**
+  - Loop frames already accept `{ "of": "height", "times": -0.7 }`; entry keyframes take only numbers.
+  - A slide from off screen is `translateX(-100%)`, and it is common. PlaySnack has it in:
+    - `snkLnbIn` and `snkSetUp`;
+    - `snkRoll` (a share of its height);
+    - `golfCheerT`.
+  - This needs conformance cases in all three runtimes, as for loops.
+- **An ease per frame.**
+  - CSS lets each frame set the timing of the leg after it (`animation-timing-function` inside a frame). A bounce is written that way: ease-in falling, ease-out rising.
+  - nudg keyframes have one ease for every leg. A frame gains its own `ease`, which overrides the effect's ease for its leg.
+
+A constant offset is not motion: `golfCheerT` keeps `translateX(-50%)` in every frame to center the element. The converter moves it to the element's base value and says so.
+
+### What it still reports instead of converting
+
+- `steps()`: discrete jumps, a different kind of motion (sprite sheets). nudg has none.
+- Transforms in a different order from nudg's fixed one (a translate after a rotate or scale): the same numbers mean a different path.
+- Properties nudg has no property for. The audit already points to a custom property.
+- A `box-shadow` spread or `inset`.
+- `${...}` interpolations, whose value only the app knows.
 
 ### Choices
 
 - **A converter, or better hints only?** Proposed: a converter. A hint still leaves the hand rewrite, where the mistakes happen. The proof is what lets the person accept 37 files without opening each one.
 - **Close enough, or exact?** Proposed: the file is written only within the limits above, and the report always says how close it is. A converter that quietly approximates would move motion into nudg, but it would change the motion.
-- **Format changes for the reported cases** (measured values in entry keyframes, an ease per frame)? Proposed: not now. Decide each one when PlaySnack's migration ([playsnack#1008](https://github.com/playsnack/playsnack/issues/1008)) shows how many keyframes need it.
+- **Format changes:** measured values and a per-frame ease, in format 1.5 (decided 2026-11-12: if the converter needs them, the format gains them properly).
 - **Spring fitting:** should the tool suggest a spring when the keyframes look like an overshoot (`snkPop`: 1, 1.32, 0.94, 1.06, 1)? Proposed: as an extra line in the report, never in place of the exact conversion. A spring responds to interruption better, but it is a different motion, and the person should judge it with `compare`.
 
 ## Open questions

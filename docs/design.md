@@ -732,6 +732,79 @@ React Native before 0.76 (the old architecture) has neither. There the adapter s
 - **Inner shadow as properties, or as `inset: true` on the one shadow?** Proposed: properties. One shadow with a flag can't be both at once, and a flag can't animate.
 - **SwiftUI spread by growing the shape?** Proposed: yes. It draws what the web draws, and the conformance values are the same; the drawing is the adapter's job.
 
+## Proposal: one check, and the person sees only what needs them (1.13)
+
+Status: proposed 2026-11-13. The judge thesis ([devlog](devlog.md), "the second review") made judging a change fast: compare, verdicts that speak first, observe on the real page. That serves a change the person asked for ("heavier"). But a vibe coder who has an AI build twenty buttons doesn't want to look at twenty comparisons. They want to look at what they asked for and at what is wrong, and to trust the rest. `from-css` showed the way: it proves each file moves as the CSS did, so 41 conversions needed no look at all.
+
+So the goal moves from "a change is judged in 2 seconds" to "most changes need no judging". The new metric is how many motions the person had to look at, and for routine work the target is none.
+
+### What exists, and what's missing
+
+| Check | Tool today | Asks the person? |
+|---|---|---|
+| The file is valid | `validate`, and `compare` on the changed side | No: the AI fixes errors |
+| The motion follows the platforms' guidelines | `critique`, one file at a time | Its warnings reach the person through the AI's reply |
+| The real page plays what the file says | `observe`, one URL and one file at a time | Its headline reaches the person |
+| The app's motion is on nudg | `audit`, a directory | Its share and gaps |
+| A requested change is perceptible | `compare` | Yes, by design |
+| A conversion is exact | `from-css` | Only when it offers a spring |
+
+Each tool answers one question about one thing. Nothing checks a whole app in one call, and nothing separates what the AI should just fix from what only the person can decide.
+
+### Proposed: `nudg check` (CLI and MCP `nudg_check`)
+
+- **One call over the project.**
+  - It validates and critiques every `.nudg.json`.
+  - It audits the source.
+  - Given the running app's URL, it observes each bound file there.
+- **Two lists, by who acts.**
+  - **For the AI:** what it can fix without asking.
+    - Validation errors.
+    - Guideline warnings with a single fix. A slow press, for example, has one answer.
+    - Glue the audit found that nudg replaces.
+    - CSS fighting a file on the page.
+
+    These come back as structured data. The AI fixes them and runs the check again; the person never hears of them.
+  - **For the person:** what needs taste or a decision.
+    - A guideline the file breaks on purpose. A slow exit can be a choice.
+    - A spring offered in place of exact keyframes.
+    - A gap nudg can't cover yet.
+    - A motion the page never shows when the reason isn't clear.
+
+    Each item is one line, in words: "the pay button answers a press 120 ms late; fix it?"
+- **One headline for the reply.** It is the only text the AI passes on, and it is short:
+  - "23 motions, all within the guidelines";
+  - or "23 motions; 1 needs you: …".
+  - When the AI's own list is empty and the person's list is empty, the AI may say nothing at all.
+- **No report file.** The person reads the conversation, not a dashboard. `compare` opens only when they ask to see something, and CI uses the same check, failing on the person's list.
+- **Memory of decisions.** When the person keeps a choice ("the slow exit is on purpose"), it is recorded in the file's `note` with the finding's code. The check doesn't raise it again, and the next AI reads why.
+
+### Choices
+
+- **A new command, or more flags on `audit`?** Proposed: a new command. `audit` answers "how much is on nudg"; `check` answers "is everything right, and what needs me".
+- **Who decides whether a finding is for the AI or for the person?** Proposed: the finding's code, in a fixed table in the spec. The same finding then always goes the same way, and agents can't route around the person.
+- **Recording a kept decision in `note`, or in a separate field?** Proposed: a separate field, `"keep": ["slow-exit"]`. It is machine-read, and a note is free text for people and the next AI. It is additive, so it fits 1.x.
+
+## Next major: what a 2.0 would break
+
+1.x only adds: files and APIs keep working. A 2.0 is worth it only when enough of the following hurts in practice, with evidence from real apps or agents. Then all of them go together, and `nudg upgrade` moves files over automatically. Add an item here with the evidence when it hurts.
+
+- **Names.**
+  - `color` is the background color.
+  - The shadow properties came in two formats (1.3, 1.6) under two prefixes (`shadow*`, `inner*`).
+  - Aliases accept other libraries' words.
+
+  A grammar designed at once would be easier for an AI to get right the first time.
+- **Version gates and history.**
+  - Fifteen format versions, each with `needs-version` checks.
+  - Twelve compiled program formats.
+  - Schemas for every version.
+
+  2.0 would start one format and one program format.
+- **Keyframes after a jump start at the target** ([devlog](devlog.md#2026-11-12-keyframes-after-a-jump-start-at-the-target)). The intuitive rule is the value before the state change; today it holds only when the property has a motion.
+- **A final state** (see open questions). It says in the file that a state means the component is gone, instead of the adapters' `exit` option.
+- **Adapter options.** `useNudg`, `useNudgOnce`, `playDoc` and `playEach` grew their options one at a time. One set of names and one lifecycle across them would be simpler.
+
 ## Open questions
 
 These are unresolved design choices. Scheduling and completion status live in the [roadmap](roadmap.md); examples of possible syntax below are proposals.

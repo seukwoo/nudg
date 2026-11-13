@@ -25,6 +25,8 @@ export interface FromCssOptions {
   animation?: string;
   /** The element's box for the proof, when a value is a percentage of it. Default 120 × 48. */
   size?: [number, number];
+  /** Values only the app knows, by the expression the source interpolates: { "V.accent": "#ff6a00", "GO_MS": "900" }. */
+  values?: Record<string, string>;
 }
 
 export interface CssDifference {
@@ -113,6 +115,8 @@ export function fromCss(source: string, name: string, options: FromCssOptions = 
   const out: CssConversion = { differences: [], problems, notes };
   const target = options.target ?? "content";
   const size = options.size ?? [120, 48];
+  // Put in what the app would: each ${expression} the caller gave a value for.
+  for (const [expr, value] of Object.entries(options.values ?? {})) source = source.split("${" + expr + "}").join(value);
 
   const block = findKeyframes(source, name);
   if (block === undefined) {
@@ -120,7 +124,7 @@ export function fromCss(source: string, name: string, options: FromCssOptions = 
     return out;
   }
   if (/\$\{/.test(block)) {
-    problems.push(`@keyframes ${name} has a \${...} value only the app knows. Put the value in, or write that frame by hand.`);
+    problems.push(`@keyframes ${name} has ${[...new Set(block.match(/\$\{[^}]*\}/g))].join(", ")}, a value only the app knows. Give it (--set "${/\$\{([^}]*)\}/.exec(block)![1]}=…"), or write that frame by hand.`);
     return out;
   }
   const frames = parseFrames(block, problems);
@@ -535,6 +539,28 @@ function color(raw: string, where: string, problems: string[]): string | undefin
     if (h.length <= 4) h = [...h].map((c) => c + c).join("");
     return "#" + (h.length === 6 ? h + "ff" : h);
   }
+  // color-mix(in srgb, a p%, b q%): premultiplied by alpha, as CSS Color 5 mixes.
+  const mix = /^color-mix\(\s*in\s+srgb\s*,(.*)\)$/.exec(s);
+  if (mix) {
+    const [one, two] = splitTop(mix[1], ",");
+    const part = (raw: string | undefined) => {
+      const m = /^(.*?)\s+([\d.]+)%$/.exec((raw ?? "").trim());
+      return { c: color(m ? m[1] : raw ?? "", where, problems), p: m ? parseFloat(m[2]) / 100 : undefined };
+    };
+    const a = part(one);
+    const b = part(two);
+    if (!a.c || !b.c) return undefined;
+    let pa = a.p ?? (b.p === undefined ? 0.5 : 1 - b.p);
+    let pb = b.p ?? 1 - pa;
+    const sum = pa + pb;
+    const scale = sum < 1 ? sum : 1;
+    pa /= sum;
+    pb /= sum;
+    const [ca, cb] = [rgba(a.c), rgba(b.c)];
+    const alpha = ca[3] * pa + cb[3] * pb;
+    const ch = [0, 1, 2].map((j) => (alpha === 0 ? 0 : (ca[j] * ca[3] * pa + cb[j] * cb[3] * pb) / alpha));
+    return "#" + [...ch, alpha * scale].map((c) => Math.round(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, "0")).join("");
+  }
   const rgb = /^rgba?\(([^)]*)\)$/.exec(s);
   if (rgb) {
     const parts = rgb[1].split(/[\s,/]+/).filter(Boolean);
@@ -579,7 +605,7 @@ function findAnimation(source: string, name: string, override: string | undefine
     if (/\$\{/.test(token)) {
       // A value only the app knows is fine when the override gives it.
       if (override) continue;
-      problems.push(`The animation line has "${token}", a value only the app knows. Pass the line with numbers, e.g. --animation "0.3s ease".`);
+      problems.push(`The animation line has "${token}", a value only the app knows. Give it (--set "${/\$\{([^}]*)\}/.exec(token)?.[1] ?? "name"}=…") or pass the line with numbers (--animation "0.3s ease").`);
       continue;
     }
     const t = /^(-?[\d.]+)(m?s)$/.exec(token);

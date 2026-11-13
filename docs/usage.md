@@ -198,7 +198,7 @@ It turns one CSS `@keyframes` block into a nudg file, so moving an app's CSS ani
 - `steps()`;
 - a shadow spread or inset;
 - a property no nudg property moves;
-- a value only the app knows (`${...}`, `var()`, `color-mix()`).
+- a value only the app knows (`${...}`, `var()`), unless you give it: `--set "V.accent=#ff6a00"` puts it in where the source interpolates it (over MCP, `values`). `color-mix(in srgb, …)` is computed as CSS mixes it.
 
 Colors are a note rather than a limit: CSS blends in sRGB and nudg in OKLab, so the colors in between differ by design.
 

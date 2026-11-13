@@ -70,6 +70,7 @@ simulate and plot options
                             gives or overrides the timing. When the keyframes overshoot, a
                             fitted spring is offered: --spring writes it, --exact the keyframes;
                             in a terminal it asks. --target <name> (default content).
+                            --set "V.accent=#ff6a00" gives a ${...} value only the app knows.
   critique <file...>        Whether the motion is good, not only valid: each transition checked
                             against the platforms' motion guidelines and accessibility rules
                             (slow transitions, late press feedback, invisible changes, bouncy

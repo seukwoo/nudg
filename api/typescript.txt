@@ -22,7 +22,7 @@ export interface Emitter { from: string; at: "center" | "top" | "bottom" | "left
 export type EntryEffect = SpringMotion | KeyframesEffect;
 export interface FiredCue { t: number; sound?: string; haptic?: string; intensity: number; pitch: number; }
 export interface Follow { input: string; range?: [MeasuredEndpoint, MeasuredEndpoint]; overdrag: number; multiply?: boolean; }
-export interface FromCssOptions { target?: string; animation?: string; size?: [number, number]; }
+export interface FromCssOptions { target?: string; animation?: string; size?: [number, number]; values?: Record<string, string>; }
 export interface Glide { momentum: number; range?: [MeasuredEndpoint, MeasuredEndpoint]; }
 export interface HeadlessOptions<C extends NudgContract = NudgContract> { host: PlayerHost; state?: C["states"][]; reducedMotion?: boolean; speed?: number; onFrame?: (values: Record<string, Value>) => void; onState?: (state: C["states"][]) => void; exit?: StateName<C> | StateName<C>[]; onExit?: () => void; onSettle?: (state: C["states"][]) => void; onCue?: (cue: FiredCue) => void; }
 export interface HeadlessPlayer<C extends NudgContract = NudgContract> { readonly runtime: Runtime; send(event: C["events"]): boolean; input(name: C["inputs"], value: number): boolean; values(): Record<string, Value>; present(): boolean; leaving(): boolean; now(): number; setReducedMotion(on: boolean): void; destroy(): void; }

@@ -210,6 +210,7 @@ const TOOLS = [
         name: { type: "string", description: "The @keyframes name." },
         animation: { type: "string", description: "The animation line's timing, when the source has none or it holds values only the app knows, e.g. \"0.6s ease-out\"." },
         target: { type: "string", description: "The nudg target name, default content." },
+        values: { type: "object", additionalProperties: { type: "string" }, description: "Values only the app knows, by the expression the source interpolates, e.g. { \"V.accent\": \"#ff6a00\", \"GO_MS\": \"900\" }. Read them from the app's code." },
       },
       required: ["name"],
     },
@@ -406,7 +407,7 @@ async function runTool(name: string, args: Json): Promise<ToolResult> {
         const path = optionalString(args.path, "path");
         const css = optionalString(args.css, "css");
         if (!path === !css) throw new Error("Pass the source as path or as css, not both.");
-        const result = fromCss(css ?? readFileSync(resolve(path!), "utf8"), name, { animation: optionalString(args.animation, "animation"), target: optionalString(args.target, "target") });
+        const result = fromCss(css ?? readFileSync(resolve(path!), "utf8"), name, { animation: optionalString(args.animation, "animation"), target: optionalString(args.target, "target"), values: args.values && typeof args.values === "object" && !Array.isArray(args.values) ? Object.fromEntries(Object.entries(args.values).map(([k, v]) => [k, String(v)])) : undefined });
         let body = formatFromCss(name, result);
         if (result.doc) body += "\n\nThe exact conversion:\n" + JSON.stringify(result.doc, null, 2);
         if (result.spring) body += "\n\nThe spring version (offer it; the person chooses):\n" + JSON.stringify(result.spring.doc, null, 2);

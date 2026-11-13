@@ -805,6 +805,111 @@ Each tool answers one question about one thing. Nothing checks a whole app in on
 - **A final state** (see open questions). It says in the file that a state means the component is gone, instead of the adapters' `exit` option.
 - **Adapter options.** `useNudg`, `useNudgOnce`, `playDoc` and `playEach` grew their options one at a time. One set of names and one lifecycle across them would be simpler.
 
+## Proposal: an entry effect can wait (format 1.7, #161)
+
+Status: proposed 2026-11-13. PlaySnack's cards rise one after another with an indexed delay (`"delay": { "input": "host.index", "times": 0.045 }`, 1.2). Each card's tags should then pop in just after their card. The pop is an entry kick on `scale`, and an entry effect starts on entry, so it can't wait ([#161](https://github.com/seukwoo/nudg/issues/161)):
+- the validator rejects a `delay` there (`delay-outside-animate`);
+- putting the delay on the transition's motion only delays the set, and the kick has already played by the time the tag shows.
+
+So the host sends `host.show` from a timer per item, which is the glue the audit flags.
+
+### Proposed
+
+- **A `delay` on an entry kick and on entry keyframes:** the same forms as a motion's, a number or `{ "input", "times", "plus", "max" }`, read when the state is entered.
+- **Until the delay ends,** the property does what the transition set it doing. When the transition delays its own motion by as much, the property holds still.
+- **When the delay ends:**
+  - a kick adds its velocity there, with its spring, toward the state's target;
+  - keyframes start from the value at that moment.
+- **Leaving or re-entering the state** before then drops the waiting effect, as it drops waiting cues.
+- **Reduced motion** skips entry effects as before, so nothing waits.
+- **Validation:**
+  - in 1.7 and later, `delay` on an entry effect is accepted;
+  - in older formats it is `needs-version`, in place of `delay-outside-animate`;
+  - `delay-outside-animate` stays for named motions.
+- **Conformance:**
+  - a staggered pop (the kick starting with its card's delayed rise);
+  - delayed keyframes;
+  - leaving before the delay ends;
+  - `validation-1.7`.
+
+### Choices
+
+- **A delay per entry effect, or one delay that holds the whole entry (set and enter)?** Proposed: per effect, the same way motions take a delay per property (0.12). Choreography stays per property, and one property's pop can follow another's rise.
+
+## Proposal: nudg to the web without nudg (`nudg to-css`)
+
+Status: proposed 2026-11-13. `from-css` moves CSS animations into nudg. The other direction is needed where nudg's runtime doesn't run. PlaySnack's side menu keeps 4 CSS keyframes because a static page without JavaScript shares them. A file should stay the one source, and the static page should get what it needs from that file.
+
+### What it writes, in three tiers
+
+1. **Plain CSS** for motion driven by time and by discrete events.
+   - **Entry and exit:** `@keyframes`.
+   - **State changes:** a `transition` on a class or attribute the page already toggles, such as `.is-open` or `[aria-expanded="true"]`.
+   - **Hover, press and focus:** `:hover`, `:active` and `:focus-visible`.
+   - **Loops:** `animation: … infinite`.
+   - **Springs:** CSS `linear()` easing, sampled from the closed-form curve.
+2. **Modern CSS for continuous input.**
+   - **A map from scroll:** scroll-driven animations (`animation-timeline: scroll()` or `view()`), for a header that shrinks, a parallax layer or a progress bar.
+   - **A drag that settles on the nearest state** (a carousel, a bottom sheet, a swipe row): a scroll container with `scroll-snap`. The browser tracks the finger, glides and snaps.
+   - **What moves with that position** (a dim that deepens as a sheet rises): a scroll-driven animation on the container.
+3. **A small generated script** for what CSS can't do:
+   - a free drag not tied to scrolling;
+   - a pinch;
+   - a velocity carried exactly through an interruption;
+   - tier 2 in browsers without scroll-driven animations.
+
+   It holds only that file's interaction, not the runtime. It enhances: the page works with tiers 1 and 2 alone, and the script makes it exact.
+
+### Decisions left to the person
+
+- **Whether a static page gets a script at all.** It is an option (`--script`). Without it, the tool says what the page loses ("the sheet won't carry the finger's speed through a reversal") instead of adding JavaScript on its own.
+- **Which class or attribute stands for a state.** The person names it, or the tool proposes `data-nudg-state`.
+
+### The proof
+
+As in `from-css`, it samples nudg's runtime and the generated CSS's own timing at 60 points and writes only within the same limits.
+- A `linear()` curve has enough points to stay within them.
+- Where CSS can't match, such as a transition reversed midway, the report says how far and when.
+
+### Choices
+
+- **One command, or `to-css` and `to-script`?** Proposed: one command with the tiers. The person asks for "this file on that page", and the tool picks the lightest tier that is exact.
+- **Should the audit count generated CSS as on nudg?** Proposed: yes, by a header comment the tool writes (`/* generated by nudg from menu.nudg.json */`). Editing it by hand removes the comment, and the audit counts it again.
+
+## Proposal: colors the app names (#162)
+
+Status: proposed 2026-11-13. A themed app's tints are tokens (`var(--hdr-hover)`), different in light and dark and switched live, but `color` and `shadowColor` take hex only ([#162](https://github.com/seukwoo/nudg/issues/162)). A CSS variable is a web idea, so the answer has to work on every platform.
+
+### Proposed
+
+- **Declaring the colors.** `host.colors` declares named colors the app supplies, like `host.inputs`. A file then uses `{ "color": "hover" }` wherever it would write a hex.
+- **Supplying them.**
+  - The web adapter reads each one from a CSS custom property of the same name (`--hover`, or a mapping), at bind and again when the theme changes (a `prefers-color-scheme` change, or a class or attribute change on the root).
+  - Native adapters take a map from the app (`colors: { hover: Color(...) }`) and follow it as it changes, the way they follow reduced motion.
+- **Blending.** A named color is resolved to channels before it blends, so blending stays in OKLab. A theme change moves each property to its new color with its own motion.
+- **Validation.** The validator checks that every named color is declared, as it checks inputs.
+
+### Not now
+
+- **More than one shadow per side** (a bevel plus an offset shadow). Revisit when a second app needs it; today it is one control's look.
+- **Hover that depends on the element's own state** (`:not([aria-checked="true"])`). That is the `when` of the file (a hover transition only from the unchecked state), and `playEach(…, { when: "mount" })` already binds every control. The guide should show the pattern.
+
+## Proposal: confetti with designed paths (#163)
+
+Status: proposed 2026-11-13. PlaySnack's celebration is a planned set of pieces. Each piece has a start, a peak at 40% of its life, a fall past the start, a spin, a duration, a delay and a color, and plays with Web Animations ([#163](https://github.com/seukwoo/nudg/issues/163)). The 1.4 emitter flies pieces by physics (seeded ranges of angle, speed, gravity and drag), so a designed arc can't be reproduced, and one player per piece is what the guide says not to do.
+
+### Proposed: paths in the emitter
+
+An emitter may give its pieces a path instead of physics: `"path": { "keyframes": [...], "ease": ... }`. Each frame holds an offset, a rotation, a scale and an opacity at a normalized time, and values may be ranges drawn from the seed like the physics fields. So the arc is designed once, and each piece varies within it:
+- a peak at `at: 0.4`, `y: [-160, -120]`;
+- a fall to `y: [40, 80]` at the end, with `ease: "in"` on that leg.
+
+Duration and delay ranges come from the seed as well. Every runtime places each piece the same, so the burst can still be compared and tested.
+
+### Not proposed: a plan the host sends
+
+`emit("confetti", pieces)` with each piece's path computed by the app would reproduce any design. But the motion would live in the app, out of the file, out of `compare`, and different on each platform. Revisit only if a design can't be written as ranges over one path.
+
 ## Open questions
 
 These are unresolved design choices. Scheduling and completion status live in the [roadmap](roadmap.md); examples of possible syntax below are proposals.

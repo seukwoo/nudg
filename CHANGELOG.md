@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.12.0
+
+Almost every CSS animation now moves onto nudg by command. `nudg from-css` reads transform lists in any order, takes values only the app knows (`--set`), and proves each file against CSS's own blending. Format 1.6 adds what the remaining keyframes drew: a shadow's spread and an inner shadow. On PlaySnack, 41 of 42 keyframes convert; the last is a 1.6 px skew nudg doesn't draw. Files from 1.5 and earlier read as before.
 
 - **Format 1.6: a shadow's spread and an inner shadow.** A ring that spreads and fades, a focus outline and a pressed-in look are now in the file, not a separate ring element.
   - **Properties:** `shadowSpread` grows the drop shadow. `innerX`, `innerY`, `innerBlur`, `innerSpread` and `innerColor` draw an inner shadow beside it (CSS's `inset`), each moving on its own.

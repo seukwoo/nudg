@@ -44,6 +44,8 @@ export interface CssConversion {
   doc?: JsonObject;
   /** How to play it from the host. */
   play?: string;
+  /** The timing it read, in words: the proof shares it, so a misread shows here and nowhere else (#160). */
+  timing?: string;
   /** Per property, how far nudg is from the CSS. */
   differences: CssDifference[];
   /** Why the file wasn't written: each names the frame or value and what to do. */
@@ -135,6 +137,13 @@ export function fromCss(source: string, name: string, options: FromCssOptions = 
   }
   const frames = parseFrames(block, problems);
   const animation = findAnimation(source, name, options.animation, problems, notes);
+  if (animation) {
+    const parts = [`${animation.duration}s`];
+    if (animation.delay) parts.push(`after ${animation.delay}s`);
+    parts.push(animation.iterations === Infinity ? "forever" : animation.iterations === 1 ? "once" : `${animation.iterations} times`);
+    if (animation.direction !== "normal") parts.push(animation.direction);
+    out.timing = parts.join(", ");
+  }
   if (!frames || !animation || problems.length) return out;
 
   // Uniform scale unless some frame scales the axes apart; then every frame says both axes.
@@ -619,40 +628,43 @@ function findAnimation(source: string, name: string, override: string | undefine
   while ((m = re.exec(source))) for (const one of splitTop(m[1], ",")) if (splitTop(one.trim(), " ").includes(name)) uses.push(one.trim());
   const distinct = [...new Set(uses)];
   if (distinct.length > 1) notes.push(`${name} is played ${distinct.length} ways (${distinct.join(" | ")}); this file follows the first. Pass the animation to convert another.`);
-  const line = [distinct[0] ?? "", override ?? ""].join(" ").trim();
   if (!distinct.length && !override) {
     problems.push(`No animation line plays ${name}, so its duration is unknown. Pass one, e.g. --animation "0.6s ease-out".`);
     return undefined;
   }
-  const a: Animation = { duration: 0, delay: 0, ease: CSS_EASES.ease, iterations: 1, direction: "normal", fill: "none" };
-  let times = 0;
-  for (const token of splitTop(line, " ")) {
-    if (token === name) continue;
-    if (/\$\{/.test(token)) {
-      // A value only the app knows is fine when the override gives it.
-      if (override) continue;
-      problems.push(`The animation line has "${token}", a value only the app knows. Give it (--set "${/\$\{([^}]*)\}/.exec(token)?.[1] ?? "name"}=…") or pass the line with numbers (--animation "0.3s ease").`);
-      continue;
+  // Each line is read on its own, as CSS reads it: its first time is the duration, its second
+  // the delay. What the override says replaces what the source said (#160).
+  const read = (line: string, given: boolean): Partial<Animation> => {
+    const out: Partial<Animation> = {};
+    let times = 0;
+    for (const token of splitTop(line, " ")) {
+      if (token === name) continue;
+      if (/\$\{/.test(token)) {
+        // A value only the app knows is fine when the override gives it.
+        if (override) continue;
+        problems.push(`The animation line has "${token}", a value only the app knows. Give it (--set "${/\$\{([^}]*)\}/.exec(token)?.[1] ?? "name"}=…") or pass the line with numbers (--animation "0.3s ease").`);
+        continue;
+      }
+      const t = /^(-?[\d.]+)(m?s)$/.exec(token);
+      if (t) {
+        const sec = parseFloat(t[1]) / (t[2] === "ms" ? 1000 : 1);
+        if (times++ === 0) out.duration = sec;
+        else out.delay = sec;
+        continue;
+      }
+      if (CSS_EASES[token] || /^(cubic-bezier|steps)\(|^step-/.test(token)) {
+        const e = timing(token, "animation", problems);
+        if (e) out.ease = e;
+      } else if (token === "infinite") out.iterations = Infinity;
+      else if (/^[\d.]+$/.test(token)) out.iterations = parseFloat(token);
+      else if (["normal", "reverse", "alternate", "alternate-reverse"].includes(token)) out.direction = token as Animation["direction"];
+      else if (["none", "forwards", "backwards", "both"].includes(token)) out.fill = token as Animation["fill"];
+      else if (["running", "paused"].includes(token)) continue;
+      else if (!given) continue; // another animation's name in the same line
     }
-    const t = /^(-?[\d.]+)(m?s)$/.exec(token);
-    if (t) {
-      const sec = parseFloat(t[1]) / (t[2] === "ms" ? 1000 : 1);
-      // Each line's first time is a duration and its second a delay; an override starts over.
-      if (times % 2 === 0) a.duration = sec;
-      else a.delay = sec;
-      times++;
-      continue;
-    }
-    if (CSS_EASES[token] || /^(cubic-bezier|steps)\(|^step-/.test(token)) {
-      const e = timing(token, "animation", problems);
-      if (e) a.ease = e;
-    } else if (token === "infinite") a.iterations = Infinity;
-    else if (/^[\d.]+$/.test(token)) a.iterations = parseFloat(token);
-    else if (["normal", "reverse", "alternate", "alternate-reverse"].includes(token)) a.direction = token as Animation["direction"];
-    else if (["none", "forwards", "backwards", "both"].includes(token)) a.fill = token as Animation["fill"];
-    else if (["running", "paused"].includes(token)) continue;
-    else if (!override) continue; // another animation's name in the same line
-  }
+    return out;
+  };
+  const a: Animation = { duration: 0, delay: 0, ease: CSS_EASES.ease, iterations: 1, direction: "normal", fill: "none", ...read(distinct[0] ?? "", false), ...(override ? read(override, true) : {}) };
   if (!(a.duration > 0)) problems.push(`${name} has no duration. Pass one, e.g. --animation "0.6s".`);
   if (a.delay < 0) problems.push(`A negative delay starts ${name} partway; nudg starts at the beginning.`);
   return a;
@@ -1018,6 +1030,7 @@ export function formatFromCss(name: string, c: CssConversion): string {
     for (const p of c.problems) lines.push(`  ✗ ${p}`);
   } else {
     lines.push(`@keyframes ${name}: converted, within the limits.`);
+    if (c.timing) lines.push(`  Timing read: ${c.timing}. The proof uses this timing too, so check it.`);
     for (const d of c.differences) lines.push(`  ${d.property}: at most ${d.max}${d.unit} from the CSS${d.unit === "ΔE" ? "" : ` (limit ${d.limit}${d.unit})`}`);
     if (c.play) lines.push(`  Play it with ${c.play}`);
   }

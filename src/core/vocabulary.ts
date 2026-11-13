@@ -1,8 +1,8 @@
 import type { PropertyKind } from "./types.ts";
 
 /** The newest format version; every listed version is read. */
-export const VERSION = "1.5";
-export const VERSIONS = ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "0.10", "0.11", "0.12", "0.13", "0.14", "0.15", "0.16", "0.17", "0.18", "1.0", "1.1", "1.2", "1.3", "1.4", "1.5"];
+export const VERSION = "1.6";
+export const VERSIONS = ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "0.10", "0.11", "0.12", "0.13", "0.14", "0.15", "0.16", "0.17", "0.18", "1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6"];
 
 /** What a host reports about each target's layout, as target.layout.<name> inputs (v0.4). */
 export const MEASUREMENTS = ["x", "y", "width", "height", "naturalWidth", "naturalHeight"] as const;
@@ -24,6 +24,12 @@ export const PROPERTIES: Record<string, PropertyKind> = {
   shadowY: "length",
   shadowBlur: "length",
   shadowColor: "color",
+  shadowSpread: "length",
+  innerX: "length",
+  innerY: "length",
+  innerBlur: "length",
+  innerSpread: "length",
+  innerColor: "color",
   blur: "length",
 };
 
@@ -35,12 +41,16 @@ export const HAPTICS = ["tick", "select", "light", "medium", "heavy", "soft", "r
 
 /** Properties that need format 1.3. */
 export const PROPERTIES_1_3 = ["shadowX", "shadowY", "shadowBlur", "shadowColor", "blur"];
+/** Properties that need format 1.6: a shadow's spread, and an inner shadow beside it. */
+export const PROPERTIES_1_6 = ["shadowSpread", "innerX", "innerY", "innerBlur", "innerSpread", "innerColor"];
 /** A custom property, target.custom.<name> (1.3): a number nudg moves and the host draws. */
 export const CUSTOM = "custom";
 /** Names a custom property can't take, with the built-in to use instead. */
 export const BUILT_IN_LIKE: Record<string, string> = {
-  shadow: "shadowX, shadowY, shadowBlur and shadowColor",
-  boxShadow: "shadowX, shadowY, shadowBlur and shadowColor",
+  shadow: "shadowX, shadowY, shadowBlur, shadowSpread and shadowColor",
+  innerShadow: "innerX, innerY, innerBlur, innerSpread and innerColor",
+  inset: "innerX, innerY, innerBlur, innerSpread and innerColor",
+  boxShadow: "shadowX, shadowY, shadowBlur, shadowSpread and shadowColor (an inset one: innerX, innerY, innerBlur, innerSpread and innerColor)",
   elevation: "shadowY and shadowBlur",
   filter: "blur",
 };
@@ -60,6 +70,7 @@ export const PROPERTY_ALIASES: Record<string, string> = {
   shadowOffsetX: "shadowX",
   shadowOffsetY: "shadowY",
   shadowRadius: "shadowBlur",
+  spread: "shadowSpread",
   backdropBlur: "blur",
 };
 

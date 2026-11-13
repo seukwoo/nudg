@@ -1,0 +1,132 @@
+{
+  "conformance": "1.6",
+  "name": "Shadow spread and an inner shadow move like any length and color, each with its own motion",
+  "doc": {
+    "nudg": "1.6",
+    "targets": [
+      "button"
+    ],
+    "values": {
+      "button.shadowSpread": 0,
+      "button.shadowColor": "#ff6a00cc",
+      "button.innerSpread": 0,
+      "button.innerColor": "#ff6a0000"
+    },
+    "animate": {
+      "button.shadowSpread": {
+        "spring": {
+          "duration": 0.4,
+          "bounce": 0
+        }
+      },
+      "button.shadowColor": {
+        "tween": {
+          "duration": 0.4,
+          "ease": "out"
+        }
+      },
+      "button.innerSpread": {
+        "tween": {
+          "duration": 0.2,
+          "ease": "linear"
+        }
+      },
+      "button.innerColor": {
+        "tween": {
+          "duration": 0.2,
+          "ease": "linear"
+        }
+      }
+    },
+    "initial": "idle",
+    "when": {
+      "host.pop": "popped",
+      "host.reset": "idle"
+    },
+    "states": {
+      "idle": {},
+      "popped": {
+        "set": {
+          "button.shadowSpread": 12,
+          "button.shadowColor": "#ff6a0000",
+          "button.innerSpread": 2,
+          "button.innerColor": "#ff6a00ff"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "button.shadowSpread": 0,
+          "button.innerSpread": 0
+        }
+      }
+    },
+    {
+      "t": 0.1,
+      "send": "host.pop"
+    },
+    {
+      "t": 0.15,
+      "expect": {
+        "state": [
+          "popped"
+        ],
+        "values": {
+          "button.shadowSpread": 2.231626849,
+          "button.shadowColor": "#ff6a00",
+          "button.innerSpread": 0.5,
+          "button.innerColor": "#ff6a00"
+        }
+      }
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "state": [
+          "popped"
+        ],
+        "values": {
+          "button.shadowSpread": 5.587007384,
+          "button.shadowColor": "#ff6a00",
+          "button.innerSpread": 1.0,
+          "button.innerColor": "#ff6a00"
+        }
+      }
+    },
+    {
+      "t": 0.3,
+      "expect": {
+        "state": [
+          "popped"
+        ],
+        "values": {
+          "button.shadowSpread": 9.852306643,
+          "button.shadowColor": "#ff6a00",
+          "button.innerSpread": 2.0,
+          "button.innerColor": "#ff6a00"
+        }
+      }
+    },
+    {
+      "t": 0.6,
+      "expect": {
+        "state": [
+          "popped"
+        ],
+        "values": {
+          "button.shadowSpread": 11.958754272,
+          "button.shadowColor": "#ff6a00",
+          "button.innerSpread": 2.0,
+          "button.innerColor": "#ff6a00"
+        }
+      }
+    }
+  ]
+}

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Format 1.6: a shadow's spread and an inner shadow.** A ring that spreads and fades, a focus outline and a pressed-in look are now in the file, not a separate ring element.
+  - **Properties:** `shadowSpread` grows the drop shadow. `innerX`, `innerY`, `innerBlur`, `innerSpread` and `innerColor` draw an inner shadow beside it (CSS's `inset`), each moving on its own.
+  - **Drawing:**
+    - the web writes them into one `box-shadow`;
+    - Compose uses `dropShadow` spread and `innerShadow`;
+    - SwiftUI draws the spread from the box grown by it, and the inner shadow inside the view;
+    - React Native skips both with a warning, because Animated can't drive its `boxShadow`.
+  - **Conformance:** `shadow-spread-inner` and `validation-1.6`, in all three runtimes.
+  - **Fixed:** Compose drew the 1.3 shadow outside the graphics layer, so it didn't move, turn or scale with the view. It does now.
+- **`from-css` reads them:** one outer shadow with its spread, and one inset shadow. A color fading to `transparent` keeps its hue, as CSS's premultiplied blend does, and the proof compares colors as they show over white and black. On PlaySnack, every `@keyframes` but `snkTrophyDrop` (a 1.6 px skew) converts.
+
 - **`nudg from-css` converts transform lists in any order.**
   - **Any order:** a list is composed as CSS does and read back in nudg's order (translate, rotate, scale), so `rotate(2deg) translateX(-4px)` becomes the turned translate.
   - **The proof:** between frames it now follows CSS's own blending, function by function (or as matrices when the lists don't match), and accepts the file only within the limits.

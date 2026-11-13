@@ -58,7 +58,7 @@ test("from-css refuses what it can't convert exactly, and says why", () => {
   // A rotate after a non-uniform scale skews; the proof says how far a corner leans.
   assert.match(reasons("@keyframes x { from { transform: scale(1.4, .7) rotate(20deg) } to { transform: none } }"), /a corner leans [\d.]+px/);
   assert.match(reasons("@keyframes x { from { opacity: 0 } to { opacity: 1 } }", "x .4s steps(4)"), /steps/);
-  assert.match(reasons("@keyframes x { from { box-shadow: 0 0 0 0 #000 } to { box-shadow: 0 0 0 12px #0000 } }"), /spread/);
+  assert.match(reasons("@keyframes x { from { box-shadow: 0 0 2px #000, 0 0 4px #000 } to { box-shadow: none } }"), /more than one outer shadow/);
   assert.match(reasons("@keyframes x { from { color: red } to { color: blue } }"), /no nudg property moves "color"/);
   assert.match(reasons("@keyframes x { from { opacity: ${a} } to { opacity: 1 } }"), /only the app knows/);
   assert.match(fromCss("@keyframes x { from { opacity: 0 } to { opacity: 1 } }", "x").problems.join(), /duration is unknown/);
@@ -111,3 +111,17 @@ test("from-css takes values only the app knows, and mixes colors as CSS does", (
   assert.equal((c.doc as any).values["content.shadowColor"], "#ff6a00cc");
   assert.equal((c.doc as any).animate["content.shadowBlur"].tween.duration, 0.4);
 });
+
+test("from-css reads a shadow's spread and an inset shadow (1.6), and fades to transparent as CSS does", () => {
+  const ring = fromCss(css("@keyframes ring { 0% { box-shadow: 0 0 0 0 #ff6a00cc } 100% { box-shadow: 0 0 0 12px transparent } }", "ring .5s ease-out"), "ring");
+  assert.deepEqual(ring.problems, []);
+  const doc = ring.doc as any;
+  assert.equal(doc.states.shown.set["content.shadowSpread"], 12);
+  // The transparent end keeps the ring's hue, so it fades without passing through black.
+  assert.equal(doc.states.shown.set["content.shadowColor"], "#ff6a0000");
+  assert.ok(ring.differences.every((d) => d.max <= (d.unit === "ΔE" ? 0.001 : d.limit)), JSON.stringify(ring.differences));
+  const both = fromCss(css("@keyframes press { from { box-shadow: 0 4px 8px #0004, inset 0 0 0 0 #0000 } to { box-shadow: 0 1px 2px #0004, inset 0 2px 4px #0006 } }", "press .2s"), "press");
+  assert.deepEqual(both.problems, []);
+  assert.equal((both.doc as any).states.shown.set["content.innerBlur"], 4);
+});
+

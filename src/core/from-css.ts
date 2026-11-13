@@ -106,6 +106,12 @@ const KINDS: Record<string, { unit: CssDifference["unit"]; own: Value }> = {
   shadowY: { unit: "px", own: 0 },
   shadowBlur: { unit: "px", own: 0 },
   shadowColor: { unit: "ΔE", own: "#00000000" },
+  shadowSpread: { unit: "px", own: 0 },
+  innerX: { unit: "px", own: 0 },
+  innerY: { unit: "px", own: 0 },
+  innerBlur: { unit: "px", own: 0 },
+  innerSpread: { unit: "px", own: 0 },
+  innerColor: { unit: "ΔE", own: "#00000000" },
   color: { unit: "ΔE", own: "" },
 };
 
@@ -172,6 +178,18 @@ export function fromCss(source: string, name: string, options: FromCssOptions = 
     }
   }
   if (problems.length) return out;
+  // A fully transparent color has no hue, and CSS blends colors premultiplied, so a fade to
+  // transparent keeps its hue. nudg blends what it is given: give the transparent end the hue
+  // of its neighbour, and the two blend the same.
+  for (const [prop, list] of tracks) {
+    if (KINDS[prop].unit !== "ΔE") continue;
+    const hex = (f: Frame) => f.values.get(prop) as string;
+    list.forEach((f, i) => {
+      if (!hex(f).endsWith("00")) return;
+      const near = list.slice(i + 1).find((g) => !hex(g).endsWith("00")) ?? [...list.slice(0, i)].reverse().find((g) => !hex(g).endsWith("00"));
+      if (near) f.values.set(prop, hex(near).slice(0, 7) + "00");
+    });
+  }
 
   const infinite = animation.iterations === Infinity;
   if (!infinite && (animation.iterations !== Math.floor(animation.iterations) || animation.iterations < 1)) {
@@ -466,23 +484,31 @@ function transformAt(from: TList, to: TList, k: number, size: [number, number]):
   return part({ x: addLength(scaleLength(p0.x, 1 - k), scaleLength(p1.x, k)), y: addLength(scaleLength(p0.y, 1 - k), scaleLength(p1.y, k)), rotation: lerp(r0, r1), scaleX: lerp(p0.scaleX, p1.scaleX), scaleY: lerp(p0.scaleY, p1.scaleY), shear: lerp(p0.shear, p1.shear) });
 }
 
+/** A box-shadow: one outer shadow (with its spread, 1.6) and one inset shadow (the inner shadow, 1.6). */
 function parseShadow(value: string, frame: Frame, where: string, problems: string[]) {
+  const sets = { shadow: ["shadowX", "shadowY", "shadowBlur", "shadowSpread", "shadowColor"], inner: ["innerX", "innerY", "innerBlur", "innerSpread", "innerColor"] };
+  // none is both shadows at nothing, so either can grow from it.
   if (value === "none") {
-    for (const [p, v] of [["shadowX", 0], ["shadowY", 0], ["shadowBlur", 0], ["shadowColor", "#00000000"]] as const) frame.values.set(p, v);
+    for (const props of Object.values(sets)) props.forEach((p, i) => frame.values.set(p, i === 4 ? "#00000000" : 0));
     return;
   }
-  if (splitTop(value, ",").length > 1) return void problems.push(`${where}: several shadows; nudg draws one.`);
-  if (/\binset\b/.test(value)) return void problems.push(`${where}: an inset shadow; nudg's shadow is outside the box. A ring element whose opacity moves draws the same.`);
-  const parts = splitTop(value, " ");
-  const lengths = parts.filter((p) => /^-?[\d.]+(px)?$/.test(p));
-  const rest = parts.filter((p) => !lengths.includes(p));
-  if (lengths.length === 4 && parseFloat(lengths[3]) !== 0) return void problems.push(`${where}: a shadow spread; nudg shadows have none. A separate ring element whose scale grows as it fades draws a spreading ring.`);
-  if (lengths.length < 2) return void problems.push(`${where}: "${value}" isn't a shadow nudg can read.`);
-  frame.values.set("shadowX", parseFloat(lengths[0]));
-  frame.values.set("shadowY", parseFloat(lengths[1]));
-  frame.values.set("shadowBlur", lengths[2] ? parseFloat(lengths[2]) : 0);
-  const c = rest.length ? color(rest.join(" "), where, problems) : "#000000ff";
-  if (c) frame.values.set("shadowColor", c);
+  const seen = new Set<string>();
+  for (const one of splitTop(value, ",")) {
+    const parts = splitTop(one, " ");
+    const inset = parts.includes("inset");
+    const kind = inset ? "inner" : "shadow";
+    if (seen.has(kind)) return void problems.push(`${where}: more than one ${inset ? "inset" : "outer"} shadow; nudg draws one of each.`);
+    seen.add(kind);
+    const lengths = parts.filter((p) => /^-?[\d.]+(px)?$/.test(p));
+    const rest = parts.filter((p) => p !== "inset" && !lengths.includes(p));
+    if (lengths.length < 2 || lengths.length > 4) return void problems.push(`${where}: "${one}" isn't a shadow nudg can read.`);
+    const props = sets[kind];
+    for (let i = 0; i < 4; i++) frame.values.set(props[i], lengths[i] ? parseFloat(lengths[i]) : 0);
+    const c = rest.length ? color(rest.join(" "), where, problems) : "#000000ff";
+    if (c) frame.values.set(props[4], c);
+  }
+  // A list without one of the two has it at nothing in this frame.
+  for (const [kind, props] of Object.entries(sets)) if (!seen.has(kind)) props.forEach((p, i) => frame.values.set(p, i === 4 ? "#00000000" : 0));
 }
 
 function length(raw: string, axis: "width" | "height" | undefined, where: string, problems: string[]): Value | undefined {
@@ -808,7 +834,7 @@ function resolve(v0: Value, size: [number, number]): number | string {
 }
 
 /** What CSS shows for one property at `t` seconds after the animation starts. */
-function cssAt(list: Frame[], a: Animation, t: number, size: [number, number]): number | number[] {
+function cssAt(list: Frame[], a: Animation, t: number, size: [number, number]): number | string {
   // An infinite animation repeats one period (two cycles when it alternates), starting over each time.
   const infinite = a.iterations === Infinity;
   const cycles = infinite ? (a.direction === "alternate" || a.direction === "alternate-reverse" ? 2 : 1) : a.iterations;
@@ -830,12 +856,20 @@ function cssAt(list: Frame[], a: Animation, t: number, size: [number, number]): 
       const c1 = rgba(v1 as string);
       const alpha = c0[3] + (c1[3] - c0[3]) * k;
       const ch = [0, 1, 2].map((j) => (alpha === 0 ? 0 : (c0[j] * c0[3] + (c1[j] * c1[3] - c0[j] * c0[3]) * k) / alpha));
-      return hexToOklab("#" + [...ch, alpha].map((c) => Math.round(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, "0")).join(""));
+      return "#" + [...ch, alpha].map((c) => Math.round(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, "0")).join("");
     }
     return v0 + (v1 - v0) * k;
   }
-  const last = resolve(points[points.length - 1].value, size);
-  return typeof last === "string" ? hexToOklab(last) : last;
+  return resolve(points[points.length - 1].value, size);
+}
+
+/** How differently two colors show: over white and over black, the larger OKLab distance. A transparent color's hue doesn't count. */
+function colorDiff(x: string, y: string): number {
+  const over = (hex: string, bg: number) => {
+    const [r, g, b, al] = rgba(hex);
+    return hexToOklab("#" + [r, g, b].map((c) => Math.round((c * al + bg * (1 - al)) * 255).toString(16).padStart(2, "0")).join(""));
+  };
+  return Math.max(...[1, 0].map((bg) => Math.hypot(...over(x, bg).slice(0, 3).map((c, j) => c - over(y, bg)[j]))));
 }
 
 function rgba(hex: string): number[] {
@@ -858,7 +892,7 @@ function prove(doc: JsonObject, tracks: Map<string, Frame[]>, a: Animation, targ
       const css = cssAt(list, a, t, size);
       const nudg = sample[`${target}.${prop}`];
       const unit = KINDS[prop].unit;
-      const raw = Array.isArray(css) ? Math.hypot(...hexToOklab(String(nudg)).slice(0, 3).map((c, j) => c - css[j])) : Math.abs(Number(nudg) - css);
+      const raw = typeof css === "string" ? colorDiff(String(nudg), css) : Math.abs(Number(nudg) - css);
       // NaN: CSS skews here, which no nudg property draws.
       const diff = Number.isNaN(raw) ? Infinity : raw;
       const d = out.get(prop) ?? { property: prop, max: 0, unit, at: 0, limit: LIMITS[unit] ?? 0 };

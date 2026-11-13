@@ -3024,6 +3024,65 @@ def validation_v1_5_cases():
     })
 
 
+# --- 1.6: shadow spread, inner shadow ----------------------------------------
+
+def shadow_spread_inner_cases():
+    # A ring that spreads and fades, and an inner outline that flashes: ordinary lengths and
+    # colors, each with its own motion. Adapters decide how they are drawn.
+    doc = {
+        "nudg": "1.6",
+        "targets": ["button"],
+        "values": {"button.shadowSpread": 0, "button.shadowColor": "#ff6a00cc", "button.innerSpread": 0, "button.innerColor": "#ff6a0000"},
+        "animate": {
+            "button.shadowSpread": spring_json(0.4, 0),
+            "button.shadowColor": {"tween": {"duration": 0.4, "ease": "out"}},
+            "button.innerSpread": {"tween": {"duration": 0.2, "ease": "linear"}},
+            "button.innerColor": {"tween": {"duration": 0.2, "ease": "linear"}},
+        },
+        "initial": "idle",
+        "when": {"host.pop": "popped", "host.reset": "idle"},
+        "states": {
+            "idle": {},
+            "popped": {"set": {"button.shadowSpread": 12, "button.shadowColor": "#ff6a0000", "button.innerSpread": 2, "button.innerColor": "#ff6a00ff"}},
+        },
+    }
+    sp, sc, isp, ic = Prop(0), Prop("#ff6a00cc"), Prop(0), Prop("#ff6a0000")
+    sp.retarget(12, spring(0.4, 0), 0.1)
+    sc.retarget("#ff6a0000", tween(0.4, "out"), 0.1)
+    isp.retarget(2, tween(0.2, "linear"), 0.1)
+    ic.retarget("#ff6a00ff", tween(0.2, "linear"), 0.1)
+    steps = [{"t": 0, "expect": {"state": ["idle"], "values": {"button.shadowSpread": 0, "button.innerSpread": 0}}},
+             {"t": 0.1, "send": "host.pop"}]
+    for t in (0.15, 0.2, 0.3, 0.6):
+        steps.append({"t": t, "expect": {"state": ["popped"], "values": {
+            "button.shadowSpread": sp.value(t), "button.shadowColor": sc.value(t),
+            "button.innerSpread": isp.value(t), "button.innerColor": ic.value(t)}}})
+    write("shadow-spread-inner", {
+        "conformance": "1.6",
+        "name": "Shadow spread and an inner shadow move like any length and color, each with its own motion",
+        "doc": doc,
+        "steps": steps,
+    })
+
+
+def validation_v1_6_cases():
+    base = {"nudg": "1.6", "targets": ["card"], "values": {"card.shadowSpread": 4, "card.innerX": 0, "card.innerY": 1, "card.innerBlur": 2, "card.innerSpread": 0, "card.innerColor": "#00000040"}, "initial": "idle", "states": {"idle": {}}}
+
+    def doc():
+        return json.loads(json.dumps(base))
+
+    out = [("valid", doc(), [])]
+    d = doc(); d["nudg"] = "1.5"
+    out.append(("needs-version", d, [("needs-version", "/values/card." + p) for p in ("shadowSpread", "innerX", "innerY", "innerBlur", "innerSpread", "innerColor")]))
+    d = doc(); d["values"]["card.innerColor"] = 3
+    out.append(("inner-color", d, [("invalid-value", "/values/card.innerColor")]))
+    write("validation-1.6", {
+        "conformance": "1.6",
+        "name": "Validator (1.6): shadow spread and the inner shadow",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 if __name__ == "__main__":
     toggle_cases()
     spring_form_cases()
@@ -3078,5 +3137,7 @@ if __name__ == "__main__":
     validation_v1_4_cases()
     keyframe_v1_5_cases()
     validation_v1_5_cases()
+    shadow_spread_inner_cases()
+    validation_v1_6_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

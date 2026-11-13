@@ -40,10 +40,17 @@ export function styleOf(target: string, props: string[], values: Record<string, 
   if (props.includes("width")) style.width = `${v("width", 0)}px`;
   if (props.includes("height")) style.height = `${v("height", 0)}px`;
   if (props.includes("color")) style[svg ? "fill" : "backgroundColor"] = values[`${target}.color`] as string;
-  if (props.some((p) => p.startsWith("shadow"))) {
-    const color = props.includes("shadowColor") ? (values[`${target}.shadowColor`] as string) : SHADOW_COLOR;
-    style.boxShadow = `${v("shadowX", 0)}px ${v("shadowY", 0)}px ${Math.max(0, v("shadowBlur", 0))}px ${color}`;
-  }
+  // A shadow, with its spread (1.6), and an inner shadow beside it (1.6): one box-shadow list.
+  const shadows: string[] = [];
+  const shadow = (prefix: string, inset: string) => {
+    if (!props.some((p) => p.startsWith(prefix))) return;
+    const color = props.includes(`${prefix}Color`) ? (values[`${target}.${prefix}Color`] as string) : SHADOW_COLOR;
+    const spread = props.includes(`${prefix}Spread`) ? ` ${v(`${prefix}Spread`, 0)}px` : "";
+    shadows.push(`${inset}${v(`${prefix}X`, 0)}px ${v(`${prefix}Y`, 0)}px ${Math.max(0, v(`${prefix}Blur`, 0))}px${spread} ${color}`);
+  };
+  shadow("shadow", "");
+  shadow("inner", "inset ");
+  if (shadows.length) style.boxShadow = shadows.join(", ");
   if (props.includes("blur")) style.filter = `blur(${Math.max(0, v("blur", 0))}px)`;
   // A custom property (1.3) is the host's to draw: a CSS variable it can use anywhere.
   for (const p of props) if (p.startsWith("custom.")) style[`--nudg-${p.slice(7)}`] = String(values[`${target}.${p}`]);

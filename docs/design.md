@@ -700,7 +700,7 @@ A constant offset is not motion: `golfCheerT` keeps `translateX(-50%)` in every 
 
 ## Proposal: shadow spread and inner shadows (format 1.6)
 
-Status: proposed 2026-11-13. After [#156](https://github.com/seukwoo/nudg/pull/156), `nudg from-css` converts 39 of PlaySnack's 42 `@keyframes`. Two of the three left draw something nudg's shadow can't: `snkPopRing` grows a ring with a shadow **spread** (`0 0 0 12px`), and `snkPopFade` flashes an **inset** outline (`inset 0 0 0 2px`). Both are common: a focus ring, a pulse around a button, a pressed-in look. Today the workaround is a separate ring element, which is glue nudg exists to remove.
+Status: decided 2026-11-13 as proposed. After [#156](https://github.com/seukwoo/nudg/pull/156), `nudg from-css` converts 39 of PlaySnack's 42 `@keyframes`. Two of the three left draw something nudg's shadow can't: `snkPopRing` grows a ring with a shadow **spread** (`0 0 0 12px`), and `snkPopFade` flashes an **inset** outline (`inset 0 0 0 2px`). Both are common: a focus ring, a pulse around a button, a pressed-in look. Today the workaround is a separate ring element, which is glue nudg exists to remove.
 
 ### What each platform draws
 

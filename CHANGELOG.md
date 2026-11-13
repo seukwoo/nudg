@@ -10,7 +10,8 @@
     - `scale(0)` frames, which pop something in from a point, convert;
     - `--animation` now covers a `${...}` duration in the source;
     - an infinite animation whose cycle ends away from where it starts (`rotate(1turn)`) no longer fails.
-  - **On PlaySnack:** 37 of 42 keyframes convert as they are, and 39 with `--animation` for the two the app times. The other three are a skew of 1.6 px (`snkTrophyDrop`) and two rings drawn with an app color and a spread.
+  - **Values only the app knows:** `--set "V.accent=#ff6a00"` (MCP `values`) puts them in where the source interpolates `${...}`, and `color-mix(in srgb, …)` is computed as CSS mixes it.
+  - **On PlaySnack:** 37 of 42 keyframes convert as they are, and 39 when `--set` gives the two values the app supplies (a duration and an accent color). The other three can't be converted: a 1.6 px skew (`snkTrophyDrop`), a shadow spread (`snkPopRing`) and an inset shadow (`snkPopFade`).
 
 ## 1.11.0
 

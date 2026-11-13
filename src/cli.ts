@@ -111,6 +111,7 @@ simulate and plot options
                             gives or overrides the timing. When the keyframes overshoot, a
                             fitted spring is offered: --spring writes it, --exact the keyframes;
                             in a terminal it asks. --target <name> (default content).
+                            --set "V.accent=#ff6a00" gives a \${...} value only the app knows.
   critique <file...>        Whether the motion is good, not only valid: each transition checked
                             against the platforms' motion guidelines and accessibility rules
                             (slow transitions, late press feedback, invisible changes, bouncy
@@ -736,7 +737,13 @@ if (command === "from-css") {
   if (!file || !name || args.positional.length > 2) fail("from-css takes a source file and a @keyframes name.");
   if (!existsSync(file)) fail(`${file} doesn't exist.`);
   if (args.flags.has("spring") && args.flags.has("exact")) fail("Pass --spring or --exact, not both.");
-  const result = fromCss(readFileSync(file, "utf8"), name, { animation: args.flags.get("animation")?.at(-1), target: args.flags.get("target")?.at(-1) });
+  const values: Record<string, string> = {};
+  for (const pair of args.flags.get("set") ?? []) {
+    const i = pair.indexOf("=");
+    if (i < 1) fail(`--set takes name=value, as in --set "V.accent=#ff6a00" (got "${pair}").`);
+    values[pair.slice(0, i)] = pair.slice(i + 1);
+  }
+  const result = fromCss(readFileSync(file, "utf8"), name, { animation: args.flags.get("animation")?.at(-1), target: args.flags.get("target")?.at(-1), values });
   let choice: "exact" | "spring" = args.flags.has("spring") && result.spring ? "spring" : "exact";
   if (args.flags.has("spring") && !result.spring && result.doc) process.stderr.write("No spring offered: the keyframes don't overshoot. Writing the exact conversion.\n");
   if (json) {

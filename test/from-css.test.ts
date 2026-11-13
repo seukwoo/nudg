@@ -101,3 +101,13 @@ test("from-css reads a transform list back in nudg's order, and proves the path 
   assert.equal((spin.doc as any).states.playing.loop["content.rotation"].to, 360);
 });
 
+
+test("from-css takes values only the app knows, and mixes colors as CSS does", () => {
+  const src = "@keyframes glow { from { box-shadow: 0 0 0 color-mix(in srgb, ${V.accent} 80%, transparent) } to { box-shadow: 0 0 16px color-mix(in srgb, ${V.accent} 80%, transparent) } }\n.x { animation: glow ${MS}ms ease-out; }";
+  assert.match(fromCss(src, "glow").problems.join(), /--set "V\.accent=…"/);
+  const c = fromCss(src, "glow", { values: { "V.accent": "#ff6a00", MS: "400" } });
+  assert.deepEqual(c.problems, []);
+  // 80% of an opaque color with transparent: the color at 80% alpha (0.8 × 255 = 204, cc).
+  assert.equal((c.doc as any).values["content.shadowColor"], "#ff6a00cc");
+  assert.equal((c.doc as any).animate["content.shadowBlur"].tween.duration, 0.4);
+});

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Fixed: `from-css` read `--animation` times the wrong way round** ([#160](https://github.com/seukwoo/nudg/issues/160)). When the source's `animation` line had one time and the option had two, the option's first time became the delay. Each line is now read on its own, as CSS reads it: the first time is the duration and the second the delay. What the option says replaces what the source said. The report now starts with the timing it read, because the proof uses the same timing and can't catch a misread.
+
 ## 1.12.0
 
 Almost every CSS animation now moves onto nudg by command. `nudg from-css` reads transform lists in any order, takes values only the app knows (`--set`), and proves each file against CSS's own blending. Format 1.6 adds what the remaining keyframes drew: a shadow's spread and an inner shadow. On PlaySnack, 41 of 42 keyframes convert; the last is a 1.6 px skew nudg doesn't draw. Files from 1.5 and earlier read as before.

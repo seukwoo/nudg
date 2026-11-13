@@ -125,3 +125,23 @@ test("from-css reads a shadow's spread and an inset shadow (1.6), and fades to t
   assert.equal((both.doc as any).states.shown.set["content.innerBlur"], 4);
 });
 
+
+test("from-css reads the animation option as CSS does: the first time is the duration, the second the delay (#160)", () => {
+  const kf = "@keyframes blink { 0%, 100% { opacity: 1 } 50% { opacity: .25 } }";
+  // A source line with one time, and an option with two: the option's own first time is the duration.
+  const c = fromCss(kf + "\n.x { animation: blink 1.2s infinite; }", "blink", { animation: "blink .9s .3s infinite" });
+  const loop = (c.doc as any).states.playing.loop["content.opacity"];
+  assert.equal(loop.duration, 0.9);
+  assert.equal(loop.delay, 0.3);
+  const f = fromCss("@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }", "fadeIn", { animation: "fadeIn .4s ease .65s both" });
+  // A hold of 0.65 s, then 0.4 s of fade: 1.05 s in all, the fade starting at 0.65 / 1.05.
+  const enter = (f.doc as any).states.shown.enter["content.opacity"];
+  assert.equal(enter.duration, 1.05);
+  assert.deepEqual(enter.keyframes, [{ at: 0.619048, value: 0, ease: [0.25, 0.1, 0.25, 1] }]);
+  // A source line with two times keeps them when the option gives only an ease.
+  const g = fromCss("@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }\n.x { animation: fadeIn .4s ease .65s both; }", "fadeIn", { animation: "linear" });
+  const kept = (g.doc as any).states.shown.enter["content.opacity"];
+  assert.equal(kept.duration, 1.05);
+  assert.deepEqual(kept.keyframes, [{ at: 0.619048, value: 0 }]);
+  assert.equal(kept.ease, "linear");
+});

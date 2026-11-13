@@ -1,6 +1,6 @@
 # The nudg format, version 1.2
 
-The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [conformance suite](../spec/conformance/), the [JSON Schema](../spec/nudg-1.5.schema.json) describes the structure for editors, and every validator code is listed in the [error reference](errors.md). For the reasoning behind the format, see [Design](design.md).
+The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [conformance suite](../spec/conformance/), the [JSON Schema](../spec/nudg-1.6.schema.json) describes the structure for editors, and every validator code is listed in the [error reference](errors.md). For the reasoning behind the format, see [Design](design.md).
 
 **Stability.** Format 1.0 is stable. Within 1.x, files only gain: new fields, events, inputs and error codes may appear in a later 1.x version, but nothing a 1.0 file says changes meaning; a file opts into a 1.x version's rules by declaring it. Runtimes read every earlier version (0.1 to 1.0) unchanged; each was a superset of the one before, and `nudg upgrade` raises a file to the current version, 1.2. The [appendix](#appendix-format-history) lists what each version added.
 
@@ -30,7 +30,7 @@ The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [
 
 A nudg file is strict JSON with the extension `.nudg.json`. Every platform already parses it, JSON Schema describes it, and LLMs write it reliably, so there is no parser to maintain and nothing new to learn. A friendlier syntax can be added later as sugar that compiles to the same model, but JSON stays the source of truth.
 
-A file may start with `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.5.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
+A file may start with `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.6.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
 
 JSON has no comments. Instead, any object may carry a `note` string. Runtimes ignore it. Unlike a comment, a note survives tools rewriting the file, and an AI can read it as part of the data.
 
@@ -125,7 +125,8 @@ One dotted form everywhere: `target.property` for values (`knob.x`), `target.eve
 Properties are platform-neutral: `x`, `y`, `width`, `height` (lengths), `scale`, `scaleX`, `scaleY`, `rotation` (degrees), `opacity` (0 to 1) and `color`. Adapters translate them.
 
 Format 1.3 adds:
-- **A drop shadow:** `shadowX`, `shadowY` and `shadowBlur` (lengths) and `shadowColor` (a color with alpha). Each moves with its own motion, so a lift can deepen its shadow with the same spring that raises the card. There is no spread: SwiftUI and Compose shadows have none, so a ring that spreads is a separate element that scales up as it fades. A file that moves a shadow without `shadowColor` gets a quarter-black (`#00000040`).
+- **A drop shadow:** `shadowX`, `shadowY` and `shadowBlur` (lengths) and `shadowColor` (a color with alpha). Each moves with its own motion, so a lift can deepen its shadow with the same spring that raises the card. A file that moves a shadow without `shadowColor` gets a quarter-black (`#00000040`).
+- **Spread and an inner shadow (1.6):** `shadowSpread` grows the drop shadow's box (a ring that spreads is a spread on a transparent-blur shadow). An inner shadow, drawn inside the box as CSS's `inset` is, has its own set: `innerX`, `innerY`, `innerBlur`, `innerSpread` (lengths) and `innerColor`. It is a second shadow beside the drop shadow, so an element can lift and be pressed in at once, each moving on its own. Without `innerColor` it is a quarter-black too.
 - **`blur`** (a length), a Gaussian blur of the view. Where a platform can't draw a property (blur below Android 12; shadow offsets and blur on React Native), the adapter warns once and skips it, and the rest of the file plays.
 - **Custom properties**, `target.custom.<name>`: unitless numbers the file moves like any other (motion, delay, reduced motion, settle), and the host draws. Use them for what no nudg property draws, such as a shader's input or a platform-only effect. Each name must be listed under `host.custom` (`undeclared-custom`). A name that nudg draws already (`shadow`, `blur`, `opacity`, an alias such as `filter`) is an error whose hint names the built-in (`custom-is-built-in`). On the web, the value is also the CSS variable `--nudg-<name>` on the element.
 
@@ -538,7 +539,7 @@ Settle is reported from the frame loop, never from inside the call that sent the
 
 ## Appendix: format history
 
-Each version added to the one before and kept everything it had. A 1.5 runtime reads them all; `nudg upgrade` raises a file to 1.5. The conformance cases named here define each addition across TypeScript, Swift and Kotlin; compiled programs gained a format when they needed new fields.
+Each version added to the one before and kept everything it had. A 1.6 runtime reads them all; `nudg upgrade` raises a file to 1.6. The conformance cases named here define each addition across TypeScript, Swift and Kotlin; compiled programs gained a format when they needed new fields.
 
 | Format | Added | Conformance | Program |
 |---|---|---|---|
@@ -566,5 +567,6 @@ Each version added to the one before and kept everything it had. A 1.5 runtime r
 | 1.3 | Shadow, blur, custom properties; cues for sound and haptics | `shadow-blur-custom`, `cue*`, `validation-1.3` | 10, only when cues are used |
 | 1.4 | Particles: `emitters` and `emit` | `particles*`, `validation-1.4` | 11, only when used |
 | 1.5 | Measured entry keyframes, an ease per keyframe | `keyframes-measured*`, `keyframes-ease`, `validation-1.5` | 12, only when used |
+| 1.6 | `shadowSpread`, and an inner shadow: `innerX`, `innerY`, `innerBlur`, `innerSpread`, `innerColor` | `shadow-spread-inner`, `validation-1.6` | as 1.5 |
 
 The `rest` case defines rest and lifecycle across all of them. Before 0.5, `map` and `follow` read only properties and drag inputs; before 0.9, ranges and map points were numbers; and so on: a feature used in a file that declares an older version is a `needs-version` error whose hint names the version that added it.

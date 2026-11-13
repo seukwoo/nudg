@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.draw.innerShadow
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.input.pointer.PointerInputChange
@@ -292,7 +293,6 @@ private fun hapticConstant(name: String): Int {
 
 /** Applies a target's values: offset, rotation, scale and opacity in a graphics layer, size in layout, color behind, shadow and blur (1.3). */
 fun Modifier.nudg(state: NudgState, name: String): Modifier = this
-    .nudgShadow(state, name)
     .layout { measurable, constraints ->
         val w = (state.values["$name.width"] as? Value.Number)?.let { (it.value * density).roundToInt() }
         val h = (state.values["$name.height"] as? Value.Number)?.let { (it.value * density).roundToInt() }
@@ -313,6 +313,8 @@ fun Modifier.nudg(state: NudgState, name: String): Modifier = this
         scaleY = (s * state.number(name, "scaleY", 1.0)).toFloat()
         alpha = state.number(name, "opacity", 1.0).toFloat()
     }
+    // Inside the graphics layer, so the shadows move, turn and scale with the view, as on the web.
+    .nudgShadow(state, name)
     .drawBehind {
         (state.values["$name.color"] as? Value.Color)?.let { drawRect(parseHex(it.hex)) }
     }
@@ -321,14 +323,27 @@ fun Modifier.nudg(state: NudgState, name: String): Modifier = this
         if (state.values.containsKey("$name.blur")) Modifier.blur((state.number(name, "blur", 0.0).coerceAtLeast(0.0)).dp, BlurredEdgeTreatment.Unbounded) else Modifier,
     )
 
-/** A drop shadow from shadowX, shadowY, shadowBlur and shadowColor (1.3), drawn behind the view. */
+/**
+ * A drop shadow from shadowX, shadowY, shadowBlur, shadowSpread and shadowColor (1.3, spread
+ * 1.6), drawn behind the view, and an inner shadow from innerX, innerY, innerBlur, innerSpread
+ * and innerColor (1.6), drawn over it.
+ */
 private fun Modifier.nudgShadow(state: NudgState, name: String): Modifier {
-    if (listOf("shadowX", "shadowY", "shadowBlur", "shadowColor").none { state.values.containsKey("$name.$it") }) return this
-    return this.dropShadow(RectangleShape) {
+    fun has(prefix: String) = listOf("X", "Y", "Blur", "Spread", "Color").any { state.values.containsKey("$name.$prefix$it") }
+    var out = this
+    if (has("shadow")) out = out.dropShadow(RectangleShape) {
         radius = (state.number(name, "shadowBlur", 0.0).coerceAtLeast(0.0) * density).toFloat()
+        spread = (state.number(name, "shadowSpread", 0.0) * density).toFloat()
         offset = Offset((state.number(name, "shadowX", 0.0) * density).toFloat(), (state.number(name, "shadowY", 0.0) * density).toFloat())
         color = (state.values["$name.shadowColor"] as? Value.Color)?.let { parseHex(it.hex) } ?: Color(0x40000000)
     }
+    if (has("inner")) out = out.innerShadow(RectangleShape) {
+        radius = (state.number(name, "innerBlur", 0.0).coerceAtLeast(0.0) * density).toFloat()
+        spread = (state.number(name, "innerSpread", 0.0) * density).toFloat()
+        offset = Offset((state.number(name, "innerX", 0.0) * density).toFloat(), (state.number(name, "innerY", 0.0) * density).toFloat())
+        color = (state.values["$name.innerColor"] as? Value.Color)?.let { parseHex(it.hex) } ?: Color(0x40000000)
+    }
+    return out
 }
 
 /**

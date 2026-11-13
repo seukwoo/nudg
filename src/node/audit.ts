@@ -108,9 +108,7 @@ function keyframesUse(name: string, body: string): { use: string; gap?: boolean 
   const n = name.toLowerCase();
   const props = [...new Set([...body.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1]))].filter((p) => !NUDG_CSS.has(p));
   if (props.length) return { use: `animates ${props.join(", ")}, which no nudg property moves yet; a custom property (target.custom.<name>, drawn through var(--nudg-<name>)) keeps its timing in nudg`, gap: true };
-  if (/box-shadow/.test(body) && /\b0\s+0\s+0\s+[1-9][\d.]*px/.test(body))
-    return { use: "a ring that spreads: a separate ring element whose scale grows as it fades (nudg shadows have no spread)" };
-  if (/box-shadow|filter\s*:\s*blur/.test(body)) return { use: "shadowX / shadowY / shadowBlur / shadowColor or blur (1.3), in a state's set and enter like any property" };
+  if (/box-shadow|filter\s*:\s*blur/.test(body)) return { use: "shadowX / shadowY / shadowBlur / shadowSpread / shadowColor, an inner shadow (innerX ... innerColor, 1.6) or blur, in a state's set and enter like any property" };
   if (/shake|wobble|jiggle|nope/.test(n)) return { use: "presets.shake(), played with release: \"settle\"" };
   if (/spin|rotat|load|pulse|blink|breath|shimmer|skeleton|bounce-?loop|float|wave|typing|dots/.test(n)) return { use: "a loop in a state (the spinner, skeleton or typing-indicator recipe)" };
   if (/confetti|particle|burst|firework|sparkle/.test(n)) return { use: "an emitter (1.4): \"emitters\" and \"emit\" in the file, drawn from data-nudg-piece templates" };

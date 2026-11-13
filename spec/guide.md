@@ -36,7 +36,7 @@ nudg files describe a UI interaction: states, the events that move between them,
 
 | Kind | Allowed |
 |---|---|
-| Properties (`target.property`) | `x`, `y`, `width`, `height` (logical units: number or `"20px"`/`"pt"`/`"dp"`), `scale`, `scaleX`, `scaleY`, `rotation` (degrees), `opacity` (0–1), `color` (hex `#RGB`, `#RRGGBB`, `#RRGGBBAA`); 1.3: `shadowX`, `shadowY`, `shadowBlur`, `shadowColor`, `blur`, and `custom.<name>` (declared in `host.custom`) for what the host draws |
+| Properties (`target.property`) | `x`, `y`, `width`, `height` (logical units: number or `"20px"`/`"pt"`/`"dp"`), `scale`, `scaleX`, `scaleY`, `rotation` (degrees), `opacity` (0–1), `color` (hex `#RGB`, `#RRGGBB`, `#RRGGBBAA`); 1.3: `shadowX`, `shadowY`, `shadowBlur`, `shadowColor`, `blur`, and `custom.<name>` (declared in `host.custom`) for what the host draws; 1.6: `shadowSpread`, and an inner shadow `innerX`, `innerY`, `innerBlur`, `innerSpread`, `innerColor` |
 | Events (`target.event`) | `down`, `up`, `cancel`, `tap`. A click is `down`, `up`, `tap`. Format 0.14: `longpress` (held 0.5 s; its tap is swallowed) and `doubletap` (a second tap within 0.3 s, right after it). |
 | Time | seconds (`0.3`) or `"300ms"` |
 
@@ -348,6 +348,7 @@ An app's motion is nudg files plus adapter calls. Before you write a timer, a wr
 | Confetti, sparkles, a burst out of a button | An emitter and `"emit"` in the file (1.4), drawn in a view the file names as a target. Never a piece-per-element loop of `animate()` calls or one player per piece. |
 | A sound or a vibration at a moment (a tap, a success, a shake's beats, a list item landing) | A cue in the file (`"cue": { "haptic": "success", "sound": "pop" }`), with the sound map in the adapter (`sounds`). Never `navigator.vibrate`, `new Audio()` or a haptics call in a timer of your own. |
 | A lift whose shadow deepens, a background that blurs | `shadowY`, `shadowBlur`, `shadowColor` and `blur` (1.3), animated like `y`. Never a CSS `box-shadow` or `filter` transition. |
+| A ring that spreads from a button, a focus outline, a pressed-in look | `shadowSpread` with `shadowColor` fading to transparent; an inner shadow (`innerSpread`, `innerColor`, 1.6). Never a separate ring element. |
 | An effect no nudg property draws (a shader input, a platform-only material) | A custom property: `"host": { "custom": ["glow"] }` and `"card.custom.glow": 0`. nudg moves it and the host draws it: on the web `var(--nudg-glow)`, on React Native `value("card.custom.glow")`, in SwiftUI and Compose from the model's values. First check that a built-in doesn't do it, and tell the person why you needed a custom property. |
 | A value the app knows (progress, volume, scroll) | `input("host.progress", v)`, declared under `host.inputs` |
 | Something the app decides (closed, loaded, failed) | `send("host.close")`, declared under `host.events` |

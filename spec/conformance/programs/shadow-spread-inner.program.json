@@ -1,0 +1,156 @@
+{
+ "nudgProgram": 8,
+ "version": "1.6",
+ "targets": [
+  "button"
+ ],
+ "properties": [
+  {
+   "key": "button.shadowSpread",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "button.shadowColor",
+   "kind": "color",
+   "base": [
+    0.7009248919190486,
+    0.14284685338429068,
+    0.1416876121709637,
+    0.8
+   ]
+  },
+  {
+   "key": "button.innerSpread",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "button.innerColor",
+   "kind": "color",
+   "base": [
+    0.7009248919190486,
+    0.14284685338429068,
+    0.1416876121709637,
+    0
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "button.shadowSpread",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 246.74011002723395,
+    "damping": 31.41592653589793,
+    "mass": 1
+   }
+  },
+  {
+   "key": "button.shadowColor",
+   "motion": {
+    "kind": "tween",
+    "duration": 0.4,
+    "ease": [
+     0,
+     0,
+     0.58,
+     1
+    ]
+   }
+  },
+  {
+   "key": "button.innerSpread",
+   "motion": {
+    "kind": "tween",
+    "duration": 0.2,
+    "ease": "linear"
+   }
+  },
+  {
+   "key": "button.innerColor",
+   "motion": {
+    "kind": "tween",
+    "duration": 0.2,
+    "ease": "linear"
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "idle",
+  "states": [
+   {
+    "name": "idle",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [],
+    "timers": []
+   },
+   {
+    "name": "popped",
+    "set": [
+     {
+      "key": "button.shadowSpread",
+      "value": [
+       12
+      ]
+     },
+     {
+      "key": "button.shadowColor",
+      "value": [
+       0.7009248919190486,
+       0.14284685338429068,
+       0.1416876121709637,
+       0
+      ]
+     },
+     {
+      "key": "button.innerSpread",
+      "value": [
+       2
+      ]
+     },
+     {
+      "key": "button.innerColor",
+      "value": [
+       0.7009248919190486,
+       0.14284685338429068,
+       0.1416876121709637,
+       1
+      ]
+     }
+    ],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [],
+    "timers": []
+   }
+  ],
+  "when": [
+   {
+    "event": "host.pop",
+    "animate": [],
+    "to": "popped"
+   },
+   {
+    "event": "host.reset",
+    "animate": [],
+    "to": "idle"
+   }
+  ]
+ }
+}

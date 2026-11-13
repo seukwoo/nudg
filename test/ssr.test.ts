@@ -41,3 +41,11 @@ test("useNudg on the server: style(name) puts the first frame in the markup, inp
   }
   assert.match(renderToString(h(Meter)), /scale\(0\.5, 1\)/);
 });
+
+test("a shadow's spread and an inner shadow (1.6) are one box-shadow list", async () => {
+  const { styleOf } = await import("../src/dom/style.ts");
+  const values = { "b.shadowSpread": 12, "b.shadowColor": "#ff6a0080", "b.innerSpread": 2, "b.innerColor": "#ff6a00ff" };
+  assert.equal(styleOf("b", ["shadowSpread", "shadowColor", "innerSpread", "innerColor"], values).boxShadow, "0px 0px 0px 12px #ff6a0080, inset 0px 0px 0px 2px #ff6a00ff");
+  // Without a spread the shadow is written as before.
+  assert.equal(styleOf("b", ["shadowY", "shadowBlur"], { "b.shadowY": 2, "b.shadowBlur": 4 }).boxShadow, "0px 2px 4px #00000040");
+});

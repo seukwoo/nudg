@@ -30,7 +30,7 @@ test("audit finds motion outside nudg and names what does it", () => {
   assert.match(use(5), /shadowBlur/);
   assert.match(use(9), /presets\.shake/);
   assert.match(use(10), /clip-path, which no nudg property moves yet; a custom property/);
-  assert.match(use(11), /separate ring element/);
+  assert.match(use(11), /shadowSpread/);
   assert.equal(a.onNudg, 0);
   assert.equal(a.coverage, 0);
 });

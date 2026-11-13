@@ -295,7 +295,8 @@ function styleFor(program: Program, target: string, animated: Map<string, Animat
     style.shadowOpacity = 1;
   }
   if (get("shadowColor")) style.shadowColor = get("shadowColor");
-  const skipped = ["shadowX", "shadowY", "blur"].filter((p) => get(p));
+  // A spread and an inner shadow (1.6) are only in React Native's boxShadow, which Animated can't drive.
+  const skipped = ["shadowX", "shadowY", "blur", "shadowSpread", "innerX", "innerY", "innerBlur", "innerSpread", "innerColor"].filter((p) => get(p));
   if (skipped.length && !warnedSkips.has(`${target}:${skipped}`)) {
     warnedSkips.add(`${target}:${skipped}`);
     console.warn(`nudg: React Native has no animatable style for ${skipped.map((p) => `${target}.${p}`).join(", ")}; it isn't drawn. Read it with value("${target}.${skipped[0]}") to draw it yourself.`);

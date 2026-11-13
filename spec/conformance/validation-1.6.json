@@ -1,0 +1,102 @@
+{
+  "conformance": "1.6",
+  "name": "Validator (1.6): shadow spread and the inner shadow",
+  "documents": [
+    {
+      "name": "valid",
+      "doc": {
+        "nudg": "1.6",
+        "targets": [
+          "card"
+        ],
+        "values": {
+          "card.shadowSpread": 4,
+          "card.innerX": 0,
+          "card.innerY": 1,
+          "card.innerBlur": 2,
+          "card.innerSpread": 0,
+          "card.innerColor": "#00000040"
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {}
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "1.5",
+        "targets": [
+          "card"
+        ],
+        "values": {
+          "card.shadowSpread": 4,
+          "card.innerX": 0,
+          "card.innerY": 1,
+          "card.innerBlur": 2,
+          "card.innerSpread": 0,
+          "card.innerColor": "#00000040"
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {}
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/values/card.shadowSpread"
+        },
+        {
+          "code": "needs-version",
+          "path": "/values/card.innerX"
+        },
+        {
+          "code": "needs-version",
+          "path": "/values/card.innerY"
+        },
+        {
+          "code": "needs-version",
+          "path": "/values/card.innerBlur"
+        },
+        {
+          "code": "needs-version",
+          "path": "/values/card.innerSpread"
+        },
+        {
+          "code": "needs-version",
+          "path": "/values/card.innerColor"
+        }
+      ]
+    },
+    {
+      "name": "inner-color",
+      "doc": {
+        "nudg": "1.6",
+        "targets": [
+          "card"
+        ],
+        "values": {
+          "card.shadowSpread": 4,
+          "card.innerX": 0,
+          "card.innerY": 1,
+          "card.innerBlur": 2,
+          "card.innerSpread": 0,
+          "card.innerColor": 3
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {}
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/values/card.innerColor"
+        }
+      ]
+    }
+  ]
+}

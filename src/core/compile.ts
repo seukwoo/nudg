@@ -48,6 +48,7 @@ import { MEASUREMENTS,
   VERSION,
   VERSIONS,
   PROPERTIES_1_3,
+  PROPERTIES_1_6,
   CUSTOM,
   BUILT_IN_LIKE,
   HAPTICS,
@@ -139,7 +140,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-1.5.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-1.6.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -784,6 +785,7 @@ class ComponentCompiler {
       ok = false;
     }
     if (ok && kind && PROPERTIES_1_3.includes(prop) && !this.needsVersion("1.3", p, `"${prop}"`)) return undefined;
+    if (ok && kind && PROPERTIES_1_6.includes(prop) && !this.needsVersion("1.6", p, `"${prop}"`)) return undefined;
     return ok ? kind : undefined;
   }
 

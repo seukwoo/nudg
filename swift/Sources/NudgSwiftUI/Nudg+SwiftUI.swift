@@ -221,7 +221,7 @@ private func playHaptic(_ name: String, _ intensity: Double) {
   #endif
 }
 
-/** Applies a target's values to a view: offset, rotation, scale, opacity, size, background color, shadow and blur (1.3). */
+/** Applies a target's values to a view: offset, rotation, scale, opacity, size, background color, shadow and blur (1.3), a shadow's spread and an inner shadow (1.6). */
 public struct NudgTarget: ViewModifier {
   @ObservedObject var model: NudgModel
   let name: String
@@ -232,12 +232,41 @@ public struct NudgTarget: ViewModifier {
       let v = model.values(at: model.now)
       let n = { (p: String, d: Double) in v["\(name).\(p)"]?.number ?? d }
       let scale = n("scale", 1)
-      let shadowed = ["shadowX", "shadowY", "shadowBlur", "shadowColor"].contains { v["\(name).\($0)"] != nil }
+      let shadowed = ["shadowX", "shadowY", "shadowBlur", "shadowColor", "shadowSpread"].contains { v["\(name).\($0)"] != nil }
+      let spread = n("shadowSpread", 0)
+      let shadowColor = shadowed ? (v["\(name).shadowColor"]?.color.map { Color(nudgHex: $0) } ?? Color.black.opacity(0.25)) : Color.clear
+      let inner = ["innerX", "innerY", "innerBlur", "innerColor", "innerSpread"].contains { v["\(name).\($0)"] != nil }
       content
         .frame(width: v["\(name).width"]?.number.map { CGFloat($0) }, height: v["\(name).height"]?.number.map { CGFloat($0) })
         .background(v["\(name).color"]?.color.map { Color(nudgHex: $0) } ?? Color.clear)
+        // An inner shadow (1.6), as CSS draws inset: the box outside a rectangle inset by the
+        // spread, offset and blurred, kept inside the view.
+        .overlay {
+          if inner {
+            let blur = CGFloat(max(0, n("innerBlur", 0)))
+            Rectangle()
+              .strokeBorder(v["\(name).innerColor"]?.color.map { Color(nudgHex: $0) } ?? Color.black.opacity(0.25), lineWidth: max(0, CGFloat(n("innerSpread", 0))) + blur)
+              .padding(-blur)
+              .offset(x: CGFloat(n("innerX", 0)), y: CGFloat(n("innerY", 0)))
+              .blur(radius: blur / 2)
+              .clipped()
+              .allowsHitTesting(false)
+          }
+        }
+        // A shadow with a spread (1.6) is drawn as CSS draws it: the box grown by the spread,
+        // blurred and offset, behind the view. SwiftUI's own shadow has no spread.
+        .background {
+          if shadowed && spread != 0 {
+            Rectangle()
+              .fill(shadowColor)
+              .padding(-CGFloat(spread))
+              .blur(radius: CGFloat(max(0, n("shadowBlur", 0))) / 2)
+              .offset(x: CGFloat(n("shadowX", 0)), y: CGFloat(n("shadowY", 0)))
+              .allowsHitTesting(false)
+          }
+        }
         // A CSS blur radius is twice SwiftUI's shadow radius.
-        .shadow(color: shadowed ? (v["\(name).shadowColor"]?.color.map { Color(nudgHex: $0) } ?? Color.black.opacity(0.25)) : .clear,
+        .shadow(color: shadowed && spread == 0 ? shadowColor : .clear,
                 radius: CGFloat(max(0, n("shadowBlur", 0)) / 2), x: CGFloat(n("shadowX", 0)), y: CGFloat(n("shadowY", 0)))
         .blur(radius: CGFloat(max(0, n("blur", 0))))
         .scaleEffect(x: CGFloat(scale * n("scaleX", 1)), y: CGFloat(scale * n("scaleY", 1)))

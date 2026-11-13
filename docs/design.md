@@ -698,6 +698,40 @@ A constant offset is not motion: `golfCheerT` keeps `translateX(-50%)` in every 
     - The MCP tool returns both, and its instructions tell the agent to show the choice and ask.
     - Whichever is written, the report says that the spring version moves differently from the original.
 
+## Proposal: shadow spread and inner shadows (format 1.6)
+
+Status: proposed 2026-11-13. After [#156](https://github.com/seukwoo/nudg/pull/156), `nudg from-css` converts 39 of PlaySnack's 42 `@keyframes`. Two of the three left draw something nudg's shadow can't: `snkPopRing` grows a ring with a shadow **spread** (`0 0 0 12px`), and `snkPopFade` flashes an **inset** outline (`inset 0 0 0 2px`). Both are common: a focus ring, a pulse around a button, a pressed-in look. Today the workaround is a separate ring element, which is glue nudg exists to remove.
+
+### What each platform draws
+
+| Platform | Spread | Inner shadow |
+|---|---|---|
+| Web | `box-shadow` spread | `box-shadow: inset` |
+| React Native 0.76+ | `boxShadow` with spread | `boxShadow` with `inset` |
+| Compose 1.9+ | `Modifier.dropShadow(shape, Shadow(spread = …))` | `Modifier.innerShadow(shape, Shadow(…))` |
+| SwiftUI | no spread: the adapter draws the shadow from a shape grown by the spread | `.shadow(.inner(color:radius:x:y:))` on a shape style (iOS 16+) |
+
+React Native before 0.76 (the old architecture) has neither. There the adapter skips them with a warning, as it already does for a shadow it can't draw.
+
+### Proposed
+
+- **`shadowSpread`:** a length, default 0, beside `shadowX`, `shadowY`, `shadowBlur` and `shadowColor`.
+- **An inner shadow as its own set:** `innerX`, `innerY`, `innerBlur`, `innerSpread` and `innerColor`. It is a second shadow, not a flag, so one element can have both (a lifted card with a pressed edge), and each animates on its own.
+- **Runtimes:** both are ordinary numbers and colors there, so the conformance work is a case like `shadow-blur-custom`. The work is in the adapters.
+- **`from-css`:**
+  - reads a spread and one `inset` shadow;
+  - converts a list of two shadows (one outer, one inset);
+  - still refuses more than one of each.
+
+### Not proposed
+
+- **Skew** (`snkTrophyDrop` leans 1.6 px). Compose's `graphicsLayer` and SwiftUI's modifiers have no skew, so it would be a property that two platforms draw through a raw matrix. The converter's message already says how to change the CSS: scale after the rotate. Revisit it if a real design needs a skew.
+
+### Choices
+
+- **Inner shadow as properties, or as `inset: true` on the one shadow?** Proposed: properties. One shadow with a flag can't be both at once, and a flag can't animate.
+- **SwiftUI spread by growing the shape?** Proposed: yes. It draws what the web draws, and the conformance values are the same; the drawing is the adapter's job.
+
 ## Open questions
 
 These are unresolved design choices. Scheduling and completion status live in the [roadmap](roadmap.md); examples of possible syntax below are proposals.

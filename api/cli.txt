@@ -62,6 +62,11 @@ simulate and plot options
                             transitions, Web Animations, other libraries, hand-written styles,
                             frame loops, timers around players), what in nudg does each, and
                             the share of motion on nudg. Gaps nudg can't cover are marked.
+  check [dir]               Everything about an app's motion in one call: every nudg file
+                            validated and checked against the guidelines, and the source
+                            audited. Two lists: what the AI fixes without asking, and what
+                            needs the person. The first line is all a person needs to read.
+                            Exits 1 on a validation error or anything for the person (for CI).
   from-css <file> <name>    Turn a CSS @keyframes (in a .css file or a CSS-in-JS string) into a
                             nudg file, with its timing from the animation line that plays it,
                             and prove it moves the same: the largest difference per property

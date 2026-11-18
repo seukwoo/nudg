@@ -231,6 +231,7 @@ An agent can't watch an animation, so nudg tells it what happened, in text and i
 | `render` | Real frames of your component, captured in a headless browser. |
 | `compare` | Before and after under the same tap: whether a person would notice, then both side by side, and a page that plays them in slow motion. Point it at the running app and it opens in your browser. |
 | `critique` | Whether the motion is good, not only valid: too slow, late press feedback, invisible, bouncy fades, slow exits, short timeouts, no Escape. Each with a fix and its source. |
+| `check` | Everything about an app's motion in one call, in two lists: what the AI fixes without asking, and what needs you. The first line says whether anything does. |
 | `audit` | How much of an app's motion is on nudg, and what in nudg replaces each piece that isn't: CSS keyframes and transitions, other libraries, hand-written styles, timers around players. Gaps nudg can't cover yet are marked. |
 | `from-css` | A CSS `@keyframes` turned into a nudg file, with proof that it moves the same: the largest difference per property, within half a pixel. For overshoots it also offers a spring, and you choose. |
 | `observe` | Host truth: the real page, tapped and measured every frame, judged against the file. "The element left the page at 0.18 s; the release is never shown." |

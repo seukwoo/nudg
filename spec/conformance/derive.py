@@ -3156,9 +3156,16 @@ def validation_v1_7_cases():
     out.append(("negative", d, [("invalid-value", frames)]))
     d = doc(); d["states"]["shown"]["enter"]["tag.scale"]["delay"] = {"input": "host.size", "times": 0.05}
     out.append(("undeclared-input", d, [("undeclared-host-input", kick + "/input")]))
+    # "keep" (1.7): critique codes a person decided to keep. Tools read it; runtimes ignore it.
+    d = doc(); d["keep"] = ["slow-transition"]
+    out.append(("keep", d, []))
+    d = doc(); d["keep"] = ["slow-transitions", 3]
+    out.append(("keep-unknown", d, [("invalid-value", "/keep/0"), ("invalid-value", "/keep/1")]))
+    d = doc(); d["nudg"] = "1.6"; d["states"]["shown"]["enter"]["tag.scale"].pop("delay"); d["states"]["shown"]["enter"]["dot.y"].pop("delay"); d["keep"] = ["slow-exit"]
+    out.append(("keep-needs-version", d, [("needs-version", "/keep")]))
     write("validation-1.7", {
         "conformance": "1.7",
-        "name": "Validator (1.7): a delay on an entry kick or entry keyframes",
+        "name": "Validator (1.7): a delay on an entry kick or entry keyframes, and \"keep\"",
         "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
     })
 

@@ -363,6 +363,21 @@
     "when": {
       "$ref": "#/$defs/when",
       "description": "Transitions from any state of the top-level machine (0.2)."
+    },
+    "keep": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "slow-transition",
+          "late-feedback",
+          "invisible-change",
+          "slow-exit",
+          "bouncy-fade",
+          "short-timeout",
+          "no-escape"
+        ]
+      },
+      "description": "Critique codes a person decided to keep (1.7), with a note saying why: nudg check and critique don't raise them again."
     }
   },
   "required": [

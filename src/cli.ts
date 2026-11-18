@@ -18,6 +18,7 @@ import { materializeRevision } from "./node/git.ts";
 import { clearLog, formatSummary as formatLogSummary, logPath, readLog, record, shareableSummary, shareTip, shareUrl, struggle, summarize } from "./node/log.ts";
 import { installSkill, SKILL } from "./node/skill.ts";
 import { auditDir, formatAudit } from "./node/audit.ts";
+import { checkDir, formatCheck } from "./node/check.ts";
 import { formatFromCss, fromCss } from "./core/from-css.ts";
 import { formatComparison, formatCritique, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
 import { comparePage, lastRuntimeInlined, readWithImports } from "./node/compare-page.ts";
@@ -103,6 +104,11 @@ simulate and plot options
                             transitions, Web Animations, other libraries, hand-written styles,
                             frame loops, timers around players), what in nudg does each, and
                             the share of motion on nudg. Gaps nudg can't cover are marked.
+  check [dir]               Everything about an app's motion in one call: every nudg file
+                            validated and checked against the guidelines, and the source
+                            audited. Two lists: what the AI fixes without asking, and what
+                            needs the person. The first line is all a person needs to read.
+                            Exits 1 on a validation error or anything for the person (for CI).
   from-css <file> <name>    Turn a CSS @keyframes (in a .css file or a CSS-in-JS string) into a
                             nudg file, with its timing from the animation line that plays it,
                             and prove it moves the same: the largest difference per property
@@ -732,6 +738,12 @@ if (command === "audit") {
   process.stdout.write((json ? JSON.stringify({ ok: true, ...result }, null, 2) : formatAudit(result)) + "\n");
   process.exit(0);
 }
+if (command === "check") {
+  if (args.positional.length > 1) fail("check takes at most one directory.");
+  const result = checkDir(args.positional[0] ?? ".");
+  process.stdout.write((json ? JSON.stringify({ ok: result.forPerson.length === 0, ...result }, null, 2) : formatCheck(result)) + "\n");
+  process.exit(result.forAi.some((i) => i.kind === "error") || result.forPerson.length ? 1 : 0);
+}
 if (command === "from-css") {
   const [file, name] = args.positional;
   if (!file || !name || args.positional.length > 2) fail("from-css takes a source file and a @keyframes name.");
@@ -857,4 +869,4 @@ if (command === "mcp") {
   await serveMcp();
   process.exit(0);
 }
-fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, compile, generate, upgrade, critique, audit, from-css, observe, recipe, preset, log, skill, mcp.`);
+fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, compile, generate, upgrade, critique, audit, check, from-css, observe, recipe, preset, log, skill, mcp.`);

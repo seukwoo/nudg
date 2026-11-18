@@ -303,6 +303,8 @@ export interface Program {
   machine: Machine;
   /** Emitters by name (1.4); each name is also a target, where its pieces are drawn. */
   emitters?: Map<string, Emitter>;
+  /** Critique codes a person decided to keep (1.7): `nudg check` and critique don't raise them again. */
+  keep?: string[];
 }
 
 /**

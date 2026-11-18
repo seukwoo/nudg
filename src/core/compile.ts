@@ -3,6 +3,7 @@
 
 import { hexToOklab, isHexColor } from "./color.ts";
 import { interpolate } from "./map.ts";
+import { CRITIQUE_CODES } from "./critique-codes.ts";
 import { fromDurationBounce, fromStiffnessRatio } from "./spring.ts";
 import type { Cue, CueAmount, DelayInput, Emitter, Keyframe, Measure,
   MeasuredEndpoint,
@@ -80,7 +81,7 @@ interface LibraryEntry {
   origin: string;
 }
 
-const TOP_LEVEL_KEYS = ["$schema", "nudg", "import", "host", "targets", "values", "motions", "animate", "emitters", "initial", "states", "regions", "when"];
+const TOP_LEVEL_KEYS = ["$schema", "nudg", "import", "host", "targets", "values", "motions", "animate", "emitters", "initial", "states", "regions", "when", "keep"];
 const MACHINE_KEYS = ["initial", "states", "regions"];
 /** A region's object: a machine that may also have machine-level `when`. */
 const REGION_KEYS = [...MACHINE_KEYS, "when"];
@@ -344,6 +345,7 @@ class ComponentCompiler {
     this.parseTargets(doc.targets);
     this.parseValues(doc.values);
     const animate = "animate" in doc ? this.parseAnimate(doc.animate, "/animate") : new Map<string, Motion>();
+    const keep = "keep" in doc ? this.parseKeep(doc.keep) : undefined;
     if ("emitters" in doc) this.parseEmitters(doc.emitters);
     if ("when" in doc && "regions" in doc) {
       r.error("machine-when-regions", "/when", "\"when\" next to \"regions\" has no states to switch between.", "Put \"when\" inside the region whose states it switches.");
@@ -364,12 +366,30 @@ class ComponentCompiler {
       }
     }
     if (!machine) return undefined;
-    return { version: this.version, targets: [...this.targets], ...(this.host ? { host: this.host } : {}), properties: this.properties, animate, machine, ...(this.emitters.size ? { emitters: this.emitters } : {}) };
+    return { version: this.version, targets: [...this.targets], ...(this.host ? { host: this.host } : {}), properties: this.properties, animate, machine, ...(this.emitters.size ? { emitters: this.emitters } : {}), ...(keep?.length ? { keep } : {}) };
   }
 
   private emitters = new Map<string, Emitter>();
   /** Declared emitter names, valid or not, so a bad one is reported once, where it is declared. */
   private emitterNames = new Set<string>();
+
+  /** `"keep": ["slow-exit"]` (1.7): critique codes a person decided to keep, so nobody is asked again. */
+  private parseKeep(raw: Json): string[] | undefined {
+    if (!this.needsVersion("1.7", "/keep", "\"keep\"")) return undefined;
+    if (!Array.isArray(raw)) {
+      this.r.error("invalid-type", "/keep", "\"keep\" must be a list of critique codes.", 'For example: "keep": ["slow-exit"], with a "note" saying why.');
+      return undefined;
+    }
+    const out: string[] = [];
+    raw.forEach((code, i) => {
+      if (typeof code === "string" && CRITIQUE_CODES.includes(code)) out.push(code);
+      else {
+        const guess = typeof code === "string" ? didYouMean(code, CRITIQUE_CODES) : undefined;
+        this.r.error("invalid-value", ptr("/keep", i), `${JSON.stringify(code)} isn't a critique code.`, guess ? `Use "${guess}".` : `Codes are ${CRITIQUE_CODES.join(", ")}.`);
+      }
+    });
+    return out;
+  }
 
   /** `"emitters": { "confetti": { "from": "button", "count": 24, ... } }` (1.4). */
   private parseEmitters(raw: Json) {

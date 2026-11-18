@@ -57,7 +57,7 @@ export declare class PointerTracker { private origin; private first; private dra
 export interface PopOptions { target?: string; scale?: number; motion?: SpringOptions; }
 export type PresetName = keyof typeof presets;
 export interface PressOptions { target?: string; scale?: number; y?: number; sink?: SpringOptions; release?: SpringOptions; }
-export interface Program { version: string; targets: string[]; host?: HostDeclaration; properties: Map<string, Property>; animate: Map<string, Motion>; machine: Machine; emitters?: Map<string, Emitter>; }
+export interface Program { version: string; targets: string[]; host?: HostDeclaration; properties: Map<string, Property>; animate: Map<string, Motion>; machine: Machine; emitters?: Map<string, Emitter>; keep?: string[]; }
 export interface Property { kind: PropertyKind; measure?: Measure; base: Channels; map?: PropertyMap; min?: number; max?: number; }
 export interface PropertyDifference { property: string; maxDifference: number; at: number; overshoot?: [number, number]; settledAt: [number | undefined, number | undefined]; verdict: Perceptibility; summary: string; }
 export type PropertyKind = "length" | "number" | "color";
@@ -97,7 +97,7 @@ export declare function contractModule(c: Contract, file: string): string;
 export declare function contractName(file: string): string;
 export declare function createPlayer<C extends NudgContract = NudgContract>(program: Program, options: HeadlessOptions<C>): HeadlessPlayer<C>;
 export declare function createRuntime(program: Program, options?: RuntimeOptions): Runtime;
-export declare function critique(program: Program): { findings: CritiqueFinding[]; transitions: MeasuredTransition[]; };
+export declare function critique(program: Program): { findings: CritiqueFinding[]; transitions: MeasuredTransition[]; kept: CritiqueFinding[]; };
 export declare function decomposeMatrix(m: [number, number, number, number, number, number]): { x: number; y: number; scaleX: number; scaleY: number; rotation: number; };
 export declare function didYouMean(input: string, candidates: string[]): string | undefined;
 export declare function dragAxes(program: Program): Map<string, "x" | "y">;

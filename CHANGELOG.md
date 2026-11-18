@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **`nudg check`: everything about an app's motion in one call, and only what needs the person.**
+  - **What it checks:** it validates every nudg file, checks each against the platforms' guidelines, and audits the source.
+  - **Two lists:** what the AI fixes without asking (validation errors, guideline misses with one right answer, glue nudg replaces), and what needs the person (a long or slow transition, a short timeout, a gap nudg can't fill).
+  - **The headline:** its first line is all a person reads, and it says "Nothing needs you" when that's so.
+  - **Where:** CLI `nudg check` (exits 1 for CI), MCP `nudg_check`, the guide and the agent skill.
+- **`"keep"` (format 1.7):** a file lists the critique codes a person decided to keep, with a note. `check` and `critique` count them as kept and don't raise them again.
+
 - **Format 1.7: an entry effect can wait** ([#161](https://github.com/seukwoo/nudg/issues/161)).
   - **What's new:** an entry kick or entry keyframes may have a `delay`, in seconds or read from an app input (`{ "input": "host.index", "times": 0.05 }`).
   - **What it's for:** a tag that pops in just after its card rises, each card with its own index, needs no timer per item.

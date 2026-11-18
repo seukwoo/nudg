@@ -9,6 +9,8 @@ import type { Machine, Motion, Program, State } from "./types.ts";
 
 export type CritiqueSeverity = "warning" | "suggestion";
 
+export { CRITIQUE_CODES } from "./critique-codes.ts";
+
 export interface CritiqueFinding {
   code: string;
   severity: CritiqueSeverity;
@@ -45,7 +47,11 @@ const FRACTIONAL = new Set(["scale", "scaleX", "scaleY", "opacity", "custom"]);
 const SCAN = 1 / 240;
 const HORIZON = 3;
 
-export function critique(program: Program): { findings: CritiqueFinding[]; transitions: MeasuredTransition[] } {
+/**
+ * Findings the file keeps (`"keep"`, 1.7) are a decision someone made ("the slow exit is on
+ * purpose"): they come back as `kept`, not as findings, so nobody is asked again.
+ */
+export function critique(program: Program): { findings: CritiqueFinding[]; transitions: MeasuredTransition[]; kept: CritiqueFinding[] } {
   const transitions = measureTransitions(program);
   const findings: CritiqueFinding[] = [];
   const add = (f: CritiqueFinding) => {
@@ -172,7 +178,8 @@ export function critique(program: Program): { findings: CritiqueFinding[]; trans
 
   const order = (f: CritiqueFinding) => (f.severity === "warning" ? 0 : 1);
   findings.sort((a, b) => order(a) - order(b));
-  return { findings, transitions };
+  const keep = new Set(program.keep ?? []);
+  return { findings: findings.filter((f) => !keep.has(f.code)), transitions, kept: findings.filter((f) => keep.has(f.code)) };
 }
 
 /** Plays every event a leaf state handles, from rest, and measures what it moves. */

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Format 1.7: an entry effect can wait** ([#161](https://github.com/seukwoo/nudg/issues/161)).
+  - **What's new:** an entry kick or entry keyframes may have a `delay`, in seconds or read from an app input (`{ "input": "host.index", "times": 0.05 }`).
+  - **What it's for:** a tag that pops in just after its card rises, each card with its own index, needs no timer per item.
+  - **While it waits,** the property does what the transition set it doing. Leaving the state before the delay ends drops the effect.
+  - **Conformance:** TypeScript, Swift and Kotlin share `entry-delay`, `entry-delay-leave` and `validation-1.7`. A compiled program that uses it is format 13.
+
 - **Docs:**
   - The README shows cues, emitters and shadows in one example, and how to move an existing app (`audit`, then `from-css`).
   - A case study tells how PlaySnack went from 49% to 89% of its motion on nudg.

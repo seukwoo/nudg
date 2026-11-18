@@ -89,7 +89,7 @@ val repeatEvery: Double,
 val throttle: Double?,
 sealed interface EntryEffect
     data class Kick(val motion: Motion) : EntryEffect
-    data class Keyframes(val frames: List<Keyframe>, val duration: Double, val ease: Ease) : EntryEffect
+    data class Keyframes(val frames: List<Keyframe>, val duration: Double, val ease: Ease, val delay: Double
 data class Measure(val target: String, val of: String, val times: Double, val plus: Double)
 data class InputTarget(val input: String, val times: Double, val plus: Double)
 sealed interface MeasuredEndpoint

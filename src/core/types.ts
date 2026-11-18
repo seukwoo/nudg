@@ -97,6 +97,10 @@ export interface KeyframesEffect {
   frames: Keyframe[];
   duration: number;
   ease: Ease;
+  /** Seconds after entry before the keyframes start (1.7). */
+  delay?: number;
+  /** A delay read from an app input when the state is entered (1.7), instead of `delay`. */
+  delayInput?: DelayInput;
 }
 
 export type EntryEffect = SpringMotion | KeyframesEffect;

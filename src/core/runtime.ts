@@ -106,7 +106,16 @@ type Segment =
   /** A property slowing down from `v0` (v0.16), and settling at a range bound if it reaches one. */
   | { kind: "glide"; key: string; t0: number; x0: number; v0: number; glide: Glide; owner: State }
   /** A motion that starts at `t0` (v0.12); until then the property does what `prev` does. */
-  | { kind: "delayed"; t0: number; prev: Segment; to: Channels; motion: Motion; started?: Segment & { kind: "motion" } };
+  | {
+      kind: "delayed";
+      t0: number;
+      prev: Segment;
+      to: Channels;
+      motion?: Motion;
+      /** An entry effect waiting for its delay (1.7): a kick, or keyframes, from where `prev` is then. */
+      entry?: { key: string; owner: State; kick?: number; keyframes?: import("./types.ts").KeyframesEffect };
+      started?: Segment & { kind: "motion" | "keyframes" };
+    };
 
 type StatesMachine = Machine & { kind: "states" };
 
@@ -404,7 +413,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
   }
 
   /** Seconds a motion waits: its `delay`, or (v1.2) `input × times + plus` from 0 up to `max`. */
-  function delayOf(motion: Motion, t: number): number {
+  function delayOf(motion: { delay?: number; delayInput?: import("./types.ts").DelayInput }, t: number): number {
     const d = motion.delayInput;
     if (!d) return motion.delay ?? 0;
     return Math.min(d.max ?? Infinity, Math.max(0, inputAt(d.input, t) * d.times + d.plus));
@@ -459,7 +468,8 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
           for (const cue of beats[0]?.cues ?? []) schedule(cue, t, state);
           continue;
         }
-        for (const frame of beats) for (const cue of frame.cues!) schedule(cue, t + frame.at * effect.duration, state);
+        const wait = delayOf(effect, t);
+        for (const frame of beats) for (const cue of frame.cues!) schedule(cue, t + wait + frame.at * effect.duration, state);
       }
     }
     flushCues(t);
@@ -554,15 +564,22 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       const s = glideState(segment, t);
       return "motion" in s ? evaluateMotion(s.motion, t) : [[s.pos], [s.vel]];
     }
-    if (segment.kind === "delayed") return t < segment.t0 ? evaluate(segment.prev, t) : evaluateMotion(started(segment), t);
+    if (segment.kind === "delayed") return t < segment.t0 ? evaluate(segment.prev, t) : evaluate(started(segment), t);
     return evaluateMotion(segment, t);
   }
 
   /** The motion a delayed segment becomes: from wherever `prev` is when the delay ends. */
-  function started(segment: Segment & { kind: "delayed" }): Segment & { kind: "motion" } {
+  function started(segment: Segment & { kind: "delayed" }): Segment & { kind: "motion" | "keyframes" } {
     if (!segment.started) {
       const [from, v0] = evaluate(segment.prev, segment.t0);
-      segment.started = { kind: "motion", t0: segment.t0, from, v0, to: segment.to, motion: segment.motion };
+      const e = segment.entry;
+      if (e?.keyframes) {
+        const k = e.keyframes;
+        segment.started = { kind: "keyframes", key: e.key, t0: segment.t0, from, to: segment.to, frames: k.frames, duration: k.duration, ease: k.ease, owner: e.owner };
+      } else {
+        if (e?.kick) v0[0] += e.kick;
+        segment.started = { kind: "motion", t0: segment.t0, from, v0, to: segment.to, motion: segment.motion };
+      }
     }
     return segment.started;
   }
@@ -720,8 +737,15 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
         segment.to = to;
         continue;
       }
+      // An entry effect still waiting (1.7) keeps waiting while its state stays; relayout moves its end.
+      if (segment.kind === "delayed" && segment.entry && activeStates.has(segment.entry.owner) && !entered.includes(segment.entry.owner) && !handoff.has(key)) {
+        segment.to = to;
+        if (segment.started) segment.started.to = to;
+        continue;
+      }
       // Leaving a follow always hands off, carrying the input's velocity into the motion.
-      if ((segment.kind === "motion" || segment.kind === "delayed") && sameChannels(segment.to, to) && !handoff.has(key)) continue;
+      // (A waiting entry effect whose state was left is dropped below, even toward the same target.)
+      if ((segment.kind === "motion" || (segment.kind === "delayed" && !segment.entry)) && sameChannels(segment.to, to) && !handoff.has(key)) continue;
       if (snap) {
         segments.set(key, { kind: "motion", t0: t, from: to, v0: to.map(() => 0), to });
         continue;
@@ -735,7 +759,9 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
         // Until the delay ends the property keeps doing what it was doing: a pending
         // motion that hasn't started is dropped, and a value placed here holds still.
         const placed = handoff.has(key) || committed.has(key);
-        const prev: Segment = placed ? { kind: "motion", t0: t, from: pos, v0: vel.map(() => 0), to: pos } : segment.kind === "delayed" && t < segment.t0 ? segment.prev : segment;
+        // Pending ones are dropped all the way down: a waiting entry effect (1.7) may wait on a waiting motion.
+        let prev: Segment = placed ? { kind: "motion", t0: t, from: pos, v0: vel.map(() => 0), to: pos } : segment;
+        while (prev.kind === "delayed" && t < prev.t0) prev = prev.prev;
         segments.set(key, { kind: "delayed", t0: t + wait, prev, to, motion });
         continue;
       }
@@ -749,6 +775,13 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       for (const [key, effect] of state.enter) {
         const segment = segments.get(key)!;
         if (segment.kind === "follow" || segment.kind === "glide") continue;
+        // A delayed entry effect (1.7) waits; the property does what the transition set it doing.
+        const wait = delayOf(effect, t);
+        if (wait > 0) {
+          const entry = effect.kind === "keyframes" ? { key, owner: state, keyframes: effect } : { key, owner: state, kick: effect.kick ?? 0 };
+          segments.set(key, { kind: "delayed", t0: t + wait, prev: segment, to: segment.to, motion: effect.kind === "keyframes" ? undefined : effect, entry });
+          continue;
+        }
         const [pos, vel] = evaluate(segment, t);
         if (effect.kind === "keyframes") {
           segments.set(key, { kind: "keyframes", key, t0: t, from: pos, to: segment.to, frames: effect.frames, duration: effect.duration, ease: effect.ease, owner: state });

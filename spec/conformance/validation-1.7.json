@@ -1,0 +1,397 @@
+{
+  "conformance": "1.7",
+  "name": "Validator (1.7): a delay on an entry kick or entry keyframes",
+  "documents": [
+    {
+      "name": "valid",
+      "doc": {
+        "nudg": "1.7",
+        "host": {
+          "events": [
+            "show",
+            "hide"
+          ],
+          "inputs": {
+            "index": {
+              "range": [
+                0,
+                100
+              ]
+            }
+          }
+        },
+        "targets": [
+          "tag",
+          "dot"
+        ],
+        "values": {
+          "tag.scale": 0.6,
+          "tag.opacity": 0,
+          "dot.y": 0
+        },
+        "animate": {
+          "tag.scale": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            },
+            "delay": {
+              "input": "host.index",
+              "times": 0.05
+            }
+          },
+          "tag.opacity": {
+            "tween": {
+              "duration": 0.15,
+              "ease": "linear"
+            },
+            "delay": {
+              "input": "host.index",
+              "times": 0.05
+            }
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "tag.scale": 1,
+              "tag.opacity": 1
+            },
+            "enter": {
+              "tag.scale": {
+                "kick": 6,
+                "spring": {
+                  "duration": 0.4,
+                  "bounce": 0.5
+                },
+                "delay": {
+                  "input": "host.index",
+                  "times": 0.05
+                }
+              },
+              "dot.y": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": -10
+                  }
+                ],
+                "duration": 0.3,
+                "ease": "linear",
+                "delay": 0.1
+              }
+            },
+            "when": {
+              "host.hide": "hidden"
+            }
+          }
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "older-format",
+      "doc": {
+        "nudg": "1.6",
+        "host": {
+          "events": [
+            "show",
+            "hide"
+          ],
+          "inputs": {
+            "index": {
+              "range": [
+                0,
+                100
+              ]
+            }
+          }
+        },
+        "targets": [
+          "tag",
+          "dot"
+        ],
+        "values": {
+          "tag.scale": 0.6,
+          "tag.opacity": 0,
+          "dot.y": 0
+        },
+        "animate": {
+          "tag.scale": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            },
+            "delay": {
+              "input": "host.index",
+              "times": 0.05
+            }
+          },
+          "tag.opacity": {
+            "tween": {
+              "duration": 0.15,
+              "ease": "linear"
+            },
+            "delay": {
+              "input": "host.index",
+              "times": 0.05
+            }
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "tag.scale": 1,
+              "tag.opacity": 1
+            },
+            "enter": {
+              "tag.scale": {
+                "kick": 6,
+                "spring": {
+                  "duration": 0.4,
+                  "bounce": 0.5
+                },
+                "delay": {
+                  "input": "host.index",
+                  "times": 0.05
+                }
+              },
+              "dot.y": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": -10
+                  }
+                ],
+                "duration": 0.3,
+                "ease": "linear",
+                "delay": 0.1
+              }
+            },
+            "when": {
+              "host.hide": "hidden"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "delay-outside-animate",
+          "path": "/states/shown/enter/tag.scale/delay"
+        },
+        {
+          "code": "delay-outside-animate",
+          "path": "/states/shown/enter/dot.y/delay"
+        }
+      ]
+    },
+    {
+      "name": "negative",
+      "doc": {
+        "nudg": "1.7",
+        "host": {
+          "events": [
+            "show",
+            "hide"
+          ],
+          "inputs": {
+            "index": {
+              "range": [
+                0,
+                100
+              ]
+            }
+          }
+        },
+        "targets": [
+          "tag",
+          "dot"
+        ],
+        "values": {
+          "tag.scale": 0.6,
+          "tag.opacity": 0,
+          "dot.y": 0
+        },
+        "animate": {
+          "tag.scale": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            },
+            "delay": {
+              "input": "host.index",
+              "times": 0.05
+            }
+          },
+          "tag.opacity": {
+            "tween": {
+              "duration": 0.15,
+              "ease": "linear"
+            },
+            "delay": {
+              "input": "host.index",
+              "times": 0.05
+            }
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "tag.scale": 1,
+              "tag.opacity": 1
+            },
+            "enter": {
+              "tag.scale": {
+                "kick": 6,
+                "spring": {
+                  "duration": 0.4,
+                  "bounce": 0.5
+                },
+                "delay": {
+                  "input": "host.index",
+                  "times": 0.05
+                }
+              },
+              "dot.y": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": -10
+                  }
+                ],
+                "duration": 0.3,
+                "ease": "linear",
+                "delay": -0.1
+              }
+            },
+            "when": {
+              "host.hide": "hidden"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/states/shown/enter/dot.y/delay"
+        }
+      ]
+    },
+    {
+      "name": "undeclared-input",
+      "doc": {
+        "nudg": "1.7",
+        "host": {
+          "events": [
+            "show",
+            "hide"
+          ],
+          "inputs": {
+            "index": {
+              "range": [
+                0,
+                100
+              ]
+            }
+          }
+        },
+        "targets": [
+          "tag",
+          "dot"
+        ],
+        "values": {
+          "tag.scale": 0.6,
+          "tag.opacity": 0,
+          "dot.y": 0
+        },
+        "animate": {
+          "tag.scale": {
+            "spring": {
+              "duration": 0.3,
+              "bounce": 0
+            },
+            "delay": {
+              "input": "host.index",
+              "times": 0.05
+            }
+          },
+          "tag.opacity": {
+            "tween": {
+              "duration": 0.15,
+              "ease": "linear"
+            },
+            "delay": {
+              "input": "host.index",
+              "times": 0.05
+            }
+          }
+        },
+        "initial": "hidden",
+        "states": {
+          "hidden": {
+            "when": {
+              "host.show": "shown"
+            }
+          },
+          "shown": {
+            "set": {
+              "tag.scale": 1,
+              "tag.opacity": 1
+            },
+            "enter": {
+              "tag.scale": {
+                "kick": 6,
+                "spring": {
+                  "duration": 0.4,
+                  "bounce": 0.5
+                },
+                "delay": {
+                  "input": "host.size",
+                  "times": 0.05
+                }
+              },
+              "dot.y": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": -10
+                  }
+                ],
+                "duration": 0.3,
+                "ease": "linear",
+                "delay": 0.1
+              }
+            },
+            "when": {
+              "host.hide": "hidden"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "undeclared-host-input",
+          "path": "/states/shown/enter/tag.scale/delay/input"
+        }
+      ]
+    }
+  ]
+}

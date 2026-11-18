@@ -10,7 +10,7 @@ Errors stop a file from compiling. Warnings don't.
 |---|---|
 | `after-on-machine` | An `after:` timer is in a machine's `when`; timers belong to a state. |
 | `custom-is-built-in` | A name under `host.custom` is something nudg draws already (`shadow`, `blur`, `opacity`); the hint names the built-in property (1.3). |
-| `delay-outside-animate` | A `delay` is on a named motion or an entry kick; it belongs to a motion in `animate`. |
+| `delay-outside-animate` | A `delay` is on a named motion, or on an entry effect before format 1.7. It belongs to a motion in `animate`, or to an entry effect in 1.7 and later. |
 | `duplicate-host-name` | A name is declared twice under `host`. |
 | `duplicate-motion` | Two files define a motion with the same name. |
 | `duplicate-target` | A target is listed twice. |

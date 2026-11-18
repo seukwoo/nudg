@@ -72,7 +72,8 @@ public final class Cue {
 
 public enum EntryEffect {
   case kick(Motion)
-  case keyframes(frames: [Keyframe], duration: Double, ease: Ease)
+  /** Keyframes; `delay` or `delayInput` (1.7) make them wait after entry. */
+  case keyframes(frames: [Keyframe], duration: Double, ease: Ease, delay: Double = 0, delayInput: DelayInput? = nil)
 }
 
 public struct Measure {
@@ -246,7 +247,7 @@ public struct Program {
 
   /** Reads `nudg compile` output. */
   public static func decode(_ data: Data) throws -> Program {
-    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...12).contains(format) else {
+    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...13).contains(format) else {
       throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 11). Compile it with `nudg compile`.")
     }
     let properties: [(String, Property)] = (j["properties"] as! [[String: Any]]).map { p in
@@ -331,7 +332,9 @@ private func readEntryEffect(_ v: Any) -> EntryEffect {
       let measure = (f["value"] as? [String: Any]).map(readMeasure)
       return Keyframe(at: number(f["at"])!, value: measure == nil ? doubles(f["value"]) : [0], measure: measure, ease: f["ease"].map(readEase), cues: readCues(f["cue"]))
     }
-    return .keyframes(frames: frames, duration: number(effect["duration"])!, ease: readEase(effect["ease"]))
+    // A wait (format 13): seconds, or an object read from an input.
+    let wait = effect["delay"] as? [String: Any]
+    return .keyframes(frames: frames, duration: number(effect["duration"])!, ease: readEase(effect["ease"]), delay: wait == nil ? number(effect["delay"]) ?? 0 : 0, delayInput: wait.map { DelayInput(input: $0["input"] as! String, times: number($0["times"]) ?? 1, plus: number($0["plus"]) ?? 0, max: number($0["max"])) })
   }
   return .kick(readMotion(v))
 }

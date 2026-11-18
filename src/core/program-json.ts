@@ -7,7 +7,7 @@
 import type { Channels, Cue, Ease, Emitter, EntryEffect, Follow, Glide, Keyframe, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
 import { animateMaps } from "./walk.ts";
 
-export const PROGRAM_FORMAT = 12;
+export const PROGRAM_FORMAT = 13;
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
@@ -15,20 +15,23 @@ type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 let wroteCues = false;
 /** Set while a program is written, when a keyframe is measured or has its own ease (format 12). */
 let wroteFrames = false;
+/** Set while a program is written, when an entry effect waits (format 13). */
+let wroteEntryDelay = false;
 
 /**
  * Program format 8 is frozen with 1.0; 9 adds a delay read from an input (1.2); 10 adds cues
- * (1.3); 11 adds emitters (1.4); 12 adds measured entry keyframes and an ease per frame (1.5).
+ * (1.3); 11 adds emitters (1.4); 12 adds measured entry keyframes and an ease per frame (1.5); 13 lets an entry effect wait (1.7).
  * A program says the oldest format that has everything it uses, so older runtimes
  * still read every program that doesn't use what they lack.
  */
 export function programToJson(program: Program): Json {
   wroteCues = false;
   wroteFrames = false;
+  wroteEntryDelay = false;
   const written = machine(program.machine);
   const delayInput = animateMaps(program).some((t) => [...t.values()].some((m) => m.delayInput));
   const out: Record<string, Json> = {
-    nudgProgram: wroteFrames ? 12 : program.emitters ? 11 : wroteCues ? 10 : delayInput ? 9 : 8,
+    nudgProgram: wroteEntryDelay ? 13 : wroteFrames ? 12 : program.emitters ? 11 : wroteCues ? 10 : delayInput ? 9 : 8,
     version: program.version,
     targets: program.targets,
     properties: [...program.properties].map(([key, p]) => ({ key, ...property(p) })),
@@ -59,7 +62,7 @@ const readCues = (j: any): Cue[] | undefined => (Array.isArray(j) ? j.map((c: an
 
 export function programFromJson(json: unknown): Program {
   const j = json as Record<string, any>;
-  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
   return {
     version: j.version,
     targets: j.targets,
@@ -137,14 +140,24 @@ function readLoopFrame(j: any): Loop["frames"][number] {
 }
 
 function entryEffect(effect: EntryEffect): Json {
+  if (effect.delay !== undefined || effect.delayInput) wroteEntryDelay = true;
   if (effect.kind !== "keyframes") return motion(effect);
-  return { kind: "keyframes", frames: effect.frames.map(frame), duration: effect.duration, ease: easeJson(effect.ease) };
+  const out: Record<string, Json> = { kind: "keyframes", frames: effect.frames.map(frame), duration: effect.duration, ease: easeJson(effect.ease) };
+  if (effect.delay !== undefined) out.delay = effect.delay;
+  if (effect.delayInput) out.delay = { ...effect.delayInput } as unknown as Json;
+  return out;
 }
 
 function readEntryEffect(effect: any): EntryEffect {
   return effect.kind === "keyframes"
-    ? { kind: "keyframes", frames: effect.frames.map(readFrame), duration: effect.duration, ease: effect.ease }
-    : (effect as Motion & EntryEffect);
+    ? withWait({ kind: "keyframes", frames: effect.frames.map(readFrame), duration: effect.duration, ease: effect.ease }, effect.delay)
+    : (readMotion(effect) as Motion & EntryEffect);
+}
+
+function withWait(k: EntryEffect & { kind: "keyframes" }, delay: any): EntryEffect {
+  if (delay === undefined) return k;
+  if (typeof delay === "number") return { ...k, delay };
+  return { ...k, delayInput: { input: delay.input, times: delay.times ?? 1, plus: delay.plus ?? 0, ...(delay.max === undefined ? {} : { max: delay.max }) } };
 }
 
 function machine(m: Machine): Json {

@@ -90,7 +90,7 @@ const VALUE_KEYS = ["base", "min", "max"];
 const FOLLOW_KEYS = ["input", "range", "overdrag", "multiply"];
 const MAP_KEYS = ["map", "from", "to"];
 const MOTION_KEYS = ["spring", "tween", "kick", "delay"];
-const KEYFRAMES_KEYS = ["keyframes", "duration", "ease"];
+const KEYFRAMES_KEYS = ["keyframes", "duration", "ease", "delay"];
 const LOOP_KEYS = ["to", "keyframes", "duration", "ease", "delay", "wrap"];
 const TWEEN_KEYS = ["duration", "ease"];
 const SPRING_FORMS = [
@@ -140,7 +140,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-1.6.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-1.7.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -874,15 +874,29 @@ class ComponentCompiler {
       if (motion.delayInput) {
         const dp = ptr(kp, "delay");
         if (!this.needsVersion("1.2", dp, "A delay read from an input")) continue;
-        if (!motion.delayInput.input.startsWith(`${HOST}.`)) {
-          this.r.error("invalid-value", ptr(dp, "input"), "A delay reads an app input (host.<name>), which holds still while the motion waits.", 'For example "host.index", which the app supplies to each item\'s player.');
-          continue;
-        }
-        if (!this.checkInput(motion.delayInput.input, ptr(dp, "input"), ptr(dp, "input"))) continue;
+        if (!this.delayReadsAppInput(motion.delayInput, dp)) continue;
       }
       out.set(key, motion);
     }
     return out;
+  }
+
+  /** A delay read from an input reads an app input the file declares. */
+  private delayReadsAppInput(d: DelayInput, dp: string): boolean {
+    if (!d.input.startsWith(`${HOST}.`)) {
+      this.r.error("invalid-value", ptr(dp, "input"), "A delay reads an app input (host.<name>), which holds still while the motion waits.", 'For example "host.index", which the app supplies to each item\'s player.');
+      return false;
+    }
+    return this.checkInput(d.input, ptr(dp, "input"), ptr(dp, "input"));
+  }
+
+  /** A delay on an entry effect (1.7): before 1.7 an entry effect starts on entry. */
+  private entryDelay(d: DelayInput | undefined, dp: string, what: string): boolean {
+    if (VERSIONS.indexOf(this.version) < VERSIONS.indexOf("1.7")) {
+      this.r.error("delay-outside-animate", dp, `${what} starts on entry in this format; it can't wait.`, 'Change "nudg" to "1.7", where an entry effect can wait, or put a delayed motion in "animate" for the transition.');
+      return false;
+    }
+    return !d || this.delayReadsAppInput(d, dp);
   }
 
   private parseEnter(raw: Json, p: string): Map<string, EntryEffect> {
@@ -902,10 +916,7 @@ class ComponentCompiler {
       }
       const motion = this.motion(value, kp);
       if (!prop || !motion) continue;
-      if (motion.delay !== undefined || motion.delayInput) {
-        this.r.error("delay-outside-animate", ptr(kp, "delay"), "An entry kick starts on entry; it can't wait.", "Remove the delay. To start a motion later, put a delayed motion in \"animate\" for the transition.");
-        continue;
-      }
+      if ((motion.delay !== undefined || motion.delayInput) && !this.entryDelay(motion.delayInput, ptr(kp, "delay"), "An entry kick")) continue;
       if (motion.kind !== "spring" || motion.kick === undefined) {
         this.r.error("enter-without-kick", kp, "Motions in \"enter\" must have a kick.", "Add \"kick\" (velocity in units per second) next to the spring, or move this motion to \"animate\".");
         continue;
@@ -1107,7 +1118,25 @@ class ComponentCompiler {
       if (!parsed) return undefined;
       ease = parsed;
     }
-    return frames.length === raw.keyframes.length ? { kind: "keyframes", frames, duration, ease } : undefined;
+    // A wait before the keyframes start (1.7): seconds, or read from an app input.
+    let wait: { delay?: number; delayInput?: DelayInput } = {};
+    if ("delay" in raw) {
+      const dp = ptr(p, "delay");
+      if (isObject(raw.delay)) {
+        const d = parseDelayInput(raw.delay, dp, r);
+        if (!d || !this.entryDelay(d, dp, "Entry keyframes")) return undefined;
+        wait = { delayInput: d };
+      } else {
+        const d = parseTime(raw.delay);
+        if (d === undefined) {
+          r.error("invalid-value", dp, '"delay" must be a time of 0 or more, or an input: { "input": "host.index", "times": 0.06 }.', 'Use seconds (0.08) or a string like "80ms".');
+          return undefined;
+        }
+        if (!this.entryDelay(undefined, dp, "Entry keyframes")) return undefined;
+        if (d > 0) wait = { delay: d };
+      }
+    }
+    return frames.length === raw.keyframes.length ? { kind: "keyframes", frames, duration, ease, ...wait } : undefined;
   }
 
   private motion(raw: Json, p: string): Motion | undefined {

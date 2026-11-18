@@ -1,0 +1,149 @@
+{
+ "nudgProgram": 13,
+ "version": "1.7",
+ "targets": [
+  "tag",
+  "dot"
+ ],
+ "properties": [
+  {
+   "key": "tag.scale",
+   "kind": "number",
+   "base": [
+    0.6
+   ]
+  },
+  {
+   "key": "tag.opacity",
+   "kind": "number",
+   "base": [
+    0
+   ]
+  },
+  {
+   "key": "dot.y",
+   "kind": "length",
+   "base": [
+    0
+   ]
+  }
+ ],
+ "animate": [
+  {
+   "key": "tag.scale",
+   "motion": {
+    "kind": "spring",
+    "stiffness": 438.6490844928604,
+    "damping": 41.88790204786391,
+    "mass": 1,
+    "delay": {
+     "input": "host.index",
+     "times": 0.05,
+     "plus": 0
+    }
+   }
+  },
+  {
+   "key": "tag.opacity",
+   "motion": {
+    "kind": "tween",
+    "duration": 0.15,
+    "ease": "linear",
+    "delay": {
+     "input": "host.index",
+     "times": 0.05,
+     "plus": 0
+    }
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "hidden",
+  "states": [
+   {
+    "name": "hidden",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "host.show",
+      "animate": [],
+      "to": "shown"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "shown",
+    "set": [
+     {
+      "key": "tag.scale",
+      "value": [
+       1
+      ]
+     },
+     {
+      "key": "tag.opacity",
+      "value": [
+       1
+      ]
+     }
+    ],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [
+     {
+      "key": "tag.scale",
+      "effect": {
+       "kind": "spring",
+       "stiffness": 246.74011002723395,
+       "damping": 15.707963267948966,
+       "mass": 1,
+       "kick": 6,
+       "delay": {
+        "input": "host.index",
+        "times": 0.05,
+        "plus": 0
+       }
+      }
+     },
+     {
+      "key": "dot.y",
+      "effect": {
+       "kind": "keyframes",
+       "frames": [
+        {
+         "at": 0.5,
+         "value": [
+          -10
+         ]
+        }
+       ],
+       "duration": 0.3,
+       "ease": "linear",
+       "delay": 0.1
+      }
+     }
+    ],
+    "loop": [],
+    "when": [
+     {
+      "event": "host.hide",
+      "animate": [],
+      "to": "hidden"
+     }
+    ],
+    "timers": []
+   }
+  ],
+  "when": []
+ }
+}

@@ -13,18 +13,32 @@ public enum Value: Equatable {
 
 public enum RuntimeError: Error { case timeWentBackwards(Double, Double), badStatePath(String) }
 
+/** What a waiting entry effect becomes when its delay ends (1.7). */
+private enum Waiting {
+  case kick(Motion, kick: Double, owner: State)
+  case keyframes(key: String, frames: [Keyframe], duration: Double, ease: Ease, owner: State)
+  var owner: State {
+    switch self {
+    case let .kick(_, _, owner), let .keyframes(_, _, _, _, owner): return owner
+    }
+  }
+}
+
 private indirect enum Segment {
   case motion(t0: Double, from: [Double], v0: [Double], to: [Double], motion: Motion?)
   /** A motion that starts at `t0` (v0.12); until then the property does what `prev` does. */
   case delayed(t0: Double, prev: Segment, to: [Double], motion: Motion)
+  /** An entry effect waiting for its delay (1.7): until `t0` the property does what `prev` does. */
+  case waiting(t0: Double, prev: Segment, to: [Double], entry: Waiting)
   case keyframes(key: String, t0: Double, from: [Double], to: [Double], frames: [Keyframe], duration: Double, ease: Ease, owner: State)
   case follow(key: String, t0: Double, anchor: Double, input0: Double, follow: Follow, owner: State)
   /** A property slowing down from `v0` (v0.16), and settling at a range bound if it reaches one. */
   case glide(key: String, t0: Double, x0: Double, v0: Double, glide: Glide, owner: State)
   var isKeyframes: Bool { if case .keyframes = self { return true }; return false }
+  var isWaiting: Bool { if case .waiting = self { return true }; return false }
   var to: [Double]? {
     switch self {
-    case let .motion(_, _, _, to, _), let .keyframes(_, _, _, to, _, _, _, _), let .delayed(_, _, to, _): return to
+    case let .motion(_, _, _, to, _), let .keyframes(_, _, _, to, _, _, _, _), let .delayed(_, _, to, _), let .waiting(_, _, to, _): return to
     case .follow, .glide: return nil
     }
   }
@@ -305,7 +319,7 @@ public final class Runtime {
         // Cue amounts and delays read from inputs (1.3).
         var cues = state.cues
         for transition in state.when.map({ $0.1 }) + state.timers.map({ $0.transition }) { cues += transition.cues }
-        for (_, effect) in state.enter { if case let .keyframes(frames, _, _) = effect { for f in frames { cues += f.cues } } }
+        for (_, effect) in state.enter { if case let .keyframes(frames, _, _, _, _) = effect { for f in frames { cues += f.cues } } }
         for (_, loop) in state.loop { for beat in loop.cues { cues += beat.cues } }
         for cue in cues { collectCueInputs(cue) }
         if let inner = state.machine { collectFollowInputs(inner) }
@@ -431,9 +445,23 @@ public final class Runtime {
   // MARK: inputs and evaluation
 
   /** Seconds a motion waits: its `delay`, or (v1.2) input × times + plus, from 0 up to max. */
-  private func delayOf(_ motion: Motion, _ t: Double) -> Double {
-    guard let d = motion.delayInput else { return motion.delay }
+  private func delayOf(_ motion: Motion, _ t: Double) -> Double { wait(motion.delay, motion.delayInput, t) }
+
+  private func wait(_ delay: Double, _ input: DelayInput?, _ t: Double) -> Double {
+    guard let d = input else { return delay }
     return min(d.max ?? .infinity, max(0, inputAt(d.input, t) * d.times + d.plus))
+  }
+
+  /** What a waiting entry effect is once its delay ends: from wherever `prev` is then. */
+  private func started(_ t0: Double, _ prev: Segment, _ to: [Double], _ entry: Waiting) -> Segment {
+    var (from, v0) = evaluate(prev, t0)
+    switch entry {
+    case let .kick(motion, kick, _):
+      v0[0] += kick
+      return .motion(t0: t0, from: from, v0: v0, to: to, motion: motion)
+    case let .keyframes(key, frames, duration, ease, owner):
+      return .keyframes(key: key, t0: t0, from: from, to: to, frames: frames, duration: duration, ease: ease, owner: owner)
+    }
   }
 
   // MARK: cues (1.3)
@@ -489,14 +517,15 @@ public final class Runtime {
     for state in entered {
       for cue in state.cues { schedule(cue, t, state) }
       for (_, effect) in state.enter {
-        guard case let .keyframes(frames, duration, _) = effect else { continue }
+        guard case let .keyframes(frames, duration, _, delay, delayInput) = effect else { continue }
         let beats = frames.filter { !$0.cues.isEmpty }
         // Reduced motion skips the beats; their first cue still marks the moment.
         if reduced {
           for cue in beats.first?.cues ?? [] { schedule(cue, t, state) }
           continue
         }
-        for frame in beats { for cue in frame.cues { schedule(cue, t + frame.at * duration, state) } }
+        let w = wait(delay, delayInput, t)
+        for frame in beats { for cue in frame.cues { schedule(cue, t + w + frame.at * duration, state) } }
       }
     }
     flushCues(t)
@@ -574,6 +603,8 @@ public final class Runtime {
       if t < t0 { return evaluate(prev, t) }
       let (from, v0) = evaluate(prev, t0)
       return evaluateMotion(t0: t0, from: from, v0: v0, to: to, motion: motion, t: t)
+    case let .waiting(t0, prev, to, entry):
+      return t < t0 ? evaluate(prev, t) : evaluate(started(t0, prev, to, entry), t)
     case let .glide(key, t0, x0, v0, glide, _):
       switch glidePhase(key: key, t0: t0, x0: x0, v0: v0, glide: glide, t: t) {
       case let .gliding(pos, vel): return ([pos], [vel])
@@ -756,7 +787,13 @@ public final class Runtime {
         segments[key] = .keyframes(key: key, t0: t0, from: from, to: to, frames: frames, duration: duration, ease: ease, owner: owner)
         continue
       }
-      if let current = segment.to, current == to, handoff[key] == nil, !segment.isKeyframes { continue }
+      // An entry effect still waiting (1.7) keeps waiting while its state stays; relayout moves its end.
+      if case let .waiting(t0, prev, _, entry) = segment, activeStates.contains(ObjectIdentifier(entry.owner)), !isEntered(entry.owner), handoff[key] == nil {
+        segments[key] = .waiting(t0: t0, prev: prev, to: to, entry: entry)
+        continue
+      }
+      // (A waiting entry effect whose state was left is dropped below, even toward the same target.)
+      if let current = segment.to, current == to, handoff[key] == nil, !segment.isKeyframes, !segment.isWaiting { continue }
       if snap {
         segments[key] = .motion(t0: t, from: to, v0: to.map { _ in 0 }, to: to, motion: nil)
         continue
@@ -770,7 +807,14 @@ public final class Runtime {
         // motion that hasn't started is dropped, and a value placed here holds still.
         var prev = segment
         if handoff[key] != nil || committed.contains(key) { prev = .motion(t0: t, from: pos, v0: vel.map { _ in 0 }, to: pos, motion: nil) }
-        else if case let .delayed(t0, pending, _, _) = segment, t < t0 { prev = pending }
+        else {
+          // Pending ones are dropped all the way down: a waiting entry effect may wait on a waiting motion.
+          while true {
+            if case let .delayed(t0, pending, _, _) = prev, t < t0 { prev = pending; continue }
+            if case let .waiting(t0, pending, _, _) = prev, t < t0 { prev = pending; continue }
+            break
+          }
+        }
         segments[key] = .delayed(t0: t + wait, prev: prev, to: to, motion: motion)
         continue
       }
@@ -782,9 +826,23 @@ public final class Runtime {
       for (key, effect) in state.enter {
         let segment = segments[key]!
         guard let to = segment.to else { continue }
+        // A delayed entry effect (1.7) waits; the property does what the transition set it doing.
+        switch effect {
+        case let .keyframes(frames, duration, ease, delay, delayInput):
+          let w = wait(delay, delayInput, t)
+          if w > 0 { segments[key] = .waiting(t0: t + w, prev: segment, to: to, entry: .keyframes(key: key, frames: frames, duration: duration, ease: ease, owner: state)); continue }
+        case let .kick(kick):
+          let w = delayOf(kick, t)
+          if w > 0 {
+            var k = 0.0
+            if case let .spring(_, _, _, kv, _, _) = kick { k = kv ?? 0 }
+            segments[key] = .waiting(t0: t + w, prev: segment, to: to, entry: .kick(kick, kick: k, owner: state))
+            continue
+          }
+        }
         let (pos, v) = evaluate(segment, t)
         switch effect {
-        case let .keyframes(frames, duration, ease):
+        case let .keyframes(frames, duration, ease, _, _):
           segments[key] = .keyframes(key: key, t0: t, from: pos, to: to, frames: frames, duration: duration, ease: ease, owner: state)
         case let .kick(kick):
           var vel = v
@@ -1052,6 +1110,10 @@ public final class Runtime {
       if t < t0 { return false }
       let (from, v0) = evaluate(prev, t0)
       segment = .motion(t0: t0, from: from, v0: v0, to: to, motion: motion)
+    }
+    if case let .waiting(t0, prev, to, entry) = segment {
+      if t < t0 { return false }
+      segment = started(t0, prev, to, entry)
     }
     if case let .glide(gkey, t0, x0, v0, glide, _) = segment {
       switch glidePhase(key: gkey, t0: t0, x0: x0, v0: v0, glide: glide, t: t) {

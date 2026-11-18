@@ -26,6 +26,15 @@ private sealed interface Segment {
     data class GlideSeg(val key: String, val t0: Double, val x0: Double, val v0: Double, val glide: Glide, val owner: State) : Segment
     /** A motion that starts at [t0] (v0.12); until then the property does what [prev] does. */
     data class DelayedSeg(val t0: Double, val prev: Segment, val to: List<Double>, val motion: Motion) : Segment
+    /** An entry effect waiting for its delay (1.7): until [t0] the property does what [prev] does. */
+    data class WaitingSeg(val t0: Double, val prev: Segment, val to: List<Double>, val entry: Waiting) : Segment
+}
+
+/** What a waiting entry effect becomes when its delay ends (1.7). */
+private sealed interface Waiting {
+    val owner: State
+    data class Kick(val motion: Motion, val kick: Double, override val owner: State) : Waiting
+    data class Frames(val key: String, val frames: List<Keyframe>, val duration: Double, val ease: Ease, override val owner: State) : Waiting
 }
 
 private class Pending(var due: Double, val order: Int, val machine: Machine.States, val state: State, val transition: Transition, val pause: List<TimerPause>) {
@@ -393,8 +402,10 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
     // inputs and evaluation
 
     /** Seconds a motion waits: its `delay`, or (v1.2) input × times + plus, from 0 up to max. */
-    private fun delayOf(motion: Motion, t: Double): Double {
-        val d = motion.delayInput ?: return motion.delay
+    private fun delayOf(motion: Motion, t: Double): Double = wait(motion.delay, motion.delayInput, t)
+
+    private fun wait(delay: Double, input: DelayInput?, t: Double): Double {
+        val d = input ?: return delay
         return minOf(d.max ?: Double.POSITIVE_INFINITY, maxOf(0.0, inputAt(d.input, t) * d.times + d.plus))
     }
 
@@ -450,7 +461,8 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
                     for (cue in beats.firstOrNull()?.cues ?: emptyList()) schedule(cue, t, state)
                     continue
                 }
-                for (frame in beats) for (cue in frame.cues) schedule(cue, t + frame.at * effect.duration, state)
+                val w = wait(effect.delay, effect.delayInput, t)
+                for (frame in beats) for (cue in frame.cues) schedule(cue, t + w + frame.at * effect.duration, state)
             }
         }
         flushCues(t)
@@ -526,6 +538,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
         is Segment.MotionSeg -> evaluateMotion(seg, t)
         is Segment.KeyframesSeg -> evaluateKeyframes(seg, t)
         is Segment.DelayedSeg -> if (t < seg.t0) evaluate(seg.prev, t) else evaluateMotion(started(seg), t)
+        is Segment.WaitingSeg -> if (t < seg.t0) evaluate(seg.prev, t) else evaluate(started(seg), t)
         is Segment.GlideSeg -> when (val p = glidePhase(seg, t)) {
             is GlidePhase.Settling -> evaluateMotion(p.motion, t)
             is GlidePhase.Gliding -> listOf(p.pos) to listOf(p.vel)
@@ -536,6 +549,15 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
     private fun started(seg: Segment.DelayedSeg): Segment.MotionSeg {
         val (from, v0) = evaluate(seg.prev, seg.t0)
         return Segment.MotionSeg(seg.t0, from, v0, seg.to, seg.motion)
+    }
+
+    /** What a waiting entry effect is once its delay ends: from wherever [Segment.WaitingSeg.prev] is then. */
+    private fun started(seg: Segment.WaitingSeg): Segment {
+        val (from, v0) = evaluate(seg.prev, seg.t0)
+        return when (val e = seg.entry) {
+            is Waiting.Kick -> Segment.MotionSeg(seg.t0, from, v0.toMutableList().also { it[0] += e.kick }, seg.to, e.motion)
+            is Waiting.Frames -> Segment.KeyframesSeg(e.key, seg.t0, from, seg.to, e.frames, e.duration, e.ease, e.owner)
+        }
     }
 
     /** A loop's offset and its rate at [t]; 0 before its delay, and while a measured point is unknown. */
@@ -719,6 +741,12 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
                 segments[key] = seg.copy(to = to)
                 continue
             }
+            // An entry effect still waiting (1.7) keeps waiting while its state stays; relayout moves its end.
+            if (seg is Segment.WaitingSeg && seg.entry.owner in activeStates && !isEntered(seg.entry.owner) && key !in handoff) {
+                segments[key] = seg.copy(to = to)
+                continue
+            }
+            // (A waiting entry effect whose state was left is dropped below, even toward the same target.)
             if ((seg is Segment.MotionSeg && seg.to == to || seg is Segment.DelayedSeg && seg.to == to) && key !in handoff) continue
             if (snap) { segments[key] = Segment.MotionSeg(t, to, to.map { 0.0 }, to, null); continue }
             val (pos, v) = handoff[key] ?: evaluate(seg, t)
@@ -728,10 +756,15 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
             if (motion != null && wait > 0 && !reduced) {
                 // Until the delay ends the property keeps doing what it was doing: a pending
                 // motion that hasn't started is dropped, and a value placed here holds still.
-                val prev = when {
-                    key in handoff || key in committed -> Segment.MotionSeg(t, pos, vel.map { 0.0 }, pos, null)
-                    seg is Segment.DelayedSeg && t < seg.t0 -> seg.prev
-                    else -> seg
+                var prev: Segment = if (key in handoff || key in committed) Segment.MotionSeg(t, pos, vel.map { 0.0 }, pos, null) else seg
+                // Pending ones are dropped all the way down: a waiting entry effect may wait on a waiting motion.
+                while (true) {
+                    val p = prev
+                    prev = when {
+                        p is Segment.DelayedSeg && t < p.t0 -> p.prev
+                        p is Segment.WaitingSeg && t < p.t0 -> p.prev
+                        else -> break
+                    }
                 }
                 segments[key] = Segment.DelayedSeg(t + wait, prev, to, motion)
                 continue
@@ -746,7 +779,21 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
                     is Segment.MotionSeg -> seg.to
                     is Segment.KeyframesSeg -> seg.to
                     is Segment.DelayedSeg -> seg.to
+                    is Segment.WaitingSeg -> seg.to
                     is Segment.FollowSeg, is Segment.GlideSeg -> continue
+                }
+                // A delayed entry effect (1.7) waits; the property does what the transition set it doing.
+                val w = when (effect) {
+                    is EntryEffect.Keyframes -> wait(effect.delay, effect.delayInput, t)
+                    is EntryEffect.Kick -> delayOf(effect.motion, t)
+                }
+                if (w > 0) {
+                    val entry = when (effect) {
+                        is EntryEffect.Keyframes -> Waiting.Frames(key, effect.frames, effect.duration, effect.ease, s)
+                        is EntryEffect.Kick -> Waiting.Kick(effect.motion, (effect.motion as? Motion.Spring)?.kick ?: 0.0, s)
+                    }
+                    segments[key] = Segment.WaitingSeg(t + w, seg, to, entry)
+                    continue
                 }
                 val (pos, v) = evaluate(seg, t)
                 when (effect) {
@@ -890,6 +937,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
                 is Segment.MotionSeg -> segment.to
                 is Segment.KeyframesSeg -> segment.to
                 is Segment.DelayedSeg -> segment.to
+                is Segment.WaitingSeg -> segment.to
                 else -> continue
             }
             val (pos, vel) = evaluate(segment, t)
@@ -1014,7 +1062,12 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
         val current = segments.getValue(source)
         // A pending motion is a change still to come.
         if (current is Segment.DelayedSeg && t < current.t0) return false
-        val unwrapped = if (current is Segment.DelayedSeg) started(current) else current
+        if (current is Segment.WaitingSeg && t < current.t0) return false
+        val unwrapped = when (current) {
+            is Segment.DelayedSeg -> started(current)
+            is Segment.WaitingSeg -> started(current)
+            else -> current
+        }
         val seg = if (unwrapped is Segment.GlideSeg) {
             when (val p = glidePhase(unwrapped, t)) {
                 // Still gliding: at rest once what is left of its travel is under the threshold.

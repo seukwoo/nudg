@@ -3083,6 +3083,86 @@ def validation_v1_6_cases():
     })
 
 
+# --- 1.7: entry effects that wait ---------------------------------------------
+
+POP_IN = {
+    "nudg": "1.7",
+    "host": {"events": ["show", "hide"], "inputs": {"index": {"range": [0, 100]}}},
+    "targets": ["tag", "dot"],
+    "values": {"tag.scale": 0.6, "tag.opacity": 0, "dot.y": 0},
+    "animate": {
+        "tag.scale": {**spring_json(0.3, 0), "delay": {"input": "host.index", "times": 0.05}},
+        "tag.opacity": {"tween": {"duration": 0.15, "ease": "linear"}, "delay": {"input": "host.index", "times": 0.05}},
+    },
+    "initial": "hidden",
+    "states": {
+        "hidden": {"when": {"host.show": "shown"}},
+        "shown": {
+            "set": {"tag.scale": 1, "tag.opacity": 1},
+            "enter": {
+                "tag.scale": {"kick": 6, **spring_json(0.4, 0.5), "delay": {"input": "host.index", "times": 0.05}},
+                "dot.y": {"keyframes": [{"at": 0.5, "value": -10}], "duration": 0.3, "ease": "linear", "delay": 0.1},
+            },
+            "when": {"host.hide": "hidden"},
+        },
+    },
+}
+
+
+def entry_delay_cases():
+    # The fourth tag (index 3) waits 0.15 s with its card: its scale and opacity hold, then the
+    # kick lands with the rise. The dot's keyframes wait 0.1 s and start from where it is then.
+    start = 0.1 + 0.15
+    scale, opacity = Prop(0.6), Prop(0)
+    scale.retarget(1, spring(0.4, 0.5), start)
+    scale.kick(6, spring(0.4, 0.5), start)
+    opacity.retarget(1, tween(0.15, "linear"), start)
+    steps = [{"t": 0, "input": "host.index", "value": 3}, {"t": 0.1, "send": "host.show"},
+             {"t": 0.15, "expect": {"state": ["shown"], "values": {"tag.scale": 0.6, "tag.opacity": 0, "dot.y": 0}, "resting": False}}]
+    for t in (0.2, 0.3, 0.4, 0.6):
+        dot = keyframes_at(0, 0, [(0.5, -10)], 0.3, 0.2, t)[0] if t >= 0.2 else 0
+        steps.append({"t": t, "expect": {"values": {"tag.scale": 0.6 if t < start else scale.value(t), "tag.opacity": 0 if t < start else opacity.value(t), "dot.y": round(dot, 9)}}})
+    write("entry-delay", {
+        "conformance": "1.7",
+        "name": "Entry delay: a kick waits for its card's indexed delay and lands with the rise; keyframes wait and start from where the value is",
+        "doc": POP_IN,
+        "steps": steps,
+    })
+    # Leaving before the delay ends drops the waiting effects: no kick, no keyframes.
+    write("entry-delay-leave", {
+        "conformance": "1.7",
+        "name": "Entry delay: leaving the state before the delay ends drops the waiting kick and keyframes",
+        "doc": POP_IN,
+        "steps": [
+            {"t": 0, "input": "host.index", "value": 3},
+            {"t": 0.1, "send": "host.show"},
+            {"t": 0.18, "send": "host.hide"},
+            {"t": 0.3, "expect": {"state": ["hidden"], "values": {"tag.scale": 0.6, "dot.y": 0}}},
+            {"t": 0.6, "expect": {"values": {"tag.scale": 0.6, "tag.opacity": 0, "dot.y": 0}}},
+        ],
+    })
+
+
+def validation_v1_7_cases():
+    def doc():
+        return json.loads(json.dumps(POP_IN))
+
+    kick = "/states/shown/enter/tag.scale/delay"
+    frames = "/states/shown/enter/dot.y/delay"
+    out = [("valid", doc(), [])]
+    d = doc(); d["nudg"] = "1.6"
+    out.append(("older-format", d, [("delay-outside-animate", kick), ("delay-outside-animate", frames)]))
+    d = doc(); d["states"]["shown"]["enter"]["dot.y"]["delay"] = -0.1
+    out.append(("negative", d, [("invalid-value", frames)]))
+    d = doc(); d["states"]["shown"]["enter"]["tag.scale"]["delay"] = {"input": "host.size", "times": 0.05}
+    out.append(("undeclared-input", d, [("undeclared-host-input", kick + "/input")]))
+    write("validation-1.7", {
+        "conformance": "1.7",
+        "name": "Validator (1.7): a delay on an entry kick or entry keyframes",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 if __name__ == "__main__":
     toggle_cases()
     spring_form_cases()
@@ -3139,5 +3219,7 @@ if __name__ == "__main__":
     validation_v1_5_cases()
     shadow_spread_inner_cases()
     validation_v1_6_cases()
+    entry_delay_cases()
+    validation_v1_7_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

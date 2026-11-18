@@ -1,6 +1,6 @@
 # The nudg format, version 1.2
 
-The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [conformance suite](../spec/conformance/), the [JSON Schema](../spec/nudg-1.6.schema.json) describes the structure for editors, and every validator code is listed in the [error reference](errors.md). For the reasoning behind the format, see [Design](design.md).
+The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [conformance suite](../spec/conformance/), the [JSON Schema](../spec/nudg-1.7.schema.json) describes the structure for editors, and every validator code is listed in the [error reference](errors.md). For the reasoning behind the format, see [Design](design.md).
 
 **Stability.** Format 1.0 is stable. Within 1.x, files only gain: new fields, events, inputs and error codes may appear in a later 1.x version, but nothing a 1.0 file says changes meaning; a file opts into a 1.x version's rules by declaring it. Runtimes read every earlier version (0.1 to 1.0) unchanged; each was a superset of the one before, and `nudg upgrade` raises a file to the current version, 1.2. The [appendix](#appendix-format-history) lists what each version added.
 
@@ -30,7 +30,7 @@ The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [
 
 A nudg file is strict JSON with the extension `.nudg.json`. Every platform already parses it, JSON Schema describes it, and LLMs write it reliably, so there is no parser to maintain and nothing new to learn. A friendlier syntax can be added later as sugar that compiles to the same model, but JSON stays the source of truth.
 
-A file may start with `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.6.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
+A file may start with `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.7.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
 
 JSON has no comments. Instead, any object may carry a `note` string. Runtimes ignore it. Unlike a comment, a note survives tools rewriting the file, and an AI can read it as part of the data.
 
@@ -358,6 +358,13 @@ A motion in `animate` (top level or a transition's) may have `delay`, a time of 
 - Re-entering the state samples the current value and restarts the sequence without a position jump. Leaving while it plays samples both position and velocity; the destination's ordinary spring can carry that velocity forward.
 - A transition in an unrelated parallel region does not interrupt the sequence. Relayout updates its implicit final target without restarting it.
 - Keyframes are inline entry effects, not named motions and not transition `animate`.
+- **An entry effect can wait (1.7).** A kick or keyframes may have a `delay`, in seconds or read from an app input (`{ "input": "host.index", "times": 0.05, "plus"?, "max"? }`, as a motion's), read when the state is entered.
+  - **Until the delay ends,** the property does what the transition set it doing. When the transition delays its own motion by as much, the property holds still.
+  - **When the delay ends,** a kick adds its velocity there and moves with its spring to the state's target, and keyframes start from the value at that moment. Cues on keyframe beats move with them.
+  - **A relayout meanwhile** moves the effect's end and the effect keeps waiting. **Leaving or re-entering the state** before the delay ends drops the effect.
+  - **Reduced motion** skips entry effects as before.
+  - In older formats a delay on an entry effect is `delay-outside-animate`.
+  - Cases: `entry-delay`, `entry-delay-leave`, `validation-1.7`.
 
 ### Following an input
 
@@ -539,7 +546,7 @@ Settle is reported from the frame loop, never from inside the call that sent the
 
 ## Appendix: format history
 
-Each version added to the one before and kept everything it had. A 1.6 runtime reads them all; `nudg upgrade` raises a file to 1.6. The conformance cases named here define each addition across TypeScript, Swift and Kotlin; compiled programs gained a format when they needed new fields.
+Each version added to the one before and kept everything it had. A 1.7 runtime reads them all; `nudg upgrade` raises a file to 1.7. The conformance cases named here define each addition across TypeScript, Swift and Kotlin; compiled programs gained a format when they needed new fields.
 
 | Format | Added | Conformance | Program |
 |---|---|---|---|
@@ -568,5 +575,6 @@ Each version added to the one before and kept everything it had. A 1.6 runtime r
 | 1.4 | Particles: `emitters` and `emit` | `particles*`, `validation-1.4` | 11, only when used |
 | 1.5 | Measured entry keyframes, an ease per keyframe | `keyframes-measured*`, `keyframes-ease`, `validation-1.5` | 12, only when used |
 | 1.6 | `shadowSpread`, and an inner shadow: `innerX`, `innerY`, `innerBlur`, `innerSpread`, `innerColor` | `shadow-spread-inner`, `validation-1.6` | as 1.5 |
+| 1.7 | A `delay` on an entry kick or entry keyframes | `entry-delay`, `entry-delay-leave`, `validation-1.7` | 13, only when used |
 
 The `rest` case defines rest and lifecycle across all of them. Before 0.5, `map` and `follow` read only properties and drag inputs; before 0.9, ranges and map points were numbers; and so on: a feature used in a file that declares an older version is a `needs-version` error whose hint names the version that added it.

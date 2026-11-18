@@ -44,7 +44,8 @@ class Cue(
 )
 sealed interface EntryEffect {
     data class Kick(val motion: Motion) : EntryEffect
-    data class Keyframes(val frames: List<Keyframe>, val duration: Double, val ease: Ease) : EntryEffect
+    /** Keyframes; [delay] or [delayInput] (1.7) make them wait after entry. */
+    data class Keyframes(val frames: List<Keyframe>, val duration: Double, val ease: Ease, val delay: Double = 0.0, val delayInput: DelayInput? = null) : EntryEffect
 }
 
 data class Measure(val target: String, val of: String, val times: Double, val plus: Double)
@@ -135,7 +136,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
         }
 
         internal fun fromJson(j: Map<String, Any?>): Program {
-            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0)) { "Not a compiled nudg program (formats 1 to 12). Compile it with `nudg compile`." }
+            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0)) { "Not a compiled nudg program (formats 1 to 13). Compile it with `nudg compile`." }
             val properties = list(j["properties"]).map { p ->
                 obj(p).let { m ->
                     (m["key"] as String) to Property(
@@ -215,7 +216,9 @@ class Program(val version: String, val targets: List<String>, val properties: Li
                         Keyframe(it["at"] as Double, if (m == null) doubles(it["value"]) else listOf(0.0), cues(it["cue"]), m, it["ease"]?.let(::ease))
                     }
                 }
-                return EntryEffect.Keyframes(frames, e["duration"] as Double, ease(e["ease"]))
+                // A wait (format 13): seconds, or an object read from an input.
+                val wait = (e["delay"] as? Map<*, *>)?.let { d -> DelayInput(d["input"] as String, d["times"] as? Double ?: 1.0, d["plus"] as? Double ?: 0.0, d["max"] as? Double) }
+                return EntryEffect.Keyframes(frames, e["duration"] as Double, ease(e["ease"]), e["delay"] as? Double ?: 0.0, wait)
             }
             return EntryEffect.Kick(motion(v))
         }

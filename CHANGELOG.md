@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Docs:**
+  - The README shows cues, emitters and shadows in one example, and how to move an existing app (`audit`, then `from-css`).
+  - A case study tells how PlaySnack went from 49% to 89% of its motion on nudg.
+  - npm keywords now cover haptics, sound effects, particles and CSS animation migration.
+
 - **Fixed: `from-css` read `--animation` times the wrong way round** ([#160](https://github.com/seukwoo/nudg/issues/160)). When the source's `animation` line had one time and the option had two, the option's first time became the delay. Each line is now read on its own, as CSS reads it: the first time is the duration and the second the delay. What the option says replaces what the source said. The report now starts with the timing it read, because the proof uses the same timing and can't catch a misread.
 
 ## 1.12.0

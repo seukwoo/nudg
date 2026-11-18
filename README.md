@@ -17,6 +17,9 @@
 
 **[Try all 49 examples in the live demo →](https://seukwoo.github.io/nudg/demo/)**
 
+Motion, sound, haptics and particles in one file, on web, iOS and Android.<br>
+Already have CSS animations? `nudg from-css` moves each one and proves it moves the same.
+
 </div>
 
 nudg describes a UI interaction in a small JSON file next to your component: its states, the events that move between them, and the motion in between. Your AI coding tool edits the file, nudg checks the edit, and a tiny runtime plays it in your app.
@@ -94,6 +97,47 @@ function Toggle() {
 ```
 
 The look is yours (size, shape, the knob's resting place); the file moves it. Values go straight to the elements' styles, so the component doesn't re-render while things move. With Vite, add `nudg()` from `@nudg/core/vite` to the plugins: files are compiled at build time, a file with errors fails the build, and nudg adds about 14 kB gzipped instead of 28. Not using React? The DOM adapter binds `data-nudg="knob"` attributes instead; see [Using nudg](docs/usage.md#dom-adapter).
+
+## Sound, touch and particles on the same beat
+
+A like button that pops, buzzes, plays a sound and bursts, all from the file:
+
+```json
+{
+  "nudg": "1.6",
+  "targets": ["heart", "burst"],
+  "values": { "heart.scale": 1, "heart.color": "#9CA3AF" },
+  "animate": { "heart.scale": { "spring": { "duration": 0.3, "bounce": 0.5 } } },
+  "emitters": { "burst": { "from": "heart", "count": 16, "speed": [120, 260], "life": [0.4, 0.7] } },
+  "initial": "off",
+  "states": {
+    "off": { "when": { "heart.tap": "on" } },
+    "on": {
+      "set": { "heart.color": "#F43F5E" },
+      "enter": { "heart.scale": { "kick": 6, "spring": { "duration": 0.4, "bounce": 0.5 } } },
+      "cue": { "sound": "pop", "haptic": "success" },
+      "emit": "burst",
+      "when": { "heart.tap": "off" }
+    }
+  }
+}
+```
+
+- **Cues.** A `cue` plays a sound and a haptic at an exact moment of the motion: on a transition, on entering a state, or on a beat of keyframes or a loop. The adapters map them to each platform's feedback: UIKit's feedback generators on iOS, `performHapticFeedback` on Android, and Web Haptics or `vibrate` on the web. Your app maps sound names to its files.
+- **Emitters.** An emitter sends out short-lived pieces: confetti, sparkles, a burst. Every piece flies a seeded path, so the burst is the same on every platform and can be compared and tested.
+- **Shadows.** A shadow, its spread, an inner shadow and a blur are properties like any other, so a lift deepens its shadow with the same spring that raises the card.
+
+## Already have an app? Move it
+
+```sh
+npx @nudg/core audit src            # how much of the app's motion is on nudg, and what replaces the rest
+npx @nudg/core from-css src/Card.tsx cardIn --out card-in.nudg.json
+```
+
+- **`audit`** lists the motion that lives outside nudg: CSS keyframes and transitions, Web Animations, timers and listeners around players. For each one it names what in nudg replaces it.
+- **`from-css`** turns a CSS `@keyframes` into a nudg file. It plays both and compares them at 60 points, and writes the file only when they agree within half a pixel. When the keyframes overshoot, it also offers a spring that carries on naturally when interrupted, and you choose.
+
+[PlaySnack](https://playsnack.app) moved its motion this way in one pull request: **49% → 89%** on nudg, 36 of 42 keyframe animations converted with proof. [Read the case study →](docs/case-study-playsnack.md)
 
 ## Native feel, one import
 

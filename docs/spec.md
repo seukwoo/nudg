@@ -116,6 +116,16 @@ The app events and inputs a file uses, in one place:
 - Errors: `invalid-name`, `duplicate-host-name`, and `invalid-value` for a range that isn't two increasing numbers (the input stays declared).
 - It changes no behavior. Runtimes accept any finite input value; the declaration is the contract, and `nudg generate` lists exactly the declared app names.
 
+### Kept decisions (1.7)
+
+`"keep": ["slow-exit"]` lists critique codes a person decided to keep, with a `note` saying why ("the ceremony is long on purpose"). Runtimes ignore it. `critique` and `nudg check` report those findings as kept, not raised. Codes are `slow-transition`, `late-feedback`, `invisible-change`, `slow-exit`, `bouncy-fade`, `short-timeout` and `no-escape`; any other is `invalid-value`.
+
+`nudg check` routes each code by this fixed table, so the same finding always reaches the same one. A rule with one right answer goes to the agent; one that can be a choice goes to the person.
+
+| To the agent, which fixes it and checks again | To the person |
+|---|---|
+| validation errors; `late-feedback`, `invisible-change`, `bouncy-fade`, `no-escape`; motion outside nudg that nudg replaces | `slow-transition`, `slow-exit`, `short-timeout`; motion nudg can't cover yet (an audit gap) |
+
 ## Values
 
 ### Paths
@@ -575,6 +585,6 @@ Each version added to the one before and kept everything it had. A 1.7 runtime r
 | 1.4 | Particles: `emitters` and `emit` | `particles*`, `validation-1.4` | 11, only when used |
 | 1.5 | Measured entry keyframes, an ease per keyframe | `keyframes-measured*`, `keyframes-ease`, `validation-1.5` | 12, only when used |
 | 1.6 | `shadowSpread`, and an inner shadow: `innerX`, `innerY`, `innerBlur`, `innerSpread`, `innerColor` | `shadow-spread-inner`, `validation-1.6` | as 1.5 |
-| 1.7 | A `delay` on an entry kick or entry keyframes | `entry-delay`, `entry-delay-leave`, `validation-1.7` | 13, only when used |
+| 1.7 | A `delay` on an entry kick or entry keyframes; `keep` | `entry-delay`, `entry-delay-leave`, `validation-1.7` | 13, only when used |
 
 The `rest` case defines rest and lifecycle across all of them. Before 0.5, `map` and `follow` read only properties and drag inputs; before 0.9, ranges and map points were numbers; and so on: a feature used in a file that declares an older version is a `needs-version` error whose hint names the version that added it.

@@ -209,6 +209,31 @@ Colors are a note rather than a limit: CSS blends in sRGB and nudg in OKLab, so 
 
 `--json` gives the whole result as data.
 
+### check
+
+```sh
+nudg check src
+```
+
+```text
+43 nudg files, 86 transitions, 89% of the app's motion on nudg. 11 need you: motion/Ceremony-snkGo.nudg.json: hidden → shown on host.show: content.scale takes 0.78 s to settle. (and 10 more)
+```
+
+It checks everything about an app's motion in one call:
+- it validates every nudg file;
+- it checks each file against the platforms' guidelines (as `critique` does);
+- it audits the source for motion outside nudg (as `audit` does).
+
+Instead of one report, it returns two lists, by who acts:
+- **For the AI.** What has one right answer: a file that doesn't validate, press feedback that comes late, a change nobody can see, a fade that bounces, a dialog Escape can't close, and glue nudg replaces. An agent fixes these without asking and runs `check` again.
+- **For the person.** What can be a choice: a transition that takes long, a slow exit, an auto-dismiss too short to read, and motion nudg can't do yet. Each item is one line, to ask about.
+
+The first line is the only thing a person needs to read. When nothing needs them, it says so, and an agent may say nothing about motion at all.
+
+When the person keeps a choice ("the ceremony is long on purpose"), add its code to the file's `"keep"` with a note (format 1.7). `check` and `critique` then count it as kept and don't ask again. The [spec](spec.md#kept-decisions-17) lists which codes go where; the table is fixed, so an agent can't route around the person.
+
+It exits 1 on a validation error or anything for the person, so CI can run it. `--json` gives both lists as data, and over MCP it is `nudg_check`. It doesn't open the running app; `observe` still does that, one page at a time.
+
 ### critique
 
 ```sh

@@ -734,7 +734,7 @@ React Native before 0.76 (the old architecture) has neither. There the adapter s
 
 ## Proposal: one check, and the person sees only what needs them (1.13)
 
-Status: proposed 2026-11-13. The judge thesis ([devlog](devlog.md), "the second review") made judging a change fast: compare, verdicts that speak first, observe on the real page. That serves a change the person asked for ("heavier"). But a vibe coder who has an AI build twenty buttons doesn't want to look at twenty comparisons. They want to look at what they asked for and at what is wrong, and to trust the rest. `from-css` showed the way: it proves each file moves as the CSS did, so 41 conversions needed no look at all.
+Status: decided 2026-11-13; implemented in 1.13 without the running-app part (`observe` stays separate for now), and `keep` came with format 1.7. The judge thesis ([devlog](devlog.md), "the second review") made judging a change fast: compare, verdicts that speak first, observe on the real page. That serves a change the person asked for ("heavier"). But a vibe coder who has an AI build twenty buttons doesn't want to look at twenty comparisons. They want to look at what they asked for and at what is wrong, and to trust the rest. `from-css` showed the way: it proves each file moves as the CSS did, so 41 conversions needed no look at all.
 
 So the goal moves from "a change is judged in 2 seconds" to "most changes need no judging". The new metric is how many motions the person had to look at, and for routine work the target is none.
 

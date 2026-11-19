@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.14.0
+
+`nudg to-css` now covers what a static page needs. Values that follow the scroll become scroll-driven animations. With `--script`, the page plays the file exactly on nudg's runtime where JavaScript runs, and the CSS stays the fallback. Four new examples play sound for formats 1.7–1.9, and the examples site lets you browse by what an example shows. The DOM player loads without the compiler. Files and APIs from 1.13 work as before.
 
 - **`nudg to-css --script`: exact where the page runs JavaScript.** Beside the CSS it writes a small ES module that plays the file on nudg's runtime, so drags, snapping, timers, kicks, loops, cues and particles come back, exactly as the file says. It follows a state the page shows with its own class or attribute (`[data-closing]` sends the file's close event). The CSS stays the fallback where the script doesn't run. Adding the script is the person's choice; without it, the tool lists what the page loses. Checked in Chrome: a side menu that closes on the page's attribute, and a carousel drag that snaps.
 - **A lighter DOM player.** `playDoc` moved to its own module, and the headless player no longer re-exports `toProgram`, so a page that plays a compiled program loads the player without the compiler (170 KB of modules instead of 294 KB, before minifying). Imports from `@nudg/core`, `@nudg/core/dom` and the other entry points are unchanged.

@@ -209,6 +209,46 @@ Colors are a note rather than a limit: CSS blends in sRGB and nudg in OKLab, so 
 
 `--json` gives the whole result as data.
 
+### to-css
+
+```sh
+nudg to-css menu.nudg.json --mount host.show --state "hidden=[data-closing]" --target menu=.lnb --target dim=.lnb-dim --out menu.css
+```
+
+```text
+Written: 3 changes checked against nudg's runtime at 60 points and two sizes; all within 0.5 px, 0.5°, 0.01.
+```
+
+```css
+.lnb {
+  translate: 0px 0px;
+  transition: translate 0.22s cubic-bezier(0.2, 0.9, 0.25, 1.05);
+}
+@starting-style {
+  .lnb { translate: -100% 0px; }
+}
+:is([data-closing]) .lnb, .lnb:is([data-closing]) {
+  translate: -100% 0px;
+  transition: translate 0.16s cubic-bezier(0.42, 0, 1, 1);
+}
+```
+
+The other direction from `from-css`: a nudg file as plain CSS, for a page that runs no JavaScript (a static page that shares a side menu with the app). The file stays the one source; regenerate the CSS when it changes.
+
+**What it writes.**
+- **A rule per state.** The element's own rule holds the state it rests in. Every other state is a rule under a selector that matches while it is active: `--state name=selector` names a class or attribute the page toggles, on the element or an ancestor. A state the file enters on hover, press or focus and leaves on its end becomes `:hover`, `:active` or `:focus` by itself. Otherwise the state is `[data-nudg-state~="<name>"]`, and the report says to set it.
+- **Transitions** with each motion: a tween as `cubic-bezier()`, a spring as `linear()` with enough points to stay within the limits. Properties go to `translate`, `rotate` and `scale` (each moving on its own, as in nudg), `opacity`, `width`, `height`, `background-color`, `box-shadow` and `filter`. Colors are written in `oklab()`, so the browser blends them as nudg does.
+- **The way in on mount.** `--mount host.show` names the event the element is shown with (an adapter's `start`): the element rests where that event leads, and `@starting-style` holds where it starts, so it plays in as it mounts (Chrome 117, Safari 17.5, Firefox 129).
+- **Sizes from the element itself.** A value measured from the element's own width (x) or height (y) becomes a percentage of `translate`: `-100%`.
+- **Reduced motion:** a short linear transition, as nudg's runtime does.
+- A header comment marks the file as generated, and `nudg audit` counts it as on nudg; editing it by hand drops the header.
+
+**The proof.** For every change of state (and the mount), it plays nudg's runtime and the CSS's own timing, as the CSS declares them, at 60 points and two element sizes. With `--out`, it writes only within 0.5 px, 0.5° and 0.01. A change CSS can't follow exactly is listed with how far and when: a property that moves into a state differently depending on where it came from (CSS takes one timing per state), or a map with more than two points.
+
+**What the page loses without a script.** Listed, not worked around: following a drag, settling on the nearest state, timers, entry kicks and keyframes, loops, cues, particles, delays read from an input, and values measured from another element (the whole file is then left on nudg's runtime). Whether a static page gets a script is the person's decision.
+
+Over MCP, `nudg_to_css` returns the report and the CSS.
+
 ### check
 
 ```sh

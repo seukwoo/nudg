@@ -20,6 +20,7 @@ import { installSkill, SKILL } from "./node/skill.ts";
 import { auditDir, formatAudit } from "./node/audit.ts";
 import { checkDir, formatCheck } from "./node/check.ts";
 import { formatFromCss, fromCss } from "./core/from-css.ts";
+import { formatToCss, toCss } from "./core/to-css.ts";
 import { formatComparison, formatCritique, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
 import { comparePage, lastRuntimeInlined, readWithImports } from "./node/compare-page.ts";
 import { compilePath } from "./node/load.ts";
@@ -118,6 +119,15 @@ simulate and plot options
                             fitted spring is offered: --spring writes it, --exact the keyframes;
                             in a terminal it asks. --target <name> (default content).
                             --set "V.accent=#ff6a00" gives a \${...} value only the app knows.
+  to-css <file>             The file as plain CSS, for a page that runs no JavaScript: a rule
+                            per state (under a class or attribute the page toggles, or :hover,
+                            :active and :focus), transitions with each motion (springs as
+                            linear()), and the way in on mount from @starting-style. Checked
+                            against nudg's runtime at 60 points and two sizes; past the limits
+                            --out writes nothing. Lists what the page loses without a script.
+                            --state <name>=<selector> (default [data-nudg-state~="<name>"]),
+                            --target <name>=<selector> (default [data-nudg="<name>"]),
+                            --mount <event> (the event it is shown with), --out <file.css>.
   critique <file...>        Whether the motion is good, not only valid: each transition checked
                             against the platforms' motion guidelines and accessibility rules
                             (slow transitions, late press feedback, invisible changes, bouncy
@@ -744,6 +754,37 @@ if (command === "check") {
   process.stdout.write((json ? JSON.stringify({ ok: result.forPerson.length === 0, ...result }, null, 2) : formatCheck(result)) + "\n");
   process.exit(result.forAi.some((i) => i.kind === "error") || result.forPerson.length ? 1 : 0);
 }
+if (command === "to-css") {
+  const { file, program } = loadProgram("to-css", args, json);
+  if (!program) process.exit(1);
+  const pairs = (flag: string) => {
+    const out: Record<string, string> = {};
+    for (const pair of args.flags.get(flag) ?? []) {
+      const i = pair.indexOf("=");
+      if (i < 1) fail(`--${flag} takes name=selector, as in --${flag} ${flag === "state" ? "hidden='[data-closing]'" : "menu=.lnb"} (got "${pair}").`);
+      out[pair.slice(0, i)] = pair.slice(i + 1);
+    }
+    return out;
+  };
+  const result = toCss(program, { states: pairs("state"), targets: pairs("target"), mount: args.flags.get("mount")?.at(-1), file: basename(file) });
+  const ok = !result.problems.length && !result.differences.length;
+  if (json) {
+    process.stdout.write(JSON.stringify({ ok, ...result }, null, 2) + "\n");
+    process.exit(ok ? 0 : 1);
+  }
+  process.stderr.write(formatToCss(result) + "\n");
+  if (result.problems.length) process.exit(1);
+  const out = args.flags.get("out")?.at(-1);
+  if (out) {
+    if (!ok) {
+      process.stderr.write(`Not written to ${out}: CSS moves differently from the file. Give each state one timing, or keep this file on nudg's runtime.\n`);
+      process.exit(1);
+    }
+    writeFileSync(out, result.css);
+    process.stderr.write(`Wrote ${out}.\n`);
+  } else process.stdout.write(result.css);
+  process.exit(ok ? 0 : 1);
+}
 if (command === "from-css") {
   const [file, name] = args.positional;
   if (!file || !name || args.positional.length > 2) fail("from-css takes a source file and a @keyframes name.");
@@ -869,4 +910,4 @@ if (command === "mcp") {
   await serveMcp();
   process.exit(0);
 }
-fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, compile, generate, upgrade, critique, audit, check, from-css, observe, recipe, preset, log, skill, mcp.`);
+fail(`Unknown command "${command}". Commands: validate, simulate, plot, render, compare, compile, generate, upgrade, critique, audit, check, from-css, to-css, observe, recipe, preset, log, skill, mcp.`);

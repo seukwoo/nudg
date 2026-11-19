@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **`nudg to-css`: a nudg file as plain CSS, for pages without JavaScript.**
+  - **What it writes:** a rule per state, under a class or attribute the page toggles, or `:hover`, `:active` and `:focus` when the file enters the state that way. Transitions carry each motion: a tween as `cubic-bezier()`, a spring as `linear()`. `@starting-style` plays the way in on mount, a size from the element itself becomes a `translate` percentage, and colors are `oklab()`, so the browser blends them as nudg does.
+  - **Checked:** every change of state is played on nudg's runtime and on the CSS's own timing at 60 points and two sizes. A Chrome test confirms the browser plays the CSS that way. With `--out`, it writes only within the limits.
+  - **What a page loses without a script** is listed, not worked around: drags, timers, kicks, loops, cues, particles, layout from another element.
+  - **Where:** CLI `nudg to-css`, MCP `nudg_to_css`. `nudg audit` counts the generated CSS as on nudg, by its header.
+
 - **Format 1.9: confetti on a designed path** ([#163](https://github.com/seukwoo/nudg/issues/163)).
   - **What's new:** an emitter may give its pieces a `path` instead of physics: frames at shares of each piece's life, with offsets, rotation, scale and opacity, each a `[low, high]` range drawn from the seed, and an ease per leg. A `delay` range lets each piece wait its own time.
   - **What it's for:** a celebration planned beat by beat (rise to a peak at 40%, fall past the start) used to need one Web Animation per piece in the app. Now it is one emitter in the file, placed the same on every platform, and testable.

@@ -33,6 +33,7 @@ test("the example catalog matches the files", () => {
   assert.deepEqual([...new Set(catalog.examples.map((e: { id: string }) => e.id))].sort(), files.sort(), "every example file is cataloged once");
   for (const e of catalog.examples) {
     assert.ok(categories.has(e.category), `${e.id}: unknown category ${e.category}`);
+    for (const f of e.features) assert.ok(catalog.features.some((x: { id: string }) => x.id === f), `${e.id}: unknown feature ${f}`);
     assert.ok(existsSync(`${root}examples/${e.html}`), `${e.id}: missing ${e.html}`);
     assert.ok(e.tags.length && e.summary && e.prompts.length, `${e.id}: needs tags, a summary and prompts`);
     const html = readFileSync(`${root}examples/${e.html}`, "utf8");

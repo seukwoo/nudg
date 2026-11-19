@@ -56,10 +56,18 @@ async function page(file) {
 /** The examples' sounds (synthesized by scripts/sounds.py), off until the visitor turns them on. */
 const SOUNDS = { pop: "../examples/sounds/pop.wav", tick: "../examples/sounds/tick.wav", burst: "../examples/sounds/burst.wav", heart: "../examples/sounds/heart.wav" };
 let soundOn = false;
-document.getElementById("detail-sound")?.addEventListener("click", (e) => {
+const soundSwitch = document.getElementById("detail-sound");
+const SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/>';
+function drawSoundSwitch() {
+  soundSwitch.setAttribute("aria-pressed", String(soundOn));
+  soundSwitch.innerHTML = soundOn
+    ? `${SPEAKER}<path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Sound on`
+    : `${SPEAKER}<path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Sound off: tap to hear it`;
+}
+drawSoundSwitch();
+soundSwitch.addEventListener("click", () => {
   soundOn = !soundOn;
-  e.currentTarget.setAttribute("aria-pressed", String(soundOn));
-  e.currentTarget.textContent = soundOn ? "Sound on" : "Sound off";
+  drawSoundSwitch();
 });
 
 const HOOKS = {
@@ -838,12 +846,26 @@ const grid = document.getElementById("grid");
 const search = document.getElementById("search");
 const nav = document.getElementById("categories");
 
-function renderNav(current) {
-  const count = (id) => examples.filter((e) => !id || e.category === id).length;
+// Two ways in: what an example is (one category each) and what it shows (any features).
+function renderNav(category, feature) {
+  const count = (pick) => examples.filter(pick).length;
   nav.replaceChildren(
-    el("a", { href: "#", "aria-current": !current ? "true" : "false" }, "All examples", el("span", {}, String(count()))),
-    ...catalog.categories.map((c) =>
-      el("a", { href: `#category=${c.id}`, "aria-current": current === c.id ? "true" : "false" }, c.title, el("span", {}, String(count(c.id)))),
+    el("a", { href: "#", "aria-current": !category && !feature ? "true" : "false" }, "All examples", el("span", {}, String(examples.length))),
+    el(
+      "div",
+      { class: "nav-group" },
+      el("h2", { class: "nav-head" }, "Components"),
+      ...catalog.categories.map((c) =>
+        el("a", { href: `#category=${c.id}`, "aria-current": category === c.id ? "true" : "false" }, c.title, el("span", {}, String(count((e) => e.category === c.id)))),
+      ),
+    ),
+    el(
+      "div",
+      { class: "nav-group" },
+      el("h2", { class: "nav-head" }, "What it shows"),
+      ...catalog.features.map((f) =>
+        el("a", { href: `#feature=${f.id}`, "aria-current": feature === f.id ? "true" : "false" }, f.title, el("span", {}, String(count((e) => e.features.includes(f.id))))),
+      ),
     ),
   );
 }
@@ -859,17 +881,21 @@ function renderTags(current) {
   );
 }
 
-async function renderBrowse({ category, tag, q }) {
+async function renderBrowse({ category, feature, tag, q }) {
   show("browse");
   unmountAll();
-  renderNav(category);
-  renderTags(tag);
-  const title = category ? catalog.categories.find((c) => c.id === category)?.title : tag ? `Tagged ${tag}` : "All examples";
+  renderNav(category, feature);
+  // Tags are the file's own vocabulary: shown on an example's page, and only filtered by when a link asks.
+  const tags = document.getElementById("tags");
+  if (tag) renderTags(tag);
+  else tags.replaceChildren();
+  const title = category ? catalog.categories.find((c) => c.id === category)?.title : feature ? catalog.features.find((f) => f.id === feature)?.title : tag ? `Tagged ${tag}` : "All examples";
   document.getElementById("browse-title").textContent = title ?? "All examples";
   const needle = (q ?? "").trim().toLowerCase();
   const shown = examples.filter(
     (e) =>
       (!category || e.category === category) &&
+      (!feature || e.features.includes(feature)) &&
       (!tag || e.tags.includes(tag)) &&
       (!needle || [e.id, e.title, e.summary, ...e.tags].join(" ").toLowerCase().includes(needle)),
   );
@@ -907,6 +933,8 @@ async function renderDetail(id) {
   unmountAll();
   renderNav(ex.category);
   document.title = `${ex.title} · nudg examples`;
+  // Examples that play sounds say so where the visitor looks: under the stage, first.
+  soundSwitch.hidden = !ex.features.includes("sound");
   document.getElementById("detail-title").textContent = ex.title;
   document.getElementById("detail-summary").textContent = ex.summary;
   document.getElementById("detail-tags").replaceChildren(...ex.tags.map(tagLink));
@@ -1130,7 +1158,7 @@ function route() {
   const params = new URLSearchParams(hash);
   document.title = "nudg examples";
   const q = params.get("q") ?? search.value;
-  return renderBrowse({ category: params.get("category") ?? undefined, tag: params.get("tag") ?? undefined, q });
+  return renderBrowse({ category: params.get("category") ?? undefined, feature: params.get("feature") ?? undefined, tag: params.get("tag") ?? undefined, q });
 }
 
 search.addEventListener("input", () => {

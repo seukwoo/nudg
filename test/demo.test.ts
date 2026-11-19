@@ -49,7 +49,7 @@ test("the site starts and shows every cataloged example", { skip }, async () => 
   await waitFor(async () => ((await browser.evaluate("document.querySelectorAll('#grid .state:not(:empty)').length")) >= catalog.examples.length ? true : undefined), 10_000);
   assert.equal(await browser.evaluate("document.querySelectorAll('#grid .card').length"), catalog.examples.length);
   assert.equal(await browser.evaluate("document.getElementById('boot-error').hidden"), true);
-  assert.equal(await browser.evaluate("document.querySelectorAll('#categories a').length"), catalog.categories.length + 1);
+  assert.equal(await browser.evaluate("document.querySelectorAll('#categories a').length"), catalog.categories.length + catalog.features.length + 1);
   assert.equal(await browser.evaluate("document.querySelectorAll('.runtime-platforms [role=listitem]').length"), 4);
   assert.match(await browser.evaluate("document.querySelector('.runtime-check').textContent"), /32 \/ 32.*TypeScript.*Swift.*Kotlin/s);
 });
@@ -73,6 +73,13 @@ test("no example overflows its card stage, at wide and narrow widths", { skip },
 test("filters: category, tag and search", { skip }, async () => {
   await go("#category=lists");
   assert.equal(await browser.evaluate("document.getElementById('browse-title').textContent"), "Lists & rows");
+  await go("#feature=sound");
+  assert.equal(await browser.evaluate("document.getElementById('browse-title').textContent"), "Sound & haptics");
+  assert.deepEqual(await browser.evaluate("[...document.querySelectorAll('#grid h3')].map((h) => h.textContent).sort()"), ["Designed confetti", "Like with sound", "Staggered cards and tags", "Theme switch"]);
+  await go("#example/like-burst");
+  assert.equal(await browser.evaluate("document.getElementById('detail-sound').hidden"), false);
+  await go("#example/toggle");
+  assert.equal(await browser.evaluate("document.getElementById('detail-sound').hidden"), true);
   await go("#tag=kick");
   assert.deepEqual(await browser.evaluate("[...document.querySelectorAll('#grid h3')].map((h) => h.textContent).sort()"), ["Badge", "Like", "Like with sound", "Rating", "Staggered cards and tags", "Stepper"]);
   await go("#tag=keyframes");

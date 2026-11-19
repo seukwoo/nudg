@@ -6,7 +6,7 @@
   <style>
     .theme-demo { --surface: #ffffff; --hover: #f3f4f6; --track: #d1d5db; --accent: #6366f1; --text: #1c1c1a; --muted: #6b7280; font: 13px ui-sans-serif, system-ui, sans-serif; }
     .theme-demo.dark { --surface: #18181b; --hover: #27272a; --track: #3f3f46; --accent: #a78bfa; --text: #f4f4f5; --muted: #a1a1aa; }
-    .theme-demo .panel { width: 280px; padding: 8px; border-radius: 14px; box-shadow: 0 1px 3px #0000001f, 0 6px 16px #00000014; color: var(--text); }
+    .theme-demo .panel { width: 240px; padding: 8px; border-radius: 14px; box-shadow: 0 1px 3px #0000001f, 0 6px 16px #00000014; color: var(--text); }
     .theme-demo .row { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-radius: 10px; }
     .theme-demo .row small { display: block; color: var(--muted); }
     .theme-demo .track { width: 44px; height: 24px; padding: 2px; box-sizing: border-box; border: 0; border-radius: 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -18,7 +18,7 @@
   <div class="theme-demo">
     <div class="panel" data-nudg="panel">
       <div class="row" data-nudg="row1"><span>Dark mode<small>Follows this switch</small></span><button class="track" role="switch" aria-checked="false" aria-label="Dark mode" data-nudg="track"><span class="knob" data-nudg="knob"></span></button></div>
-      <div class="row" data-nudg="row2"><span>Notifications<small>Hover a row: the tint is the theme's</small></span></div>
+      <div class="row" data-nudg="row2"><span>Notifications<small>Hover: the theme's tint</small></span></div>
     </div>
     <button class="sound" aria-pressed="false">Sound off</button>
   </div>

@@ -1,17 +1,13 @@
 {
-  "note": "The example catalog. The demo site, docs and tests read it; add an entry when you add an example.",
+  "note": "The example catalog. The demo site, docs and tests read it; add an entry when you add an example. Each example has one category (what it is) and any features (what it shows).",
   "categories": [
-    {
-      "id": "platform",
-      "title": "Platform motion"
-    },
     {
       "id": "buttons",
       "title": "Buttons & cards"
     },
     {
       "id": "toggles",
-      "title": "Toggles & checks"
+      "title": "Toggles & inputs"
     },
     {
       "id": "forms",
@@ -38,12 +34,45 @@
       "title": "Media"
     }
   ],
+  "features": [
+    {
+      "id": "sound",
+      "title": "Sound & haptics"
+    },
+    {
+      "id": "particles",
+      "title": "Particles"
+    },
+    {
+      "id": "gestures",
+      "title": "Drag, pinch & gestures"
+    },
+    {
+      "id": "scroll",
+      "title": "Scroll"
+    },
+    {
+      "id": "layout",
+      "title": "Fits the layout"
+    },
+    {
+      "id": "theme",
+      "title": "Theme colors"
+    },
+    {
+      "id": "platform",
+      "title": "Platform motion"
+    }
+  ],
   "examples": [
     {
       "id": "ios-toggle",
       "recipe": "switch",
       "title": "iOS toggle",
-      "category": "platform",
+      "category": "toggles",
+      "features": [
+        "platform"
+      ],
       "tags": [
         "apple",
         "import",
@@ -60,7 +89,10 @@
       "id": "material-switch",
       "recipe": "switch",
       "title": "Material switch",
-      "category": "platform",
+      "category": "toggles",
+      "features": [
+        "platform"
+      ],
       "tags": [
         "material",
         "import",
@@ -78,6 +110,7 @@
       "recipe": "switch",
       "title": "Toggle",
       "category": "toggles",
+      "features": [],
       "tags": [
         "spring",
         "tween"
@@ -94,6 +127,7 @@
       "recipe": "switch",
       "title": "Toggle with press",
       "category": "toggles",
+      "features": [],
       "tags": [
         "spring",
         "parallel",
@@ -111,6 +145,9 @@
       "recipe": "switch",
       "title": "Draggable toggle",
       "category": "toggles",
+      "features": [
+        "gestures"
+      ],
       "tags": [
         "drag",
         "follow",
@@ -130,6 +167,7 @@
       "recipe": "button",
       "title": "Button press",
       "category": "buttons",
+      "features": [],
       "tags": [
         "spring",
         "transition-animate"
@@ -146,6 +184,7 @@
       "recipe": "card",
       "title": "Hover card",
       "category": "buttons",
+      "features": [],
       "tags": [
         "hover",
         "spring",
@@ -163,6 +202,7 @@
       "recipe": "reaction",
       "title": "Like",
       "category": "buttons",
+      "features": [],
       "tags": [
         "kick",
         "spring",
@@ -180,6 +220,9 @@
       "recipe": "reaction",
       "title": "Double-tap like",
       "category": "buttons",
+      "features": [
+        "gestures"
+      ],
       "tags": [
         "doubletap",
         "longpress",
@@ -198,6 +241,10 @@
       "recipe": "swipe-row",
       "title": "Swipe row",
       "category": "lists",
+      "features": [
+        "gestures",
+        "layout"
+      ],
       "tags": [
         "drag",
         "follow",
@@ -217,6 +264,10 @@
       "recipe": "list",
       "title": "Animated list",
       "category": "lists",
+      "features": [
+        "gestures",
+        "layout"
+      ],
       "tags": [
         "per-item",
         "host-event",
@@ -236,6 +287,9 @@
       "recipe": "accordion",
       "title": "Accordion",
       "category": "lists",
+      "features": [
+        "layout"
+      ],
       "tags": [
         "height",
         "measure",
@@ -255,6 +309,9 @@
       "recipe": "carousel",
       "title": "Carousel",
       "category": "lists",
+      "features": [
+        "gestures"
+      ],
       "tags": [
         "drag",
         "follow",
@@ -273,6 +330,10 @@
       "recipe": "free-scroll-carousel",
       "title": "Free-scrolling carousel",
       "category": "lists",
+      "features": [
+        "gestures",
+        "layout"
+      ],
       "tags": [
         "drag",
         "follow",
@@ -291,6 +352,9 @@
       "recipe": "image-viewer",
       "title": "Image viewer",
       "category": "media",
+      "features": [
+        "gestures"
+      ],
       "tags": [
         "pinch",
         "doubletap",
@@ -310,6 +374,9 @@
       "recipe": "pull-to-refresh",
       "title": "Pull to refresh",
       "category": "lists",
+      "features": [
+        "gestures"
+      ],
       "tags": [
         "drag",
         "follow",
@@ -330,6 +397,10 @@
       "recipe": "segmented-control",
       "title": "Segmented control",
       "category": "navigation",
+      "features": [
+        "gestures",
+        "layout"
+      ],
       "tags": [
         "any-state-when",
         "drag",
@@ -348,6 +419,9 @@
       "recipe": "tabs",
       "title": "Tabs",
       "category": "navigation",
+      "features": [
+        "layout"
+      ],
       "tags": [
         "measure",
         "width",
@@ -365,6 +439,10 @@
       "recipe": "bottom-sheet",
       "title": "Bottom sheet",
       "category": "overlays",
+      "features": [
+        "gestures",
+        "layout"
+      ],
       "tags": [
         "drag",
         "follow",
@@ -386,6 +464,7 @@
       "recipe": "toast",
       "title": "Toast",
       "category": "feedback",
+      "features": [],
       "tags": [
         "timer",
         "host-event",
@@ -404,6 +483,7 @@
       "recipe": "validation-feedback",
       "title": "Shake on error",
       "category": "feedback",
+      "features": [],
       "tags": [
         "keyframes",
         "host-event",
@@ -421,6 +501,9 @@
       "recipe": "slider",
       "title": "Slider",
       "category": "toggles",
+      "features": [
+        "gestures"
+      ],
       "tags": [
         "step",
         "commit",
@@ -441,6 +524,7 @@
       "recipe": "tooltip",
       "title": "Tooltip",
       "category": "feedback",
+      "features": [],
       "tags": [
         "timer",
         "hover",
@@ -459,6 +543,7 @@
       "recipe": "dialog",
       "title": "Dialog",
       "category": "overlays",
+      "features": [],
       "tags": [
         "keyboard",
         "host-event",
@@ -478,6 +563,7 @@
       "recipe": "voice-chat",
       "title": "Voice chat",
       "category": "media",
+      "features": [],
       "tags": [
         "continuous-input",
         "host-input",
@@ -496,6 +582,7 @@
       "recipe": "video-call",
       "title": "Video call",
       "category": "media",
+      "features": [],
       "tags": [
         "camera",
         "host-event",
@@ -514,6 +601,7 @@
       "recipe": "camera",
       "title": "Camera",
       "category": "media",
+      "features": [],
       "tags": [
         "camera",
         "host-event",
@@ -532,6 +620,7 @@
       "recipe": "music-player",
       "title": "Music player",
       "category": "media",
+      "features": [],
       "tags": [
         "continuous-input",
         "host-input",
@@ -550,6 +639,7 @@
       "recipe": "video-player",
       "title": "Video player",
       "category": "media",
+      "features": [],
       "tags": [
         "continuous-input",
         "host-input",
@@ -568,6 +658,9 @@
       "recipe": "app-bar",
       "title": "Shrinking app bar",
       "category": "navigation",
+      "features": [
+        "scroll"
+      ],
       "tags": [
         "continuous-input",
         "scroll",
@@ -585,6 +678,10 @@
       "recipe": "hide-on-scroll",
       "title": "Hide on scroll",
       "category": "navigation",
+      "features": [
+        "scroll",
+        "layout"
+      ],
       "tags": [
         "scroll",
         "scroll-direction",
@@ -603,6 +700,7 @@
       "recipe": "text-field",
       "title": "Text field",
       "category": "forms",
+      "features": [],
       "tags": [
         "focus",
         "parallel",
@@ -621,6 +719,9 @@
       "recipe": "search-bar",
       "title": "Search bar",
       "category": "forms",
+      "features": [
+        "layout"
+      ],
       "tags": [
         "measure",
         "width",
@@ -639,6 +740,7 @@
       "recipe": "stepper",
       "title": "Stepper",
       "category": "forms",
+      "features": [],
       "tags": [
         "kick",
         "host-event",
@@ -656,6 +758,7 @@
       "recipe": "checkbox",
       "title": "Checkbox",
       "category": "toggles",
+      "features": [],
       "tags": [
         "spring",
         "parallel",
@@ -673,6 +776,7 @@
       "recipe": "radio-group",
       "title": "Radio group",
       "category": "toggles",
+      "features": [],
       "tags": [
         "any-state-when",
         "keyboard",
@@ -690,6 +794,9 @@
       "recipe": "chip",
       "title": "Filter chips",
       "category": "toggles",
+      "features": [
+        "layout"
+      ],
       "tags": [
         "width",
         "parallel",
@@ -708,6 +815,7 @@
       "recipe": "rating",
       "title": "Rating",
       "category": "toggles",
+      "features": [],
       "tags": [
         "kick",
         "any-state-when",
@@ -725,6 +833,9 @@
       "recipe": "page-indicator",
       "title": "Page indicator",
       "category": "navigation",
+      "features": [
+        "layout"
+      ],
       "tags": [
         "width",
         "any-state-when",
@@ -742,6 +853,7 @@
       "recipe": "badge",
       "title": "Badge",
       "category": "feedback",
+      "features": [],
       "tags": [
         "kick",
         "host-event",
@@ -759,6 +871,7 @@
       "recipe": "spinner",
       "title": "Spinner",
       "category": "feedback",
+      "features": [],
       "tags": [
         "loop",
         "host-event",
@@ -776,6 +889,9 @@
       "recipe": "skeleton",
       "title": "Skeleton",
       "category": "feedback",
+      "features": [
+        "layout"
+      ],
       "tags": [
         "loop",
         "measure",
@@ -794,6 +910,7 @@
       "recipe": "typing-indicator",
       "title": "Typing indicator",
       "category": "feedback",
+      "features": [],
       "tags": [
         "loop",
         "host-event",
@@ -811,6 +928,10 @@
       "recipe": "stack-navigation",
       "title": "Stack navigation",
       "category": "navigation",
+      "features": [
+        "gestures",
+        "layout"
+      ],
       "tags": [
         "measure",
         "map",
@@ -830,6 +951,10 @@
       "recipe": "full-screen-modal",
       "title": "Full-screen modal",
       "category": "overlays",
+      "features": [
+        "gestures",
+        "layout"
+      ],
       "tags": [
         "measure",
         "map",
@@ -849,6 +974,9 @@
       "recipe": "shared-element",
       "title": "Shared element",
       "category": "navigation",
+      "features": [
+        "layout"
+      ],
       "tags": [
         "measure",
         "width",
@@ -866,6 +994,10 @@
       "recipe": "drawer",
       "title": "Drawer",
       "category": "navigation",
+      "features": [
+        "gestures",
+        "layout"
+      ],
       "tags": [
         "measure",
         "map",
@@ -886,6 +1018,7 @@
       "recipe": "menu",
       "title": "Menu",
       "category": "overlays",
+      "features": [],
       "tags": [
         "delay",
         "stagger",
@@ -905,6 +1038,7 @@
       "recipe": "speed-dial",
       "title": "Speed dial",
       "category": "buttons",
+      "features": [],
       "tags": [
         "delay",
         "stagger",
@@ -923,6 +1057,9 @@
       "recipe": "list",
       "title": "Staggered cards and tags",
       "category": "lists",
+      "features": [
+        "sound"
+      ],
       "tags": [
         "stagger",
         "entry-delay",
@@ -942,6 +1079,10 @@
       "recipe": "switch",
       "title": "Theme switch",
       "category": "toggles",
+      "features": [
+        "sound",
+        "theme"
+      ],
       "tags": [
         "theme",
         "host-colors",
@@ -961,6 +1102,10 @@
       "recipe": "celebration",
       "title": "Designed confetti",
       "category": "feedback",
+      "features": [
+        "sound",
+        "particles"
+      ],
       "tags": [
         "emitter",
         "path",
@@ -981,6 +1126,10 @@
       "recipe": "reaction",
       "title": "Like with sound",
       "category": "buttons",
+      "features": [
+        "sound",
+        "particles"
+      ],
       "tags": [
         "kick",
         "emitter",

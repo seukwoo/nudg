@@ -1,0 +1,105 @@
+{
+  "nudg": "1.9",
+  "note": "A celebration planned beat by beat: each piece rises to a peak at 40% of its life, then falls past where it started, turning as it goes. The arc is designed once; every piece draws its own values and its own delay from the seed.",
+  "targets": [
+    "button",
+    "confetti"
+  ],
+  "values": {
+    "button.scale": 1
+  },
+  "animate": {
+    "button.scale": {
+      "spring": {
+        "duration": 0.25,
+        "bounce": 0.3
+      }
+    }
+  },
+  "emitters": {
+    "confetti": {
+      "from": "button",
+      "count": 28,
+      "area": [
+        60,
+        10
+      ],
+      "life": [
+        0.9,
+        1.3
+      ],
+      "delay": [
+        0,
+        0.2
+      ],
+      "fade": 0.25,
+      "scale": [
+        0.7,
+        1.1
+      ],
+      "spin": 0,
+      "seed": 3,
+      "path": {
+        "ease": "out",
+        "frames": [
+          {
+            "at": 0.4,
+            "x": [
+              -100,
+              100
+            ],
+            "y": [
+              -120,
+              -80
+            ],
+            "rotation": [
+              -120,
+              120
+            ],
+            "ease": "in"
+          },
+          {
+            "at": 1,
+            "x": [
+              -150,
+              150
+            ],
+            "y": [
+              20,
+              60
+            ],
+            "rotation": [
+              -540,
+              540
+            ],
+            "opacity": 0.7
+          }
+        ]
+      }
+    }
+  },
+  "initial": "up",
+  "states": {
+    "up": {
+      "when": {
+        "button.down": "down"
+      }
+    },
+    "down": {
+      "set": {
+        "button.scale": 0.94
+      },
+      "when": {
+        "button.up": {
+          "to": "up",
+          "emit": "confetti",
+          "cue": {
+            "sound": "burst",
+            "haptic": "success"
+          }
+        },
+        "button.cancel": "up"
+      }
+    }
+  }
+}

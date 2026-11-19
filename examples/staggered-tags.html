@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Staggered cards and tags</title>
+  <style>
+    .stagger-demo { display: grid; gap: 8px; width: 280px; font: 13px ui-sans-serif, system-ui, sans-serif; }
+    .stagger-demo .bar { display: flex; gap: 8px; }
+    .stagger-demo .bar button { padding: 6px 12px; border: 0; border-radius: 8px; background: #1c1c1a; color: #fff; font: inherit; cursor: pointer; }
+    .stagger-demo .bar .sound { background: #f3f4f6; color: #1c1c1a; }
+    .stagger-demo .card { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 12px; background: #fff; box-shadow: 0 1px 3px #0000001f, 0 4px 12px #0000000f; }
+    .stagger-demo .card b { font-weight: 600; }
+    .stagger-demo .tag { padding: 2px 8px; border-radius: 999px; background: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="stagger-demo">
+    <div class="bar">
+      <button class="show">Show</button>
+      <button class="hide">Hide</button>
+      <button class="sound" aria-pressed="false">Sound off</button>
+    </div>
+    <div class="card" data-nudg="card1"><b>Breakfast quiz</b><span class="tag" data-nudg="tag1">New</span></div>
+    <div class="card" data-nudg="card2"><b>Movie night</b><span class="tag" data-nudg="tag2">Hot</span></div>
+    <div class="card" data-nudg="card3"><b>Road trip</b><span class="tag" data-nudg="tag3">5 min</span></div>
+  </div>
+  <!-- Host markup for staggered-tags.nudg.json. The app sends host.show and host.hide; the file times every card, tag and pop. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./staggered-tags.nudg.json");
+    const options = { sounds: { pop: "./sounds/pop.wav" }, sound: false };
+    const player = play(program, document.body, options);
+    document.querySelector(".show").addEventListener("click", () => player.send("host.show"));
+    document.querySelector(".hide").addEventListener("click", () => player.send("host.hide"));
+    const sound = document.querySelector(".sound");
+    sound.addEventListener("click", () => {
+      options.sound = !options.sound;
+      sound.setAttribute("aria-pressed", String(options.sound));
+      sound.textContent = options.sound ? "Sound on" : "Sound off";
+    });
+  </script>
+</body>
+</html>

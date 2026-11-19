@@ -917,6 +917,83 @@
         "Make the actions pop in with more bounce.",
         "Close everything at once instead of in order."
       ]
+    },
+    {
+      "id": "staggered-tags",
+      "recipe": "list",
+      "title": "Staggered cards and tags",
+      "category": "lists",
+      "tags": [
+        "stagger",
+        "entry-delay",
+        "kick",
+        "cue",
+        "sound"
+      ],
+      "html": "staggered-tags.html",
+      "summary": "Cards rise one after another, and each card's tag pops in just after its card lands, with a rising pop sound. The tags' kicks wait (format 1.7), so no timer per item; the long stagger is kept on purpose with \"keep\".",
+      "prompts": [
+        "Make the stagger tighter, 50 ms apart.",
+        "Make the tags pop harder but keep the cards calm."
+      ]
+    },
+    {
+      "id": "theme-switch",
+      "recipe": "switch",
+      "title": "Theme switch",
+      "category": "toggles",
+      "tags": [
+        "theme",
+        "host-colors",
+        "css-variables",
+        "cue",
+        "sound"
+      ],
+      "html": "theme-switch.html",
+      "summary": "Colors come from the page's theme variables (format 1.8). Flip the switch: the page changes its theme class, and every color nudg draws moves to the new theme's value with its own motion; hover tints follow the theme too.",
+      "prompts": [
+        "Make the theme change slower and softer.",
+        "Add a third row with the same hover tint."
+      ]
+    },
+    {
+      "id": "designed-confetti",
+      "recipe": "celebration",
+      "title": "Designed confetti",
+      "category": "feedback",
+      "tags": [
+        "emitter",
+        "path",
+        "particles",
+        "cue",
+        "sound",
+        "haptics"
+      ],
+      "html": "designed-confetti.html",
+      "summary": "A celebration planned beat by beat (format 1.9): each piece rises to a peak at 40% of its life and falls past its start, turning. The arc is designed once; every piece draws its own values and delay from the seed. With a burst sound and a success haptic.",
+      "prompts": [
+        "Make the peak higher and the fall shorter.",
+        "Send fewer pieces, only to the right."
+      ]
+    },
+    {
+      "id": "like-burst",
+      "recipe": "reaction",
+      "title": "Like with sound",
+      "category": "buttons",
+      "tags": [
+        "kick",
+        "emitter",
+        "cue",
+        "sound",
+        "haptics"
+      ],
+      "html": "like-burst.html",
+      "summary": "The README's like button: the heart pops, buzzes, plays a sound and bursts, all from one file.",
+      "prompts": [
+        "Make the burst smaller and quicker.",
+        "Use a lighter haptic."
+      ]
     }
   ]
 }

@@ -52,17 +52,22 @@ export function readColors(names: string[], el: Element | undefined, map: Partia
   return out;
 }
 
+/** Attributes a component switches its theme with, inside the player's root. Not `style`: the player writes it every frame. */
+const THEME_ATTRIBUTES = ["class", "data-theme", "data-mode", "data-color-scheme", "data-appearance"];
+
 /**
- * Calls `changed` when the theme may have changed: the system's light or dark setting, or a
- * class, style or data attribute on <html> or <body>, where apps switch themes.
+ * Calls `changed` when the theme may have changed: the system's light or dark setting, any
+ * attribute on <html> or <body>, where apps switch themes, or a class or theme attribute
+ * inside `root`, where a component switches its own.
  */
-export function watchTheme(changed: () => void): () => void {
+export function watchTheme(changed: () => void, root?: Node | null): () => void {
   const scheme = typeof matchMedia === "function" ? matchMedia("(prefers-color-scheme: dark)") : undefined;
   scheme?.addEventListener?.("change", changed);
   let observer: MutationObserver | undefined;
   if (typeof MutationObserver === "function" && typeof document !== "undefined") {
     observer = new MutationObserver(changed);
     for (const el of [document.documentElement, document.body]) if (el) observer.observe(el, { attributes: true });
+    if (root && root !== document) observer.observe(root, { attributes: true, subtree: true, attributeFilter: THEME_ATTRIBUTES });
   }
   return () => {
     scheme?.removeEventListener?.("change", changed);

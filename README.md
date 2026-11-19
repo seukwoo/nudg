@@ -15,7 +15,7 @@
   </picture>
 </a>
 
-**[Try all 49 examples in the live demo →](https://seukwoo.github.io/nudg/demo/)**
+**[Try all 53 examples in the live demo →](https://seukwoo.github.io/nudg/demo/)**
 
 Motion, sound, haptics and particles in one file, on web, iOS and Android.<br>
 Already have CSS animations? `nudg from-css` moves each one and proves it moves the same.

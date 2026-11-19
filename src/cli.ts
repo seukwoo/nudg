@@ -21,6 +21,7 @@ import { auditDir, formatAudit } from "./node/audit.ts";
 import { checkDir, formatCheck } from "./node/check.ts";
 import { formatFromCss, fromCss } from "./core/from-css.ts";
 import { formatToCss, toCss } from "./core/to-css.ts";
+import { scriptSources } from "./node/version.ts";
 import { formatComparison, formatCritique, formatDiagnostic, formatObservation, formatSamples, formatStatus, formatSummary } from "./node/format.ts";
 import { comparePage, lastRuntimeInlined, readWithImports } from "./node/compare-page.ts";
 import { compilePath } from "./node/load.ts";
@@ -128,6 +129,9 @@ simulate and plot options
                             --state <name>=<selector> (default [data-nudg-state~="<name>"]),
                             --target <name>=<selector> (default [data-nudg="<name>"]),
                             --mount <event> (the event it is shown with), --out <file.css>.
+                            --script <file.js> also writes a module that plays the file on
+                            nudg's runtime, exactly, where JavaScript runs (the CSS stays the
+                            fallback); --script-src <url> loads nudg from your own copy of dist.
   critique <file...>        Whether the motion is good, not only valid: each transition checked
                             against the platforms' motion guidelines and accessibility rules
                             (slow transitions, late press feedback, invisible changes, bouncy
@@ -766,7 +770,9 @@ if (command === "to-css") {
     }
     return out;
   };
-  const result = toCss(program, { states: pairs("state"), targets: pairs("target"), mount: args.flags.get("mount")?.at(-1), file: basename(file) });
+  const scriptOut = args.flags.get("script")?.at(-1);
+  if (args.flags.has("script") && !scriptOut?.endsWith(".js")) fail("--script takes the .js file to write, as in --script menu.nudg.js.");
+  const result = toCss(program, { states: pairs("state"), targets: pairs("target"), mount: args.flags.get("mount")?.at(-1), file: basename(file), script: scriptOut ? scriptSources(args.flags.get("script-src")?.at(-1)) : undefined });
   const ok = !result.problems.length && !result.differences.length;
   if (json) {
     process.stdout.write(JSON.stringify({ ok, ...result }, null, 2) + "\n");
@@ -783,6 +789,11 @@ if (command === "to-css") {
     writeFileSync(out, result.css);
     process.stderr.write(`Wrote ${out}.\n`);
   } else process.stdout.write(result.css);
+  // The script plays the file itself, so it is exact even where the CSS differs.
+  if (scriptOut && result.script) {
+    writeFileSync(scriptOut, result.script);
+    process.stderr.write(`Wrote ${scriptOut}.\n`);
+  }
   process.exit(ok ? 0 : 1);
 }
 if (command === "from-css") {

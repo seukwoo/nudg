@@ -2,7 +2,8 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createPlayer, toProgram } from "../src/core/player.ts";
+import { createPlayer } from "../src/core/player.ts";
+import { toProgram } from "../src/core/to-program.ts";
 import { PointerTracker, dragAxes, draggableTargets } from "../src/core/pointer.ts";
 import { readFileSync } from "node:fs";
 

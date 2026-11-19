@@ -246,6 +246,14 @@ The other direction from `from-css`: a nudg file as plain CSS, for a page that r
 
 **The proof.** For every change of state (and the mount), it plays nudg's runtime and the CSS's own timing, as the CSS declares them, at 60 points and two element sizes. With `--out`, it writes only within 0.5 px, 0.5° and 0.01. A change CSS can't follow exactly is listed with how far and when: a property that moves into a state differently depending on where it came from (CSS takes one timing per state), or a map with more than two points.
 
+**With a script (`--script menu.nudg.js`).** Where the page may run JavaScript (the person decides), the tool also writes a small ES module that plays the file on nudg's runtime, so the page moves exactly as the file says, and everything below comes back: drags, snapping to the nearest state, timers, kicks, loops, cues, particles. It imports nudg's DOM player (from jsDelivr at this version, bundled and minified, or from your own copy of `dist` with `--script-src /vendor/nudg/dist`) and the compiled file, binds the same selectors, and plays the mount event. A state the page shows with its own class or attribute is followed: when `[data-closing]` appears, the script sends the event the file closes on. The CSS stays as the fallback where the script doesn't run: each rule applies only while `<html>` lacks `data-nudg-live`, which the script sets. To keep the CSS from playing first, set it in the page's head before the stylesheet:
+
+```html
+<script>document.documentElement.setAttribute("data-nudg-live", "")</script>
+<link rel="stylesheet" href="menu.css">
+<script type="module" src="menu.nudg.js"></script>
+```
+
 **What the page loses without a script.** Listed, not worked around: following a drag, settling on the nearest state, timers, entry kicks and keyframes, loops, cues, particles, delays read from an input, maps from inputs other than a scroll offset, and values measured from another element (the whole file is then left on nudg's runtime). Whether a static page gets a script is the person's decision.
 
 Over MCP, `nudg_to_css` returns the report and the CSS.

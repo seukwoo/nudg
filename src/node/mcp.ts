@@ -5,6 +5,7 @@ import { auditDir, formatAudit } from "./audit.ts";
 import { checkDir, formatCheck } from "./check.ts";
 import { formatFromCss, fromCss } from "../core/from-css.ts";
 import { formatToCss, toCss } from "../core/to-css.ts";
+import { PACKAGE_VERSION, scriptSources } from "./version.ts";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, extname, join, resolve } from "node:path";
@@ -33,14 +34,6 @@ import { findRecipe, formatRecipe, noStarter, recipeCatalog, recipeSource } from
 const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const GUIDE = resolve(dirname(fileURLToPath(import.meta.url)), "../../spec/guide.md");
 
-/** The package version, for what nudg_share reports. */
-const PACKAGE_VERSION: string = (() => {
-  try {
-    return JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "package.json"), "utf8")).version;
-  } catch {
-    return "unknown";
-  }
-})();
 
 const INSTRUCTIONS = `nudg files (*.nudg.json) describe UI interactions: states, events, and spring or tween motion.
 When the person names a standard UI pattern such as a switch, sheet, video chat, or media player, call nudg_recipe first. It gives the expected parts, states, events, host responsibilities, motion and a validated starter without expanding the runtime vocabulary. Before writing a new file, or using fields the file in front of you doesn't show, call nudg_guide. After writing a new file, call nudg_validate and apply its hints until it reports no errors; after editing an existing one, nudg_compare (below) does that check.
@@ -228,7 +221,7 @@ const TOOLS = [
   {
     name: "nudg_to_css",
     title: "A nudg file as plain CSS",
-    description: "For a page that runs no JavaScript (a static page that shares a component with the app): the file as plain CSS. A rule per state under a selector the page toggles (or :hover, :active and :focus when the file enters the state on hover, press or focus), transitions carrying each motion (springs as linear()), the way in on mount from @starting-style, colors in oklab(). Checked against nudg's runtime at 60 points and two sizes; differences and what the page loses without a script (drags, timers, kicks, loops, layout from another element) are listed. Don't add a script to a static page yourself: tell the person what it loses and let them decide. Ask the person which class or attribute stands for each state when the page has one.",
+    description: "For a page that runs no JavaScript (a static page that shares a component with the app): the file as plain CSS. A rule per state under a selector the page toggles (or :hover, :active and :focus when the file enters the state on hover, press or focus), transitions carrying each motion (springs as linear()), the way in on mount from @starting-style, colors in oklab(). Checked against nudg's runtime at 60 points and two sizes; differences and what the page loses without a script (drags, timers, kicks, loops, layout from another element) are listed. Don't add a script to a static page yourself: tell the person what it loses and let them decide; when they want it exact, pass script: true for a module that plays the file on nudg's runtime. Ask the person which class or attribute stands for each state when the page has one.",
     inputSchema: {
       type: "object",
       properties: {
@@ -236,6 +229,8 @@ const TOOLS = [
         states: { type: "object", additionalProperties: { type: "string" }, description: "A selector per state that matches while it is active, e.g. { \"hidden\": \"[data-closing]\" }. Default [data-nudg-state~=\"<name>\"]." },
         targets: { type: "object", additionalProperties: { type: "string" }, description: "A selector per target, e.g. { \"menu\": \".lnb\" }. Default [data-nudg=\"<name>\"]." },
         mount: { type: "string", description: "The event the element is shown with as it mounts, e.g. host.show: its way in plays from @starting-style." },
+        script: { type: "boolean", description: "Also return a script (an ES module) that plays the file on nudg's runtime, exactly, where the page runs JavaScript; the CSS stays the fallback. Only when the person decided the page may load JavaScript." },
+        scriptSrc: { type: "string", description: "With script: the URL of a copy of nudg's dist folder the site serves itself, instead of jsDelivr." },
       },
     },
     annotations: { readOnlyHint: true },
@@ -445,8 +440,8 @@ async function runTool(name: string, args: Json): Promise<ToolResult> {
       case "nudg_to_css": {
         const { program, label } = loadProgram(args);
         const map = (v: unknown) => (v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, String(x)])) : undefined);
-        const result = toCss(program, { states: map(args.states), targets: map(args.targets), mount: optionalString(args.mount, "mount"), file: label });
-        const body = formatToCss(result) + (result.css ? "\n\n" + result.css : "");
+        const result = toCss(program, { states: map(args.states), targets: map(args.targets), mount: optionalString(args.mount, "mount"), file: label, script: args.script === true ? scriptSources(optionalString(args.scriptSrc, "scriptSrc")) : undefined });
+        const body = formatToCss(result) + (result.css ? "\n\n" + result.css : "") + (result.script ? "\n\nThe script (save it beside the CSS as <name>.nudg.js):\n" + result.script : "");
         return { content: [text(body)], structuredContent: result as unknown as Json };
       }
       case "nudg_generate": {

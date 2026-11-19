@@ -1,5 +1,6 @@
 export { compileText, compileUrl } from "./load.ts";
-export { play, playDoc } from "./play.ts";
+export { play } from "./play.ts";
+export { playDoc } from "./play-doc.ts";
 export type { Player, PlayOptions } from "./play.ts";
 export { playEach } from "./each.ts";
 export type { PlayEach, PlayEachOptions } from "./each.ts";

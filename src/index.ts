@@ -1,7 +1,8 @@
 export { compile, didYouMean } from "./core/compile.ts";
 export type { CompileResult, ReadFile, Source } from "./core/compile.ts";
 export { createRuntime } from "./core/runtime.ts";
-export { createPlayer, initialValues, toProgram } from "./core/player.ts";
+export { createPlayer, initialValues } from "./core/player.ts";
+export { toProgram } from "./core/to-program.ts";
 export { DRAG_SLOP, PointerTracker, dragAxes, draggableTargets, keyName, pinchInputs, pinchableTargets } from "./core/pointer.ts";
 export type { PointerSink } from "./core/pointer.ts";
 export type { HeadlessOptions, HeadlessPlayer, InitialOptions, PlayerHost } from "./core/player.ts";

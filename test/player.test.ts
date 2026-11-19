@@ -3,7 +3,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { createPlayer, toProgram } from "../src/core/player.ts";
+import { createPlayer } from "../src/core/player.ts";
+import { toProgram } from "../src/core/to-program.ts";
 import { presets } from "../src/core/presets.ts";
 
 /** A fake host: time moves only when we say, frames run when we flush them. */

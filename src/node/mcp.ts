@@ -4,6 +4,7 @@
 import { auditDir, formatAudit } from "./audit.ts";
 import { checkDir, formatCheck } from "./check.ts";
 import { formatFromCss, fromCss } from "../core/from-css.ts";
+import { formatToCss, toCss } from "../core/to-css.ts";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, extname, join, resolve } from "node:path";
@@ -43,7 +44,7 @@ const PACKAGE_VERSION: string = (() => {
 
 const INSTRUCTIONS = `nudg files (*.nudg.json) describe UI interactions: states, events, and spring or tween motion.
 When the person names a standard UI pattern such as a switch, sheet, video chat, or media player, call nudg_recipe first. It gives the expected parts, states, events, host responsibilities, motion and a validated starter without expanding the runtime vocabulary. Before writing a new file, or using fields the file in front of you doesn't show, call nudg_guide. After writing a new file, call nudg_validate and apply its hints until it reports no errors; after editing an existing one, nudg_compare (below) does that check.
-When you change motion for a person to judge, call nudg_compare with the version before and after: it says first whether the difference is perceptible, then shows both side by side (real A/B filmstrips when the host page's HTML is given; in a SwiftUI or Compose app, bundle writes it for NudgCompare to play on the app's own views). It also checks the changed version: errors come back with the validator's hints, and guideline warnings the change brings are listed under the headline, so after an edit it replaces separate validate and critique calls. Pass its headline on to the person; if it suggests an exaggerated version, offer that. When nudg_compare says a change has taken several rounds, ask the person once whether they'd share what made it hard; if they agree, call nudg_share with their words and give them the link (they submit it; never claim it was sent). After writing a new file, call nudg_critique once and fix its warnings: it checks the motion against the platforms' guidelines (too slow, late press feedback, invisible, bouncy fades, slow exits). Use nudg_simulate for numbers, nudg_plot for one version's graph, nudg_render for one version's frames. The file says what should happen; nudg_observe says what the real page showed: after wiring a file into an app, or when the person says it doesn't look right, call it with the running page's URL and the file, and report what it found (a page that never shows the motion, an element that unmounts mid-motion, a CSS transition fighting the spring). After building or changing an app's motion, call nudg_check once: fix its forAi list yourself and call it again, then pass on only its headline and the forPerson items (nothing, when there are none). After wiring nudg into an app, call nudg_audit: it lists motion still outside nudg with what replaces it, and gaps nudg can't cover yet. Convert each CSS @keyframes it lists with nudg_from_css, which proves the file moves the same, rather than rewriting it by hand. When wiring a file into an app, use the adapter's own lifecycle and composition (the guide's "Wire it without glue"): onSettle and onExit instead of timers, exit for unmounting after the way out, no style writes or CSS animation on elements nudg moves.`;
+When you change motion for a person to judge, call nudg_compare with the version before and after: it says first whether the difference is perceptible, then shows both side by side (real A/B filmstrips when the host page's HTML is given; in a SwiftUI or Compose app, bundle writes it for NudgCompare to play on the app's own views). It also checks the changed version: errors come back with the validator's hints, and guideline warnings the change brings are listed under the headline, so after an edit it replaces separate validate and critique calls. Pass its headline on to the person; if it suggests an exaggerated version, offer that. When nudg_compare says a change has taken several rounds, ask the person once whether they'd share what made it hard; if they agree, call nudg_share with their words and give them the link (they submit it; never claim it was sent). After writing a new file, call nudg_critique once and fix its warnings: it checks the motion against the platforms' guidelines (too slow, late press feedback, invisible, bouncy fades, slow exits). Use nudg_simulate for numbers, nudg_plot for one version's graph, nudg_render for one version's frames. The file says what should happen; nudg_observe says what the real page showed: after wiring a file into an app, or when the person says it doesn't look right, call it with the running page's URL and the file, and report what it found (a page that never shows the motion, an element that unmounts mid-motion, a CSS transition fighting the spring). After building or changing an app's motion, call nudg_check once: fix its forAi list yourself and call it again, then pass on only its headline and the forPerson items (nothing, when there are none). After wiring nudg into an app, call nudg_audit: it lists motion still outside nudg with what replaces it, and gaps nudg can't cover yet. Convert each CSS @keyframes it lists with nudg_from_css, which proves the file moves the same, rather than rewriting it by hand. Where a page runs no JavaScript (a static page sharing a component), keep the nudg file as the source and generate its CSS with nudg_to_css. When wiring a file into an app, use the adapter's own lifecycle and composition (the guide's "Wire it without glue"): onSettle and onExit instead of timers, exit for unmounting after the way out, no style writes or CSS animation on elements nudg moves.`;
 
 type Json = Record<string, unknown>;
 type Content = { type: "text"; text: string } | { type: "image"; data: string; mimeType: string };
@@ -221,6 +222,21 @@ const TOOLS = [
         values: { type: "object", additionalProperties: { type: "string" }, description: "Values only the app knows, by the expression the source interpolates, e.g. { \"V.accent\": \"#ff6a00\", \"GO_MS\": \"900\" }. Read them from the app's code." },
       },
       required: ["name"],
+    },
+    annotations: { readOnlyHint: true },
+  },
+  {
+    name: "nudg_to_css",
+    title: "A nudg file as plain CSS",
+    description: "For a page that runs no JavaScript (a static page that shares a component with the app): the file as plain CSS. A rule per state under a selector the page toggles (or :hover, :active and :focus when the file enters the state on hover, press or focus), transitions carrying each motion (springs as linear()), the way in on mount from @starting-style, colors in oklab(). Checked against nudg's runtime at 60 points and two sizes; differences and what the page loses without a script (drags, timers, kicks, loops, layout from another element) are listed. Don't add a script to a static page yourself: tell the person what it loses and let them decide. Ask the person which class or attribute stands for each state when the page has one.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        ...source,
+        states: { type: "object", additionalProperties: { type: "string" }, description: "A selector per state that matches while it is active, e.g. { \"hidden\": \"[data-closing]\" }. Default [data-nudg-state~=\"<name>\"]." },
+        targets: { type: "object", additionalProperties: { type: "string" }, description: "A selector per target, e.g. { \"menu\": \".lnb\" }. Default [data-nudg=\"<name>\"]." },
+        mount: { type: "string", description: "The event the element is shown with as it mounts, e.g. host.show: its way in plays from @starting-style." },
+      },
     },
     annotations: { readOnlyHint: true },
   },
@@ -424,6 +440,13 @@ async function runTool(name: string, args: Json): Promise<ToolResult> {
         let body = formatFromCss(name, result);
         if (result.doc) body += "\n\nThe exact conversion:\n" + JSON.stringify(result.doc, null, 2);
         if (result.spring) body += "\n\nThe spring version (offer it; the person chooses):\n" + JSON.stringify(result.spring.doc, null, 2);
+        return { content: [text(body)], structuredContent: result as unknown as Json };
+      }
+      case "nudg_to_css": {
+        const { program, label } = loadProgram(args);
+        const map = (v: unknown) => (v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, String(x)])) : undefined);
+        const result = toCss(program, { states: map(args.states), targets: map(args.targets), mount: optionalString(args.mount, "mount"), file: label });
+        const body = formatToCss(result) + (result.css ? "\n\n" + result.css : "");
         return { content: [text(body)], structuredContent: result as unknown as Json };
       }
       case "nudg_generate": {

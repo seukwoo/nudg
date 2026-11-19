@@ -76,6 +76,15 @@ simulate and plot options
                             fitted spring is offered: --spring writes it, --exact the keyframes;
                             in a terminal it asks. --target <name> (default content).
                             --set "V.accent=#ff6a00" gives a ${...} value only the app knows.
+  to-css <file>             The file as plain CSS, for a page that runs no JavaScript: a rule
+                            per state (under a class or attribute the page toggles, or :hover,
+                            :active and :focus), transitions with each motion (springs as
+                            linear()), and the way in on mount from @starting-style. Checked
+                            against nudg's runtime at 60 points and two sizes; past the limits
+                            --out writes nothing. Lists what the page loses without a script.
+                            --state <name>=<selector> (default [data-nudg-state~="<name>"]),
+                            --target <name>=<selector> (default [data-nudg="<name>"]),
+                            --mount <event> (the event it is shown with), --out <file.css>.
   critique <file...>        Whether the motion is good, not only valid: each transition checked
                             against the platforms' motion guidelines and accessibility rules
                             (slow transitions, late press feedback, invisible changes, bouncy

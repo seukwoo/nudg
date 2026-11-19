@@ -5,6 +5,7 @@
 
 import { createLifecycle } from "./lifecycle.ts";
 import { createRuntime, type FiredCue, type Runtime, type Value } from "./runtime.ts";
+import { colorToHex } from "./color.ts";
 import type { NudgContract, Program, StateName } from "./types.ts";
 
 export interface PlayerHost {
@@ -18,6 +19,8 @@ export interface HeadlessOptions<C extends NudgContract = NudgContract> {
   host: PlayerHost;
   state?: C["states"][];
   reducedMotion?: boolean;
+  /** Colors the file names (1.8), as the app's theme has them now: shown from the start. Hex, rgb() or hsl(). */
+  colors?: Record<string, string>;
   /** Time scale: 0.25 plays everything at quarter speed. Default 1. */
   speed?: number;
   /** Called with the values whenever they change: apply them to the views. */
@@ -37,6 +40,8 @@ export interface HeadlessPlayer<C extends NudgContract = NudgContract> {
   readonly runtime: Runtime;
   send(event: C["events"]): boolean;
   input(name: C["inputs"], value: number): boolean;
+  /** Supplies a color the file names (1.8): hex, rgb() or hsl(). Each property showing it moves there with its own motion. */
+  color(name: string, value: string): boolean;
   values(): Record<string, Value>;
   present(): boolean;
   /** True while the way out plays: the machine has entered an `exit` state from elsewhere and is still moving. */
@@ -54,7 +59,7 @@ export function createPlayer<C extends NudgContract = NudgContract>(program: Pro
   if (!(speed > 0)) throw new RangeError("`speed` must be greater than 0.");
   const start = host.now();
   const now = () => (host.now() - start) * speed;
-  const runtime = createRuntime(program, { state: options.state, reducedMotion: options.reducedMotion });
+  const runtime = createRuntime(program, { state: options.state, reducedMotion: options.reducedMotion, colors: hexColors(options.colors) });
   let cancel: (() => void) | undefined;
   let destroyed = false;
   let lastValues: Record<string, Value> = runtime.sample(0);
@@ -95,6 +100,13 @@ export function createPlayer<C extends NudgContract = NudgContract>(program: Pro
       changed();
       return used;
     },
+    color(name, value) {
+      if (destroyed) return false;
+      const hex = colorToHex(value);
+      if (!hex || !runtime.color(name, hex, now())) return false;
+      changed();
+      return true;
+    },
     values: () => lastValues,
     present: () => life.present(),
     leaving: () => life.leaving(),
@@ -117,6 +129,19 @@ export interface InitialOptions {
   state?: string[];
   /** Continuous app inputs already known, e.g. { "host.progress": 0.6 }. Others start at 0. */
   inputs?: Record<string, number>;
+  /** Colors the file names (1.8), as the app's theme has them: hex, rgb() or hsl(). Others show their defaults. */
+  colors?: Record<string, string>;
+}
+
+/** Colors as the app writes them, as hex; ones that don't parse are left to their defaults. */
+function hexColors(colors: Record<string, string> | undefined): Record<string, string> | undefined {
+  if (!colors) return undefined;
+  const out: Record<string, string> = {};
+  for (const [name, value] of Object.entries(colors)) {
+    const hex = colorToHex(value);
+    if (hex) out[name] = hex;
+  }
+  return out;
 }
 
 /**
@@ -126,7 +151,7 @@ export interface InitialOptions {
  * the adapters start from the same values, so hydration doesn't jump.
  */
 export function initialValues(program: Program, options: InitialOptions = {}): Record<string, Value> {
-  const runtime = createRuntime(program, { state: options.state });
+  const runtime = createRuntime(program, { state: options.state, colors: hexColors(options.colors) });
   for (const [name, value] of Object.entries(options.inputs ?? {})) runtime.input(name, value, 0);
   return runtime.sample(0);
 }

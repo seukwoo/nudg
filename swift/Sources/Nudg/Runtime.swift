@@ -168,6 +168,8 @@ public final class Runtime {
   private var loops: [String: ActiveLoop] = [:]
   private var inputs: [String: [(Double, Double)]] = [:]
   private var bases: [String: [Double]] = [:]
+  /** Colors the app names (1.8), as OKLab: the defaults, then what the app supplies. */
+  private var colors: [String: [Double]] = [:]
   private var pending: [Pending] = []
   private var layout: [String: Double] = [:]
   private var measuredBases: [String: Measure] = [:]
@@ -203,9 +205,12 @@ public final class Runtime {
   private let fades: Bool
   private func loopPlays(_ key: String) -> Bool { !reduced || (fades && key.hasSuffix(".opacity")) }
 
-  public init(_ program: Program, state: [String] = [], reducedMotion: Bool = false) throws {
+  /** `colors`: the colors the file names (1.8) as the app's theme has them, as hex, shown from the start. */
+  public init(_ program: Program, state: [String] = [], reducedMotion: Bool = false, colors: [String: String] = [:]) throws {
     self.program = program
     self.reduced = reducedMotion
+    for (name, value) in program.colors { self.colors[name] = value }
+    for (name, hex) in colors where self.colors[name] != nil { if let v = hexToOklab(hex) { self.colors[name] = v } }
     let version = program.version.split(separator: ".").map { Int($0) ?? 0 }
     self.fades = (version.first ?? 0, version.count > 1 ? version[1] : 0) >= (1, 1)
     for (key, prop) in program.properties {
@@ -387,9 +392,11 @@ public final class Runtime {
   private func resolveTargets(_ act: [ObjectIdentifier: String]) -> [String: [Double]] {
     var out = bases
     for (key, m) in measuredBases { if let v = measured(key, m) { out[key] = [clamp(key, v)] } }
+    for (key, prop) in program.properties { if let name = prop.color { out[key] = colors[name] ?? prop.base } }
     let resolvedBases = out
     walkActive(act) { state in
       for (key, value) in state.set {
+        if let name = state.color[key] { out[key] = colors[name] ?? value; continue }
         if let target = state.input[key] {
           // The input's latest sample (0 before the first), scaled and offset (v0.17).
           out[key] = [clamp(key, (inputs[target.input]?.last?.1 ?? 0) * target.times + target.plus)]
@@ -991,6 +998,35 @@ public final class Runtime {
     walkActive(active) { state in
       for (key, loop) in state.loop where loops[key] == nil && loopPlays(key) { loops[key] = ActiveLoop(loop: loop, owner: state, t0: t) }
     }
+  }
+
+  /** The colors the file names (1.8), for the host to supply. */
+  public var colorNames: [String] { program.colors.map { $0.0 } }
+
+  /**
+   * The app supplies a color it names (1.8), in sRGB from 0 to 1, at time `t`: a theme change.
+   * Each property showing it moves there with its own motion; `snap` places it without motion.
+   * False for a name the file doesn't declare.
+   */
+  @discardableResult
+  public func color(_ name: String, red: Double, green: Double, blue: Double, alpha: Double = 1, at t: Double, snap: Bool = false) throws -> Bool {
+    try setColor(name, srgbToOklab(red, green, blue, alpha), at: t, snap: snap)
+  }
+
+  /** The same, from #RGB, #RRGGBB or #RRGGBBAA. False for a name the file doesn't declare or a value that isn't hex. */
+  @discardableResult
+  public func color(_ name: String, hex: String, at t: Double, snap: Bool = false) throws -> Bool {
+    guard let value = hexToOklab(hex) else { return false }
+    return try setColor(name, value, at: t, snap: snap)
+  }
+
+  private func setColor(_ name: String, _ value: [Double], at t: Double, snap: Bool) throws -> Bool {
+    guard colors[name] != nil else { return false }
+    try advanceTo(t)
+    if colors[name] == value { return true }
+    colors[name] = value
+    settle(t, [], [], snap: snap)
+    return true
   }
 
   /** Records a referenced continuous input or a layout report. */

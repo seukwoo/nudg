@@ -3170,6 +3170,92 @@ def validation_v1_7_cases():
     })
 
 
+# --- 1.8: colors the app names ----------------------------------------------------
+
+THEMED_ROW = {
+    "nudg": "1.8",
+    "note": "A row tinted on hover with colors from the app's theme, which can change while it shows.",
+    "host": {"colors": {"surface": {"default": "#FFFFFF"}, "hover": {"default": "#E5E7EB"}}},
+    "targets": ["row"],
+    "values": {"row.color": {"color": "surface"}},
+    "animate": {"row.color": {"tween": {"duration": 0.2, "ease": "out"}}},
+    "initial": "idle",
+    "states": {
+        "idle": {"when": {"row.hoverstart": "over"}},
+        "over": {"set": {"row.color": {"color": "hover"}}, "when": {"row.hoverend": "idle"}},
+    },
+}
+
+
+def host_color_cases():
+    tw = tween(0.2, "out")
+    row = Prop("#FFFFFF")
+    # Until the app supplies a color, its default shows.
+    steps = [{"t": 0, "expect": {"state": ["idle"], "values": {"row.color": "#ffffff"}}}]
+    steps.append({"t": 0.1, "send": "row.hoverstart"})
+    row.retarget("#E5E7EB", tw, 0.1)
+    for t in (0.15, 0.2):
+        steps.append({"t": t, "expect": {"state": ["over"], "values": {"row.color": row.value(t)}}})
+    # The theme changes mid-flight: the property moves to the new color with its own motion.
+    steps.append({"t": 0.25, "color": "hover", "value": "#374151"})
+    row.retarget("#374151", tw, 0.25)
+    for t in (0.3, 0.4, 0.6):
+        steps.append({"t": t, "expect": {"values": {"row.color": row.value(t)}}})
+    # A color nothing shows right now changes nothing until a state shows it.
+    steps.append({"t": 0.7, "color": "surface", "value": "#111827"})
+    steps.append({"t": 0.75, "expect": {"values": {"row.color": row.value(0.75)}, "resting": True}})
+    steps.append({"t": 0.8, "send": "row.hoverend"})
+    row.retarget("#111827", tw, 0.8)
+    for t in (0.85, 0.9, 1.1):
+        steps.append({"t": t, "expect": {"state": ["idle"], "values": {"row.color": row.value(t)}}})
+    write("host-colors", {
+        "conformance": "1.8",
+        "name": "Colors the app names: the default until supplied; a theme change moves each property showing it with its own motion",
+        "doc": THEMED_ROW,
+        "steps": steps,
+    })
+
+    # Colors supplied when the runtime starts are where things are, not somewhere they move to.
+    row = Prop("#0B0B0F")
+    steps = [{"t": 0, "expect": {"state": ["idle"], "values": {"row.color": "#0b0b0f"}, "resting": True}}]
+    steps.append({"t": 0.1, "send": "row.hoverstart"})
+    row.retarget("#27272A", tw, 0.1)
+    for t in (0.2, 0.4):
+        steps.append({"t": t, "expect": {"values": {"row.color": row.value(t)}}})
+    write("host-colors-start", {
+        "conformance": "1.8",
+        "name": "Colors the app names, supplied at the start: shown at once, then animated to like any color",
+        "doc": THEMED_ROW,
+        "colors": {"surface": "#0B0B0F", "hover": "#27272A"},
+        "steps": steps,
+    })
+
+
+def validation_v1_8_cases():
+    def doc():
+        return json.loads(json.dumps(THEMED_ROW))
+
+    over = "/states/over/set/row.color"
+    out = [("valid", doc(), [])]
+    d = doc(); d["nudg"] = "1.7"
+    out.append(("older-format", d, [("needs-version", "/host/colors"), ("needs-version", "/values/row.color"), ("needs-version", over)]))
+    d = doc(); d["states"]["over"]["set"]["row.color"] = {"color": "hovr"}
+    out.append(("undeclared", d, [("undeclared-host-color", over + "/color")]))
+    d = doc(); d["host"]["colors"]["hover"] = {}
+    out.append(("no-default", d, [("missing-default", "/host/colors/hover")]))
+    d = doc(); d["host"]["colors"]["hover"] = {"default": "var(--hover)"}
+    out.append(("default-not-hex", d, [("invalid-value", "/host/colors/hover/default")]))
+    d = doc(); d["values"]["row.y"] = 0; d["states"]["over"]["set"]["row.y"] = {"color": "hover"}
+    out.append(("not-a-color-property", d, [("invalid-type", "/states/over/set/row.y")]))
+    d = doc(); d["states"]["over"]["enter"] = {"row.color": {"keyframes": [{"at": 0.5, "value": {"color": "hover"}}], "duration": 0.3}}
+    out.append(("not-in-keyframes", d, [("invalid-value", "/states/over/enter/row.color/keyframes/0/value")]))
+    write("validation-1.8", {
+        "conformance": "1.8",
+        "name": "Validator (1.8): colors the app names",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 if __name__ == "__main__":
     toggle_cases()
     spring_form_cases()
@@ -3228,5 +3314,7 @@ if __name__ == "__main__":
     validation_v1_6_cases()
     entry_delay_cases()
     validation_v1_7_cases()
+    host_color_cases()
+    validation_v1_8_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

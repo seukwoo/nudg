@@ -12,6 +12,7 @@ import { measureElement } from "./measure.ts";
 import { createRuntime, type FiredCue, type Runtime, type Value } from "../core/runtime.ts";
 import { playFeedback, type FeedbackOptions } from "./feedback.ts";
 import { clearPieces, drawPieces } from "./pieces.ts";
+import { cssColorToHex, readColors, watchTheme } from "./colors.ts";
 import type { Machine, NudgContract, Program, StateName } from "../core/types.ts";
 
 export interface PlayOptions<C extends NudgContract = NudgContract> extends FeedbackOptions {
@@ -29,6 +30,14 @@ export interface PlayOptions<C extends NudgContract = NudgContract> extends Feed
   onState?: (state: C["states"][]) => void;
   /** Reduced motion (v0.3). Default: the system's prefers-reduced-motion setting, followed as it changes. */
   reducedMotion?: boolean;
+  /**
+   * Where the colors the file names (1.8, `host.colors`) come from: by default each is read
+   * from the CSS custom property of the same name (`hover` from `--hover`) on the bound
+   * element, at bind and again when the theme changes (the system's light or dark setting, or
+   * a class, style or data attribute on <html> or <body>). Map a name to another property:
+   * `colors: { hover: "--hdr-hover" }`.
+   */
+  colors?: Partial<Record<string, string>>;
   /** Called with the values after every frame they're applied, e.g. to keep aria-valuenow in step. */
   onFrame?: (values: Record<string, Value>) => void;
   /**
@@ -93,6 +102,12 @@ export interface Player<C extends NudgContract = NudgContract> {
   values(): Record<string, Value>;
   /** Records an input sample now (e.g. "host.volume", 0.7). */
   input(name: C["inputs"], value: number): boolean;
+  /**
+   * Supplies a color the file names (1.8), as any CSS color, now: each property showing it
+   * moves there with its own motion. False for a name the file doesn't declare or a value
+   * that isn't a color. Without it, colors are read from CSS custom properties (see `colors`).
+   */
+  color(name: string, value: string): boolean;
   /** Binds one more element to a target. Returns a function that unbinds it. */
   bind(name: C["targets"], element: Element): () => void;
   /** The player's current time in seconds: scaled real time, or the last rendered time on a manual clock. */
@@ -144,7 +159,26 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   // The system setting, followed while the player runs unless the host decides.
   const system = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : undefined;
   let followSystem = options.reducedMotion === undefined;
-  const runtime = createRuntime(program, { state: options.state, reducedMotion: options.reducedMotion ?? system?.matches === true });
+  // Colors the file names (1.8), as the page shows them now: where things are, not where they move to.
+  const colorNames = [...(program.colors?.keys() ?? [])];
+  const colorSource = (): Element | undefined => {
+    for (const els of elements.values()) for (const el of els) return el;
+    const first = Object.values(options.bind ?? {}).flat()[0];
+    if (first instanceof Element) return first;
+    return root instanceof Element ? root : typeof document === "undefined" ? undefined : document.documentElement;
+  };
+  const runtime = createRuntime(program, { state: options.state, reducedMotion: options.reducedMotion ?? system?.matches === true, colors: colorNames.length ? readColors(colorNames, colorSource(), options.colors) : undefined });
+  // A color the app supplied itself stays, until it supplies another.
+  const supplied = new Set<string>();
+  // `snap` when the first element binds: its theme (variables set on a container) is where things are.
+  const rereadColors = (snap = false) => {
+    if (destroyed) return;
+    const t = now();
+    let moved = false;
+    for (const [name, hex] of Object.entries(readColors(colorNames.filter((n) => !supplied.has(n)), colorSource(), options.colors))) moved = runtime.color(name, hex, t, snap) || moved;
+    if (moved) changed();
+  };
+  const stopTheme = colorNames.length ? watchTheme(() => rereadColors()) : undefined;
   const onSystemChange = () => {
     if (!followSystem || destroyed) return;
     runtime.setReducedMotion(system!.matches, now());
@@ -285,6 +319,15 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     return handled;
   }
 
+  function color(name: string, value: string): boolean {
+    if (destroyed) return false;
+    const hex = cssColorToHex(value);
+    if (!hex || !runtime.color(name, hex, now())) return false;
+    supplied.add(name);
+    changed();
+    return true;
+  }
+
   function input(name: string, value: number): boolean {
     if (destroyed) return false;
     const used = runtime.input(name, value, now());
@@ -317,9 +360,11 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
 
   function bind(name: string, el: Element): () => void {
     if (!program.targets.includes(name)) return () => {};
+    const firstElement = elements.size === 0;
     const set = elements.get(name) ?? new Set<Element>();
     set.add(el);
     elements.set(name, set);
+    if (firstElement && colorNames.length) rereadColors(true);
     const listeners: [string, (e: Event) => void][] = [
       [
         "pointerdown",
@@ -583,6 +628,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     unknown,
     send,
     input,
+    color,
     bind,
     values: () => lastValues,
     present() {
@@ -611,6 +657,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
       stopped();
       for (const name of program.emitters?.keys() ?? []) for (const el of elements.get(name) ?? []) clearPieces(el);
       system?.removeEventListener?.("change", onSystemChange);
+      stopTheme?.();
       frame?.();
       cancelAnimationFrame(measureFrame);
       observer?.disconnect();

@@ -46,6 +46,8 @@ export interface UseNudgOptions<C extends NudgContract = NudgContract> {
    * Doesn't re-render; set state in it if the component needs to.
    */
   onSettle?: (state: C["states"][]) => void;
+  /** The CSS custom property each color the file names is read from (1.8), when not `--<name>`; see PlayOptions.colors. */
+  colors?: Partial<Record<string, string>>;
   /** Follow the state a component library shows on the bound elements (data-state, aria-*); see PlayOptions.watch. */
   watch?: boolean;
   /** Sound names to URLs for the file's cues (1.3): { pop: "/sfx/pop.mp3" }. Read when a cue fires, so it can change. */
@@ -71,6 +73,11 @@ export interface Nudg<C extends NudgContract = NudgContract> {
    * carries over when the program changes, and one given before mount applies at mount.
    */
   input(name: C["inputs"], value: number): boolean;
+  /**
+   * Supplies a color the file names (1.8) as any CSS color, for a theme kept in JavaScript:
+   * color("hover", theme.hover). Without it, colors are read from CSS custom properties.
+   */
+  color(name: string, value: string): boolean;
   /** False once the component has exited (see `exit`); true again if it is shown again. */
   present: boolean;
   /** True while the way out plays (see `exit`): a dim behind a leaving sheet can let taps through. */
@@ -119,6 +126,7 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
     const p = play(program, null, {
       state: options.state,
       reducedMotion: options.reducedMotion,
+      colors: options.colors,
       onState: (s) => {
         setState(s);
         setLeaving(p.leaving());
@@ -193,7 +201,8 @@ export function useNudg<C extends NudgContract = NudgContract>(source: Program |
     if (used) inputs.current.set(name, value);
     return used;
   }, [reads]);
-  return { bind, state, send, input, present, leaving, style };
+  const color = useCallback((name: string, value: string) => player.current?.color(name, value) ?? false, []);
+  return { bind, state, send, input, color, present, leaving, style };
 }
 
 const EMPTY_STYLE: NudgStyle = {};

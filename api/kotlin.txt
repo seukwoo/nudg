@@ -10,6 +10,7 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
     var pieces: List<Piece> by mutableStateOf(emptyList())
     fun send(event: String): Boolean
     fun input(name: String, value: Double): Boolean
+    fun color(name: String, color: Color): Boolean
     fun setReducedMotion(on: Boolean)
 fun systemReducedMotion(): Boolean
 fun rememberNudg(
@@ -100,7 +101,7 @@ sealed interface MapValue
     data class Channels(val values: List<Double>) : MapValue
     data class Measured(val measure: Measure) : MapValue
 data class PropertyMap(val source: String, val sourceKind: String, val from: List<MeasuredEndpoint>, val to: List<MapValue>)
-data class Property(val kind: PropertyKind, val base: List<Double>, val map: PropertyMap?, val measure: Measure?, val min: Double?, val max: Double?)
+data class Property(val kind: PropertyKind, val base: List<Double>, val map: PropertyMap?, val measure: Measure?, val min: Double?, val max: Double?, val color: String?
 data class Follow(val input: String, val range: Pair<MeasuredEndpoint, MeasuredEndpoint>?, val overdrag: Double, val multiply: Boolean
 data class Glide(val momentum: Double, val range: Pair<MeasuredEndpoint, MeasuredEndpoint>?)
 data class Nearest(val states: List<String>, val by: String, val momentum: Double)
@@ -136,6 +137,7 @@ val timers: List<Timer>,
 val machine: Machine?,
 val cues: List<Cue>
 val emit: List<String>
+val color: Map<String, String>
     fun transition(event: String)
 sealed class Machine
     class States(val initial: String, val states: List<State>, val `when`: List<Pair<String, Transition>>) : Machine()
@@ -157,6 +159,9 @@ class Runtime(val program: Program, state: List<String>
     fun takeCues(): List<FiredCue>
     fun send(event: String, t: Double): Boolean
     fun setReducedMotion(on: Boolean, t: Double)
+    val colorNames: List<String> get()
+    fun color(name: String, red: Double, green: Double, blue: Double, alpha: Double
+    fun color(name: String, hex: String, t: Double, snap: Boolean
     fun input(name: String, value: Double, t: Double): Boolean
     fun sample(t: Double): Map<String, Value>
     fun state(): List<String>

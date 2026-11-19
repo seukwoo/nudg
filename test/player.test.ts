@@ -202,3 +202,38 @@ test("an event the file can never act on gets a message; target events and handl
   assert.equal(message("host.show"), undefined);
   assert.equal(message(`${program.targets[0]}.down`), undefined, "gestures are derived from target events");
 });
+
+test("colors the app names (1.8): shown from the start, moved to when the theme changes", async () => {
+  const { colorToHex } = await import("../src/core/color.ts");
+  assert.equal(colorToHex("#ABC"), "#abc");
+  assert.equal(colorToHex("rgb(229, 231, 235)"), "#e5e7ebff");
+  assert.equal(colorToHex("rgba(0 0 0 / 50%)"), "#00000080");
+  assert.equal(colorToHex("hsl(240 4% 16%)"), "#27272aff");
+  assert.equal(colorToHex("transparent"), "#00000000");
+  assert.equal(colorToHex("var(--x)"), undefined);
+  assert.equal(colorToHex("rgb(1, 2)"), undefined);
+
+  const program = toProgram({
+    nudg: "1.8",
+    host: { colors: { surface: { default: "#FFFFFF" } } },
+    targets: ["row"],
+    values: { "row.color": { color: "surface" } },
+    animate: { "row.color": { tween: { duration: 0.2, ease: "linear" } } },
+    initial: "idle",
+    states: { idle: {} },
+  });
+  const { initialValues } = await import("../src/core/player.ts");
+  assert.equal(initialValues(program)["row.color"], "#ffffff");
+  assert.equal(initialValues(program, { colors: { surface: "rgb(17, 24, 39)" } })["row.color"], "#111827");
+  const fake = fakeHost();
+  const player = createPlayer(program, { host: fake.host, colors: { surface: "#111827" } });
+  assert.equal(player.values()["row.color"], "#111827", "the theme's color from the first frame");
+  assert.equal(player.color("surface", "rgb(255, 255, 255)"), true);
+  fake.advance(0.1);
+  const mid = player.values()["row.color"] as string;
+  assert.ok(mid !== "#111827" && mid !== "#ffffff", `moving: ${mid}`);
+  fake.advance(0.2);
+  assert.equal(player.values()["row.color"], "#ffffff");
+  assert.equal(player.color("nope", "#000"), false);
+  assert.equal(player.color("surface", "not a color"), false);
+});

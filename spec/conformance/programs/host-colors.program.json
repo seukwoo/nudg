@@ -1,0 +1,114 @@
+{
+ "nudgProgram": 14,
+ "version": "1.8",
+ "targets": [
+  "row"
+ ],
+ "properties": [
+  {
+   "key": "row.color",
+   "kind": "color",
+   "base": [
+    0.9999999934735462,
+    8.095285553011422e-11,
+    3.727390762708893e-8,
+    1
+   ],
+   "color": "surface"
+  }
+ ],
+ "animate": [
+  {
+   "key": "row.color",
+   "motion": {
+    "kind": "tween",
+    "duration": 0.2,
+    "ease": [
+     0,
+     0,
+     0.58,
+     1
+    ]
+   }
+  }
+ ],
+ "machine": {
+  "kind": "states",
+  "initial": "idle",
+  "states": [
+   {
+    "name": "idle",
+    "set": [],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "row.hoverstart",
+      "animate": [],
+      "to": "over"
+     }
+    ],
+    "timers": []
+   },
+   {
+    "name": "over",
+    "set": [
+     {
+      "key": "row.color",
+      "value": [
+       0.9275823037698044,
+       -0.0005540396215928944,
+       -0.0057870471656484845,
+       1
+      ]
+     }
+    ],
+    "measure": [],
+    "input": [],
+    "follow": [],
+    "glide": [],
+    "enter": [],
+    "loop": [],
+    "when": [
+     {
+      "event": "row.hoverend",
+      "animate": [],
+      "to": "idle"
+     }
+    ],
+    "timers": [],
+    "color": [
+     {
+      "key": "row.color",
+      "name": "hover"
+     }
+    ]
+   }
+  ],
+  "when": []
+ },
+ "colors": [
+  {
+   "name": "surface",
+   "default": [
+    0.9999999934735462,
+    8.095285553011422e-11,
+    3.727390762708893e-8,
+    1
+   ]
+  },
+  {
+   "name": "hover",
+   "default": [
+    0.9275823037698044,
+    -0.0005540396215928944,
+    -0.0057870471656484845,
+    1
+   ]
+  }
+ ]
+}

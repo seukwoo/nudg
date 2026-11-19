@@ -127,6 +127,8 @@ public struct Property {
   public let measure: Measure?
   public let min: Double?
   public let max: Double?
+  /** A base color the app names (1.8); `base` holds its default. */
+  public var color: String? = nil
 }
 
 public struct Follow {
@@ -187,8 +189,10 @@ public final class State {
   public let cues: [Cue]
   /** Emitters that send out a wave when it is entered through a transition (1.4). */
   public let emit: [String]
-  init(name: String, set: [(String, [Double])], measure: [String: Measure], input: [String: InputTarget], follow: [(String, Follow)], glide: [(String, Glide)], enter: [(String, EntryEffect)], loop: [(String, Loop)], when: [(String, Transition)], timers: [Timer], machine: Machine?, cues: [Cue] = [], emit: [String] = []) {
-    self.name = name; self.set = set; self.measure = measure; self.input = input; self.follow = follow; self.glide = glide; self.enter = enter; self.loop = loop; self.when = when; self.timers = timers; self.machine = machine; self.cues = cues; self.emit = emit
+  /** Entries of `set` that are colors the app names (1.8); their `set` value is the default. */
+  public let color: [String: String]
+  init(name: String, set: [(String, [Double])], measure: [String: Measure], input: [String: InputTarget], follow: [(String, Follow)], glide: [(String, Glide)], enter: [(String, EntryEffect)], loop: [(String, Loop)], when: [(String, Transition)], timers: [Timer], machine: Machine?, cues: [Cue] = [], emit: [String] = [], color: [String: String] = [:]) {
+    self.name = name; self.set = set; self.measure = measure; self.input = input; self.follow = follow; self.glide = glide; self.enter = enter; self.loop = loop; self.when = when; self.timers = timers; self.machine = machine; self.cues = cues; self.emit = emit; self.color = color
   }
   func transition(for event: String) -> Transition? { when.first { $0.0 == event }?.1 }
 }
@@ -237,6 +241,8 @@ public struct Program {
   public let machine: Machine
   /** Emitters by name (1.4), in file order. */
   public var emitters: [(String, Emitter)] = []
+  /** Colors the app names (1.8), with their defaults as OKLab channels, in file order. */
+  public var colors: [(String, [Double])] = []
 
   public func property(_ key: String) -> Property? { properties.first { $0.0 == key }?.1 }
 
@@ -247,8 +253,8 @@ public struct Program {
 
   /** Reads `nudg compile` output. */
   public static func decode(_ data: Data) throws -> Program {
-    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...13).contains(format) else {
-      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 11). Compile it with `nudg compile`.")
+    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...14).contains(format) else {
+      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 14). Compile it with `nudg compile`.")
     }
     let properties: [(String, Property)] = (j["properties"] as! [[String: Any]]).map { p in
       (p["key"] as! String, Property(
@@ -257,7 +263,8 @@ public struct Program {
         map: (p["map"] as? [String: Any]).map { m in PropertyMap(source: m["source"] as! String, sourceKind: m["sourceKind"] as? String ?? "property", from: (m["from"] as! [Any]).map(readEndpoint), to: (m["to"] as! [Any]).map { v in v is [Any] ? .channels(doubles(v)) : .measure(readMeasure(v as! [String: Any])) }) },
         measure: (p["measure"] as? [String: Any]).map(readMeasure),
         min: number(p["min"]),
-        max: number(p["max"])))
+        max: number(p["max"]),
+        color: p["color"] as? String))
     }
     var animate: [String: Motion] = [:]
     for a in j["animate"] as! [[String: Any]] { animate[a["key"] as! String] = readMotion(a["motion"]!) }
@@ -269,7 +276,9 @@ public struct Program {
         spin: pair(e["spin"]), life: pair(e["life"]), fade: number(e["fade"])!, scale: pair(e["scale"]),
         stagger: number(e["stagger"])!, seed: (e["seed"] as! NSNumber).intValue))
     }
-    return Program(version: j["version"] as! String, targets: j["targets"] as! [String], properties: properties, animate: animate, machine: readMachine(j["machine"]!), emitters: emitters)
+    // Format 14 (1.8): colors the app names, with their defaults.
+    let colors = (j["colors"] as? [[String: Any]] ?? []).map { ($0["name"] as! String, doubles($0["default"])) }
+    return Program(version: j["version"] as! String, targets: j["targets"] as! [String], properties: properties, animate: animate, machine: readMachine(j["machine"]!), emitters: emitters, colors: colors)
   }
 }
 
@@ -403,5 +412,6 @@ private func readState(_ s: [String: Any]) -> State {
     },
     machine: s["machine"].map(readMachine),
     cues: readCues(s["cue"]),
-    emit: s["emit"] as? [String] ?? [])
+    emit: s["emit"] as? [String] ?? [],
+    color: Dictionary(uniqueKeysWithValues: (s["color"] as? [[String: Any]] ?? []).map { ($0["key"] as! String, $0["name"] as! String) }))
 }

@@ -1,0 +1,90 @@
+{
+  "conformance": "1.8",
+  "name": "Colors the app names, supplied at the start: shown at once, then animated to like any color",
+  "doc": {
+    "nudg": "1.8",
+    "note": "A row tinted on hover with colors from the app's theme, which can change while it shows.",
+    "host": {
+      "colors": {
+        "surface": {
+          "default": "#FFFFFF"
+        },
+        "hover": {
+          "default": "#E5E7EB"
+        }
+      }
+    },
+    "targets": [
+      "row"
+    ],
+    "values": {
+      "row.color": {
+        "color": "surface"
+      }
+    },
+    "animate": {
+      "row.color": {
+        "tween": {
+          "duration": 0.2,
+          "ease": "out"
+        }
+      }
+    },
+    "initial": "idle",
+    "states": {
+      "idle": {
+        "when": {
+          "row.hoverstart": "over"
+        }
+      },
+      "over": {
+        "set": {
+          "row.color": {
+            "color": "hover"
+          }
+        },
+        "when": {
+          "row.hoverend": "idle"
+        }
+      }
+    }
+  },
+  "colors": {
+    "surface": "#0B0B0F",
+    "hover": "#27272A"
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "row.color": "#0b0b0f"
+        },
+        "resting": true
+      }
+    },
+    {
+      "t": 0.1,
+      "send": "row.hoverstart"
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "values": {
+          "row.color": "#1e1e21"
+        }
+      }
+    },
+    {
+      "t": 0.4,
+      "expect": {
+        "values": {
+          "row.color": "#27272a"
+        }
+      }
+    }
+  ]
+}

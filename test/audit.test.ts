@@ -73,3 +73,10 @@ test("the messenger example has all its motion on nudg", () => {
   const out = execFileSync(process.execPath, ["src/cli.ts", "audit", "examples/apps/messenger"], { encoding: "utf8" });
   assert.match(out, /^Motion on nudg: 100% \(\d+ on nudg, 0 outside/);
 });
+
+test("audit points theme tints in a transition to colors the app names (1.8)", () => {
+  const themed = audit([{ path: "Row.css", text: ".row { background: var(--row-bg); transition: all 0.2s; }\n.row:hover { background: var(--row-hover); }" }]);
+  assert.match(themed.findings[0].use, /host\.colors/);
+  const plain = audit([{ path: "Row.css", text: ".row { background: #fff; transition: all 0.2s; }" }]);
+  assert.doesNotMatch(plain.findings[0].use, /host\.colors/);
+});

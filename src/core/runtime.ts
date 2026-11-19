@@ -1,7 +1,7 @@
 // Runs a compiled Program. Time is always passed in, never read from a clock, so the
 // same events and inputs at the same times always produce the same states and values.
 
-import { oklabToHex } from "./color.ts";
+import { hexToOklab, isHexColor, oklabToHex } from "./color.ts";
 import { animateMaps } from "./walk.ts";
 import { easeAt, easeSlope } from "./ease.ts";
 import { interpolate } from "./map.ts";
@@ -50,6 +50,8 @@ export interface RuntimeOptions {
    * kicks do nothing. States, timers and followed values are unchanged.
    */
   reducedMotion?: boolean;
+  /** Colors the app names (1.8), as hex, in place of their defaults from the start. */
+  colors?: Record<string, string>;
 }
 
 export interface Runtime {
@@ -63,6 +65,15 @@ export interface Runtime {
    * loops from `t`. Motions already moving finish as they are.
    */
   setReducedMotion(on: boolean, t: number): void;
+  /**
+   * The app supplies a color it names (1.8), as hex, at time `t`: a theme change. Each property
+   * showing it moves to the new color with its own motion. Returns false for a name the file
+   * doesn't declare or a value that isn't a hex color. `snap` places it without motion: a
+   * color read when the component mounts is where things are, not somewhere they move to.
+   */
+  color(name: string, hex: string, t: number, snap?: boolean): boolean;
+  /** The colors the file names (1.8), for the host to supply. */
+  colorNames(): string[];
   /** Records a referenced drag, app, scroll, or layout input sample at time `t`. */
   input(name: string, value: number, t: number): boolean;
   /** Continuous inputs referenced by `map` or `follow` (layout measurements excluded). */
@@ -216,6 +227,9 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     }
   }
 
+  /** Colors the app names (1.8): the defaults, then what the app supplies. */
+  const colors = new Map<string, Channels>(program.colors ?? []);
+  for (const [name, hex] of Object.entries(options.colors ?? {})) if (colors.has(name) && isHexColor(hex)) colors.set(name, hexToOklab(hex));
   for (const [key, prop] of program.properties) if (!prop.map) bases.set(key, prop.base);
   enterMachine(program.machine, active, [], 0);
   for (const path of options.state ?? []) enterPath(path);
@@ -347,9 +361,15 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       const v = measured(key, m);
       if (v !== undefined) out.set(key, [clamp(key, v)]);
     }
+    for (const [key, prop] of program.properties) if (prop.color) out.set(key, colors.get(prop.color) ?? prop.base);
     const resolvedBases = new Map(out);
     walkActive(act, (state) => {
       for (const [key, value] of state.set) {
+        const named = state.color?.get(key);
+        if (named) {
+          out.set(key, colors.get(named) ?? value);
+          continue;
+        }
         const target = state.input.get(key);
         if (target) {
           // The input's latest sample (0 before the first), scaled and offset.
@@ -932,6 +952,20 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
       walkActive(active, (state) => {
         for (const [key, loop] of state.loop) if (!loops.has(key) && loopPlays(key)) loops.set(key, { loop, owner: state, t0: t });
       });
+    },
+
+    color(name, hex, t, snap = false) {
+      if (!colors.has(name) || !isHexColor(hex)) return false;
+      advanceTo(t);
+      const value = hexToOklab(hex);
+      if (colors.get(name)!.every((c, i) => c === value[i])) return true;
+      colors.set(name, value);
+      settle(t, [], [], snap);
+      return true;
+    },
+
+    colorNames() {
+      return [...colors.keys()];
     },
 
     input(name, value, t) {

@@ -141,7 +141,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-1.7.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-1.8.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -364,9 +364,12 @@ class ComponentCompiler {
       for (const name of this.host.inputs.keys()) {
         if (!this.usedHost.has(`input:${name}`)) r.warn("unused-host-input", ptr(ptr("/host", "inputs"), name), `The file declares host.${name} but no map or follow reads it.`, "Remove it, or read it with \"map\" or \"follow\".");
       }
+      for (const name of this.host.colors?.keys() ?? []) {
+        if (!this.usedHost.has(`color:${name}`)) r.warn("unused-host-color", ptr(ptr("/host", "colors"), name), `The file declares the color ${name} but no value uses it.`, `Remove it, or use it: { "color": "${name}" } in "values" or "set".`);
+      }
     }
     if (!machine) return undefined;
-    return { version: this.version, targets: [...this.targets], ...(this.host ? { host: this.host } : {}), properties: this.properties, animate, machine, ...(this.emitters.size ? { emitters: this.emitters } : {}), ...(keep?.length ? { keep } : {}) };
+    return { version: this.version, targets: [...this.targets], ...(this.host ? { host: this.host } : {}), properties: this.properties, animate, machine, ...(this.emitters.size ? { emitters: this.emitters } : {}), ...(keep?.length ? { keep } : {}), ...(this.host?.colors?.size ? { colors: new Map([...this.host.colors].map(([n, c]) => [n, c.default])) } : {}) };
   }
 
   private emitters = new Map<string, Emitter>();
@@ -480,7 +483,7 @@ class ComponentCompiler {
       r.error("invalid-type", "/host", "\"host\" must be an object with \"events\" and \"inputs\".", `For example: "host": { "events": ["show", "hide"], "inputs": { "volume": { "range": [0, 1] } } }`);
       return;
     }
-    r.keys(raw, "/host", ["events", "inputs", "custom"]);
+    r.keys(raw, "/host", ["events", "inputs", "custom", "colors"]);
     const host: HostDeclaration = { events: [], inputs: new Map() };
     const name = (value: Json, p: string, seen: (n: string) => boolean): string | undefined => {
       const bare = typeof value === "string" && value.startsWith(`${HOST}.`) ? value.slice(HOST.length + 1) : value;
@@ -551,6 +554,30 @@ class ComponentCompiler {
         host.custom = custom;
       }
     }
+    if ("colors" in raw && this.needsVersion("1.8", "/host/colors", "\"colors\"")) {
+      const colors = new Map<string, { default: Channels }>();
+      if (!isObject(raw.colors)) r.error("invalid-type", "/host/colors", "\"colors\" must map color names to their defaults.", `For example: "colors": { "hover": { "default": "#E5E7EB", "note": "row tint, from the theme" } }.`);
+      else for (const [key, spec] of Object.entries(raw.colors)) {
+        if (key === "note" || key.startsWith("x-")) continue;
+        const p = ptr("/host/colors", key);
+        const n = name(key, p, (x) => colors.has(x));
+        if (!n) continue;
+        if (!isObject(spec) || !("default" in spec)) {
+          r.error("missing-default", p, `host.colors.${n} has no default.`, `Give the color to draw until the app supplies one, and in previews and tests: { "default": "#E5E7EB" }.`);
+          colors.set(n, { default: [0, 0, 0, 1] });
+          continue;
+        }
+        r.keys(spec, p, ["default"]);
+        const value = spec.default;
+        if (!isHexColor(value)) {
+          r.error("invalid-value", ptr(p, "default"), `${JSON.stringify(value)} is not a color.`, "Use a hex color such as \"#E5E7EB\" (#RGB, #RRGGBB or #RRGGBBAA).");
+          colors.set(n, { default: [0, 0, 0, 1] });
+          continue;
+        }
+        colors.set(n, { default: hexToOklab(value) });
+      }
+      host.colors = colors;
+    }
     this.host = host;
   }
 
@@ -610,6 +637,11 @@ class ComponentCompiler {
       const kind = this.parsePropertyPath(key, p);
       if (!kind) continue;
       const placeholder = kind === "color" ? [0, 0, 0, 1] : [0];
+      if (isObject(value) && "color" in value) {
+        const named = this.parseNamedColor(kind, key, value, p);
+        this.properties.set(key, named ? { kind, base: named.default, color: named.name } : { kind, base: placeholder });
+        continue;
+      }
       if (isObject(value) && "measure" in value) {
         this.properties.set(key, { kind, base: placeholder, measure: this.parseMeasure(kind, key, value, p) });
         continue;
@@ -849,6 +881,10 @@ class ComponentCompiler {
     const r = this.r;
     if (kind === "color") {
       if (isHexColor(raw)) return hexToOklab(raw);
+      if (isObject(raw) && "color" in raw) {
+        r.error("invalid-value", p, "A color the app names goes in \"values\" or \"set\", not here.", "Use a hex color here, or set the named color in a state and animate to it.");
+        return undefined;
+      }
       r.error("invalid-value", p, `${JSON.stringify(raw)} is not a color.`, "Use a hex color such as \"#4ADE80\" (#RGB, #RRGGBB or #RRGGBBAA).");
       return undefined;
     }
@@ -1300,6 +1336,13 @@ class ComponentCompiler {
           const kp = ptr(ptr(p, "set"), key);
           const prop = this.property(key, kp);
           if (!prop) continue;
+          if (isObject(value) && "color" in value) {
+            const named = this.parseNamedColor(prop.kind, key, value, kp);
+            if (!named) continue;
+            state.set.set(key, named.default);
+            (state.color ??= new Map()).set(key, named.name);
+            continue;
+          }
           if (isObject(value) && "input" in value) {
             const target = this.parseInputTarget(prop.kind, key, value, kp);
             if (!target) continue;
@@ -1510,6 +1553,33 @@ class ComponentCompiler {
   }
 
   /** { "input", "times"?, "plus"? } as a state target (v0.17). */
+  /** `{ "color": "hover" }` (1.8): a color the app names in host.colors and supplies. */
+  private parseNamedColor(kind: PropertyKind, key: string, raw: JsonObject, p: string): { name: string; default: Channels } | undefined {
+    const r = this.r;
+    if (!this.needsVersion("1.8", p, "A color the app names")) return undefined;
+    r.keys(raw, p, ["color"]);
+    if (kind !== "color") {
+      r.error("invalid-type", p, `"${key}" is a number; a named color only goes into a color.`, "Use it on color, shadowColor or innerColor.");
+      return undefined;
+    }
+    const cp = ptr(p, "color");
+    const value = raw.color;
+    const bare = typeof value === "string" && value.startsWith(`${HOST}.`) ? value.slice(HOST.length + 1) : value;
+    const declared = [...(this.host?.colors?.keys() ?? [])];
+    if (typeof bare !== "string" || !this.host?.colors?.has(bare)) {
+      const guess = typeof bare === "string" ? didYouMean(bare, declared) : undefined;
+      r.error(
+        "undeclared-host-color",
+        cp,
+        `${JSON.stringify(value)} is not a color declared under host.colors.`,
+        guess ? `Did you mean "${guess}"? If not, declare it: "host": { "colors": { ${JSON.stringify(bare)}: { "default": "#E5E7EB" } } }.` : `Declare it: "host": { "colors": { ${JSON.stringify(typeof bare === "string" ? bare : "hover")}: { "default": "#E5E7EB" } } }, with the color to draw until the app supplies one.`,
+      );
+      return undefined;
+    }
+    this.usedHost.add(`color:${bare}`);
+    return { name: bare, default: this.host.colors.get(bare)!.default };
+  }
+
   private parseInputTarget(kind: PropertyKind, key: string, raw: JsonObject, p: string): InputTarget | undefined {
     const r = this.r;
     if (!this.needsVersion("0.17", p, "A target read from an input")) return undefined;

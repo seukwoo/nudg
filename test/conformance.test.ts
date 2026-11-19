@@ -16,7 +16,9 @@ interface Step {
   send?: string;
   reducedMotion?: boolean;
   input?: string;
-  value?: number;
+  /** A color the app names (1.8), supplied with `value` as hex. */
+  color?: string;
+  value?: number | string;
   handled?: boolean;
   /** `cues`: every cue that came due since the last step that listed cues (or the start). */
   expect?: { state?: string[]; values?: Record<string, Value>; resting?: boolean; settled?: boolean; looping?: boolean; cues?: FiredCue[]; pieces?: Piece[] };
@@ -27,6 +29,8 @@ interface Case {
   doc: unknown;
   start?: string[];
   reducedMotion?: boolean;
+  /** Colors the app names, supplied when the runtime starts (1.8). */
+  colors?: Record<string, string>;
   files?: Record<string, unknown>;
   steps?: Step[];
   documents?: { name: string; doc: unknown; files?: Record<string, unknown>; errors: { code: string; path: string }[] }[];
@@ -72,10 +76,11 @@ for (const file of readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
   }
 
   const run = (program: Program) => {
-    const rt = createRuntime(program, { state: c.start, reducedMotion: c.reducedMotion });
+    const rt = createRuntime(program, { state: c.start, reducedMotion: c.reducedMotion, colors: c.colors });
     for (const step of c.steps ?? []) {
       if (step.reducedMotion !== undefined) rt.setReducedMotion(step.reducedMotion, step.t);
-      if (step.input !== undefined) assert.ok(rt.input(step.input, step.value!, step.t), `input ${step.input} at ${step.t}s`);
+      if (step.input !== undefined) assert.ok(rt.input(step.input, step.value as number, step.t), `input ${step.input} at ${step.t}s`);
+      if (step.color !== undefined) assert.ok(rt.color(step.color, step.value as string, step.t), `color ${step.color} at ${step.t}s`);
       if (step.send !== undefined) {
         const handled = rt.send(step.send, step.t);
         if (step.handled !== undefined) assert.equal(handled, step.handled, `${step.send} at ${step.t}s handled`);

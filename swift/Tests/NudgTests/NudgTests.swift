@@ -76,6 +76,19 @@ final class SwiftUITests: XCTestCase {
     XCTAssertEqual(model.state, ["on"])
   }
 
+  func testColorsTheAppNamesComeFromTheThemeAndMoveWhenItChanges() throws {
+    var now = Date(timeIntervalSince1970: 0)
+    let model = NudgModel(try program("host-colors"), reducedMotion: false, colors: ["surface": Color(red: 17 / 255, green: 24 / 255, blue: 39 / 255)], clock: { now })
+    XCTAssertEqual(model.values(at: now)["row.color"]?.color, "#111827", "the theme's color from the first frame")
+    now = Date(timeIntervalSince1970: 0.1)
+    XCTAssertTrue(model.color("surface", Color(red: 1, green: 1, blue: 1)))
+    now = Date(timeIntervalSince1970: 0.2)
+    XCTAssertNotEqual(model.values(at: now)["row.color"]?.color, "#ffffff", "on its way")
+    now = Date(timeIntervalSince1970: 1)
+    XCTAssertEqual(model.values(at: now)["row.color"]?.color, "#ffffff")
+    XCTAssertFalse(model.color("nope", .red))
+  }
+
   func testOneSettlePerRestAndExitOnceSettled() throws {
     var now = Date(timeIntervalSince1970: 0)
     var settles: [[String]] = []

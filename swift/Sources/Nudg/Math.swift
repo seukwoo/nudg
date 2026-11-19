@@ -104,3 +104,31 @@ func oklabToHex(_ c: [Double]) -> String {
   let alphaByte = Int((min(1, max(0, alpha)) * 255).rounded(.toNearestOrAwayFromZero))
   return "#" + rgb.map(byte).joined() + (alphaByte == 255 ? "" : byte(alpha))
 }
+
+/** sRGB channels from 0 to 1 as OKLab [L, a, b, alpha], the space colors blend in. */
+func srgbToOklab(_ r: Double, _ g: Double, _ b: Double, _ alpha: Double) -> [Double] {
+  let lin = [r, g, b].map { $0 <= 0.04045 ? $0 / 12.92 : pow(($0 + 0.055) / 1.055, 2.4) }
+  let l = cbrt(0.4122214708 * lin[0] + 0.5363325363 * lin[1] + 0.0514459929 * lin[2])
+  let m = cbrt(0.2119034982 * lin[0] + 0.6806995451 * lin[1] + 0.1073969566 * lin[2])
+  let s = cbrt(0.0883024619 * lin[0] + 0.2817188376 * lin[1] + 0.6299787005 * lin[2])
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+    alpha,
+  ]
+}
+
+/** #RGB, #RRGGBB or #RRGGBBAA as OKLab, or nil. */
+func hexToOklab(_ hex: String) -> [Double]? {
+  guard hex.hasPrefix("#") else { return nil }
+  var digits = Array(hex.dropFirst())
+  if digits.count == 3 { digits = digits.flatMap { [$0, $0] } }
+  guard digits.count == 6 || digits.count == 8 else { return nil }
+  var bytes: [Double] = []
+  for i in stride(from: 0, to: digits.count, by: 2) {
+    guard let v = Int(String(digits[i...i + 1]), radix: 16) else { return nil }
+    bytes.append(Double(v) / 255)
+  }
+  return srgbToOklab(bytes[0], bytes[1], bytes[2], bytes.count == 4 ? bytes[3] : 1)
+}

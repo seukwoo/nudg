@@ -119,3 +119,27 @@ internal fun oklabToHex(c: List<Double>): String {
     return "#" + rgb.joinToString("") { "%02x".format(byte(it)) } + if (alphaByte == 255L) "" else "%02x".format(alphaByte)
 }
 
+
+/** sRGB channels from 0 to 1 as OKLab [L, a, b, alpha], the space colors blend in. */
+internal fun srgbToOklab(r: Double, g: Double, b: Double, alpha: Double): List<Double> {
+    val lin = listOf(r, g, b).map { if (it <= 0.04045) it / 12.92 else ((it + 0.055) / 1.055).pow(2.4) }
+    val l = Math.cbrt(0.4122214708 * lin[0] + 0.5363325363 * lin[1] + 0.0514459929 * lin[2])
+    val m = Math.cbrt(0.2119034982 * lin[0] + 0.6806995451 * lin[1] + 0.1073969566 * lin[2])
+    val s = Math.cbrt(0.0883024619 * lin[0] + 0.2817188376 * lin[1] + 0.6299787005 * lin[2])
+    return listOf(
+        0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+        1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+        0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+        alpha,
+    )
+}
+
+/** #RGB, #RRGGBB or #RRGGBBAA as OKLab, or null. */
+internal fun hexToOklab(hex: String): List<Double>? {
+    if (!hex.startsWith("#")) return null
+    var digits = hex.drop(1)
+    if (digits.length == 3) digits = digits.map { "$it$it" }.joinToString("")
+    if (digits.length != 6 && digits.length != 8) return null
+    val bytes = digits.chunked(2).map { (it.toIntOrNull(16) ?: return null) / 255.0 }
+    return srgbToOklab(bytes[0], bytes[1], bytes[2], if (bytes.size == 4) bytes[3] else 1.0)
+}

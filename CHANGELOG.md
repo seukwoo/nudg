@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Format 1.8: colors the app names** ([#162](https://github.com/seukwoo/nudg/issues/162)).
+  - **What's new:** a file names colors under `host.colors`, each with a default, and uses `{ "color": "hover" }` in `values` or `set` where it would write a hex.
+  - **What it's for:** a themed app's tints, which change with light and dark and while the app runs. When the theme changes, each property showing a color moves to the new one with its own motion.
+  - **Where the colors come from:**
+    - the web reads each from the CSS variable `--<name>`, at bind and when the theme changes, in any CSS color form;
+    - React Native, SwiftUI and Compose take the app's colors (`colors:`) and follow them as they change;
+    - every adapter can also be handed a color: `color("hover", value)`.
+  - **Audit:** a transition on a background from a CSS variable now points to `host.colors`.
+  - **Conformance:** TypeScript, Swift and Kotlin share `host-colors`, `host-colors-start` and `validation-1.8`. A compiled program that uses it is format 14.
+
 - **`nudg check`: everything about an app's motion in one call, and only what needs the person.**
   - **What it checks:** it validates every nudg file, checks each against the platforms' guidelines, and audits the source.
   - **Two lists:** what the AI fixes without asking (validation errors, guideline misses with one right answer, glue nudg replaces), and what needs the person (a long or slow transition, a short timeout, a gap nudg can't fill).

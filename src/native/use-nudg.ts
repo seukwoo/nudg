@@ -19,6 +19,12 @@ export interface UseNudgNativeOptions<C extends NudgContract = NudgContract> {
   files?: Record<string, unknown>;
   /** Default: the system's Reduce Motion setting, followed as it changes. A change to this option applies to the running player. */
   reducedMotion?: boolean;
+  /**
+   * The colors the file names (1.8), from the app's theme: { hover: theme.hover }, as hex,
+   * rgb() or hsl(). The first frame shows them; when one changes (the theme switched), each
+   * property showing it moves there with its own motion. Names left out show their defaults.
+   */
+  colors?: Partial<Record<string, string>>;
   exit?: StateName<C> | StateName<C>[];
   onExit?: () => void;
   /** Called with the active states each time every value has come to rest; as in the React hook. */
@@ -86,10 +92,12 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
   // The latest value per app input, replayed into each new player; starts from `inputs`.
   const inputs = useRef<Map<string, number>>(null as unknown as Map<string, number>);
   if (!inputs.current) inputs.current = new Map(Object.entries(options.inputs ?? {}) as [string, number][]);
+  // The theme's colors as last given; a new player starts from them.
+  const colors = useRef(options.colors);
   // One Animated value per property; views read them, the player writes them.
   const animated = useMemo(() => {
     const out = new Map<string, Animated.Value | Animated.Color>();
-    const initial = initialValues(program, { state: options.state, inputs: Object.fromEntries(inputs.current) });
+    const initial = initialValues(program, { state: options.state, inputs: Object.fromEntries(inputs.current), colors: definedColors(colors.current) });
     for (const [k, prop] of program.properties) out.set(k, prop.kind === "color" ? new Animated.Color(initial[k] as string) : new Animated.Value(initial[k] as number));
     return out;
   }, [program]);
@@ -152,6 +160,7 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
       host: { now: () => extra.current.now?.() ?? performance.now() / 1000, frame: (fn) => { const id = requestAnimationFrame(fn); return () => cancelAnimationFrame(id); } },
       state: options.state,
       reducedMotion: reduced.current,
+      colors: definedColors(colors.current),
       exit: options.exit,
       onExit: () => {
         setPresent(false);
@@ -187,6 +196,14 @@ export function useNudgWith<C extends NudgContract = NudgContract>(source: Progr
       player.current = null;
     };
   }, [program, animated]);
+
+  // A theme change: each color that changed moves the properties showing it.
+  const colorKey = JSON.stringify(options.colors ?? {});
+  useEffect(() => {
+    const before = colors.current ?? {};
+    colors.current = options.colors;
+    for (const [name, value] of Object.entries(options.colors ?? {})) if (value !== undefined && value !== before[name]) player.current?.color(name, value);
+  }, [colorKey]);
 
   const styles = useMemo(() => {
     const out = new Map<string, Record<string, unknown>>();
@@ -303,4 +320,8 @@ function styleFor(program: Program, target: string, animated: Map<string, Animat
   }
   void program;
   return style;
+}
+
+function definedColors(colors: Partial<Record<string, string>> | undefined): Record<string, string> | undefined {
+  return colors && (Object.fromEntries(Object.entries(colors).filter(([, v]) => v !== undefined)) as Record<string, string>);
 }

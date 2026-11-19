@@ -7,7 +7,8 @@ import { AccessibilityInfo, Animated, PanResponder, type GestureResponderEvent, 
 import { PointerTracker, draggableTargets, pinchableTargets } from "../core/pointer.ts";
 import { activation, touchSync } from "./touches.ts";
 import { handledEvents, unknownEventMessage } from "../core/observe.ts";
-import { createPlayer, initialValues, toProgram, type HeadlessPlayer } from "../core/player.ts";
+import { createPlayer, initialValues, type HeadlessPlayer } from "../core/player.ts";
+import { toProgram } from "../core/to-program.ts";
 import { createRuntime, type FiredCue, type Piece, type Value } from "../core/runtime.ts";
 import type { HapticPlayer } from "./haptics.ts";
 import type { NudgContract, Program, StateName } from "../core/types.ts";

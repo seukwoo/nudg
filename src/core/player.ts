@@ -156,4 +156,3 @@ export function initialValues(program: Program, options: InitialOptions = {}): R
   return runtime.sample(0);
 }
 
-export { toProgram } from "./to-program.ts";

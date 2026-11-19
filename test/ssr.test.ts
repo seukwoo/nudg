@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { createElement as h } from "react";
 import { renderToString } from "react-dom/server";
-import { toProgram } from "../src/core/player.ts";
+import { toProgram } from "../src/core/to-program.ts";
 import { cssText, initialStyles } from "../src/dom/style.ts";
 import { useNudg } from "../src/react/index.ts";
 

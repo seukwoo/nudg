@@ -85,6 +85,9 @@ simulate and plot options
                             --state <name>=<selector> (default [data-nudg-state~="<name>"]),
                             --target <name>=<selector> (default [data-nudg="<name>"]),
                             --mount <event> (the event it is shown with), --out <file.css>.
+                            --script <file.js> also writes a module that plays the file on
+                            nudg's runtime, exactly, where JavaScript runs (the CSS stays the
+                            fallback); --script-src <url> loads nudg from your own copy of dist.
   critique <file...>        Whether the motion is good, not only valid: each transition checked
                             against the platforms' motion guidelines and accessibility rules
                             (slow transitions, late press feedback, invisible changes, bouncy

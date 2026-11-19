@@ -165,3 +165,64 @@ test("in Chrome, a scroll-driven map follows the scroll as the runtime's map doe
     close();
   }
 });
+
+test("in Chrome, --script plays the file on nudg's runtime: it follows the page's own attribute, and a drag CSS can't do comes back", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const { writeFileSync, rmSync, mkdirSync } = await import("node:fs");
+  const { launchBrowser, waitFor } = await import("../src/node/cdp.ts");
+  const { serveIfLocal } = await import("../src/node/observe.ts");
+  const dir = "test/fixtures/host/.to-css";
+  mkdirSync(dir, { recursive: true });
+  const sources = { player: "/dist/dom/play.js", programs: "/dist/core/program-json.js" };
+  const menu = toCss(SIDE_MENU, { mount: "host.show", states: { hidden: "[data-closing]" }, targets: { menu: ".lnb", dim: ".lnb-dim" }, file: "menu.nudg.json", script: sources });
+  const carousel = toCss(example("carousel"), { file: "carousel.nudg.json", script: sources });
+  assert.ok(carousel.lost.some((l) => /nearest/.test(l)), "CSS alone loses the snap");
+  writeFileSync(`${dir}/menu.css`, menu.css);
+  writeFileSync(`${dir}/menu.nudg.js`, menu.script!);
+  writeFileSync(`${dir}/carousel.css`, carousel.css);
+  writeFileSync(`${dir}/carousel.nudg.js`, carousel.script!);
+  writeFileSync(`${dir}/page.html`, `<!doctype html><html><head>
+    <script>document.documentElement.setAttribute("data-nudg-live", "")</script>
+    <link rel="stylesheet" href="menu.css"><link rel="stylesheet" href="carousel.css">
+    <style>.lnb { width: 200px; height: 100px; background: #333; } .lnb-dim { width: 50px; height: 50px; }
+      .viewport { width: 200px; overflow: hidden; } [data-nudg=strip] { display: flex; width: 600px; height: 60px; } [data-nudg=strip] > div { flex: none; width: 200px; }
+      [data-nudg^=dot] { width: 10px; height: 10px; }</style>
+    </head><body>
+    <div class="lnb-dim" id="dim"><div class="lnb"></div></div>
+    <div class="viewport"><div data-nudg="strip"><div>1</div><div>2</div><div>3</div></div></div>
+    <div data-nudg="dot1"></div><div data-nudg="dot2"></div><div data-nudg="dot3"></div>
+    <script type="module">
+      const [m, c] = await Promise.all([import("./menu.nudg.js"), import("./carousel.nudg.js")]);
+      window.__players = { menu: m.player, carousel: c.player };
+    </script></body></html>`);
+  const { url, close } = await serveIfLocal(`${dir}/page.html`);
+  const browser = await launchBrowser(chrome!);
+  try {
+    await browser.send("Page.navigate", { url });
+    await waitFor(() => browser.evaluate("window.__players ? 'ready' : ''"), 15_000);
+    await new Promise((r) => setTimeout(r, 600));
+    const shown = JSON.parse(await browser.evaluate(`JSON.stringify({ state: __players.menu.runtime.state(), transform: getComputedStyle(document.querySelector(".lnb")).transform, translate: getComputedStyle(document.querySelector(".lnb")).translate })`));
+    assert.deepEqual(shown.state, ["shown"], "mounted with host.show");
+    assert.equal(shown.translate, "none", "the CSS is off while the script runs");
+    await browser.evaluate(`document.getElementById("dim").setAttribute("data-closing", "")`);
+    await new Promise((r) => setTimeout(r, 500));
+    const closed = JSON.parse(await browser.evaluate(`JSON.stringify({ state: __players.menu.runtime.state(), x: new DOMMatrix(getComputedStyle(document.querySelector(".lnb")).transform).m41 })`));
+    assert.deepEqual(closed.state, ["hidden"], "the page's own attribute sends the file's event");
+    assert.ok(Math.abs(closed.x + 200) < 0.5, `slid out by its own width: ${closed.x}`);
+    // A drag and release: the strip snaps to the next slide, as the file says.
+    const r = JSON.parse(await browser.evaluate(`JSON.stringify(document.querySelector("[data-nudg=strip]").getBoundingClientRect())`));
+    const y = r.y + 30;
+    const mouse = (type: string, x: number) => browser.send("Input.dispatchMouseEvent", { type, x, y, button: "left", buttons: type === "mouseReleased" ? 0 : 1, clickCount: 1 });
+    await mouse("mousePressed", 180);
+    for (let i = 1; i <= 8; i++) {
+      await mouse("mouseMoved", 180 - i * 15);
+      await new Promise((r) => setTimeout(r, 16));
+    }
+    await mouse("mouseReleased", 60);
+    await new Promise((r) => setTimeout(r, 900));
+    assert.deepEqual(JSON.parse(await browser.evaluate(`JSON.stringify(__players.carousel.runtime.state())`)), ["second"]);
+  } finally {
+    await browser.close();
+    close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

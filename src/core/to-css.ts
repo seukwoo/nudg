@@ -57,6 +57,7 @@ const LIMIT = { length: 0.5, rotation: 0.5, number: 0.01, color: 0.01 };
 const SIZE_A = { width: 320, height: 240 };
 const SIZE_B = { width: 410, height: 290 };
 const SAMPLES = 60;
+const SCROLL = /^([A-Za-z][\w-]*)\.scroll\.(x|y)$/;
 
 type Kind = "length" | "rotation" | "number" | "color";
 /** A value as CSS writes it: a number plus shares of the element's own width and height (for translate), or a color. */
@@ -84,6 +85,7 @@ export function toCss(program: Program, options: ToCssOptions = {}): CssResult {
   const lost: string[] = [];
   const notes: string[] = [];
   const problems: string[] = [];
+  const differences: CssDifference[] = [];
   const empty = (): CssResult => ({ css: "", edges: 0, differences: [], lost, notes, problems });
 
   const regions: Region[] = [];
@@ -114,7 +116,14 @@ export function toCss(program: Program, options: ToCssOptions = {}): CssResult {
       for (const t of s.when.values()) if (t.step || t.commit) unsupported.add(`${where} steps or commits a value: a script.`);
     }
   }
-  for (const [key, prop] of program.properties) if (prop.map?.sourceKind === "input") unsupported.add(`${key} is mapped from an input: tier 2 (a scroll-driven animation) or a script.`);
+  // A map from a scroll offset is a scroll-driven animation (tier 2); from any other input, a script.
+  const scrollMaps = new Map<string, string[]>();
+  for (const [key, prop] of program.properties) {
+    if (prop.map?.sourceKind !== "input") continue;
+    const scroll = SCROLL.exec(prop.map.source);
+    if (scroll && prop.map.from.every((p) => typeof p === "number")) scrollMaps.set(prop.map.source, [...(scrollMaps.get(prop.map.source) ?? []), key]);
+    else unsupported.add(`${key} is mapped from ${scroll ? "a measured scroll range" : "an input"}: a script.`);
+  }
   for (const [key, m] of program.animate) if (m.delayInput) unsupported.add(`${key}'s delay reads an app input: a script, or a --i custom property per element.`);
   lost.push(...unsupported);
 
@@ -230,7 +239,8 @@ export function toCss(program: Program, options: ToCssOptions = {}): CssResult {
       else if (pseudo.has(name)) conditions.set(path, pseudo.get(name)!);
       else {
         conditions.set(path, { selector: `[data-nudg-state~="${name}"]`, on: "self" });
-        notes.push(`${path}: set data-nudg-state="${name}" on the element or an ancestor while it is active (or pass --state ${name}=<selector>).`);
+        const on = [...new Set([...r.machine.states.values(), { when: r.machine.when } as State].flatMap((st) => [...st.when].filter(([, t]) => t.to === name).map(([e]) => e)))];
+        notes.push(`${path}: set data-nudg-state="${name}" on the element or an ancestor while it is active${on.length ? ` (the file enters it on ${on.join(", ")})` : ""}, or pass --state ${name}=<selector>.`);
       }
     }
   }
@@ -336,13 +346,60 @@ export function toCss(program: Program, options: ToCssOptions = {}): CssResult {
       }
     }
   }
+  // Tier 2: maps from a scroll offset play on the scroller's own timeline.
+  const scrollTimelines: string[] = [];
+  const scrollRules: string[] = [];
+  for (const [source, keys] of scrollMaps) {
+    const [, scroller, axis] = SCROLL.exec(source)!;
+    const timeline = `--nudg-${scroller}-${axis}`;
+    scrollTimelines.push(timeline);
+    out.push(rule(selectorOf(scroller), [`scroll-timeline: ${timeline} ${axis === "y" ? "block" : "inline"}`]));
+    const points = [...new Set(keys.flatMap((k) => program.properties.get(k)!.map!.from as number[]))].sort((a, b) => a - b);
+    const [lo, hi] = [points[0], points[points.length - 1]];
+    const at = (offset: number) => {
+      const rt = createRuntime(program);
+      rt.input(source, offset, 0);
+      const sample = rt.sample(0);
+      return new Map(keys.map((k) => [k, typeof sample[k] === "string" ? { n: 0, w: 0, h: 0, color: hexToOklab(sample[k] as string) } : { n: sample[k] as number, w: 0, h: 0 }]));
+    };
+    for (const target of new Set(keys.map((k) => k.split(".")[0]))) {
+      const mine = keys.filter((k) => k.split(".")[0] === target);
+      const name = `nudg-${target}-${scroller}-${axis}`;
+      const frames = points.map((p) => `  ${fmt(hi === lo ? 100 : ((p - lo) / (hi - lo)) * 100)}% { ${declarations(target, mine, at(p)).join("; ")}; }`);
+      out.push(`@keyframes ${name} {\n${frames.join("\n")}\n}`);
+      scrollRules.push(rule(selectorOf(target), [`animation: ${name} linear both`, `animation-timeline: ${timeline}`, `animation-range: ${fmt(lo)}px ${fmt(hi)}px`]));
+      // The proof: a map is linear between its points, as keyframes are.
+      for (let i = 0; i <= SAMPLES; i++) {
+        const offset = lo - (hi - lo) * 0.1 + ((hi - lo) * 1.2 * i) / SAMPLES;
+        const nudg = at(offset);
+        // CSS holds the first and last keyframes outside the range (fill: both), and is linear between keyframes.
+        const x = Math.min(hi, Math.max(lo, offset));
+        let j = 0;
+        while (j < points.length - 2 && x > points[j + 1]) j++;
+        const a = at(points[j]);
+        const b = at(points[Math.min(j + 1, points.length - 1)]);
+        const local = points.length < 2 ? 1 : (x - points[j]) / (points[j + 1] - points[j]);
+        for (const k of mine) {
+          const va = a.get(k)!;
+          const vb = b.get(k)!;
+          const want = nudg.get(k)!;
+          const d = va.color ? Math.hypot(...va.color.map((c, n) => c + (vb.color![n] - c) * local - want.color![n])) : Math.abs(va.n + (vb.n - va.n) * local - want.n);
+          if (d > LIMIT[kindOf(k)] && !differences.some((x) => x.property === k)) differences.push({ edge: `scrolling ${source} to ${fmt(offset)}`, property: k, max: d, at: 0 });
+        }
+      }
+    }
+  }
+  if (scrollRules.length) {
+    out.push(rule(":root", [`timeline-scope: ${scrollTimelines.join(", ")}`]));
+    out.push(`@supports (animation-timeline: scroll()) {\n  ${scrollRules.map((r) => r.replace(/\n/g, "\n  ")).join("\n\n  ")}\n}`);
+    notes.push("Values that follow the scroll use scroll-driven animations (Chrome 115, Safari 26). Where those aren't supported, they stay as at the top.");
+  }
   if (reducedRules.length) out.push(`@media (prefers-reduced-motion: reduce) {\n  ${rule(reducedRules.join(", "), ["transition-duration: 0.15s !important", "transition-timing-function: linear !important", "transition-delay: 0s !important"]).replace(/\n/g, "\n  ")}\n}`);
   if (options.mount) notes.push(`The way in plays as the element mounts (@starting-style: Chrome 117, Safari 17.5, Firefox 129). Before those, it appears in place.`);
 
   // The proof: every edge (and the mount), nudg's runtime against the CSS's own timing.
   const restTimingsAll = new Map<string, Timing>();
   for (const r of regions) for (const [k, t] of timings.get(restOf(r)) ?? []) restTimingsAll.set(k, t);
-  const differences: CssDifference[] = [];
   const proofEdges: { label: string; labelFrom: string; fromPaths: string[]; event: string; into: string; region?: Region }[] = edges.map((e) => ({ label: `${e.from} → ${e.to}`, labelFrom: e.from, fromPaths: pathsWith(e.region, stateName(e.from)), event: e.event, into: e.to, region: e.region }));
   if (options.mount) proofEdges.push({ label: `mount (${options.mount})`, labelFrom: "", fromPaths: initialPaths, event: options.mount, into: "" });
   for (const e of proofEdges) {
@@ -408,7 +465,7 @@ export function toCss(program: Program, options: ToCssOptions = {}): CssResult {
       for (const w of worst.values()) if (!differences.some((x) => x.edge === w.edge && x.property === w.property)) differences.push(w);
     }
   }
-  return { css: out.join("\n\n") + "\n", edges: proofEdges.length, differences, lost: [...new Set(lost)], notes, problems };
+  return { css: out.join("\n\n") + "\n", edges: proofEdges.length + scrollMaps.size, differences, lost: [...new Set(lost)], notes, problems };
 }
 
 /** The CSS value `s` seconds after a change from `a` to `b` (numbers, or OKLab channels) with timing `t` (none: it jumps). */
@@ -604,7 +661,7 @@ function stateName(path: string): string {
 export function formatToCss(r: CssResult): string {
   const lines: string[] = [];
   if (r.problems.length) return ["Not written:", ...r.problems.map((p) => `  ${p}`)].join("\n");
-  lines.push(r.differences.length ? `CSS moves differently from the file on ${r.differences.length} of the checked properties:` : `Written: ${r.edges} change${r.edges === 1 ? "" : "s"} checked against nudg's runtime at ${SAMPLES} points and two sizes; all within 0.5 px, 0.5°, 0.01.`);
+  lines.push(r.differences.length ? `CSS moves differently from the file on ${r.differences.length} of the checked properties:` : `Written: ${r.edges} change${r.edges === 1 ? "" : "s"} of state or scroll checked against nudg's runtime at ${SAMPLES} points and two sizes; all within 0.5 px, 0.5°, 0.01.`);
   for (const d of r.differences) lines.push(`  ${d.edge}: ${d.property} differs by ${fmt(d.max)} at ${fmt(d.at)} s`);
   if (r.lost.length) lines.push("", "Without a script, the page won't have:", ...r.lost.map((l) => `  ${l}`));
   if (r.notes.length) lines.push("", ...r.notes);

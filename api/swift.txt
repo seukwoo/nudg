@@ -159,6 +159,15 @@ public let fade: Double
 public let scale: (Double, Double)
 public let stagger: Double
 public let seed: Int
+public var delay: (Double, Double)?
+public var path: EmitterPath?
+public struct EmitterPath
+public let frames: [PathFrame]
+public let ease: Ease
+public struct PathFrame
+public let at: Double
+public let values: [(Double, Double)?]
+public let ease: Ease?
 public struct Program
 public let version: String
 public let targets: [String]

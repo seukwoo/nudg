@@ -68,6 +68,7 @@ Errors stop a file from compiling. Warnings don't.
 | `motion-conflict` | A motion has both `spring` and `tween`. |
 | `needs-version` | A feature is newer than the file's declared format; the hint names the version to declare. |
 | `out-of-range` | A base or `set` value lies outside its property's `min` / `max`. |
+| `path-with-physics` | An emitter with a `path` (1.9) also gives `angle`, `speed`, `gravity` or `drag`, which only physics uses. |
 | `region-conflict` | Two parallel regions set, follow, loop or glide the same property. |
 | `reserved-name` | A target is named `host`. |
 | `spring-ambiguous-form` | A spring uses `tension` / `friction`, which tools disagree on. |

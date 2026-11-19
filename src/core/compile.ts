@@ -5,7 +5,7 @@ import { hexToOklab, isHexColor } from "./color.ts";
 import { interpolate } from "./map.ts";
 import { CRITIQUE_CODES } from "./critique-codes.ts";
 import { fromDurationBounce, fromStiffnessRatio } from "./spring.ts";
-import type { Cue, CueAmount, DelayInput, Emitter, Keyframe, Measure,
+import type { Cue, CueAmount, DelayInput, Emitter, EmitterPath, PathFrame, Keyframe, Measure,
   MeasuredEndpoint,
   Channels,
   Diagnostic,
@@ -88,6 +88,8 @@ const REGION_KEYS = [...MACHINE_KEYS, "when"];
 const STATE_KEYS = ["set", "follow", "glide", "enter", "loop", "when", "cue", "emit", ...MACHINE_KEYS];
 const TRANSITION_KEYS = ["to", "nearest", "by", "momentum", "animate", "step", "commit", "cue", "emit"];
 const VALUE_KEYS = ["base", "min", "max"];
+/** What a frame of an emitter path (1.9) may move. */
+const PATH_PROPS = ["x", "y", "rotation", "scale", "opacity"] as const;
 const FOLLOW_KEYS = ["input", "range", "overdrag", "multiply"];
 const MAP_KEYS = ["map", "from", "to"];
 const MOTION_KEYS = ["spring", "tween", "kick", "delay"];
@@ -141,7 +143,7 @@ function compileFile(
   }
   r.keys(doc, "", TOP_LEVEL_KEYS);
   if ("$schema" in doc && typeof doc.$schema !== "string") {
-    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-1.8.schema.json\", or remove it.");
+    r.error("invalid-type", "/$schema", "\"$schema\" must be a URL string.", "Use \"https://unpkg.com/@nudg/core/spec/nudg-1.9.schema.json\", or remove it.");
   }
 
   if (!("nudg" in doc)) {
@@ -415,7 +417,7 @@ class ComponentCompiler {
         r.error("invalid-type", p, "An emitter is an object.", `{} for the defaults, or for example { "from": "button", "count": 24, "angle": [-150, -30] }.`);
         continue;
       }
-      r.keys(spec, p, ["from", "at", "count", "area", "angle", "speed", "gravity", "drag", "spin", "life", "fade", "scale", "stagger", "seed"]);
+      r.keys(spec, p, ["from", "at", "count", "area", "angle", "speed", "gravity", "drag", "spin", "life", "fade", "scale", "stagger", "seed", "delay", "path"]);
       const e: Emitter = { from: name, at: "center", count: 20, area: [0, 0], angle: [-150, -30], speed: [300, 700], gravity: 1200, drag: 1, spin: [-540, 540], life: [0.8, 1.2], fade: 0.3, scale: [0.7, 1], stagger: 0, seed: 1 };
       let ok = true;
       const bad = (field: string, message: string, hint: string) => {
@@ -458,8 +460,85 @@ class ComponentCompiler {
         if (!valid) bad(field, field === "seed" ? '"seed" must be a whole number, 0 or more.' : `"${field}" must be a number${field === "gravity" ? "" : ", 0 or more"}.`, field === "gravity" ? "Units per second squared, downward: 1200 for confetti, negative for bubbles." : field === "drag" ? "1 slows pieces to a third in a second." : "Seconds.");
         else e[field] = v as number;
       }
+      if ("delay" in spec && this.needsVersion("1.9", ptr(p, "delay"), "An emitter's \"delay\"")) {
+        const v = spec.delay;
+        const pair = typeof v === "number" ? [v, v] : Array.isArray(v) && v.length === 2 && v.every((x) => typeof x === "number" && Number.isFinite(x)) ? (v as number[]) : undefined;
+        if (!pair || pair[0] < 0 || pair[0] > pair[1]) bad("delay", '"delay" must be seconds, a number or [low, high], 0 or more.', "Each piece waits a seeded time in this range after its stagger: [0, 0.3].");
+        else e.delay = [pair[0], pair[1]];
+      }
+      if ("path" in spec && this.needsVersion("1.9", ptr(p, "path"), "An emitter's \"path\"")) {
+        // Physics and a path are two ways to fly; a file says one.
+        for (const field of ["angle", "speed", "gravity", "drag"]) {
+          if (field in spec) {
+            r.error("path-with-physics", ptr(p, field), `"${field}" is physics; with a "path" the pieces follow the path.`, `Remove "${field}", or remove "path" to fly the pieces by physics.`);
+            ok = false;
+          }
+        }
+        const path = this.parsePath(spec.path, ptr(p, "path"));
+        if (path) e.path = path;
+        else ok = false;
+      }
       if (ok) this.emitters.set(name, e);
     }
+  }
+
+  /** `"path": { "frames": [{ "at": 0.4, "y": [-160, -120], "ease": "in" }, …], "ease"? }` (1.9). */
+  private parsePath(raw: Json, p: string): EmitterPath | undefined {
+    const r = this.r;
+    if (!isObject(raw)) {
+      r.error("invalid-type", p, "\"path\" is an object with \"frames\".", `For example: "path": { "frames": [{ "at": 0.4, "y": [-160, -120], "ease": "in" }, { "at": 1, "y": [40, 80] }] }.`);
+      return undefined;
+    }
+    r.keys(raw, p, ["frames", "ease"]);
+    let ok = true;
+    let ease: Ease = NAMED_EASES.out;
+    if ("ease" in raw) {
+      const parsed = parseEase(raw.ease, ptr(p, "ease"), r);
+      if (parsed) ease = parsed;
+      else ok = false;
+    }
+    const fp = ptr(p, "frames");
+    if (!Array.isArray(raw.frames) || raw.frames.length === 0) {
+      r.error("invalid-value", fp, "\"frames\" lists at least one frame.", `For example: [{ "at": 0.4, "y": [-160, -120] }, { "at": 1, "y": [40, 80] }].`);
+      return undefined;
+    }
+    const frames: PathFrame[] = [];
+    let last = 0;
+    raw.frames.forEach((f, i) => {
+      const ip = ptr(fp, i);
+      if (!isObject(f)) {
+        r.error("invalid-type", ip, "A frame is an object with \"at\".", `For example: { "at": 0.4, "y": [-160, -120] }.`);
+        ok = false;
+        return;
+      }
+      r.keys(f, ip, ["at", "x", "y", "rotation", "scale", "opacity", "ease"]);
+      const at = f.at;
+      if (typeof at !== "number" || !(at > last) || at > 1) {
+        r.error("invalid-value", ptr(ip, "at"), `"at" must be above ${last} and at most 1, after the frame before.`, "A share of the piece's life: 0.4 for a peak at 40%, 1 for its end.");
+        ok = false;
+        return;
+      }
+      last = at;
+      const frame: PathFrame = { at };
+      for (const prop of PATH_PROPS) {
+        if (!(prop in f)) continue;
+        const v = f[prop];
+        const pair = typeof v === "number" && Number.isFinite(v) ? [v, v] : Array.isArray(v) && v.length === 2 && v.every((x) => typeof x === "number" && Number.isFinite(x)) ? (v as number[]) : undefined;
+        if (!pair || pair[0] > pair[1] || ((prop === "scale" || prop === "opacity") && pair[0] < 0)) {
+          r.error("invalid-value", ptr(ip, prop), `"${prop}" must be a number or [low, high]${prop === "scale" || prop === "opacity" ? ", 0 or more" : ""}.`, prop === "opacity" ? "A factor: 1 is fully shown." : prop === "rotation" ? "Degrees: [-90, 90]." : "An offset in logical units from where the piece starts: [-160, -120].");
+          ok = false;
+          continue;
+        }
+        frame[prop] = [pair[0], pair[1]];
+      }
+      if ("ease" in f) {
+        const parsed = parseEase(f.ease, ptr(ip, "ease"), r);
+        if (parsed) frame.ease = parsed;
+        else ok = false;
+      }
+      frames.push(frame);
+    });
+    return ok ? { frames, ease } : undefined;
   }
 
   /** `"emit": "confetti"` or a list (1.4), on a transition or a state. */

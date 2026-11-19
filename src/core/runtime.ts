@@ -10,7 +10,7 @@ import { CROSSING, DOUBLE_TAP, LONG_PRESS, SCROLL_SLOP, VERSIONS } from "./vocab
 
 /** Where a pinch's inputs start (v0.18): the ratio at 1, rotation and travel at 0. */
 const PINCH_START: [string, number][] = [["scale", 1], ["rotation", 0], ["x", 0], ["y", 0]];
-import type { Channels, Cue, CueAmount, Ease, Emitter, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, PropertyMap, State, TimerPause, Transition } from "./types.ts";
+import type { Channels, Cue, CueAmount, Ease, Emitter, EmitterPath, Follow, Glide, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, PropertyMap, State, TimerPause, Transition } from "./types.ts";
 
 export type Value = number | string;
 
@@ -1126,7 +1126,7 @@ export function createRuntime(program: Program, options: RuntimeOptions = {}): R
     for (let i = waves.length - 1; i >= 0; i--) {
       const w = waves[i];
       const e = program.emitters!.get(w.name)!;
-      if (t - w.t0 > (e.count - 1) * e.stagger + e.life[1]) waves.splice(i, 1);
+      if (t - w.t0 > (e.count - 1) * e.stagger + (e.delay?.[1] ?? 0) + e.life[1]) waves.splice(i, 1);
     }
     return waves.length > 0;
   }
@@ -1256,8 +1256,11 @@ export function pieceRandom(seed: number, wave: number, index: number, field: nu
 export function pieceAt(name: string, e: Emitter, wave: number, index: number, age: number): Piece | undefined {
   const u = (field: number) => pieceRandom(e.seed, wave, index, field);
   const pick = ([a, b]: [number, number], field: number) => a + u(field) * (b - a);
+  // Each piece's own wait (1.9), after its stagger.
+  if (e.delay) age -= pick(e.delay, 7);
   const life = pick(e.life, 3);
   if (age < 0 || age > life) return undefined;
+  if (e.path) return pathPieceAt(name, e, e.path, wave, index, age, life, u, pick);
   const angle = (pick(e.angle, 0) * Math.PI) / 180;
   const speed = pick(e.speed, 1);
   const vx = speed * Math.cos(angle);
@@ -1278,6 +1281,51 @@ export function pieceAt(name: string, e: Emitter, wave: number, index: number, a
   }
   const opacity = e.fade > 0 && age > life - e.fade ? Math.max(0, (life - age) / e.fade) : 1;
   return { emitter: name, wave, index, x, y, rotation: pick(e.spin, 2) * age, scale: pick(e.scale, 4), opacity };
+}
+
+const PATH_PROPS = ["x", "y", "rotation", "scale", "opacity"] as const;
+const PATH_START = { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1 };
+
+/**
+ * A piece on a designed path (1.9): each property runs through the frames that name it, from
+ * its start value, with the ease of the frame each leg starts from; after its last frame it
+ * holds. Frame j's value of property k is drawn from field 16 + 5j + k.
+ */
+function pathPieceAt(name: string, e: Emitter, path: EmitterPath, wave: number, index: number, age: number, life: number, u: (field: number) => number, pick: (r: [number, number], field: number) => number): Piece {
+  const s = age / life;
+  const value = (prop: (typeof PATH_PROPS)[number]): number | undefined => {
+    const k = PATH_PROPS.indexOf(prop);
+    let at = 0;
+    let from = PATH_START[prop];
+    let ease = path.ease;
+    let named = false;
+    for (let j = 0; j < path.frames.length; j++) {
+      const f = path.frames[j];
+      const range = f[prop];
+      if (!range) continue;
+      named = true;
+      const to = pick(range, 16 + j * 5 + k);
+      if (s <= f.at) return from + (to - from) * easeAt(ease, (s - at) / (f.at - at));
+      [at, from, ease] = [f.at, to, f.ease ?? path.ease];
+    }
+    return named ? from : undefined;
+  };
+  const x = value("x") ?? 0;
+  const y = value("y") ?? 0;
+  const rotation = value("rotation");
+  const scale = value("scale") ?? 1;
+  const opacity = value("opacity") ?? 1;
+  const fade = e.fade > 0 && age > life - e.fade ? Math.max(0, (life - age) / e.fade) : 1;
+  return {
+    emitter: name,
+    wave,
+    index,
+    x: (u(5) - 0.5) * e.area[0] + x,
+    y: (u(6) - 0.5) * e.area[1] + y,
+    rotation: rotation ?? pick(e.spin, 2) * age,
+    scale: pick(e.scale, 4) * scale,
+    opacity: opacity * fade,
+  };
 }
 
 /** Inputs read by cues (1.3): intensity, pitch and delay from an input. */

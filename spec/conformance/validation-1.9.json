@@ -1,0 +1,470 @@
+{
+  "conformance": "1.9",
+  "name": "Validator (1.9): emitter paths and delays",
+  "documents": [
+    {
+      "name": "valid",
+      "doc": {
+        "nudg": "1.9",
+        "host": {
+          "events": [
+            "go"
+          ]
+        },
+        "targets": [
+          "button",
+          "confetti"
+        ],
+        "values": {
+          "button.scale": 1
+        },
+        "emitters": {
+          "confetti": {
+            "from": "button",
+            "path": {
+              "frames": [
+                {
+                  "at": 0.4,
+                  "y": [
+                    -160,
+                    -120
+                  ]
+                },
+                {
+                  "at": 1,
+                  "y": 60
+                }
+              ]
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.go": {
+                "emit": "confetti"
+              }
+            }
+          }
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "needs-version",
+      "doc": {
+        "nudg": "1.8",
+        "host": {
+          "events": [
+            "go"
+          ]
+        },
+        "targets": [
+          "button",
+          "confetti"
+        ],
+        "values": {
+          "button.scale": 1
+        },
+        "emitters": {
+          "confetti": {
+            "from": "button",
+            "path": {
+              "frames": [
+                {
+                  "at": 0.4,
+                  "y": [
+                    -160,
+                    -120
+                  ]
+                },
+                {
+                  "at": 1,
+                  "y": 60
+                }
+              ]
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.go": {
+                "emit": "confetti"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/emitters/confetti/path"
+        }
+      ]
+    },
+    {
+      "name": "delay-needs-version",
+      "doc": {
+        "nudg": "1.8",
+        "host": {
+          "events": [
+            "go"
+          ]
+        },
+        "targets": [
+          "button",
+          "confetti"
+        ],
+        "values": {
+          "button.scale": 1
+        },
+        "emitters": {
+          "confetti": {
+            "from": "button",
+            "delay": [
+              0,
+              0.2
+            ]
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.go": {
+                "emit": "confetti"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/emitters/confetti/delay"
+        }
+      ]
+    },
+    {
+      "name": "order",
+      "doc": {
+        "nudg": "1.9",
+        "host": {
+          "events": [
+            "go"
+          ]
+        },
+        "targets": [
+          "button",
+          "confetti"
+        ],
+        "values": {
+          "button.scale": 1
+        },
+        "emitters": {
+          "confetti": {
+            "from": "button",
+            "path": {
+              "frames": [
+                {
+                  "at": 0.4,
+                  "y": [
+                    -160,
+                    -120
+                  ]
+                },
+                {
+                  "at": 0.3,
+                  "y": 60
+                }
+              ]
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.go": {
+                "emit": "confetti"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/emitters/confetti/path/frames/1/at"
+        }
+      ]
+    },
+    {
+      "name": "range",
+      "doc": {
+        "nudg": "1.9",
+        "host": {
+          "events": [
+            "go"
+          ]
+        },
+        "targets": [
+          "button",
+          "confetti"
+        ],
+        "values": {
+          "button.scale": 1
+        },
+        "emitters": {
+          "confetti": {
+            "from": "button",
+            "path": {
+              "frames": [
+                {
+                  "at": 0.4,
+                  "y": [
+                    -120,
+                    -160
+                  ]
+                },
+                {
+                  "at": 1,
+                  "y": 60
+                }
+              ]
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.go": {
+                "emit": "confetti"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/emitters/confetti/path/frames/0/y"
+        }
+      ]
+    },
+    {
+      "name": "unknown",
+      "doc": {
+        "nudg": "1.9",
+        "host": {
+          "events": [
+            "go"
+          ]
+        },
+        "targets": [
+          "button",
+          "confetti"
+        ],
+        "values": {
+          "button.scale": 1
+        },
+        "emitters": {
+          "confetti": {
+            "from": "button",
+            "path": {
+              "frames": [
+                {
+                  "at": 0.4,
+                  "y": [
+                    -160,
+                    -120
+                  ],
+                  "size": 2
+                },
+                {
+                  "at": 1,
+                  "y": 60
+                }
+              ]
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.go": {
+                "emit": "confetti"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "unknown-key",
+          "path": "/emitters/confetti/path/frames/0/size"
+        }
+      ]
+    },
+    {
+      "name": "empty",
+      "doc": {
+        "nudg": "1.9",
+        "host": {
+          "events": [
+            "go"
+          ]
+        },
+        "targets": [
+          "button",
+          "confetti"
+        ],
+        "values": {
+          "button.scale": 1
+        },
+        "emitters": {
+          "confetti": {
+            "from": "button",
+            "path": {
+              "frames": []
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.go": {
+                "emit": "confetti"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/emitters/confetti/path/frames"
+        }
+      ]
+    },
+    {
+      "name": "with-physics",
+      "doc": {
+        "nudg": "1.9",
+        "host": {
+          "events": [
+            "go"
+          ]
+        },
+        "targets": [
+          "button",
+          "confetti"
+        ],
+        "values": {
+          "button.scale": 1
+        },
+        "emitters": {
+          "confetti": {
+            "from": "button",
+            "path": {
+              "frames": [
+                {
+                  "at": 0.4,
+                  "y": [
+                    -160,
+                    -120
+                  ]
+                },
+                {
+                  "at": 1,
+                  "y": 60
+                }
+              ]
+            },
+            "gravity": 900
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.go": {
+                "emit": "confetti"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "path-with-physics",
+          "path": "/emitters/confetti/gravity"
+        }
+      ]
+    },
+    {
+      "name": "delay",
+      "doc": {
+        "nudg": "1.9",
+        "host": {
+          "events": [
+            "go"
+          ]
+        },
+        "targets": [
+          "button",
+          "confetti"
+        ],
+        "values": {
+          "button.scale": 1
+        },
+        "emitters": {
+          "confetti": {
+            "from": "button",
+            "path": {
+              "frames": [
+                {
+                  "at": 0.4,
+                  "y": [
+                    -160,
+                    -120
+                  ]
+                },
+                {
+                  "at": 1,
+                  "y": 60
+                }
+              ]
+            },
+            "delay": [
+              0.3,
+              0.1
+            ]
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "host.go": {
+                "emit": "confetti"
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/emitters/confetti/delay"
+        }
+      ]
+    }
+  ]
+}

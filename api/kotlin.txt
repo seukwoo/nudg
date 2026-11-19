@@ -121,6 +121,10 @@ val fade: Double,
 val scale: Pair<Double, Double>,
 val stagger: Double,
 val seed: Int,
+val delay: Pair<Double, Double>?
+val path: EmitterPath?
+class EmitterPath(val frames: List<PathFrame>, val ease: Ease)
+class PathFrame(val at: Double, val values: List<Pair<Double, Double>?>, val ease: Ease?)
 data class TimerPause(val on: String, val off: String)
 class Timer(val key: String, val delay: Double, val transition: Transition, val pause: List<TimerPause>)
 class State(

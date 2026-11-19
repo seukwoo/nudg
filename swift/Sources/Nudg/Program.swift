@@ -230,6 +230,23 @@ public struct Emitter {
   public let scale: (Double, Double)
   public let stagger: Double
   public let seed: Int
+  /** Seconds each piece waits after its stagger, drawn from the seed (1.9). */
+  public var delay: (Double, Double)? = nil
+  /** A designed path instead of physics (1.9). */
+  public var path: EmitterPath? = nil
+}
+
+/** A designed path for an emitter's pieces (1.9); see the spec. */
+public struct EmitterPath {
+  public let frames: [PathFrame]
+  public let ease: Ease
+}
+
+public struct PathFrame {
+  public let at: Double
+  /** x, y, rotation, scale and opacity, in that order; nil where the frame doesn't name it. */
+  public let values: [(Double, Double)?]
+  public let ease: Ease?
 }
 
 public struct Program {
@@ -253,8 +270,8 @@ public struct Program {
 
   /** Reads `nudg compile` output. */
   public static func decode(_ data: Data) throws -> Program {
-    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...14).contains(format) else {
-      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 14). Compile it with `nudg compile`.")
+    guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any], let format = j["nudgProgram"] as? Int, (1...15).contains(format) else {
+      throw DecodeError.notAProgram("Not a compiled nudg program (formats 1 to 15). Compile it with `nudg compile`.")
     }
     let properties: [(String, Property)] = (j["properties"] as! [[String: Any]]).map { p in
       (p["key"] as! String, Property(
@@ -274,7 +291,15 @@ public struct Program {
         from: e["from"] as! String, at: e["at"] as! String, count: (e["count"] as! NSNumber).intValue, area: pair(e["area"]),
         angle: pair(e["angle"]), speed: pair(e["speed"]), gravity: number(e["gravity"])!, drag: number(e["drag"])!,
         spin: pair(e["spin"]), life: pair(e["life"]), fade: number(e["fade"])!, scale: pair(e["scale"]),
-        stagger: number(e["stagger"])!, seed: (e["seed"] as! NSNumber).intValue))
+        stagger: number(e["stagger"])!, seed: (e["seed"] as! NSNumber).intValue,
+        delay: e["delay"].map(pair),
+        path: (e["path"] as? [String: Any]).map { p in
+          EmitterPath(
+            frames: (p["frames"] as! [[String: Any]]).map { f in
+              PathFrame(at: number(f["at"])!, values: ["x", "y", "rotation", "scale", "opacity"].map { f[$0].map(pair) }, ease: f["ease"].map(readEase))
+            },
+            ease: readEase(p["ease"]))
+        }))
     }
     // Format 14 (1.8): colors the app names, with their defaults.
     let colors = (j["colors"] as? [[String: Any]] ?? []).map { ($0["name"] as! String, doubles($0["default"])) }

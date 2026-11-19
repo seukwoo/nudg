@@ -94,7 +94,15 @@ class Emitter(
     val scale: Pair<Double, Double>,
     val stagger: Double,
     val seed: Int,
+    /** Seconds each piece waits after its stagger, drawn from the seed (1.9). */
+    val delay: Pair<Double, Double>? = null,
+    /** A designed path instead of physics (1.9). */
+    val path: EmitterPath? = null,
 )
+/** A designed path for an emitter's pieces (1.9); see the spec. */
+class EmitterPath(val frames: List<PathFrame>, val ease: Ease)
+/** [values]: x, y, rotation, scale and opacity, in that order; null where the frame doesn't name it. */
+class PathFrame(val at: Double, val values: List<Pair<Double, Double>?>, val ease: Ease?)
 data class TimerPause(val on: String, val off: String)
 class Timer(val key: String, val delay: Double, val transition: Transition, val pause: List<TimerPause>)
 
@@ -140,7 +148,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
         }
 
         internal fun fromJson(j: Map<String, Any?>): Program {
-            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0)) { "Not a compiled nudg program (formats 1 to 14). Compile it with `nudg compile`." }
+            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0)) { "Not a compiled nudg program (formats 1 to 15). Compile it with `nudg compile`." }
             val properties = list(j["properties"]).map { p ->
                 obj(p).let { m ->
                     (m["key"] as String) to Property(
@@ -163,6 +171,13 @@ class Program(val version: String, val targets: List<String>, val properties: Li
                         pair(m["angle"]), pair(m["speed"]), m["gravity"] as Double, m["drag"] as Double,
                         pair(m["spin"]), pair(m["life"]), m["fade"] as Double, pair(m["scale"]),
                         m["stagger"] as Double, (m["seed"] as Double).toInt(),
+                        m["delay"]?.let(::pair),
+                        (m["path"] as? Map<*, *>)?.let { p ->
+                            EmitterPath(
+                                list(p["frames"]).map { f -> obj(f).let { fr -> PathFrame(fr["at"] as Double, listOf("x", "y", "rotation", "scale", "opacity").map { k -> fr[k]?.let(::pair) }, fr["ease"]?.let(::ease)) } },
+                                ease(p["ease"]),
+                            )
+                        },
                     )
                 }
             }

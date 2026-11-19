@@ -79,3 +79,44 @@ test("the DOM adapter reads named colors from CSS variables, follows a theme cha
     close();
   }
 });
+
+test("a component that switches its own theme with a class inside its root (a shadow root too) is followed", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const { launchBrowser, waitFor } = await import("../src/node/cdp.ts");
+  const { serveIfLocal } = await import("../src/node/observe.ts");
+  const { url, close } = await serveIfLocal("test/fixtures/host/presence.html");
+  const browser = await launchBrowser(chrome!);
+  try {
+    await browser.send("Page.navigate", { url });
+    await waitFor(() => browser.evaluate("window.__player ? 'ready' : ''"), 15_000);
+    const result = await browser.evaluate(`(async () => {
+      const { playDoc } = await import("../../../dist/dom/index.js");
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      const host = document.createElement("div");
+      document.body.append(host);
+      const root = host.attachShadow({ mode: "open" });
+      root.innerHTML = '<style>.app { --surface: #ffffff; } .app.dark { --surface: #111827; }</style><div class="app"><div data-nudg="row"></div></div>';
+      const doc = {
+        nudg: "1.8",
+        host: { colors: { surface: { default: "#FFFFFF" } } },
+        targets: ["row"],
+        values: { "row.color": { color: "surface" } },
+        animate: { "row.color": { tween: { duration: 0.1, ease: "out" } } },
+        initial: "idle",
+        states: { idle: {} },
+      };
+      const p = playDoc(doc, root);
+      const row = root.querySelector('[data-nudg="row"]');
+      const before = getComputedStyle(row).backgroundColor;
+      root.querySelector(".app").classList.add("dark");
+      await wait(250);
+      const after = getComputedStyle(row).backgroundColor;
+      p.destroy();
+      return { before, after };
+    })()`);
+    assert.equal(result.before, "rgb(255, 255, 255)");
+    assert.equal(result.after, "rgb(17, 24, 39)");
+  } finally {
+    await browser.close();
+    close();
+  }
+});

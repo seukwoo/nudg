@@ -53,7 +53,24 @@ async function page(file) {
  * App-side behavior some examples need, since the host page's own script doesn't run
  * here: the events an app would send, wired to the example's controls.
  */
+/** The examples' sounds (synthesized by scripts/sounds.py), off until the visitor turns them on. */
+const SOUNDS = { pop: "../examples/sounds/pop.wav", tick: "../examples/sounds/tick.wav", burst: "../examples/sounds/burst.wav", heart: "../examples/sounds/heart.wav" };
+let soundOn = false;
+document.getElementById("detail-sound")?.addEventListener("click", (e) => {
+  soundOn = !soundOn;
+  e.currentTarget.setAttribute("aria-pressed", String(soundOn));
+  e.currentTarget.textContent = soundOn ? "Sound on" : "Sound off";
+});
+
 const HOOKS = {
+  "staggered-tags"(player, root) {
+    root.querySelector(".show")?.addEventListener("click", () => player.send("host.show"));
+    root.querySelector(".hide")?.addEventListener("click", () => player.send("host.hide"));
+  },
+  // The page switches its theme class; nudg reads the new CSS variables and moves to them.
+  "theme-switch": (player, root) => ({
+    onState: (state) => root.querySelector(".theme-demo")?.classList.toggle("dark", state.includes("dark/on")),
+  }),
   shake(player, root) {
     const form = root.querySelector("form");
     const input = root.querySelector("input");
@@ -582,6 +599,8 @@ function mount(stage, program, content, { hook, onState, onEvent, speed } = {}) 
   const names = new Set([...new DOMParser().parseFromString(`<div>${content.markup}</div>`, "text/html").querySelectorAll("[data-nudg]")].map((el) => el.dataset.nudg));
   const covered = program.targets.every((t) => names.has(t));
   root.innerHTML = `<style>${STAGE_STYLE}${covered ? content.style : ""}</style>${covered ? content.markup : `<div class="generic">${program.targets.map((t) => `<div class="target" data-nudg="${t}">${t}</div>`).join("")}</div>`}`;
+  // A host page's own sound switch; here the site's switch under the stage decides.
+  root.querySelectorAll("button.sound").forEach((b) => b.remove());
 
   const start = () => {
     let late;
@@ -600,6 +619,10 @@ function mount(stage, program, content, { hook, onState, onEvent, speed } = {}) 
       };
     };
     const player = play(program, root, {
+      sounds: SOUNDS,
+      get sound() {
+        return soundOn;
+      },
       onState: (state) => {
         onState?.(state);
         late?.onState?.(state);
@@ -616,7 +639,7 @@ function mount(stage, program, content, { hook, onState, onEvent, speed } = {}) 
     // WAI-ARIA switch pattern: the app keeps aria-checked in step with the state.
     const switches = root.querySelectorAll("[role=switch]");
     if (switches.length) {
-      const sync = (state) => switches.forEach((s) => s.setAttribute("aria-checked", String(state.includes("on"))));
+      const sync = (state) => switches.forEach((s) => s.setAttribute("aria-checked", String(state.some((p) => p.split("/").pop() === "on"))));
       const previous = late;
       late = { onState: (state) => { previous?.onState?.(state); sync(state); } };
       sync(player.runtime.state());

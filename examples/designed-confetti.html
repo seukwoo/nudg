@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Designed confetti</title>
+  <style>
+    .confetti-demo { position: relative; display: grid; place-items: center; align-content: end; gap: 12px; width: 300px; height: 170px; font: 13px ui-sans-serif, system-ui, sans-serif; }
+    .confetti-demo .go { margin-top: 90px; padding: 12px 20px; border: 0; border-radius: 12px; background: #1c1c1a; color: #fff; font: 600 14px ui-sans-serif, system-ui, sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .confetti-demo .layer { position: absolute; inset: 0; pointer-events: none; }
+    .confetti-demo .layer i { width: 8px; height: 14px; border-radius: 2px; }
+    .confetti-demo .layer .a { background: #f43f5e; }
+    .confetti-demo .layer .b { background: #f59e0b; }
+    .confetti-demo .layer .c { background: #10b981; }
+    .confetti-demo .layer .d { width: 10px; height: 10px; border-radius: 50%; background: #6366f1; }
+    .confetti-demo .sound { padding: 6px 10px; border: 0; border-radius: 8px; background: #f3f4f6; font: inherit; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="confetti-demo">
+    <button class="go" data-nudg="button">Celebrate</button>
+    <div class="layer" data-nudg="confetti"><i data-nudg-piece class="a"></i><i data-nudg-piece class="b"></i><i data-nudg-piece class="c"></i><i data-nudg-piece class="d"></i></div>
+    <button class="sound" aria-pressed="false">Sound off</button>
+  </div>
+  <!-- Host markup for designed-confetti.nudg.json. The pieces are the templates marked data-nudg-piece; their path is in the file. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./designed-confetti.nudg.json");
+    const options = { sounds: { burst: "./sounds/burst.wav" }, sound: false };
+    play(program, document.body, options);
+    const sound = document.querySelector(".sound");
+    sound.addEventListener("click", () => {
+      options.sound = !options.sound;
+      sound.setAttribute("aria-pressed", String(options.sound));
+      sound.textContent = options.sound ? "Sound on" : "Sound off";
+    });
+  </script>
+</body>
+</html>

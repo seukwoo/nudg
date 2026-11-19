@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Examples with sound.** Four new examples show the newest formats, each with a sound and a haptic: staggered cards whose tags pop in after them (1.7), a theme switch whose colors come from the page's CSS variables (1.8), confetti on a designed path (1.9), and the README's like button. The sounds are the project's own, synthesized by `scripts/sounds.py`. The examples site has a sound switch under the stage, off until a visitor turns it on.
+- **Fixed: a component's own theme switch.** The web adapter re-read colors only when `<html>` or `<body>` changed. It now also follows a `class` or `data-theme` change inside the player's root, so a component (or a shadow root) that switches its own theme is followed. Found while building the theme example.
 - **`nudg to-css` follows the scroll.** A `map` from a scroll offset (a header that shrinks, an accent that fades as a list scrolls) becomes a scroll-driven animation on the scroller's timeline, checked point by point against the runtime's map and in Chrome. Where scroll-driven animations aren't supported, the values stay as at the top.
 
 ## 1.13.0

@@ -178,7 +178,7 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
     for (const [name, hex] of Object.entries(readColors(colorNames.filter((n) => !supplied.has(n)), colorSource(), options.colors))) moved = runtime.color(name, hex, t, snap) || moved;
     if (moved) changed();
   };
-  const stopTheme = colorNames.length ? watchTheme(() => rereadColors()) : undefined;
+  const stopTheme = colorNames.length ? watchTheme(() => rereadColors(), root as Node | null) : undefined;
   const onSystemChange = () => {
     if (!followSystem || destroyed) return;
     runtime.setReducedMotion(system!.matches, now());

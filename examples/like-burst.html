@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Like with sound</title>
+  <style>
+    .like-demo { position: relative; display: grid; place-items: center; gap: 16px; width: 200px; height: 180px; font: 13px ui-sans-serif, system-ui, sans-serif; }
+    .like-demo .heart { display: grid; place-items: center; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .like-demo .heart svg { width: 28px; height: 28px; fill: #fff; }
+    .like-demo .layer { position: absolute; inset: 0; pointer-events: none; }
+    .like-demo .layer i { width: 7px; height: 7px; border-radius: 50%; background: #f43f5e; }
+    .like-demo .layer .soft { background: #fda4af; }
+    .like-demo .sound { padding: 6px 10px; border: 0; border-radius: 8px; background: #f3f4f6; font: inherit; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="like-demo">
+    <button class="heart" aria-label="Like" data-nudg="heart"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-10-9.3C.4 8.4 2.4 4.5 6.1 4.5c2.2 0 3.6 1.2 4.4 2.4h3c.8-1.2 2.2-2.4 4.4-2.4 3.7 0 5.7 3.9 4.1 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
+    <div class="layer" data-nudg="burst"><i data-nudg-piece></i><i data-nudg-piece class="soft"></i></div>
+    <button class="sound" aria-pressed="false">Sound off</button>
+  </div>
+  <!-- Host markup for like-burst.nudg.json: the README's like button. The pop, the haptic, the sound and the burst are all in the file. -->
+  <script type="module">
+    import { compileUrl, play } from "../dist/dom/index.js";
+    const { program } = await compileUrl("./like-burst.nudg.json");
+    const options = { sounds: { heart: "./sounds/heart.wav" }, sound: false };
+    play(program, document.body, options);
+    const sound = document.querySelector(".sound");
+    sound.addEventListener("click", () => {
+      options.sound = !options.sound;
+      sound.setAttribute("aria-pressed", String(options.sound));
+      sound.textContent = options.sound ? "Sound on" : "Sound off";
+    });
+  </script>
+</body>
+</html>

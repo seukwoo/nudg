@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.13.0
+
+Everything PlaySnack's migration found missing is in. An entry effect can wait (format 1.7), colors can come from the app's theme and follow it live (1.8), and confetti can follow a designed path (1.9). A page that runs no JavaScript gets plain CSS from the same file (`nudg to-css`). `nudg check` gives an agent one call that says what to fix itself and what needs the person. Files from 1.6 and earlier read as before.
 
 - **`nudg to-css`: a nudg file as plain CSS, for pages without JavaScript.**
   - **What it writes:** a rule per state, under a class or attribute the page toggles, or `:hover`, `:active` and `:focus` when the file enters the state that way. Transitions carry each motion: a tween as `cubic-bezier()`, a spring as `linear()`. `@starting-style` plays the way in on mount, a size from the element itself becomes a `translate` percentage, and colors are `oklab()`, so the browser blends them as nudg does.

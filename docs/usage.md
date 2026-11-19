@@ -240,12 +240,13 @@ The other direction from `from-css`: a nudg file as plain CSS, for a page that r
 - **Transitions** with each motion: a tween as `cubic-bezier()`, a spring as `linear()` with enough points to stay within the limits. Properties go to `translate`, `rotate` and `scale` (each moving on its own, as in nudg), `opacity`, `width`, `height`, `background-color`, `box-shadow` and `filter`. Colors are written in `oklab()`, so the browser blends them as nudg does.
 - **The way in on mount.** `--mount host.show` names the event the element is shown with (an adapter's `start`): the element rests where that event leads, and `@starting-style` holds where it starts, so it plays in as it mounts (Chrome 117, Safari 17.5, Firefox 129).
 - **Sizes from the element itself.** A value measured from the element's own width (x) or height (y) becomes a percentage of `translate`: `-100%`.
+- **Values that follow the scroll** (a `map` from `<scroller>.scroll.y` or `.x`): a scroll-driven animation on the scroller's own timeline (`scroll-timeline`, `animation-timeline`, `animation-range` over the map's points), so a header shrinks as the list scrolls with no script. Inside `@supports`, so where scroll-driven animations aren't supported (before Chrome 115, Safari 26) the values stay as at the top.
 - **Reduced motion:** a short linear transition, as nudg's runtime does.
 - A header comment marks the file as generated, and `nudg audit` counts it as on nudg; editing it by hand drops the header.
 
 **The proof.** For every change of state (and the mount), it plays nudg's runtime and the CSS's own timing, as the CSS declares them, at 60 points and two element sizes. With `--out`, it writes only within 0.5 px, 0.5° and 0.01. A change CSS can't follow exactly is listed with how far and when: a property that moves into a state differently depending on where it came from (CSS takes one timing per state), or a map with more than two points.
 
-**What the page loses without a script.** Listed, not worked around: following a drag, settling on the nearest state, timers, entry kicks and keyframes, loops, cues, particles, delays read from an input, and values measured from another element (the whole file is then left on nudg's runtime). Whether a static page gets a script is the person's decision.
+**What the page loses without a script.** Listed, not worked around: following a drag, settling on the nearest state, timers, entry kicks and keyframes, loops, cues, particles, delays read from an input, maps from inputs other than a scroll offset, and values measured from another element (the whole file is then left on nudg's runtime). Whether a static page gets a script is the person's decision.
 
 Over MCP, `nudg_to_css` returns the report and the CSS.
 

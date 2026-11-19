@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **`nudg to-css` follows the scroll.** A `map` from a scroll offset (a header that shrinks, an accent that fades as a list scrolls) becomes a scroll-driven animation on the scroller's timeline, checked point by point against the runtime's map and in Chrome. Where scroll-driven animations aren't supported, the values stay as at the top.
+
 ## 1.13.0
 
 Everything PlaySnack's migration found missing is in. An entry effect can wait (format 1.7), colors can come from the app's theme and follow it live (1.8), and confetti can follow a designed path (1.9). A page that runs no JavaScript gets plain CSS from the same file (`nudg to-css`). `nudg check` gives an agent one call that says what to fix itself and what needs the person. Files from 1.6 and earlier read as before.

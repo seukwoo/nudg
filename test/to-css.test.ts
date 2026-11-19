@@ -116,3 +116,52 @@ test("the audit counts CSS that to-css wrote as on nudg, and counts it again onc
   const edited = audit([{ path: "menu.css", text: css.replace(/^\/\*.*\*\/\n/, "") + "\n.x { transition: transform 0.2s; }" }]);
   assert.ok(edited.findings.length > 1, "its transitions are outside nudg again");
 });
+
+test("a map from a scroll offset becomes a scroll-driven animation, checked point by point", () => {
+  const r = toCss(example("scroll-header"));
+  assert.deepEqual(r.differences, []);
+  assert.ok(!r.lost.some((l) => /scroll/.test(l)));
+  assert.match(r.css, /\[data-nudg="scroller"\] \{\n  scroll-timeline: --nudg-scroller-y block;/);
+  assert.match(r.css, /@keyframes nudg-accent-scroller-y \{\n  0% \{ scale: 1; opacity: 1; \}\n  62\.5% \{ scale: 0\.7188 1; opacity: 0\.4; \}/);
+  assert.match(r.css, /@supports \(animation-timeline: scroll\(\)\)/);
+});
+
+test("in Chrome, a scroll-driven map follows the scroll as the runtime's map does", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const { launchBrowser, waitFor } = await import("../src/node/cdp.ts");
+  const { serveIfLocal } = await import("../src/node/observe.ts");
+  const program = example("scroll-header");
+  const { css } = toCss(program);
+  const { url, close } = await serveIfLocal("test/fixtures/host/presence.html");
+  const browser = await launchBrowser(chrome!);
+  try {
+    await browser.send("Page.navigate", { url });
+    await waitFor(() => browser.evaluate("window.__player ? 'ready' : ''"), 15_000);
+    const offsets = [0, 25, 50, 65, 80, 140];
+    const read = JSON.parse((await browser.evaluate(`(async () => {
+      window.__player.destroy();
+      document.body.innerHTML = '<div data-nudg="header" style="width:200px"><div data-nudg="accent" style="height:4px"></div></div><div data-nudg="scroller" style="height:100px;overflow:auto"><div style="height:1000px"></div></div>';
+      const style = document.createElement("style");
+      style.textContent = ${JSON.stringify(css)};
+      document.head.append(style);
+      const scroller = document.querySelector('[data-nudg="scroller"]');
+      const frame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const out = [];
+      for (const y of ${JSON.stringify(offsets)}) {
+        scroller.scrollTop = y;
+        await frame();
+        out.push({ height: getComputedStyle(document.querySelector('[data-nudg="header"]')).height, opacity: getComputedStyle(document.querySelector('[data-nudg="accent"]')).opacity });
+      }
+      return JSON.stringify(out);
+    })()`)) as string) as { height: string; opacity: string }[];
+    offsets.forEach((y, i) => {
+      const rt = createRuntime(program);
+      rt.input("scroller.scroll.y", y, 0);
+      const v = rt.sample(0);
+      assert.ok(Math.abs(parseFloat(read[i].height) - (v["header.height"] as number)) < 0.5, `header.height at ${y}px: CSS ${read[i].height}, nudg ${v["header.height"]}`);
+      assert.ok(Math.abs(parseFloat(read[i].opacity) - (v["accent.opacity"] as number)) < 0.01, `accent.opacity at ${y}px: CSS ${read[i].opacity}, nudg ${v["accent.opacity"]}`);
+    });
+  } finally {
+    await browser.close();
+    close();
+  }
+});

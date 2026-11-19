@@ -69,8 +69,33 @@ fun pieceRandom(seed: Int, wave: Int, index: Int, field: Int): Double {
 fun pieceAt(name: String, e: Emitter, wave: Int, index: Int, age: Double): Piece? {
     fun u(field: Int) = pieceRandom(e.seed, wave, index, field)
     fun pick(r: Pair<Double, Double>, field: Int) = r.first + u(field) * (r.second - r.first)
+    // Each piece's own wait (1.9), after its stagger.
+    val age = e.delay?.let { age - pick(it, 7) } ?: age
     val life = pick(e.life, 3)
     if (age < 0 || age > life) return null
+    e.path?.let { path ->
+        // A designed path (1.9): each property runs through the frames that name it, then holds.
+        val s = age / life
+        val start = listOf(0.0, 0.0, 0.0, 1.0, 1.0)
+        fun value(k: Int): Double? {
+            var at = 0.0
+            var from = start[k]
+            var ease = path.ease
+            var named = false
+            for ((j, f) in path.frames.withIndex()) {
+                val range = f.values[k] ?: continue
+                named = true
+                val to = pick(range, 16 + j * 5 + k)
+                if (s <= f.at) return from + (to - from) * easeAt(ease, (s - at) / (f.at - at))
+                at = f.at; from = to; ease = f.ease ?: path.ease
+            }
+            return if (named) from else null
+        }
+        val fade = if (e.fade > 0 && age > life - e.fade) maxOf(0.0, (life - age) / e.fade) else 1.0
+        return Piece(name, wave, index,
+            (u(5) - 0.5) * e.area.first + (value(0) ?: 0.0), (u(6) - 0.5) * e.area.second + (value(1) ?: 0.0),
+            value(2) ?: (pick(e.spin, 2) * age), pick(e.scale, 4) * (value(3) ?: 1.0), (value(4) ?: 1.0) * fade)
+    }
     val angle = Math.toRadians(pick(e.angle, 0))
     val speed = pick(e.speed, 1)
     val vx = speed * Math.cos(angle)
@@ -1073,7 +1098,7 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
 
     /** True while a wave has pieces still to launch or alive at [t] (1.4); drops the waves that are over. */
     private fun flying(t: Double): Boolean {
-        waves.removeAll { w -> val e = emitter(w.name); t - w.t0 > (e.count - 1) * e.stagger + e.life.second }
+        waves.removeAll { w -> val e = emitter(w.name); t - w.t0 > (e.count - 1) * e.stagger + (e.delay?.second ?: 0.0) + e.life.second }
         return waves.isNotEmpty()
     }
 

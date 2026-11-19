@@ -296,6 +296,34 @@ export interface Emitter {
   /** Seconds between one piece's launch and the next. */
   stagger: number;
   seed: number;
+  /** Seconds each piece waits after its stagger, drawn from the seed (1.9). */
+  delay?: [number, number];
+  /** A designed path instead of physics (1.9): each piece follows these frames over its life. */
+  path?: EmitterPath;
+}
+
+/**
+ * A designed path for an emitter's pieces (1.9). Times are shares of a piece's life; each
+ * value is an offset from where the piece starts (rotation in degrees, scale and opacity as
+ * factors), a [low, high] range drawn from the seed per piece. A property no frame names
+ * keeps its physics-free default: no offset, `spin` for rotation, full scale and opacity.
+ */
+export interface EmitterPath {
+  frames: PathFrame[];
+  /** The ease of the leg from the start to the first frame that names a property. */
+  ease: Ease;
+}
+
+export interface PathFrame {
+  /** Share of the piece's life, above 0 and up to 1, increasing. */
+  at: number;
+  x?: [number, number];
+  y?: [number, number];
+  rotation?: [number, number];
+  scale?: [number, number];
+  opacity?: [number, number];
+  /** The ease of the leg after this frame, for each property it names. */
+  ease?: Ease;
 }
 
 export interface Program {

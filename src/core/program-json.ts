@@ -7,7 +7,7 @@
 import type { Channels, Cue, Ease, Emitter, EntryEffect, Follow, Glide, Keyframe, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
 import { animateMaps } from "./walk.ts";
 
-export const PROGRAM_FORMAT = 14;
+export const PROGRAM_FORMAT = 15;
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
@@ -21,7 +21,7 @@ let wroteEntryDelay = false;
 /**
  * Program format 8 is frozen with 1.0; 9 adds a delay read from an input (1.2); 10 adds cues
  * (1.3); 11 adds emitters (1.4); 12 adds measured entry keyframes and an ease per frame (1.5); 13 lets an entry effect wait (1.7);
- * 14 adds colors the app names (1.8).
+ * 14 adds colors the app names (1.8); 15 adds emitter paths and delays (1.9).
  * A program says the oldest format that has everything it uses, so older runtimes
  * still read every program that doesn't use what they lack.
  */
@@ -32,7 +32,7 @@ export function programToJson(program: Program): Json {
   const written = machine(program.machine);
   const delayInput = animateMaps(program).some((t) => [...t.values()].some((m) => m.delayInput));
   const out: Record<string, Json> = {
-    nudgProgram: program.colors ? 14 : wroteEntryDelay ? 13 : wroteFrames ? 12 : program.emitters ? 11 : wroteCues ? 10 : delayInput ? 9 : 8,
+    nudgProgram: [...(program.emitters?.values() ?? [])].some((e) => e.path || e.delay) ? 15 : program.colors ? 14 : wroteEntryDelay ? 13 : wroteFrames ? 12 : program.emitters ? 11 : wroteCues ? 10 : delayInput ? 9 : 8,
     version: program.version,
     targets: program.targets,
     properties: [...program.properties].map(([key, p]) => ({ key, ...property(p) })),
@@ -65,7 +65,7 @@ const readCues = (j: any): Cue[] | undefined => (Array.isArray(j) ? j.map((c: an
 
 export function programFromJson(json: unknown): Program {
   const j = json as Record<string, any>;
-  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
   return {
     version: j.version,
     targets: j.targets,

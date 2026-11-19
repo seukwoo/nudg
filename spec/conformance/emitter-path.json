@@ -1,0 +1,261 @@
+{
+  "conformance": "1.9",
+  "name": "Emitter paths: each piece follows the designed frames, its values and its delay drawn from the seed, an ease per leg",
+  "doc": {
+    "nudg": "1.9",
+    "host": {
+      "events": [
+        "celebrate"
+      ]
+    },
+    "targets": [
+      "button",
+      "confetti"
+    ],
+    "values": {
+      "button.scale": 1
+    },
+    "emitters": {
+      "confetti": {
+        "from": "button",
+        "count": 4,
+        "area": [
+          40,
+          0
+        ],
+        "spin": [
+          0,
+          0
+        ],
+        "life": [
+          0.9,
+          1.3
+        ],
+        "fade": 0.2,
+        "scale": [
+          0.8,
+          1
+        ],
+        "stagger": 0,
+        "delay": [
+          0,
+          0.3
+        ],
+        "seed": 11,
+        "path": {
+          "ease": "out",
+          "frames": [
+            {
+              "at": 0.4,
+              "x": [
+                -60,
+                60
+              ],
+              "y": [
+                -160,
+                -120
+              ],
+              "rotation": [
+                -90,
+                90
+              ],
+              "ease": "in"
+            },
+            {
+              "at": 1,
+              "x": [
+                -90,
+                90
+              ],
+              "y": [
+                40,
+                80
+              ],
+              "rotation": [
+                -360,
+                360
+              ],
+              "opacity": 0.6
+            }
+          ]
+        }
+      }
+    },
+    "initial": "idle",
+    "states": {
+      "idle": {
+        "when": {
+          "host.celebrate": {
+            "emit": "confetti"
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0.1,
+      "send": "host.celebrate"
+    },
+    {
+      "t": 0.15,
+      "expect": {
+        "pieces": []
+      }
+    },
+    {
+      "t": 0.4,
+      "expect": {
+        "pieces": [
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 0,
+            "x": -8.101965336838582,
+            "y": -18.597676626285516,
+            "rotation": -10.657627170974802,
+            "scale": 0.8619017956312747,
+            "opacity": 0.9800238554532028
+          },
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 1,
+            "x": -8.009489518859377,
+            "y": -22.591246693598052,
+            "rotation": -4.549050610734074,
+            "scale": 0.975955122616142,
+            "opacity": 0.9703065080802218
+          },
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 2,
+            "x": -3.3291012583975306,
+            "y": -100.06473505417178,
+            "rotation": -27.857872511115886,
+            "scale": 0.8456895245704801,
+            "opacity": 0.8880059535295532
+          },
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 3,
+            "x": -11.916361602621205,
+            "y": -45.127909542601515,
+            "rotation": -24.51237932469964,
+            "scale": 0.9855184051208198,
+            "opacity": 0.9505899493815253
+          }
+        ]
+      }
+    },
+    {
+      "t": 0.7,
+      "expect": {
+        "pieces": [
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 0,
+            "x": 0.6284194232285039,
+            "y": -148.9454859471082,
+            "rotation": -85.35504138083274,
+            "scale": 0.8619017956312747,
+            "opacity": 0.7953252919882443
+          },
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 1,
+            "x": -53.64533971559838,
+            "y": -124.4664843418147,
+            "rotation": -25.0629964910926,
+            "scale": 0.975955122616142,
+            "opacity": 0.786378368261641
+          },
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 2,
+            "x": 1.8188113796095031,
+            "y": -154.12301598296864,
+            "rotation": -37.50798700407721,
+            "scale": 0.8456895245704801,
+            "opacity": 0.7387451295047001
+          },
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 3,
+            "x": -33.26536595684304,
+            "y": -153.07446308076882,
+            "rotation": -83.14631326803155,
+            "scale": 0.9855184051208198,
+            "opacity": 0.7768031594288958
+          }
+        ]
+      }
+    },
+    {
+      "t": 1.0,
+      "expect": {
+        "pieces": [
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 0,
+            "x": 0.6808378359620804,
+            "y": -97.72493932186003,
+            "rotation": 26.84151209728934,
+            "scale": 0.8619017956312747,
+            "opacity": 0.6602106797775757
+          },
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 1,
+            "x": -57.77855948231214,
+            "y": -71.08676230345554,
+            "rotation": -113.36843034690425,
+            "scale": 0.975955122616142,
+            "opacity": 0.6535416768458961
+          },
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 2,
+            "x": 12.00491548781477,
+            "y": -71.6364206258955,
+            "rotation": 79.48117768373235,
+            "scale": 0.8456895245704801,
+            "opacity": 0.634168541456169
+          },
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 3,
+            "x": -0.6198905373561985,
+            "y": -79.23592558413232,
+            "rotation": -123.10299557402797,
+            "scale": 0.9855184051208198,
+            "opacity": 0.6510579060948025
+          }
+        ]
+      }
+    },
+    {
+      "t": 1.4,
+      "expect": {
+        "pieces": []
+      }
+    },
+    {
+      "t": 1.75,
+      "expect": {
+        "pieces": [],
+        "settled": true
+      }
+    }
+  ]
+}

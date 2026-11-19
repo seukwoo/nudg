@@ -18,7 +18,8 @@ export interface Diagnostic { severity: Severity; code: string; message: string;
 export interface DropOptions { target?: string; height?: number; tilt?: number; motion?: SpringOptions; }
 export declare const EVENTS: readonly ["down", "up", "cancel", "tap", "dragstart", "dragend", "hoverstart", "hoverend", "focus", "blur", "longpress", "doubletap", "scrollup", "scrolldown", "scrollleft", "scrollright", "pinchstart", "pinchend"];
 export type Ease = "linear" | readonly [number, number, number, number];
-export interface Emitter { from: string; at: "center" | "top" | "bottom" | "left" | "right"; count: number; area: [number, number]; angle: [number, number]; speed: [number, number]; gravity: number; drag: number; spin: [number, number]; life: [number, number]; fade: number; scale: [number, number]; stagger: number; seed: number; }
+export interface Emitter { from: string; at: "center" | "top" | "bottom" | "left" | "right"; count: number; area: [number, number]; angle: [number, number]; speed: [number, number]; gravity: number; drag: number; spin: [number, number]; life: [number, number]; fade: number; scale: [number, number]; stagger: number; seed: number; delay?: [number, number]; path?: EmitterPath; }
+export interface EmitterPath { frames: PathFrame[]; ease: Ease; }
 export type EntryEffect = SpringMotion | KeyframesEffect;
 export interface FiredCue { t: number; sound?: string; haptic?: string; intensity: number; pitch: number; }
 export interface Follow { input: string; range?: [MeasuredEndpoint, MeasuredEndpoint]; overdrag: number; multiply?: boolean; }
@@ -45,8 +46,9 @@ export interface MeasuredTransition { from: string; event: string; to: string; p
 export type Motion = SpringMotion | TweenMotion;
 export interface NudgContract { targets: string; events: string; inputs: string; states: string; }
 export type NudgDocument = Record<string, unknown>;
-export declare const PROGRAM_FORMAT = 14;
+export declare const PROGRAM_FORMAT = 15;
 export declare const PROPERTIES: Record<string, PropertyKind>;
+export interface PathFrame { at: number; x?: [number, number]; y?: [number, number]; rotation?: [number, number]; scale?: [number, number]; opacity?: [number, number]; ease?: Ease; }
 export type Perceptibility = "imperceptible" | "subtle" | "clear";
 export interface Piece { emitter: string; wave: number; index: number; x: number; y: number; rotation: number; scale: number; opacity: number; }
 export interface PlayerHost { now(): number; frame(fn: () => void): () => void; }
@@ -83,7 +85,7 @@ export interface ToastOptions { target?: string; duration?: number; rise?: numbe
 export interface ToggleOptions { knob?: string; track?: string; travel?: number; colors?: [string, string]; motion?: SpringOptions; initial?: "off" | "on"; }
 export interface Transition { to?: string; nearest?: { states: string[]; by: string; momentum: number; }; animate: Map<string, Motion>; step?: Map<string, number>; commit?: string[]; cues?: Cue[]; emit?: string[]; }
 export interface TweenMotion { kind: "tween"; duration: number; ease: Ease; delay?: number; delayInput?: DelayInput; }
-export declare const VERSION = "1.8";
+export declare const VERSION = "1.9";
 export type Value = number | string;
 export declare function actionTarget(program: Program, action: string): string;
 export declare function actionsToEvents(targetOf: string | ((action: string) => string), marks: HostMark[]): { t: number; event: string; }[];

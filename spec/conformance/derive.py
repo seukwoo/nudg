@@ -3256,6 +3256,136 @@ def validation_v1_8_cases():
     })
 
 
+# --- 1.9: emitter paths -----------------------------------------------------------
+
+PATH_PROPS = ["x", "y", "rotation", "scale", "opacity"]
+PATH_START = {"x": 0.0, "y": 0.0, "rotation": 0.0, "scale": 1.0, "opacity": 1.0}
+
+
+def path_piece_at(name, e, wave, index, age):
+    """A piece on a designed path (1.9): each frame's values are drawn from the seed."""
+    u = lambda f: piece_random(e["seed"], wave, index, f)
+    pick = lambda r, f: r[0] + u(f) * (r[1] - r[0])
+    age -= pick(e.get("delay", [0, 0]), 7)
+    life = pick(e["life"], 3)
+    if age < 0 or age > life:
+        return None
+    s = age / life
+    path = e["path"]
+    base_ease = EASES[path.get("ease", "out")] if isinstance(path.get("ease", "out"), str) else tuple(path["ease"])
+
+    def value(prop):
+        k = PATH_PROPS.index(prop)
+        pts = [(0.0, PATH_START[prop], base_ease)]
+        for j, f in enumerate(path["frames"]):
+            if prop in f:
+                r = f[prop] if isinstance(f[prop], list) else [f[prop], f[prop]]
+                fe = f.get("ease")
+                ease = base_ease if fe is None else (EASES[fe] if isinstance(fe, str) else tuple(fe))
+                pts.append((f["at"], pick(r, 16 + j * 5 + k), ease))
+        if len(pts) == 1:
+            return None
+        for i in range(len(pts) - 1):
+            a, b = pts[i], pts[i + 1]
+            if s <= b[0]:
+                w = ease_at(a[2], (s - a[0]) / (b[0] - a[0]))
+                return a[1] + (b[1] - a[1]) * w
+        return pts[-1][1]
+
+    x0 = (u(5) - 0.5) * e["area"][0]
+    y0 = (u(6) - 0.5) * e["area"][1]
+    x, y, rot, sc, op = (value(p) for p in PATH_PROPS)
+    fade = max(0.0, (life - age) / e["fade"]) if e["fade"] > 0 and age > life - e["fade"] else 1.0
+    return {
+        "emitter": name, "wave": wave, "index": index,
+        "x": x0 + (x or 0.0), "y": y0 + (y or 0.0),
+        "rotation": rot if rot is not None else pick(e["spin"], 2) * age,
+        "scale": pick(e["scale"], 4) * (sc if sc is not None else 1.0),
+        "opacity": (op if op is not None else 1.0) * fade,
+    }
+
+
+CELEBRATE_PATH = {
+    "from": "button", "count": 4, "area": [40, 0], "spin": [0, 0], "life": [0.9, 1.3], "fade": 0.2, "scale": [0.8, 1],
+    "stagger": 0, "delay": [0, 0.3], "seed": 11,
+    "path": {
+        "ease": "out",
+        "frames": [
+            {"at": 0.4, "x": [-60, 60], "y": [-160, -120], "rotation": [-90, 90], "ease": "in"},
+            {"at": 1, "x": [-90, 90], "y": [40, 80], "rotation": [-360, 360], "opacity": 0.6},
+        ],
+    },
+}
+
+
+def emitter_path_cases():
+    doc = {
+        "nudg": "1.9",
+        "host": {"events": ["celebrate"]},
+        "targets": ["button", "confetti"],
+        "values": {"button.scale": 1},
+        "emitters": {"confetti": CELEBRATE_PATH},
+        "initial": "idle",
+        "states": {"idle": {"when": {"host.celebrate": {"emit": "confetti"}}}},
+    }
+    full = {"at": "center", **CELEBRATE_PATH}
+
+    def all_pieces(t, t0=0.1):
+        out = []
+        for i in range(full["count"]):
+            p = path_piece_at("confetti", full, 0, i, t - t0 - i * full["stagger"])
+            if p:
+                out.append(p)
+        return out
+
+    steps = [{"t": 0.1, "send": "host.celebrate"}]
+    for t in (0.15, 0.4, 0.7, 1.0, 1.4):
+        steps.append({"t": t, "expect": {"pieces": all_pieces(t)}})
+    # The last piece lands at most delay 0.3 + life 1.3 after the wave.
+    steps.append({"t": 1.75, "expect": {"pieces": [], "settled": True}})
+    write("emitter-path", {
+        "conformance": "1.9",
+        "name": "Emitter paths: each piece follows the designed frames, its values and its delay drawn from the seed, an ease per leg",
+        "doc": doc,
+        "steps": steps,
+    })
+
+
+def validation_v1_9_cases():
+    base = {
+        "nudg": "1.9", "host": {"events": ["go"]}, "targets": ["button", "confetti"], "values": {"button.scale": 1},
+        "emitters": {"confetti": {"from": "button", "path": {"frames": [{"at": 0.4, "y": [-160, -120]}, {"at": 1, "y": 60}]}}},
+        "initial": "idle", "states": {"idle": {"when": {"host.go": {"emit": "confetti"}}}},
+    }
+
+    def doc():
+        return json.loads(json.dumps(base))
+
+    path = "/emitters/confetti/path"
+    out = [("valid", doc(), [])]
+    d = doc(); d["nudg"] = "1.8"
+    out.append(("needs-version", d, [("needs-version", path)]))
+    d = doc(); d["emitters"]["confetti"]["delay"] = [0, 0.2]; d["nudg"] = "1.8"; d["emitters"]["confetti"].pop("path")
+    out.append(("delay-needs-version", d, [("needs-version", "/emitters/confetti/delay")]))
+    d = doc(); d["emitters"]["confetti"]["path"]["frames"][1]["at"] = 0.3
+    out.append(("order", d, [("invalid-value", path + "/frames/1/at")]))
+    d = doc(); d["emitters"]["confetti"]["path"]["frames"][0]["y"] = [-120, -160]
+    out.append(("range", d, [("invalid-value", path + "/frames/0/y")]))
+    d = doc(); d["emitters"]["confetti"]["path"]["frames"][0]["size"] = 2
+    out.append(("unknown", d, [("unknown-key", path + "/frames/0/size")]))
+    d = doc(); d["emitters"]["confetti"]["path"]["frames"] = []
+    out.append(("empty", d, [("invalid-value", path + "/frames")]))
+    d = doc(); d["emitters"]["confetti"]["gravity"] = 900
+    out.append(("with-physics", d, [("path-with-physics", "/emitters/confetti/gravity")]))
+    d = doc(); d["emitters"]["confetti"]["delay"] = [0.3, 0.1]
+    out.append(("delay", d, [("invalid-value", "/emitters/confetti/delay")]))
+    write("validation-1.9", {
+        "conformance": "1.9",
+        "name": "Validator (1.9): emitter paths and delays",
+        "documents": [{"name": n, "doc": dd, "errors": [{"code": c, "path": pp} for c, pp in e]} for n, dd, e in out],
+    })
+
+
 if __name__ == "__main__":
     toggle_cases()
     spring_form_cases()
@@ -3316,5 +3446,7 @@ if __name__ == "__main__":
     validation_v1_7_cases()
     host_color_cases()
     validation_v1_8_cases()
+    emitter_path_cases()
+    validation_v1_9_cases()
     rest_cases()
     print("wrote", ", ".join(sorted(f for f in os.listdir(HERE) if f.endswith(".json"))))

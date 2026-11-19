@@ -1,6 +1,6 @@
 # The nudg format, version 1.2
 
-The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [conformance suite](../spec/conformance/), the [JSON Schema](../spec/nudg-1.8.schema.json) describes the structure for editors, and every validator code is listed in the [error reference](errors.md). For the reasoning behind the format, see [Design](design.md).
+The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [conformance suite](../spec/conformance/), the [JSON Schema](../spec/nudg-1.9.schema.json) describes the structure for editors, and every validator code is listed in the [error reference](errors.md). For the reasoning behind the format, see [Design](design.md).
 
 **Stability.** Format 1.0 is stable. Within 1.x, files only gain: new fields, events, inputs and error codes may appear in a later 1.x version, but nothing a 1.0 file says changes meaning; a file opts into a 1.x version's rules by declaring it. Runtimes read every earlier version (0.1 to 1.0) unchanged; each was a superset of the one before, and `nudg upgrade` raises a file to the current version, 1.2. The [appendix](#appendix-format-history) lists what each version added.
 
@@ -30,7 +30,7 @@ The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [
 
 A nudg file is strict JSON with the extension `.nudg.json`. Every platform already parses it, JSON Schema describes it, and LLMs write it reliably, so there is no parser to maintain and nothing new to learn. A friendlier syntax can be added later as sugar that compiles to the same model, but JSON stays the source of truth.
 
-A file may start with `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.8.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
+A file may start with `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.9.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
 
 JSON has no comments. Instead, any object may carry a `note` string. Runtimes ignore it. Unlike a comment, a note survives tools rewriting the file, and an AI can read it as part of the data.
 
@@ -523,6 +523,22 @@ h = seed·0x9E3779B1 + wave·0x85EBCA77 + index·0xC2B2AE3D + field·0x27D4EB2F 
 h ^= h >>> 15;  h = h·0x2C1B3C6D;  h ^= h >>> 12;  h = h·0x297A2D39;  h ^= h >>> 15;  u = h / 2^32
 ```
 
+**Designed paths (1.9).** A celebration planned beat by beat (a peak at 40% of each piece's life, then a fall past the start) is a `path` instead of physics:
+
+```json
+"confetti": { "from": "button", "count": 24, "life": [0.9, 1.3], "delay": [0, 0.3], "spin": 0,
+  "path": { "ease": "out", "frames": [
+    { "at": 0.4, "x": [-60, 60], "y": [-160, -120], "rotation": [-90, 90], "ease": "in" },
+    { "at": 1, "x": [-90, 90], "y": [40, 80], "rotation": [-360, 360], "opacity": 0.6 }
+  ] } }
+```
+
+- **Frames.** `at` is a share of the piece's life, above 0 and up to 1, increasing. A frame may name `x` and `y` (offsets from where the piece starts), `rotation` (degrees), `scale` and `opacity` (factors). Each is a number or `[low, high]`, drawn per piece, so the arc is designed once and every piece varies within it.
+- **Between frames.** Each property runs from its start (no offset, no rotation, scale and opacity 1) through the frames that name it, and holds after the last. A leg takes the `ease` of the frame it starts from; the first leg takes the path's `ease` (default `out`).
+- **What still applies.** `life`, `fade`, `area`, `stagger`, `count` and `seed` as for physics. `scale` multiplies the path's scale, so pieces differ in size. A path that names no rotation turns at `spin`. `angle`, `speed`, `gravity` and `drag` are physics only (`path-with-physics`).
+- **`delay`** (1.9, any emitter): seconds each piece waits after its stagger, a range drawn per piece.
+- **Fields drawn from the hash:** delay 7, and frame `j`'s value of property `k` (x 0, y 1, rotation 2, scale 3, opacity 4) from `16 + 5j + k`.
+
 **At runtime.**
 - `pieces(emitter?)` lists the pieces alive at the runtime's time, with x and y relative to the start point.
 - While pieces fly, the runtime is neither resting nor settled, so `onSettle` comes after the last one.
@@ -572,7 +588,7 @@ Settle is reported from the frame loop, never from inside the call that sent the
 
 ## Appendix: format history
 
-Each version added to the one before and kept everything it had. A 1.8 runtime reads them all; `nudg upgrade` raises a file to 1.8. The conformance cases named here define each addition across TypeScript, Swift and Kotlin; compiled programs gained a format when they needed new fields.
+Each version added to the one before and kept everything it had. A 1.9 runtime reads them all; `nudg upgrade` raises a file to 1.9. The conformance cases named here define each addition across TypeScript, Swift and Kotlin; compiled programs gained a format when they needed new fields.
 
 | Format | Added | Conformance | Program |
 |---|---|---|---|
@@ -603,5 +619,6 @@ Each version added to the one before and kept everything it had. A 1.8 runtime r
 | 1.6 | `shadowSpread`, and an inner shadow: `innerX`, `innerY`, `innerBlur`, `innerSpread`, `innerColor` | `shadow-spread-inner`, `validation-1.6` | as 1.5 |
 | 1.7 | A `delay` on an entry kick or entry keyframes; `keep` | `entry-delay`, `entry-delay-leave`, `validation-1.7` | 13, only when used |
 | 1.8 | Colors the app names (`host.colors`, `{ "color": name }`) | `host-colors`, `host-colors-start`, `validation-1.8` | 14, only when used |
+| 1.9 | An emitter `path` (designed frames, seeded ranges) and `delay` | `emitter-path`, `validation-1.9` | 15, only when used |
 
 The `rest` case defines rest and lifecycle across all of them. Before 0.5, `map` and `follow` read only properties and drag inputs; before 0.9, ranges and map points were numbers; and so on: a feature used in a file that declares an older version is a `needs-version` error whose hint names the version that added it.

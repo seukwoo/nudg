@@ -85,8 +85,30 @@ public func pieceRandom(_ seed: Int, _ wave: Int, _ index: Int, _ field: Int) ->
 public func pieceAt(_ name: String, _ e: Emitter, _ wave: Int, _ index: Int, _ age: Double) -> Piece? {
   let u = { (field: Int) in pieceRandom(e.seed, wave, index, field) }
   let pick = { (r: (Double, Double), field: Int) in r.0 + u(field) * (r.1 - r.0) }
+  // Each piece's own wait (1.9), after its stagger.
+  let age = e.delay.map { age - pick($0, 7) } ?? age
   let life = pick(e.life, 3)
   if age < 0 || age > life { return nil }
+  if let path = e.path {
+    // A designed path (1.9): each property runs through the frames that name it, then holds.
+    let s = age / life
+    let start = [0.0, 0, 0, 1, 1]
+    func value(_ k: Int) -> Double? {
+      var at = 0.0, from = start[k], ease = path.ease, named = false
+      for (j, f) in path.frames.enumerated() {
+        guard let range = f.values[k] else { continue }
+        named = true
+        let to = pick(range, 16 + j * 5 + k)
+        if s <= f.at { return from + (to - from) * easeAt(ease, (s - at) / (f.at - at)) }
+        (at, from, ease) = (f.at, to, f.ease ?? path.ease)
+      }
+      return named ? from : nil
+    }
+    let fade = e.fade > 0 && age > life - e.fade ? max(0, (life - age) / e.fade) : 1
+    return Piece(emitter: name, wave: wave, index: index,
+      x: (u(5) - 0.5) * e.area.0 + (value(0) ?? 0), y: (u(6) - 0.5) * e.area.1 + (value(1) ?? 0),
+      rotation: value(2) ?? pick(e.spin, 2) * age, scale: pick(e.scale, 4) * (value(3) ?? 1), opacity: (value(4) ?? 1) * fade)
+  }
   let angle = pick(e.angle, 0) * .pi / 180
   let speed = pick(e.speed, 1)
   let vx = speed * cos(angle), vy = speed * sin(angle)
@@ -1121,7 +1143,7 @@ public final class Runtime {
 
   /** True while a wave has pieces still to launch or alive at `t` (1.4); drops the waves that are over. */
   private func flying(_ t: Double) -> Bool {
-    waves.removeAll { w in let e = emitter(w.name); return t - w.t0 > Double(e.count - 1) * e.stagger + e.life.1 }
+    waves.removeAll { w in let e = emitter(w.name); return t - w.t0 > Double(e.count - 1) * e.stagger + (e.delay?.1 ?? 0) + e.life.1 }
     return !waves.isEmpty
   }
 

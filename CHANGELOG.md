@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Format 1.9: confetti on a designed path** ([#163](https://github.com/seukwoo/nudg/issues/163)).
+  - **What's new:** an emitter may give its pieces a `path` instead of physics: frames at shares of each piece's life, with offsets, rotation, scale and opacity, each a `[low, high]` range drawn from the seed, and an ease per leg. A `delay` range lets each piece wait its own time.
+  - **What it's for:** a celebration planned beat by beat (rise to a peak at 40%, fall past the start) used to need one Web Animation per piece in the app. Now it is one emitter in the file, placed the same on every platform, and testable.
+  - **Conformance:** TypeScript, Swift and Kotlin share `emitter-path` and `validation-1.9`. A compiled program that uses it is format 15.
+
 - **Format 1.8: colors the app names** ([#162](https://github.com/seukwoo/nudg/issues/162)).
   - **What's new:** a file names colors under `host.colors`, each with a default, and uses `{ "color": "hover" }` in `values` or `set` where it would write a hex.
   - **What it's for:** a themed app's tints, which change with light and dark and while the app runs. When the theme changes, each property showing a color moves to the new one with its own motion.

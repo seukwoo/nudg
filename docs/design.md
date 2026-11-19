@@ -896,7 +896,7 @@ Status: implemented as format 1.8 (2026-11-19); see [the spec](spec.md#colors-th
 
 ## Proposal: confetti with designed paths (#163)
 
-Status: proposed 2026-11-13. PlaySnack's celebration is a planned set of pieces. Each piece has a start, a peak at 40% of its life, a fall past the start, a spin, a duration, a delay and a color, and plays with Web Animations ([#163](https://github.com/seukwoo/nudg/issues/163)). The 1.4 emitter flies pieces by physics (seeded ranges of angle, speed, gravity and drag), so a designed arc can't be reproduced, and one player per piece is what the guide says not to do.
+Status: implemented as format 1.9 (2026-11-19); see [the spec](spec.md#particles-14). Built as proposed, plus: each leg takes the ease of the frame it starts from (as entry keyframes do), a property no frame names keeps its default (rotation turns at `spin`), `scale` multiplies the path's scale, and physics fields next to a path are an error (`path-with-physics`). Proposed 2026-11-13. PlaySnack's celebration is a planned set of pieces. Each piece has a start, a peak at 40% of its life, a fall past the start, a spin, a duration, a delay and a color, and plays with Web Animations ([#163](https://github.com/seukwoo/nudg/issues/163)). The 1.4 emitter flies pieces by physics (seeded ranges of angle, speed, gravity and drag), so a designed arc can't be reproduced, and one player per piece is what the guide says not to do.
 
 ### Proposed: paths in the emitter
 

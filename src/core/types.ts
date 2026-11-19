@@ -162,6 +162,8 @@ export interface Property {
   /** For a mapped property, its value at the source's base. */
   base: Channels;
   map?: PropertyMap;
+  /** A base color the app names (1.8), resolved as the app supplies it. `base` holds its default. */
+  color?: string;
   /** Bounds for step, commit and follow (v0.3); numeric properties only. */
   min?: number;
   max?: number;
@@ -224,6 +226,8 @@ export interface State {
   measure: Map<string, Measure>;
   /** Entries of `set` read from an input (v0.17); their `set` value is a placeholder. */
   input: Map<string, InputTarget>;
+  /** Entries of `set` that are colors the app names (1.8); their `set` value is the default. */
+  color?: Map<string, string>;
   follow: Map<string, Follow>;
   /** Properties that glide on with their velocity while the state is active (v0.16). */
   glide: Map<string, Glide>;
@@ -257,6 +261,8 @@ export interface HostDeclaration {
   inputs: Map<string, { range?: [number, number] }>;
   /** Custom property names (1.3), drawn by the host: target.custom.<name>. */
   custom?: string[];
+  /** Colors the app names and supplies (1.8), each with the color used until it does. */
+  colors?: Map<string, { default: Channels }>;
 }
 
 /**
@@ -303,6 +309,8 @@ export interface Program {
   machine: Machine;
   /** Emitters by name (1.4); each name is also a target, where its pieces are drawn. */
   emitters?: Map<string, Emitter>;
+  /** Colors the app names (1.8), by name, with the color each starts as until the app supplies it. */
+  colors?: Map<string, Channels>;
   /** Critique codes a person decided to keep (1.7): `nudg check` and critique don't raise them again. */
   keep?: string[];
 }

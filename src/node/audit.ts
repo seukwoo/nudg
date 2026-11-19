@@ -89,6 +89,9 @@ const NUDG_CSS = new Set(["transform", "translate", "rotate", "scale", "opacity"
 /** Something that moves on screen, near a frame loop: a style, a transform, a scroll, or a setter of a moving value. */
 const MOVES = /\.style\b|style=\{|\.setProperty\(|transform|translate|opacity|scroll(To|Top|Left|By)\b|\bset(X|Y|Pos|Position|Offset|Scale|Rotation|Angle|Opacity|Progress|Height|Width|Top|Left|On|Shown|Visible)\b|\.(x|y|left|top)\s*=(?!=)/;
 
+/** A background or color from a CSS variable: a theme tint, which a file takes as a color the app names (1.8). */
+const THEMED = /(?:background(?:-color)?|[^-]color)\s*:\s*var\(--/;
+
 /** Playback the person started: music, a preview, a recording. */
 const MEDIA = /preview|song|track|music|bgm|playlist|podcast|recording|voice/i;
 
@@ -166,7 +169,7 @@ export function audit(files: { path: string; text: string }[]): Audit {
       // A transition of something that moves; colors and borders alone are left to CSS.
       const tr = /(?:^|[\s;{"'`])transition(?:-property)?\s*:\s*([^\s;}"'`][^;}"'`]*)/.exec(line) ?? /\btransition\s*:\s*["'`]([^"'`]+)/.exec(line);
       if (tr && /\b(all|transform|opacity|translate|scale|rotate|top|left|right|bottom|width|height|max-height)\b/.test(tr[1]) && !/\bnone\b/.test(tr[1]))
-        add(i, "css-transition", "a nudg file on the element (a preset, or playEach for every match); on an element nudg moves, the adapter already turns this off");
+        add(i, "css-transition", `a nudg file on the element (a preset, or playEach for every match); on an element nudg moves, the adapter already turns this off${THEMED.test(text) ? "; tints from theme variables (var(--x)) are colors the app names: host.colors, { \"color\": \"x\" } (1.8)" : ""}`);
       if (/\.animate\(\s*[[{]/.test(line)) add(i, "web-animation", "playDoc(file, element) with entry keyframes or a transition");
       for (const [re, use, gap] of LIBRARIES) if (re.test(line) && /\b(import|require)\b/.test(line)) add(i, "motion-library", use, gap);
       const style = /\.style\.(transform|opacity|translate|scale|rotate)\s*=(?!=)/.exec(line);

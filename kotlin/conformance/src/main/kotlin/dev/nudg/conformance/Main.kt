@@ -25,13 +25,15 @@ fun main(args: Array<String>) {
         val name = "${file.name}: ${c["name"]}"
         try {
             val program = Program.decode(File(dir, "programs/" + file.name.removeSuffix(".json") + ".program.json").readText())
-            val rt = Runtime(program, (c["start"] as? List<*>)?.map { it as String } ?: emptyList(), c["reducedMotion"] as? Boolean ?: false)
+            val colors = (c["colors"] as? Map<*, *>)?.entries?.associate { (k, v) -> k as String to v as String } ?: emptyMap()
+            val rt = Runtime(program, (c["start"] as? List<*>)?.map { it as String } ?: emptyList(), c["reducedMotion"] as? Boolean ?: false, colors)
             val problems = ArrayList<String>()
             for (s in steps) {
                 val step = s as Map<*, *>
                 val t = step["t"] as Double
                 (step["reducedMotion"] as? Boolean)?.let { rt.setReducedMotion(it, t) }
                 (step["input"] as? String)?.let { if (!rt.input(it, step["value"] as Double, t)) problems.add("input $it at ${t}s was refused") }
+                (step["color"] as? String)?.let { if (!rt.color(it, step["value"] as String, t)) problems.add("color $it at ${t}s was refused") }
                 (step["send"] as? String)?.let { ev ->
                     val handled = rt.send(ev, t)
                     (step["handled"] as? Boolean)?.let { if (it != handled) problems.add("$ev at ${t}s handled $handled, expected $it") }

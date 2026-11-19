@@ -101,6 +101,7 @@ public let map: PropertyMap?
 public let measure: Measure?
 public let min: Double?
 public let max: Double?
+public var color: String?
 public struct Follow
 public let input: String
 public let range: (MeasuredEndpoint, MeasuredEndpoint)?
@@ -139,6 +140,7 @@ public let timers: [Timer]
 public let machine: Machine?
 public let cues: [Cue]
 public let emit: [String]
+public let color: [String: String]
 public final class Machine
 public enum Kind
 public let kind: Kind
@@ -164,6 +166,7 @@ public let properties: [(String, Property)]
 public let animate: [String: Motion]
 public let machine: Machine
 public var emitters: [(String, Emitter)]
+public var colors: [(String, [Double])]
 public func property(_ key: String) -> Property?
 public enum DecodeError: Error, CustomStringConvertible
 public var description: String
@@ -196,6 +199,9 @@ public init(_ program: Program, state: [String]
 public func takeCues() -> [FiredCue]
 public func send(_ event: String, at t: Double) throws -> Bool
 public func setReducedMotion(_ on: Bool, at t: Double) throws
+public var colorNames: [String]
+public func color(_ name: String, red: Double, green: Double, blue: Double, alpha: Double
+public func color(_ name: String, hex: String, at t: Double, snap: Bool
 public func input(_ name: String, _ value: Double, at t: Double) throws -> Bool
 public func sample(_ t: Double) throws -> [String: Value]
 public func state() -> [String]
@@ -219,6 +225,7 @@ public func setReducedMotion(_ on: Bool)
 public func time(at date: Date) -> Double
 public func send(_ event: String) -> Bool
 public func input(_ name: String, _ value: Double) -> Bool
+public func color(_ name: String, _ color: Color) -> Bool
 public func values(at date: Date) -> [String: Value]
 public func settled(at date: Date) -> Bool
 public var looping: Bool

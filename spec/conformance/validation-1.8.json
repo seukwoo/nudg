@@ -1,0 +1,423 @@
+{
+  "conformance": "1.8",
+  "name": "Validator (1.8): colors the app names",
+  "documents": [
+    {
+      "name": "valid",
+      "doc": {
+        "nudg": "1.8",
+        "note": "A row tinted on hover with colors from the app's theme, which can change while it shows.",
+        "host": {
+          "colors": {
+            "surface": {
+              "default": "#FFFFFF"
+            },
+            "hover": {
+              "default": "#E5E7EB"
+            }
+          }
+        },
+        "targets": [
+          "row"
+        ],
+        "values": {
+          "row.color": {
+            "color": "surface"
+          }
+        },
+        "animate": {
+          "row.color": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "out"
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "row.hoverstart": "over"
+            }
+          },
+          "over": {
+            "set": {
+              "row.color": {
+                "color": "hover"
+              }
+            },
+            "when": {
+              "row.hoverend": "idle"
+            }
+          }
+        }
+      },
+      "errors": []
+    },
+    {
+      "name": "older-format",
+      "doc": {
+        "nudg": "1.7",
+        "note": "A row tinted on hover with colors from the app's theme, which can change while it shows.",
+        "host": {
+          "colors": {
+            "surface": {
+              "default": "#FFFFFF"
+            },
+            "hover": {
+              "default": "#E5E7EB"
+            }
+          }
+        },
+        "targets": [
+          "row"
+        ],
+        "values": {
+          "row.color": {
+            "color": "surface"
+          }
+        },
+        "animate": {
+          "row.color": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "out"
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "row.hoverstart": "over"
+            }
+          },
+          "over": {
+            "set": {
+              "row.color": {
+                "color": "hover"
+              }
+            },
+            "when": {
+              "row.hoverend": "idle"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "needs-version",
+          "path": "/host/colors"
+        },
+        {
+          "code": "needs-version",
+          "path": "/values/row.color"
+        },
+        {
+          "code": "needs-version",
+          "path": "/states/over/set/row.color"
+        }
+      ]
+    },
+    {
+      "name": "undeclared",
+      "doc": {
+        "nudg": "1.8",
+        "note": "A row tinted on hover with colors from the app's theme, which can change while it shows.",
+        "host": {
+          "colors": {
+            "surface": {
+              "default": "#FFFFFF"
+            },
+            "hover": {
+              "default": "#E5E7EB"
+            }
+          }
+        },
+        "targets": [
+          "row"
+        ],
+        "values": {
+          "row.color": {
+            "color": "surface"
+          }
+        },
+        "animate": {
+          "row.color": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "out"
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "row.hoverstart": "over"
+            }
+          },
+          "over": {
+            "set": {
+              "row.color": {
+                "color": "hovr"
+              }
+            },
+            "when": {
+              "row.hoverend": "idle"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "undeclared-host-color",
+          "path": "/states/over/set/row.color/color"
+        }
+      ]
+    },
+    {
+      "name": "no-default",
+      "doc": {
+        "nudg": "1.8",
+        "note": "A row tinted on hover with colors from the app's theme, which can change while it shows.",
+        "host": {
+          "colors": {
+            "surface": {
+              "default": "#FFFFFF"
+            },
+            "hover": {}
+          }
+        },
+        "targets": [
+          "row"
+        ],
+        "values": {
+          "row.color": {
+            "color": "surface"
+          }
+        },
+        "animate": {
+          "row.color": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "out"
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "row.hoverstart": "over"
+            }
+          },
+          "over": {
+            "set": {
+              "row.color": {
+                "color": "hover"
+              }
+            },
+            "when": {
+              "row.hoverend": "idle"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "missing-default",
+          "path": "/host/colors/hover"
+        }
+      ]
+    },
+    {
+      "name": "default-not-hex",
+      "doc": {
+        "nudg": "1.8",
+        "note": "A row tinted on hover with colors from the app's theme, which can change while it shows.",
+        "host": {
+          "colors": {
+            "surface": {
+              "default": "#FFFFFF"
+            },
+            "hover": {
+              "default": "var(--hover)"
+            }
+          }
+        },
+        "targets": [
+          "row"
+        ],
+        "values": {
+          "row.color": {
+            "color": "surface"
+          }
+        },
+        "animate": {
+          "row.color": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "out"
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "row.hoverstart": "over"
+            }
+          },
+          "over": {
+            "set": {
+              "row.color": {
+                "color": "hover"
+              }
+            },
+            "when": {
+              "row.hoverend": "idle"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/host/colors/hover/default"
+        }
+      ]
+    },
+    {
+      "name": "not-a-color-property",
+      "doc": {
+        "nudg": "1.8",
+        "note": "A row tinted on hover with colors from the app's theme, which can change while it shows.",
+        "host": {
+          "colors": {
+            "surface": {
+              "default": "#FFFFFF"
+            },
+            "hover": {
+              "default": "#E5E7EB"
+            }
+          }
+        },
+        "targets": [
+          "row"
+        ],
+        "values": {
+          "row.color": {
+            "color": "surface"
+          },
+          "row.y": 0
+        },
+        "animate": {
+          "row.color": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "out"
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "row.hoverstart": "over"
+            }
+          },
+          "over": {
+            "set": {
+              "row.color": {
+                "color": "hover"
+              },
+              "row.y": {
+                "color": "hover"
+              }
+            },
+            "when": {
+              "row.hoverend": "idle"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-type",
+          "path": "/states/over/set/row.y"
+        }
+      ]
+    },
+    {
+      "name": "not-in-keyframes",
+      "doc": {
+        "nudg": "1.8",
+        "note": "A row tinted on hover with colors from the app's theme, which can change while it shows.",
+        "host": {
+          "colors": {
+            "surface": {
+              "default": "#FFFFFF"
+            },
+            "hover": {
+              "default": "#E5E7EB"
+            }
+          }
+        },
+        "targets": [
+          "row"
+        ],
+        "values": {
+          "row.color": {
+            "color": "surface"
+          }
+        },
+        "animate": {
+          "row.color": {
+            "tween": {
+              "duration": 0.2,
+              "ease": "out"
+            }
+          }
+        },
+        "initial": "idle",
+        "states": {
+          "idle": {
+            "when": {
+              "row.hoverstart": "over"
+            }
+          },
+          "over": {
+            "set": {
+              "row.color": {
+                "color": "hover"
+              }
+            },
+            "when": {
+              "row.hoverend": "idle"
+            },
+            "enter": {
+              "row.color": {
+                "keyframes": [
+                  {
+                    "at": 0.5,
+                    "value": {
+                      "color": "hover"
+                    }
+                  }
+                ],
+                "duration": 0.3
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "invalid-value",
+          "path": "/states/over/enter/row.color/keyframes/0/value"
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # The nudg format, version 1.2
 
-The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [conformance suite](../spec/conformance/), the [JSON Schema](../spec/nudg-1.7.schema.json) describes the structure for editors, and every validator code is listed in the [error reference](errors.md). For the reasoning behind the format, see [Design](design.md).
+The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [conformance suite](../spec/conformance/), the [JSON Schema](../spec/nudg-1.8.schema.json) describes the structure for editors, and every validator code is listed in the [error reference](errors.md). For the reasoning behind the format, see [Design](design.md).
 
 **Stability.** Format 1.0 is stable. Within 1.x, files only gain: new fields, events, inputs and error codes may appear in a later 1.x version, but nothing a 1.0 file says changes meaning; a file opts into a 1.x version's rules by declaring it. Runtimes read every earlier version (0.1 to 1.0) unchanged; each was a superset of the one before, and `nudg upgrade` raises a file to the current version, 1.2. The [appendix](#appendix-format-history) lists what each version added.
 
@@ -30,7 +30,7 @@ The grammar and behavior of `.nudg.json` files. Behavior is pinned down by the [
 
 A nudg file is strict JSON with the extension `.nudg.json`. Every platform already parses it, JSON Schema describes it, and LLMs write it reliably, so there is no parser to maintain and nothing new to learn. A friendlier syntax can be added later as sugar that compiles to the same model, but JSON stays the source of truth.
 
-A file may start with `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.7.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
+A file may start with `"$schema": "https://unpkg.com/@nudg/core/spec/nudg-1.8.schema.json"` so editors offer completion and checks; runtimes ignore it. The schema also ships in the package as `@nudg/core/schema.json`.
 
 JSON has no comments. Instead, any object may carry a `note` string. Runtimes ignore it. Unlike a comment, a note survives tools rewriting the file, and an AI can read it as part of the data.
 
@@ -54,7 +54,7 @@ A file without a machine is a library: it has `motions` and may be imported.
 
 ### Colors
 
-Colors are hex strings (`#RGB`, `#RRGGBB`, `#RRGGBBAA`) and interpolate in OKLab, which keeps midpoints from going muddy. A color can be tweened or sprung; it can't be kicked, followed, looped or glided.
+Colors are hex strings (`#RGB`, `#RRGGBB`, `#RRGGBBAA`) and interpolate in OKLab, which keeps midpoints from going muddy. A color can be tweened or sprung; it can't be kicked, followed, looped or glided. From 1.8 a color in `values` or `set` may also be [one the app names](#colors-the-app-names-18), such as a theme's tint.
 
 ### Unknown fields and extensions
 
@@ -125,6 +125,22 @@ The app events and inputs a file uses, in one place:
 | To the agent, which fixes it and checks again | To the person |
 |---|---|
 | validation errors; `late-feedback`, `invisible-change`, `bouncy-fade`, `no-escape`; motion outside nudg that nudg replaces | `slow-transition`, `slow-exit`, `short-timeout`; motion nudg can't cover yet (an audit gap) |
+
+### Colors the app names (1.8)
+
+A themed app's tints change with light and dark, and while the app runs. A file names them under `host.colors`, each with a `default`, and uses `{ "color": "<name>" }` in `values` or a state's `set` wherever it would write a hex:
+
+```json
+"host": { "colors": { "surface": { "default": "#FFFFFF" }, "hover": { "default": "#E5E7EB", "note": "row tint, from the theme" } } },
+"values": { "row.color": { "color": "surface" } },
+"states": { "over": { "set": { "row.color": { "color": "hover" } } } }
+```
+
+- **The default** is what shows until the app supplies the color, and in previews, `compare`, tests and server rendering. Without one: `missing-default`.
+- **Supplying it.** The app gives each color as the runtime starts (`colors`), and again when its theme changes (`runtime.color(name, hex, t)`). A color given at the start is where things are, shown at once. A change later moves each property showing that color to it, with the property's own motion, keeping its velocity; a color no active state shows changes nothing until one shows it.
+- **Adapters.** On the web, each color is read from the CSS custom property `--<name>` on the bound element (or the property the app maps it to), when it binds and again when the theme changes: the system's light or dark setting, or a class, style or data attribute on `<html>` or `<body>`. Any CSS color works there (`rgb()`, `hsl()`, `oklch()`, `color-mix()`). Native adapters take the app's colors (`colors:` with SwiftUI and Compose `Color`s, React Native strings) and follow them as they change.
+- **Blending.** A named color resolves to OKLab channels before it blends, as a hex one does.
+- **Where.** In `values` and `set`. A keyframe, loop or map value takes a hex (`invalid-value`); a named color on a numeric property is `invalid-type`; a name not declared is `undeclared-host-color`. A declared color no value uses is a warning (`unused-host-color`).
 
 ## Values
 
@@ -556,7 +572,7 @@ Settle is reported from the frame loop, never from inside the call that sent the
 
 ## Appendix: format history
 
-Each version added to the one before and kept everything it had. A 1.7 runtime reads them all; `nudg upgrade` raises a file to 1.7. The conformance cases named here define each addition across TypeScript, Swift and Kotlin; compiled programs gained a format when they needed new fields.
+Each version added to the one before and kept everything it had. A 1.8 runtime reads them all; `nudg upgrade` raises a file to 1.8. The conformance cases named here define each addition across TypeScript, Swift and Kotlin; compiled programs gained a format when they needed new fields.
 
 | Format | Added | Conformance | Program |
 |---|---|---|---|
@@ -586,5 +602,6 @@ Each version added to the one before and kept everything it had. A 1.7 runtime r
 | 1.5 | Measured entry keyframes, an ease per keyframe | `keyframes-measured*`, `keyframes-ease`, `validation-1.5` | 12, only when used |
 | 1.6 | `shadowSpread`, and an inner shadow: `innerX`, `innerY`, `innerBlur`, `innerSpread`, `innerColor` | `shadow-spread-inner`, `validation-1.6` | as 1.5 |
 | 1.7 | A `delay` on an entry kick or entry keyframes; `keep` | `entry-delay`, `entry-delay-leave`, `validation-1.7` | 13, only when used |
+| 1.8 | Colors the app names (`host.colors`, `{ "color": name }`) | `host-colors`, `host-colors-start`, `validation-1.8` | 14, only when used |
 
 The `rest` case defines rest and lifecycle across all of them. Before 0.5, `map` and `follow` read only properties and drag inputs; before 0.9, ranges and map points were numbers; and so on: a feature used in a file that declares an older version is a `needs-version` error whose hint names the version that added it.

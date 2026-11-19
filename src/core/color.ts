@@ -61,3 +61,37 @@ function oklabToLinearSrgb(L: number, a: number, b: number): [number, number, nu
     -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
   ];
 }
+
+/**
+ * A color as an app writes it, as #RRGGBBAA, or undefined: hex, rgb()/rgba() and hsl()/hsla()
+ * (comma or space syntax, alpha as a number or a percent), and "transparent". What a native
+ * theme or a React Native style holds; the DOM adapter lets the browser parse every CSS color.
+ */
+export function colorToHex(value: string): string | undefined {
+  const text = value.trim().toLowerCase();
+  if (isHexColor(text)) return text;
+  if (text === "transparent") return "#00000000";
+  const m = /^(rgba?|hsla?)\(\s*([^)]*)\)$/.exec(text);
+  if (!m) return undefined;
+  const parts = m[2].split(/\s*[,/]\s*|\s+/).filter(Boolean);
+  if (parts.length !== 3 && parts.length !== 4) return undefined;
+  const num = (s: string, percentOf: number): number | undefined => {
+    const n = parseFloat(s);
+    if (!Number.isFinite(n) || !/^-?(\d+\.?\d*|\.\d+)(%|deg)?$/.test(s)) return undefined;
+    return s.endsWith("%") ? (n / 100) * percentOf : n;
+  };
+  const alpha = parts.length === 4 ? num(parts[3], 1) : 1;
+  let rgb: (number | undefined)[];
+  if (m[1].startsWith("rgb")) rgb = parts.slice(0, 3).map((p) => num(p, 255)).map((c) => (c === undefined ? c : c / 255));
+  else {
+    const [h, s, l] = [num(parts[0], 360), num(parts[1], 1), num(parts[2], 1)];
+    if (h === undefined || s === undefined || l === undefined) return undefined;
+    const f = (k: number) => {
+      const n = (k + h / 30) % 12;
+      return l - s * Math.min(l, 1 - l) * Math.max(-1, Math.min(n - 3, 9 - n, 1));
+    };
+    rgb = [f(0), f(8), f(4)];
+  }
+  if (alpha === undefined || rgb.some((c) => c === undefined)) return undefined;
+  return "#" + [...(rgb as number[]), alpha].map(toByteHex).join("");
+}

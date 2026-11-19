@@ -7,7 +7,7 @@
 import type { Channels, Cue, Ease, Emitter, EntryEffect, Follow, Glide, Keyframe, Loop, Machine, Measure, MeasuredEndpoint, Motion, Program, Property, State, Timer, Transition } from "./types.ts";
 import { animateMaps } from "./walk.ts";
 
-export const PROGRAM_FORMAT = 13;
+export const PROGRAM_FORMAT = 14;
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
@@ -20,7 +20,8 @@ let wroteEntryDelay = false;
 
 /**
  * Program format 8 is frozen with 1.0; 9 adds a delay read from an input (1.2); 10 adds cues
- * (1.3); 11 adds emitters (1.4); 12 adds measured entry keyframes and an ease per frame (1.5); 13 lets an entry effect wait (1.7).
+ * (1.3); 11 adds emitters (1.4); 12 adds measured entry keyframes and an ease per frame (1.5); 13 lets an entry effect wait (1.7);
+ * 14 adds colors the app names (1.8).
  * A program says the oldest format that has everything it uses, so older runtimes
  * still read every program that doesn't use what they lack.
  */
@@ -31,7 +32,7 @@ export function programToJson(program: Program): Json {
   const written = machine(program.machine);
   const delayInput = animateMaps(program).some((t) => [...t.values()].some((m) => m.delayInput));
   const out: Record<string, Json> = {
-    nudgProgram: wroteEntryDelay ? 13 : wroteFrames ? 12 : program.emitters ? 11 : wroteCues ? 10 : delayInput ? 9 : 8,
+    nudgProgram: program.colors ? 14 : wroteEntryDelay ? 13 : wroteFrames ? 12 : program.emitters ? 11 : wroteCues ? 10 : delayInput ? 9 : 8,
     version: program.version,
     targets: program.targets,
     properties: [...program.properties].map(([key, p]) => ({ key, ...property(p) })),
@@ -40,6 +41,8 @@ export function programToJson(program: Program): Json {
   };
   // Format 11 (1.4): emitters, by name.
   if (program.emitters) out.emitters = [...program.emitters].map(([name, e]) => ({ name, ...(e as unknown as Record<string, Json>) }));
+  // Format 14 (1.8): colors the app names, with their defaults; properties and states say which they show.
+  if (program.colors) out.colors = [...program.colors].map(([name, value]) => ({ name, default: value }));
   return out;
 }
 
@@ -62,7 +65,7 @@ const readCues = (j: any): Cue[] | undefined => (Array.isArray(j) ? j.map((c: an
 
 export function programFromJson(json: unknown): Program {
   const j = json as Record<string, any>;
-  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, PROGRAM_FORMAT].includes(j?.nudgProgram)) throw new Error(`Not a compiled nudg program (formats 1 to ${PROGRAM_FORMAT}).`);
   return {
     version: j.version,
     targets: j.targets,
@@ -70,6 +73,7 @@ export function programFromJson(json: unknown): Program {
     animate: new Map(j.animate.map((a: any) => [a.key, readMotion(a.motion)])),
     machine: readMachine(j.machine),
     ...(j.emitters ? { emitters: new Map(j.emitters.map(({ name, ...e }: any) => [name, e as Emitter])) } : {}),
+    ...(j.colors ? { colors: new Map(j.colors.map((c: any) => [c.name, c.default])) } : {}),
   };
 }
 
@@ -77,6 +81,7 @@ function property(p: Property): Record<string, Json> {
   const out: Record<string, Json> = { kind: p.kind, base: p.base };
   if (p.map) out.map = { source: p.map.source, sourceKind: p.map.sourceKind, from: p.map.from.map(endpoint), to: p.map.to.map((value) => (Array.isArray(value) ? value : measure(value))) };
   if (p.measure) out.measure = measure(p.measure);
+  if (p.color) out.color = p.color;
   if (p.min !== undefined) out.min = p.min;
   if (p.max !== undefined) out.max = p.max;
   return out;
@@ -86,6 +91,7 @@ function readProperty(p: any): Property {
   const out: Property = { kind: p.kind, base: p.base };
   if (p.map) out.map = { ...p.map, sourceKind: p.map.sourceKind ?? "property", from: p.map.from.map(readEndpoint), to: p.map.to.map((value: any) => (Array.isArray(value) ? value : readEndpoint(value))) };
   if (p.measure) out.measure = { ...p.measure, times: p.measure.times ?? 1, plus: p.measure.plus ?? 0 };
+  if (p.color) out.color = p.color;
   if (p.min !== undefined) out.min = p.min;
   if (p.max !== undefined) out.max = p.max;
   return out;
@@ -183,6 +189,7 @@ function state(s: State): Json {
     when: [...s.when].map(([event, t]) => ({ event, ...transition(t) })),
     timers: s.timers.map((t: Timer) => ({ key: t.key, delay: t.delay, pause: t.pause.map((p) => ({ ...p })), transition: transition(t.transition) })),
   };
+  if (s.color) out.color = [...s.color].map(([key, name]) => ({ key, name }));
   if (s.cues) out.cue = cues(s.cues);
   if (s.emit) out.emit = s.emit;
   if (s.machine) out.machine = machine(s.machine);
@@ -202,6 +209,7 @@ function readState(j: any): State {
     when: new Map(j.when.map((w: any) => [w.event, readTransition(w)])),
     timers: j.timers.map((t: any) => ({ key: t.key, delay: t.delay, pause: (t.pause ?? []).map((p: any) => ({ on: p.on, off: p.off })), transition: readTransition(t.transition) })),
   };
+  if (j.color) s.color = new Map(j.color.map((e: any) => [e.key, e.name]));
   if (j.cue) s.cues = readCues(j.cue);
   if (j.emit) s.emit = j.emit;
   if (j.machine) s.machine = readMachine(j.machine);

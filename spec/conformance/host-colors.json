@@ -1,0 +1,171 @@
+{
+  "conformance": "1.8",
+  "name": "Colors the app names: the default until supplied; a theme change moves each property showing it with its own motion",
+  "doc": {
+    "nudg": "1.8",
+    "note": "A row tinted on hover with colors from the app's theme, which can change while it shows.",
+    "host": {
+      "colors": {
+        "surface": {
+          "default": "#FFFFFF"
+        },
+        "hover": {
+          "default": "#E5E7EB"
+        }
+      }
+    },
+    "targets": [
+      "row"
+    ],
+    "values": {
+      "row.color": {
+        "color": "surface"
+      }
+    },
+    "animate": {
+      "row.color": {
+        "tween": {
+          "duration": 0.2,
+          "ease": "out"
+        }
+      }
+    },
+    "initial": "idle",
+    "states": {
+      "idle": {
+        "when": {
+          "row.hoverstart": "over"
+        }
+      },
+      "over": {
+        "set": {
+          "row.color": {
+            "color": "hover"
+          }
+        },
+        "when": {
+          "row.hoverend": "idle"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "row.color": "#ffffff"
+        }
+      }
+    },
+    {
+      "t": 0.1,
+      "send": "row.hoverstart"
+    },
+    {
+      "t": 0.15,
+      "expect": {
+        "state": [
+          "over"
+        ],
+        "values": {
+          "row.color": "#f5f6f7"
+        }
+      }
+    },
+    {
+      "t": 0.2,
+      "expect": {
+        "state": [
+          "over"
+        ],
+        "values": {
+          "row.color": "#edeff1"
+        }
+      }
+    },
+    {
+      "t": 0.25,
+      "color": "hover",
+      "value": "#374151"
+    },
+    {
+      "t": 0.3,
+      "expect": {
+        "values": {
+          "row.color": "#a0a6af"
+        }
+      }
+    },
+    {
+      "t": 0.4,
+      "expect": {
+        "values": {
+          "row.color": "#464f5e"
+        }
+      }
+    },
+    {
+      "t": 0.6,
+      "expect": {
+        "values": {
+          "row.color": "#374151"
+        }
+      }
+    },
+    {
+      "t": 0.7,
+      "color": "surface",
+      "value": "#111827"
+    },
+    {
+      "t": 0.75,
+      "expect": {
+        "values": {
+          "row.color": "#374151"
+        },
+        "resting": true
+      }
+    },
+    {
+      "t": 0.8,
+      "send": "row.hoverend"
+    },
+    {
+      "t": 0.85,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "row.color": "#283141"
+        }
+      }
+    },
+    {
+      "t": 0.9,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "row.color": "#1c2434"
+        }
+      }
+    },
+    {
+      "t": 1.1,
+      "expect": {
+        "state": [
+          "idle"
+        ],
+        "values": {
+          "row.color": "#111827"
+        }
+      }
+    }
+  ]
+}

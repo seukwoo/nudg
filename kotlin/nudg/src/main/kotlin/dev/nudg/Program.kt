@@ -64,7 +64,8 @@ sealed interface MapValue {
     data class Measured(val measure: Measure) : MapValue
 }
 data class PropertyMap(val source: String, val sourceKind: String, val from: List<MeasuredEndpoint>, val to: List<MapValue>)
-data class Property(val kind: PropertyKind, val base: List<Double>, val map: PropertyMap?, val measure: Measure?, val min: Double?, val max: Double?)
+/** `color`: a base color the app names (1.8); `base` holds its default. */
+data class Property(val kind: PropertyKind, val base: List<Double>, val map: PropertyMap?, val measure: Measure?, val min: Double?, val max: Double?, val color: String? = null)
 /** [multiply]: scale by the input's ratio since entry instead of adding its change, for a pinch (v0.18). */
 data class Follow(val input: String, val range: Pair<MeasuredEndpoint, MeasuredEndpoint>?, val overdrag: Double, val multiply: Boolean = false)
 /** A property that keeps its velocity and slows down by itself while a state is active (v0.16). */
@@ -113,6 +114,8 @@ class State(
     val cues: List<Cue> = emptyList(),
     /** Emitters that send out a wave when it is entered through a transition (1.4). */
     val emit: List<String> = emptyList(),
+    /** Entries of `set` that are colors the app names (1.8); their `set` value is the default. */
+    val color: Map<String, String> = emptyMap(),
 ) {
     fun transition(event: String) = `when`.firstOrNull { it.first == event }?.second
 }
@@ -124,7 +127,8 @@ sealed class Machine {
     class Regions(val regions: List<Pair<String, Machine>>) : Machine()
 }
 
-class Program(val version: String, val targets: List<String>, val properties: List<Pair<String, Property>>, val animate: Map<String, Motion>, val machine: Machine, val emitters: List<Pair<String, Emitter>> = emptyList()) {
+/** `colors`: the colors the app names (1.8), with their defaults as OKLab channels, in file order. */
+class Program(val version: String, val targets: List<String>, val properties: List<Pair<String, Property>>, val animate: Map<String, Motion>, val machine: Machine, val emitters: List<Pair<String, Emitter>> = emptyList(), val colors: List<Pair<String, List<Double>>> = emptyList()) {
     private val byKey = properties.toMap()
     fun property(key: String): Property = byKey.getValue(key)
 
@@ -136,7 +140,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
         }
 
         internal fun fromJson(j: Map<String, Any?>): Program {
-            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0)) { "Not a compiled nudg program (formats 1 to 13). Compile it with `nudg compile`." }
+            require((j["nudgProgram"] as? Double) in setOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0)) { "Not a compiled nudg program (formats 1 to 14). Compile it with `nudg compile`." }
             val properties = list(j["properties"]).map { p ->
                 obj(p).let { m ->
                     (m["key"] as String) to Property(
@@ -146,6 +150,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
                         (m["measure"] as? Map<*, *>)?.let(::measure),
                         m["min"] as? Double,
                         m["max"] as? Double,
+                        m["color"] as? String,
                     )
                 }
             }
@@ -161,7 +166,9 @@ class Program(val version: String, val targets: List<String>, val properties: Li
                     )
                 }
             }
-            return Program(j["version"] as String, list(j["targets"]).map { it as String }, properties, animate, machine(j["machine"]), emitters)
+            // Format 14 (1.8): colors the app names, with their defaults.
+            val colors = list(j["colors"]).map { c -> obj(c).let { (it["name"] as String) to doubles(it["default"]) } }
+            return Program(j["version"] as String, list(j["targets"]).map { it as String }, properties, animate, machine(j["machine"]), emitters, colors)
         }
 
         private fun obj(v: Any?) = v as Map<*, *>
@@ -292,6 +299,7 @@ class Program(val version: String, val targets: List<String>, val properties: Li
                 s["machine"]?.let(::machine),
                 cues(s["cue"]),
                 list(s["emit"]).map { it as String },
+                list(s["color"]).associate { c -> obj(c).let { (it["key"] as String) to (it["name"] as String) } },
             )
         }
     }

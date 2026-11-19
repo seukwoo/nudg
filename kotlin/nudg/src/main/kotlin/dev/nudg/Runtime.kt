@@ -130,7 +130,8 @@ private const val VELOCITY_WINDOW = 0.1
 private val REDUCED: Motion = Motion.Tween(0.15, Ease.Linear)
 private val LAYOUT_NAMES = setOf("x", "y", "width", "height", "naturalWidth", "naturalHeight")
 
-class Runtime(val program: Program, state: List<String> = emptyList(), reducedMotion: Boolean = false) {
+/** `colors`: the colors the file names (1.8) as the app's theme has them, as hex, shown from the start. */
+class Runtime(val program: Program, state: List<String> = emptyList(), reducedMotion: Boolean = false, colors: Map<String, String> = emptyMap()) {
     private var reduced = reducedMotion
     private val active = HashMap<Machine.States, String>()
     private val segments = HashMap<String, Segment>()
@@ -141,6 +142,11 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
     private val loops = LinkedHashMap<String, ActiveLoop>()
     private val inputs = HashMap<String, MutableList<Pair<Double, Double>>>()
     private val bases = HashMap<String, List<Double>>()
+    /** Colors the app names (1.8), as OKLab: the defaults, then what the app supplies. */
+    private val named = HashMap<String, List<Double>>().apply {
+        for ((name, value) in program.colors) put(name, value)
+        for ((name, hex) in colors) if (name in this) hexToOklab(hex)?.let { put(name, it) }
+    }
     private val pending = ArrayList<Pending>()
     private val layout = HashMap<String, Double>()
     private val measuredBases = HashMap<String, Measure>()
@@ -347,9 +353,12 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
     private fun resolveTargets(act: Map<Machine.States, String>): Map<String, List<Double>> {
         val out = HashMap(bases)
         for ((key, m) in measuredBases) measured(key, m)?.let { out[key] = listOf(clamp(key, it)) }
+        for ((key, prop) in program.properties) prop.color?.let { out[key] = named[it] ?: prop.base }
         val resolvedBases = HashMap(out)
         walkActive(act) { s ->
             for ((key, value) in s.set) {
+                val color = s.color[key]
+                if (color != null) { out[key] = named[color] ?: value; continue }
                 val target = s.input[key]
                 if (target != null) {
                     // The input's latest sample (0 before the first), scaled and offset (v0.17).
@@ -947,6 +956,30 @@ class Runtime(val program: Program, state: List<String> = emptyList(), reducedMo
             segments[key] = Segment.MotionSeg(t, listOf(pos[0] + offset), listOf(vel[0] + rate), to, REDUCED)
         }
         walkActive(active) { s -> for ((key, loop) in s.loop) if (key !in loops && loopPlays(key)) loops[key] = ActiveLoop(loop, s, t) }
+    }
+
+    /** The colors the file names (1.8), for the host to supply. */
+    val colorNames: List<String> get() = program.colors.map { it.first }
+
+    /**
+     * The app supplies a color it names (1.8), in sRGB from 0 to 1, at time `t`: a theme change.
+     * Each property showing it moves there with its own motion; `snap` places it without motion.
+     * False for a name the file doesn't declare.
+     */
+    fun color(name: String, red: Double, green: Double, blue: Double, alpha: Double = 1.0, t: Double, snap: Boolean = false): Boolean =
+        setColor(name, srgbToOklab(red, green, blue, alpha), t, snap)
+
+    /** The same, from #RGB, #RRGGBB or #RRGGBBAA. False for a name the file doesn't declare or a value that isn't hex. */
+    fun color(name: String, hex: String, t: Double, snap: Boolean = false): Boolean =
+        hexToOklab(hex)?.let { setColor(name, it, t, snap) } ?: false
+
+    private fun setColor(name: String, value: List<Double>, t: Double, snap: Boolean): Boolean {
+        if (name !in named) return false
+        advanceTo(t)
+        if (named[name] == value) return true
+        named[name] = value
+        settle(t, emptyList(), emptyList(), snap = snap)
+        return true
     }
 
     /** Records a referenced continuous input or a layout report. */

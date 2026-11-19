@@ -35,6 +35,7 @@ Legend: **yes** supported, with an example; **yes, no example** supported but no
 | Follow an input, with rubber banding | yes | toggle-drag, swipe-row |
 | Snap to the nearest state, with momentum | yes | toggle-drag, carousel, segmented |
 | Derived values (`map`), including colors | yes | toggle-drag, swipe-row |
+| Colors from the app's theme, changed live (`host.colors`, 1.8) | yes | conformance `host-colors` |
 | Stepping and keeping a value (`step`, `commit`) | yes | slider |
 | Measured targets and follow/map endpoints (`measure`) | yes | tabs, accordion, bottom-sheet, swipe-row |
 | Reduced motion | yes, runtime-wide | every example |

@@ -56,6 +56,7 @@ Errors stop a file from compiling. Warnings don't.
 | `mapped-property` | A mapped property is set, animated, followed, kicked, looped or glided. |
 | `missing-base` | A value with `min` / `max` has no `base`. |
 | `missing-base-value` | A property is used without a base value in `values`. |
+| `missing-default` | A color under `host.colors` has no `default` to draw until the app supplies it (1.8). |
 | `missing-duration` | Keyframes or a loop have no `duration`. |
 | `missing-initial` | A machine with `states` has no `initial`. |
 | `missing-machine` | A file has targets or values but no states. |
@@ -75,6 +76,7 @@ Errors stop a file from compiling. Warnings don't.
 | `transition-conflict` | A transition has both `to` and `nearest`. |
 | `undeclared-custom` | A custom property `target.custom.<name>` isn't listed under `host.custom` (1.3). |
 | `undeclared-host-event` | With a `host` declaration, a `host.<name>` event isn't declared. |
+| `undeclared-host-color` | `{ "color": "<name>" }` names a color that isn't declared under `host.colors` (1.8). |
 | `undeclared-host-input` | With a `host` declaration, a `host.<name>` input isn't declared. |
 | `unknown-ease` | An ease name isn't one of nudg's. |
 | `unknown-emitter` | `emit` names an emitter that isn't declared under `emitters` (1.4). |
@@ -97,6 +99,7 @@ Errors stop a file from compiling. Warnings don't.
 | `host-prefix` | A name under `host` is written with `host.` in front. |
 | `outside-input-range` | A map point lies outside the range `host` declares for its input. |
 | `unused-host-event` | A declared host event is handled nowhere. |
+| `unused-host-color` | A color declared under `host.colors` is used by no value. |
 | `unused-host-input` | A declared host input is read nowhere. |
 | `unused-target` | A target is declared but never used. |
 

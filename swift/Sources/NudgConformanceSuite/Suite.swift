@@ -25,13 +25,16 @@ public func runConformanceSuite(at dir: URL, log: (String) -> Void = { print($0)
     do {
       let programURL = dir.appendingPathComponent("programs").appendingPathComponent(file.replacingOccurrences(of: ".json", with: ".program.json"))
       let program = try Program.decode(Data(contentsOf: programURL))
-      let rt = try Runtime(program, state: c["start"] as? [String] ?? [], reducedMotion: c["reducedMotion"] as? Bool ?? false)
+      let rt = try Runtime(program, state: c["start"] as? [String] ?? [], reducedMotion: c["reducedMotion"] as? Bool ?? false, colors: c["colors"] as? [String: String] ?? [:])
       var problems: [String] = []
       for step in steps {
         let t = (step["t"] as! NSNumber).doubleValue
         if let on = step["reducedMotion"] as? Bool { try rt.setReducedMotion(on, at: t) }
         if let input = step["input"] as? String {
           if try !rt.input(input, (step["value"] as! NSNumber).doubleValue, at: t) { problems.append("input \(input) at \(t)s was refused") }
+        }
+        if let color = step["color"] as? String {
+          if try !rt.color(color, hex: step["value"] as! String, at: t) { problems.append("color \(color) at \(t)s was refused") }
         }
         if let event = step["send"] as? String {
           let handled = try rt.send(event, at: t)

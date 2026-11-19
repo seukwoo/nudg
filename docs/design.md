@@ -878,7 +878,7 @@ As in `from-css`, it samples nudg's runtime and the generated CSS's own timing a
 
 ## Proposal: colors the app names (#162)
 
-Status: proposed 2026-11-13. A themed app's tints are tokens (`var(--hdr-hover)`), different in light and dark and switched live, but `color` and `shadowColor` take hex only ([#162](https://github.com/seukwoo/nudg/issues/162)). A CSS variable is a web idea, so the answer has to work on every platform.
+Status: implemented as format 1.8 (2026-11-19); see [the spec](spec.md#colors-the-app-names-18). Two choices made while building it: each color declares a `default` (what previews, tests and server rendering draw, and what shows until the app supplies one), and a named color goes in `values` and `set` only, not in keyframes, loops or maps, where a hex still goes. Proposed 2026-11-13. A themed app's tints are tokens (`var(--hdr-hover)`), different in light and dark and switched live, but `color` and `shadowColor` take hex only ([#162](https://github.com/seukwoo/nudg/issues/162)). A CSS variable is a web idea, so the answer has to work on every platform.
 
 ### Proposed
 

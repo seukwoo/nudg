@@ -44,15 +44,18 @@ public final class NudgModel: ObservableObject {
    * `exit` names the states that mean the component is gone ("hidden"): `present` turns false
    * and `onExit` is called once the exit motion has settled. `onSettle` is called with the
    * active states each time every value has come to rest after something moved or the
-   * state changed, as in every other adapter.
+   * state changed, as in every other adapter. `colors` are the colors the file names (1.8)
+   * as the app's theme has them, shown from the first frame; when the theme changes, pass
+   * the new ones to `color(_:_:)`.
    */
-  public init(_ program: Program, state: [String] = [], reducedMotion: Bool? = nil, exit: [String] = [], onSettle: (([String]) -> Void)? = nil, onExit: (() -> Void)? = nil, clock: @escaping () -> Date = Date.init) {
+  public init(_ program: Program, state: [String] = [], reducedMotion: Bool? = nil, colors: [String: Color] = [:], exit: [String] = [], onSettle: (([String]) -> Void)? = nil, onExit: (() -> Void)? = nil, clock: @escaping () -> Date = Date.init) {
     #if os(iOS)
     let reduce = reducedMotion ?? UIAccessibility.isReduceMotionEnabled
     #else
     let reduce = reducedMotion ?? false
     #endif
     self.runtime = try! Runtime(program, state: state, reducedMotion: reduce)
+    for (name, color) in colors { if let c = srgb(color) { try? runtime.color(name, red: c.0, green: c.1, blue: c.2, alpha: c.3, at: 0, snap: true) } }
     self.clock = clock
     self.start = clock()
     self.state = runtime.state()
@@ -141,6 +144,20 @@ public final class NudgModel: ObservableObject {
     changed()
     objectWillChange.send()
     onInput?(name, value)
+    return used
+  }
+
+  /**
+   * Supplies a color the file names (1.8), now: each property showing it moves there with its
+   * own motion. Call it when the theme changes, e.g. from `.onChange(of: colorScheme)`.
+   * False for a name the file doesn't declare.
+   */
+  @discardableResult
+  public func color(_ name: String, _ color: Color) -> Bool {
+    guard let c = srgb(color) else { return false }
+    let used = (try? runtime.color(name, red: c.0, green: c.1, blue: c.2, alpha: c.3, at: time(at: clock()))) ?? false
+    changed()
+    objectWillChange.send()
     return used
   }
 
@@ -430,5 +447,18 @@ public extension Color {
     let byte = { (i: Int) in Double(Int(String(h[i...i + 1]), radix: 16) ?? 0) / 255 }
     self.init(.sRGB, red: byte(0), green: byte(2), blue: byte(4), opacity: h.count >= 8 ? byte(6) : 1)
   }
+}
+/** A SwiftUI color as sRGB components, resolved for the current appearance (light or dark). */
+private func srgb(_ color: Color) -> (Double, Double, Double, Double)? {
+  #if canImport(UIKit)
+  var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+  guard UIColor(color).resolvedColor(with: UITraitCollection.current).getRed(&r, green: &g, blue: &b, alpha: &a) else { return nil }
+  return (Double(r), Double(g), Double(b), Double(a))
+  #elseif canImport(AppKit)
+  guard let c = NSColor(color).usingColorSpace(.sRGB) else { return nil }
+  return (Double(c.redComponent), Double(c.greenComponent), Double(c.blueComponent), Double(c.alphaComponent))
+  #else
+  return nil
+  #endif
 }
 #endif

@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.first
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.geometry.Offset
@@ -72,8 +73,10 @@ import kotlin.math.roundToInt
  *   }
  */
 @Stable
-class NudgState internal constructor(program: Program, state: List<String>, reducedMotion: Boolean, exit: List<String> = emptyList()) {
-    val runtime = Runtime(program, state, reducedMotion)
+class NudgState internal constructor(program: Program, state: List<String>, reducedMotion: Boolean, exit: List<String> = emptyList(), colors: Map<String, Color> = emptyMap()) {
+    val runtime = Runtime(program, state, reducedMotion).also { rt ->
+        for ((name, color) in colors) color.convert(ColorSpaces.Srgb).let { c -> rt.color(name, c.red.toDouble(), c.green.toDouble(), c.blue.toDouble(), c.alpha.toDouble(), 0.0, snap = true) }
+    }
     private val lifecycle = Lifecycle(runtime, exit)
     internal var onSettle: ((List<String>) -> Unit)? = null
     internal var onExit: (() -> Unit)? = null
@@ -167,6 +170,18 @@ class NudgState internal constructor(program: Program, state: List<String>, redu
         return used
     }
 
+    /**
+     * Supplies a color the file names (1.8), now: each property showing it moves there with its
+     * own motion. [rememberNudg]'s `colors` calls it when the theme changes. False for a name the
+     * file doesn't declare.
+     */
+    fun color(name: String, color: Color): Boolean {
+        val c = color.convert(ColorSpaces.Srgb)
+        val used = runtime.color(name, c.red.toDouble(), c.green.toDouble(), c.blue.toDouble(), c.alpha.toDouble(), lastTime)
+        changed()
+        return used
+    }
+
     /** The reduced-motion setting changed: loops and motions from now on follow it (see [Runtime.setReducedMotion]). */
     fun setReducedMotion(on: Boolean) {
         runtime.setReducedMotion(on, lastTime)
@@ -228,20 +243,24 @@ fun systemReducedMotion(): Boolean {
  * Plays [program]. [reducedMotion] defaults to the system's "Remove animations" setting, followed as it changes. [exit] names the states that mean the component is gone ("hidden"):
  * [NudgState.present] turns false and [onExit] is called once the exit motion has settled.
  * [onSettle] is called with the active states each time every value has come to rest after
- * something moved or the state changed, as in every other adapter.
+ * something moved or the state changed, as in every other adapter. [colors] are the colors the
+ * file names (1.8) from the app's theme, shown from the first frame; when they change (the theme
+ * switched), each property showing one moves there with its own motion.
  */
 @Composable
 fun rememberNudg(
     program: Program,
     state: List<String> = emptyList(),
     reducedMotion: Boolean = systemReducedMotion(),
+    colors: Map<String, Color> = emptyMap(),
     exit: List<String> = emptyList(),
     onSettle: ((List<String>) -> Unit)? = null,
     onExit: (() -> Unit)? = null,
     /** A cue came due (1.3), after its haptic: play its sound. */
     onCue: ((FiredCue) -> Unit)? = null,
 ): NudgState {
-    val nudg = remember(program) { NudgState(program, state, reducedMotion, exit) }
+    val nudg = remember(program) { NudgState(program, state, reducedMotion, exit, colors) }
+    LaunchedEffect(nudg, colors) { for ((name, color) in colors) nudg.color(name, color) }
     nudg.view = LocalView.current
     nudg.onCue = onCue
     // A changed setting applies to the running player, so its state and motion carry on.

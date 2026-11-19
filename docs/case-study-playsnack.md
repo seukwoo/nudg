@@ -42,15 +42,15 @@ npx @nudg/core from-css snack-player/src/Ceremony.tsx snkRoll --exact --out moti
 
 ## What nudg learned
 
-The migration found one bug and three gaps. All four are now fixed or designed:
+The migration found one bug and three gaps. All four are fixed in 1.13.0:
 
 - **A converter's proof is only as independent as its inputs.**
   - The bug: `from-css` read `--animation "fadeIn .4s ease .65s"` with the delay and the duration swapped. Its own proof passed anyway, because the proof plays the CSS at the same timing the tool read. The frame comparison caught it: a flash waited 0.3 s.
   - The fix: the times are now read as CSS reads them, and the report starts with the timing it read, so a person or agent can see it ([#165](https://github.com/seukwoo/nudg/pull/165), [devlog](devlog.md#2026-11-13-a-proof-that-shares-its-input-cant-catch-a-misread-input)).
-- **An entry effect couldn't wait.** A tag that pops in after its card needs a kick that waits for the card's delay. Designed as format 1.7 ([design](design.md#proposal-an-entry-effect-can-wait-format-17-161)).
-- **Theme colors.** Tints that switch with light and dark live in CSS variables. Designed as colors the app names (`host.colors`), read from CSS variables on the web ([design](design.md#proposal-colors-the-app-names-162)).
-- **Designed confetti.** A burst whose pieces follow an authored arc, not physics. Designed as emitter paths ([design](design.md#proposal-confetti-with-designed-paths-163)).
-- **Pages without JavaScript.** The side menu stayed on CSS because a static page shares it. Designed as `nudg to-css`, which writes CSS from the same file ([design](design.md#proposal-nudg-to-the-web-without-nudg-nudg-to-css)).
+- **An entry effect couldn't wait.** A tag that pops in after its card needs a kick that waits for the card's delay. Format 1.7 lets it wait ([spec](spec.md#entry-effects)).
+- **Theme colors.** Tints that switch with light and dark live in CSS variables. Format 1.8 adds colors the app names (`host.colors`), read from CSS variables on the web and followed as the theme changes ([spec](spec.md#colors-the-app-names-18)).
+- **Designed confetti.** A burst whose pieces follow an authored arc, not physics. Format 1.9 gives an emitter a designed `path`, its values drawn per piece ([spec](spec.md#particles-14)).
+- **Pages without JavaScript.** The side menu stayed on CSS because a static page shares it. `nudg to-css` writes its CSS from the same file, checked against the runtime ([usage](usage.md#to-css)).
 
 Along the way, the conversions themselves pushed nudg forward:
 - format 1.5 lets keyframe values be shares of the element's size (`translateX(-100%)`) and gives each frame its own ease;

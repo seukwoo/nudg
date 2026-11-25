@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.14.1
+
+A fix for emitters with drag: gravity now pulls their pieces down. Files and APIs from 1.14.0 work as before.
 
 - **Fixed: gravity pulled emitter pieces up when they had drag.** In the closed form with drag (the default, `drag: 1`), gravity's sign was flipped, so pieces rose for ever instead of falling back. All three runtimes, the spec and the conformance cases shared it. Gravity now pulls down with drag as it does without, and pieces fall at most at `gravity / drag`. A new case (`particles-gravity`) throws a piece up and expects it to come back down. `derive.py` now checks the closed form against a step-by-step integration. Emitters with drag move differently now (they fall), and designed paths (1.9) don't change. Found while moving a real app's confetti cannons onto an emitter.
 

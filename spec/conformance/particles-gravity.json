@@ -1,0 +1,136 @@
+{
+  "conformance": "1.4",
+  "name": "Particles with drag: gravity pulls down \u2014 a piece thrown up slows, stops and falls back past where it started",
+  "doc": {
+    "nudg": "1.4",
+    "host": {
+      "events": [
+        "celebrate"
+      ]
+    },
+    "targets": [
+      "button",
+      "confetti"
+    ],
+    "values": {
+      "button.scale": 1
+    },
+    "emitters": {
+      "confetti": {
+        "from": "button",
+        "count": 1,
+        "angle": -90,
+        "speed": 800,
+        "gravity": 1500,
+        "drag": 2,
+        "spin": 0,
+        "life": 2,
+        "fade": 0,
+        "scale": 1,
+        "seed": 1
+      }
+    },
+    "initial": "idle",
+    "states": {
+      "idle": {
+        "when": {
+          "host.celebrate": {
+            "emit": "confetti",
+            "cue": "success"
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "t": 0,
+      "send": "host.celebrate"
+    },
+    {
+      "t": 0.1,
+      "expect": {
+        "pieces": [
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 0,
+            "x": 4.439816060538015e-15,
+            "y": -65.4836663645641,
+            "rotation": 0.0,
+            "scale": 1.0,
+            "opacity": 1.0
+          }
+        ]
+      }
+    },
+    {
+      "t": 0.3,
+      "expect": {
+        "pieces": [
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 0,
+            "x": 1.1050927713399635e-14,
+            "y": -124.67098202712953,
+            "rotation": 0.0,
+            "scale": 1.0,
+            "opacity": 1.0
+          }
+        ]
+      }
+    },
+    {
+      "t": 0.6,
+      "expect": {
+        "pieces": [
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 0,
+            "x": 1.7115805432147305e-14,
+            "y": -91.57448576804325,
+            "rotation": 0.0,
+            "scale": 1.0,
+            "opacity": 1.0
+          }
+        ]
+      }
+    },
+    {
+      "t": 1.2,
+      "expect": {
+        "pieces": [
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 0,
+            "x": 2.2270986960525503e-14,
+            "y": 195.30641379929466,
+            "rotation": 0.0,
+            "scale": 1.0,
+            "opacity": 1.0
+          }
+        ]
+      }
+    },
+    {
+      "t": 1.9,
+      "expect": {
+        "pieces": [
+          {
+            "emitter": "confetti",
+            "wave": 0,
+            "index": 0,
+            "x": 2.3945010099984886e-14,
+            "y": 667.3373481885284,
+            "rotation": 0.0,
+            "scale": 1.0,
+            "opacity": 1.0
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -109,7 +109,7 @@ fun pieceAt(name: String, e: Emitter, wave: Int, index: Int, age: Double): Piece
     if (k > 1e-9) {
         val decay = (1 - Math.exp(-k * age)) / k
         x = x0 + vx * decay
-        y = y0 + (vy + g / k) * decay - (g / k) * age
+        y = y0 + (vy - g / k) * decay + (g / k) * age
     } else {
         x = x0 + vx * age
         y = y0 + vy * age + 0.5 * g * age * age

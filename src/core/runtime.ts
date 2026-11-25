@@ -1274,7 +1274,7 @@ export function pieceAt(name: string, e: Emitter, wave: number, index: number, a
   if (k > 1e-9) {
     const decay = (1 - Math.exp(-k * age)) / k;
     x = x0 + vx * decay;
-    y = y0 + (vy + g / k) * decay - (g / k) * age;
+    y = y0 + (vy - g / k) * decay + (g / k) * age;
   } else {
     x = x0 + vx * age;
     y = y0 + vy * age + 0.5 * g * age * age;

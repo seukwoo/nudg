@@ -512,7 +512,7 @@ An emitter sends out many short-lived pieces from one place: confetti from a but
 
 **A piece's path is closed form.** With launch velocity `(vx, vy)` from its angle and speed, drag `k` and gravity `g`, at age `a`:
 - `x = x0 + vx·(1 − e^(−k·a))/k`
-- `y = y0 + (vy + g/k)·(1 − e^(−k·a))/k − g·a/k`
+- `y = y0 + (vy − g/k)·(1 − e^(−k·a))/k + g·a/k`
 
 With no drag, `x = x0 + vx·a` and `y = y0 + vy·a + g·a²/2`. Rotation is `spin · a`. Opacity is 1 until the last `fade` seconds of life, then falls linearly to 0. A piece exists from its launch (`index × stagger` after the wave) until its life ends.
 

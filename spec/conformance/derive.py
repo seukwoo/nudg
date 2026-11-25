@@ -2811,7 +2811,7 @@ def piece_at(name, e, wave, index, age):
     if k > 1e-9:
         decay = (1 - math.exp(-k * age)) / k
         x = x0 + vx * decay
-        y = y0 + (vy + g / k) * decay - (g / k) * age
+        y = y0 + (vy - g / k) * decay + (g / k) * age
     else:
         x = x0 + vx * age
         y = y0 + vy * age + 0.5 * g * age * age
@@ -2819,8 +2819,24 @@ def piece_at(name, e, wave, index, age):
     return {"emitter": name, "wave": wave, "index": index, "x": x, "y": y, "rotation": pick(e["spin"], 2) * age, "scale": pick(e["scale"], 4), "opacity": opacity}
 
 
+def check_piece_physics():
+    # The closed form must be the motion it claims: dv/dt = g - k*v (y down), integrated in small steps
+    # here, independently. (Until 1.14.1 the drag form had gravity's sign flipped: with drag, the default,
+    # pieces were pushed up for ever.)
+    for k, g, vy in ((1.2, 1600, -700), (6, 3000, -4000), (0, 1200, -500)):
+        e = {"seed": 1, "life": [5, 5], "angle": [-90, -90], "speed": [-vy, -vy], "area": [0, 0], "drag": k, "gravity": g, "fade": 0, "spin": [0, 0], "scale": [1, 1]}
+        y, v, dt = 0.0, float(vy), 1e-5
+        for step in range(1, 300001):
+            v += (g - k * v) * dt
+            y += v * dt
+            if step % 50000 == 0:
+                closed = piece_at("c", e, 0, 0, step * dt)["y"]
+                assert abs(closed - y) < 0.5, (k, g, step * dt, closed, y)
+
+
 def particle_cases():
     # Emitters (1.4): seeded, closed-form pieces, the same in every runtime.
+    check_piece_physics()
     emitter = {"from": "button", "count": 3, "angle": [-150, -30], "speed": [500, 900], "gravity": 1600, "drag": 1.2,
                "spin": [-720, 720], "life": [0.6, 0.9], "fade": 0.3, "scale": [0.6, 1], "area": [10, 4], "stagger": 0.05, "seed": 7}
     doc = {
@@ -2855,6 +2871,24 @@ def particle_cases():
         "name": "Particles: each wave's pieces fly on seeded, closed-form paths and fade at the end of their life; the runtime settles after the last",
         "doc": doc,
         "steps": steps,
+    })
+    # A piece thrown straight up with drag slows, stops and falls back past where it started.
+    up = {"from": "button", "count": 1, "angle": -90, "speed": 800, "gravity": 1500, "drag": 2, "spin": 0, "life": 2, "fade": 0, "scale": 1, "seed": 1}
+    up_full = {"at": "center", "area": [0, 0], "stagger": 0, **{f: ([v, v] if isinstance(v, (int, float)) and f not in ("count", "drag", "gravity", "fade", "seed") else v) for f, v in up.items()}}
+    up_doc = json.loads(json.dumps(doc))
+    up_doc["emitters"] = {"confetti": up}
+    up_steps = [{"t": 0, "send": "host.celebrate"}]
+    ys = []
+    for t in (0.1, 0.3, 0.6, 1.2, 1.9):
+        p = piece_at("confetti", up_full, 0, 0, t)
+        ys.append(p["y"])
+        up_steps.append({"t": t, "expect": {"pieces": [p]}})
+    assert ys[0] < 0 and ys[1] < ys[0] and ys[-1] > 0, ys  # up, higher, then below the start
+    write("particles-gravity", {
+        "conformance": "1.4",
+        "name": "Particles with drag: gravity pulls down — a piece thrown up slows, stops and falls back past where it started",
+        "doc": up_doc,
+        "steps": up_steps,
     })
     write("particles-reduced", {
         "conformance": "1.4",

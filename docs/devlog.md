@@ -613,3 +613,11 @@ After 1.6.0, PlaySnack's motion code was read for what nudg should have done its
 - **Cause:** The source's `animation` line and the option were joined into one string and read with one counter of times. The source line already had one time, so the option's first time was counted as the second, which is the delay. The 60-point proof compares the file with the CSS played at the timing the tool read, so a misread timing is in both, and the two agree.
 - **Resolution:** Each line is read on its own. The option's fields replace the source's. The report now starts with the timing it read, in words, for the person or agent to check.
 - **Lesson:** A proof is only as independent as its inputs. Anything the converter parses and the proof reuses (the timing, the frame values) has to be shown, or tested against independent expectations, because the proof can't see it.
+
+## 2026-11-25: Gravity pointed up whenever a piece had drag
+
+- **Problem.** Moving PlaySnack's confetti cannons onto a physics emitter, the fitted pieces never came down. A piece thrown up with `drag: 1` (the default) was 2,800 px above its start after 3 s, still rising.
+- **Cause.** The closed form with drag had gravity's sign flipped: `(vy + g/k)·decay − g·a/k` instead of `(vy − g/k)·decay + g·a/k`. The spec, `derive.py` and the three runtimes all carried it. The conformance cases were derived from the same formula, so every runtime agreed with a wrong answer. Short lives (about 1 s) made it read as a burst that spreads upwards, so no demo showed it.
+- **Resolution.** Fixed the formula everywhere. `derive.py` now integrates dv/dt = g − k·v in small steps and asserts that the closed form matches. A new case throws a piece up and expects it to fall back past its start.
+- **Lesson.** A conformance case only proves the runtimes agree with the derivation. Where the derivation states physics, check it against the physics itself (a numeric integration, a limit such as drag → 0), not only against a copy of the same formula.
+

@@ -1,7 +1,7 @@
 {
   "name": "@nudg/core",
   "mcpName": "io.github.seukwoo/nudg",
-  "version": "1.14.1",
+  "version": "1.14.2",
   "description": "The interaction format your AI can nudge: motion, sound, haptics and particles in one file for web, iOS and Android, plus tools that move CSS animations onto it with proof.",
   "keywords": [
     "animation",

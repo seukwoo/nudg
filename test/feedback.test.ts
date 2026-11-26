@@ -13,3 +13,22 @@ test("vibrate follows a cue's intensity: shorter pulses for a weaker cue, the in
   assert.equal(vibration("medium", 2), 16, "intensity is clamped to 1");
   assert.equal(vibration("unknown", 1), undefined);
 });
+
+test("a function for sound or haptics is asked at each cue, so it follows the app's switch mid-play", async () => {
+  const { playFeedback } = await import("../src/dom/feedback.ts");
+  const nav = globalThis.navigator as Navigator;
+  const had = nav.vibrate;
+  const got: unknown[] = [];
+  nav.vibrate = ((p: unknown) => (got.push(p), true)) as typeof nav.vibrate;
+  try {
+    let on = true;
+    const options = { haptics: () => on, sound: () => false };
+    const cue = { t: 0, haptic: "rigid", intensity: 1, pitch: 0 };
+    playFeedback(cue, options);
+    on = false;
+    playFeedback(cue, options);
+    assert.deepEqual(got, [10]);
+  } finally {
+    nav.vibrate = had;
+  }
+});

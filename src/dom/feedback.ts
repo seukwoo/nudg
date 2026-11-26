@@ -8,10 +8,11 @@ import type { FiredCue } from "../core/runtime.ts";
 export interface FeedbackOptions {
   /** Sound names to URLs: { pop: "/sfx/pop.mp3" }. A cue whose sound isn't here plays no sound. */
   sounds?: Record<string, string>;
-  /** Default true. The app's mute: false plays no sounds. */
-  sound?: boolean;
-  /** Default true. False plays no haptics (the host's own setting). */
-  haptics?: boolean;
+  /** Default true. The app's mute: false plays no sounds. A function is asked at each cue, so it follows the
+   *  app's switch while the player runs. */
+  sound?: boolean | (() => boolean);
+  /** Default true. False plays no haptics (the host's own setting). A function is asked at each cue. */
+  haptics?: boolean | (() => boolean);
 }
 
 /** Web Haptics' intents, for the nudg intents that have one. */
@@ -35,10 +36,13 @@ export function vibration(name: string, intensity: number): number | number[] | 
 /** Audio elements per URL, decoded once and cloned to overlap. */
 const loaded = new Map<string, HTMLAudioElement>();
 
+/** A switch: on unless false, or what its function says now. */
+const on = (v: boolean | (() => boolean) | undefined) => (typeof v === "function" ? v() !== false : v !== false);
+
 export function playFeedback(cue: FiredCue, options: FeedbackOptions): void {
-  if (cue.haptic && options.haptics !== false && cue.intensity > 0) haptic(cue.haptic, cue.intensity);
+  if (cue.haptic && on(options.haptics) && cue.intensity > 0) haptic(cue.haptic, cue.intensity);
   const url = cue.sound ? options.sounds?.[cue.sound] : undefined;
-  if (url && options.sound !== false && typeof Audio === "function") {
+  if (url && on(options.sound) && typeof Audio === "function") {
     let base = loaded.get(url);
     if (!base) loaded.set(url, (base = new Audio(url)));
     const audio = base.cloneNode() as HTMLAudioElement;

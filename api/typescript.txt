@@ -131,7 +131,7 @@ export declare function toggle(options?: ToggleOptions): NudgDocument;
 
 ## @nudg/core/dom
 
-export interface FeedbackOptions { sounds?: Record<string, string>; sound?: boolean; haptics?: boolean; }
+export interface FeedbackOptions { sounds?: Record<string, string>; sound?: boolean | (() => boolean); haptics?: boolean | (() => boolean); }
 export interface FiredCue { t: number; sound?: string; haptic?: string; intensity: number; pitch: number; }
 export interface InitialOptions { state?: string[]; inputs?: Record<string, number>; colors?: Record<string, string>; }
 export interface NudgContract { targets: string; events: string; inputs: string; states: string; }

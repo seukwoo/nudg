@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.14.2
+
+Haptics on the web: a cue's intensity reaches Android browsers, and sound and haptics can follow the app's switch while a player runs. Files and APIs from 1.14.1 work as before.
 
 - **Fixed: a cue's intensity reaches Android browsers.** Where the web adapter falls back to `navigator.vibrate`, it played every intent at full length whatever its `intensity`, so a soft putt and a full swing felt the same. Since `vibrate` has no amplitude, each pulse now lasts 0.35 + 0.65 × intensity of the intent's own (at least 3 ms); pauses keep their length, and intensity 1 is unchanged. Found while designing a golf game's haptics.
 - **`sound` and `haptics` can follow a live switch.** In `playDoc` and `play`, either may be a function, asked at each cue, so the app's mute or haptics setting flipped mid-play is followed without rebuilding the player. A getter on the options didn't do this through `playDoc`, which copies its options once.

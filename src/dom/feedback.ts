@@ -19,6 +19,19 @@ const WEB_HAPTICS: Record<string, string> = { tick: "tick", select: "tick", ligh
 /** Milliseconds for `navigator.vibrate`, per intent: short for ticks, patterns for outcomes. */
 const VIBRATION: Record<string, number | number[]> = { tick: 6, select: 8, light: 10, soft: 12, medium: 16, heavy: 24, rigid: 10, align: 8, edge: 14, success: [10, 50, 14], warning: [18, 60, 18], error: [24, 40, 24, 40, 24] };
 
+/**
+ * The `navigator.vibrate` pattern for an intent at an intensity. `vibrate` has no amplitude, so a weaker cue
+ * vibrates for less time: each pulse is scaled by 0.35 + 0.65 × intensity (at least 3 ms); pauses keep their length.
+ * At intensity 1 the pattern is the intent's own.
+ */
+export function vibration(name: string, intensity: number): number | number[] | undefined {
+  const pattern = VIBRATION[name];
+  if (pattern === undefined) return undefined;
+  const k = 0.35 + 0.65 * Math.min(1, Math.max(0, intensity));
+  const pulse = (ms: number) => Math.max(3, Math.round(ms * k));
+  return typeof pattern === "number" ? pulse(pattern) : pattern.map((ms, i) => (i % 2 === 0 ? pulse(ms) : ms));
+}
+
 /** Audio elements per URL, decoded once and cloned to overlap. */
 const loaded = new Map<string, HTMLAudioElement>();
 
@@ -49,6 +62,6 @@ function haptic(name: string, intensity: number) {
       return;
     } catch {}
   }
-  const pattern = VIBRATION[name];
+  const pattern = vibration(name, intensity);
   if (pattern !== undefined && typeof nav.vibrate === "function") nav.vibrate(pattern);
 }

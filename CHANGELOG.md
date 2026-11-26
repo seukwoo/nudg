@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Fixed: a cue's intensity reaches Android browsers.** Where the web adapter falls back to `navigator.vibrate`, it played every intent at full length whatever its `intensity`, so a soft putt and a full swing felt the same. Since `vibrate` has no amplitude, each pulse now lasts 0.35 + 0.65 × intensity of the intent's own (at least 3 ms); pauses keep their length, and intensity 1 is unchanged. Found while designing a golf game's haptics.
+
 ## 1.14.1
 
 A fix for emitters with drag: gravity now pulls their pieces down. Files and APIs from 1.14.0 work as before.

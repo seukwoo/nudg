@@ -684,7 +684,7 @@ const player = play(program, document.querySelector(".settings"));
 - **Settle:** `onSettle(state)` is called each time every value has come to rest after something moved or the state changed, once per rest; pending timers don't delay it. The rules are in [the spec](spec.md#rest-and-lifecycle), and the headless player, React, React Native, SwiftUI and Compose report it the same way.
 - **Exits:** `{ exit: "hidden", onExit }` names the states that mean gone. `player.present()` turns false, and `onExit` is called once, when the machine has entered one of them from elsewhere and every value has settled: remove or hide the element then, so the exit motion is seen. Mounting in an exit state doesn't count as an exit. `player.leaving()` is true while the way out plays.
 - **Cues (1.3):** the player plays each cue as it comes due.
-  - Haptics: through Web Haptics (`navigator.playHaptics`) where a browser has it, otherwise a short `navigator.vibrate` pattern per intent. Android browsers vibrate; desktop and iOS browsers have neither.
+  - Haptics: through Web Haptics (`navigator.playHaptics`) where a browser has it, otherwise a short `navigator.vibrate` pattern per intent, its pulses shortened for a cue's lower `intensity` (vibrate has no amplitude). Android browsers vibrate; desktop and iOS browsers have neither.
   - Sounds: from `sounds: { pop: "/sfx/pop.mp3" }`, at the cue's intensity as volume, with pitch as a speed change.
   - `sound: false` is the app's mute, and `haptics: false` turns haptics off.
   - `onCue(cue)` is called after each cue plays, with `{ t, sound, haptic, intensity, pitch }`, for custom names or an audio engine of your own. The React hook takes the same options.

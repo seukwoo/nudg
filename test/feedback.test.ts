@@ -32,3 +32,12 @@ test("a function for sound or haptics is asked at each cue, so it follows the ap
     nav.vibrate = had;
   }
 });
+
+test("numberText: a whole number in the language's format", async () => {
+  const { numberText } = await import("../src/dom/text.ts");
+  assert.equal(numberText(1234.4, "en"), "1,234");
+  assert.equal(numberText(1234.6, "ko"), "1,235");
+  assert.equal(numberText(1234, "de"), "1.234");
+  assert.equal(numberText(-0.3, "en"), "0");
+  assert.equal(numberText(7, "not a language!"), "7");
+});

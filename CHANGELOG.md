@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **A number that counts, drawn by the web adapter.** An element bound to a target with `data-nudg-text="<name>"` shows `target.custom.<name>` as its text on every frame: a whole number in the element's language's format (`1,234`). A score counting up, or a place rolling down to 3rd, is a custom property moved like any value, with its ticks as cues on the same clock, and no frame loop in the app. Found planning PlaySnack's leaderboard count-ups.
 - **Fixed: `nudg audit` read comments as code.** A comment that named `navigator.vibrate`, `new Audio` or `@keyframes` was counted as motion outside nudg. Comment lines are now skipped.
 - **`nudg audit` finds a style object's transition written as an expression.** `transition: reduced ? "none" : grow`, with `grow` a constant set to `"width 700ms …"`, was missed because the line said `none`. Each branch is now read, and a name is followed to the string the file sets it to. Both found auditing PlaySnack.
 

@@ -80,3 +80,21 @@ test("audit points theme tints in a transition to colors the app names (1.8)", (
   const plain = audit([{ path: "Row.css", text: ".row { background: #fff; transition: all 0.2s; }" }]);
   assert.doesNotMatch(plain.findings[0].use, /host\.colors/);
 });
+
+test("audit reads code, not comments: a note that names navigator.vibrate or a keyframe plays nothing", () => {
+  const a = audit([{ path: "haptics.ts", text: '// the adapter plays it: else navigator.vibrate (Android)\n/* no @keyframes pop { } here */\n * new Audio("/x.mp3") in a doc comment\nnavigator.vibrate(20);' }]);
+  assert.deepEqual(a.findings.map((f) => `${f.line} ${f.kind}`), ["4 feedback"]);
+});
+
+test("audit finds a style object's transition whose value is an expression or a named constant", () => {
+  const text = [
+    'const grow = "width 700ms cubic-bezier(0.34, 1.56, 0.64, 1)";',
+    "const tint = \"background-color 200ms\";",
+    'const bar = { width: 0, transition: reduced ? "none" : grow };',
+    "const chip = { transition: tint };",
+    'const fade = { transition: on ? "opacity 120ms ease" : undefined };',
+    'const off = { transition: "none" };',
+  ].join("\n");
+  const a = audit([{ path: "Widget.tsx", text }]);
+  assert.deepEqual(a.findings.map((f) => `${f.line} ${f.kind}`), ["3 css-transition", "5 css-transition"]);
+});

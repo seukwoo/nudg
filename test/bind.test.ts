@@ -425,3 +425,47 @@ test("an emitter's pieces (1.4) are drawn from the host's templates around the s
     close();
   }
 });
+
+test("an element with data-nudg-text shows a custom property as a whole number in its language's format", { skip: chrome ? false : "no Chrome found" }, async () => {
+  const { launchBrowser, waitFor } = await import("../src/node/cdp.ts");
+  const { serveIfLocal } = await import("../src/node/observe.ts");
+  const { url, close } = await serveIfLocal("test/fixtures/host/presence.html");
+  const browser = await launchBrowser(chrome!);
+  try {
+    await browser.send("Page.navigate", { url });
+    await waitFor(() => browser.evaluate("window.__player ? 'ready' : ''"), 15_000);
+    const result = await browser.evaluate(`(async () => {
+      const { playDoc } = await import("../../../dist/dom/index.js");
+      const doc = {
+        nudg: "1.3", host: { events: ["go"], custom: ["n"] }, targets: ["score"], values: { "score.custom.n": 0 },
+        animate: { "score.custom.n": { tween: { duration: 0.3, ease: "linear" } } },
+        initial: "idle", states: { idle: { when: { "host.go": "on" } }, on: { set: { "score.custom.n": 1234 } } },
+      };
+      const el = document.createElement("span");
+      el.lang = "en";
+      el.dataset.nudgText = "n";
+      el.textContent = "1,234";
+      document.body.append(el);
+      const plain = document.createElement("span");
+      document.body.append(plain);
+      const p = playDoc(doc, el);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const first = el.textContent;
+      p.send("host.go");
+      await new Promise((r) => setTimeout(r, 140));
+      const mid = el.textContent;
+      await new Promise((r) => setTimeout(r, 400));
+      const end = el.textContent;
+      p.destroy();
+      return { first, mid, end, after: el.textContent };
+    })()`);
+    assert.equal(result.first, "0", "the file's value from the first frame");
+    const mid = Number(String(result.mid).replace(/,/g, ""));
+    assert.ok(mid > 0 && mid < 1234 && Number.isInteger(mid), `counting: ${result.mid}`);
+    assert.equal(result.end, "1,234");
+    assert.equal(result.after, "1,234", "the last number stays after the player lets go");
+  } finally {
+    await browser.close();
+    close();
+  }
+});

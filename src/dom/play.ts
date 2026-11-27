@@ -10,6 +10,7 @@ import { propertiesByTarget, styleOf } from "./style.ts";
 import { measureElement } from "./measure.ts";
 import { createRuntime, type FiredCue, type Runtime, type Value } from "../core/runtime.ts";
 import { playFeedback, type FeedbackOptions } from "./feedback.ts";
+import { drawText } from "./text.ts";
 import { clearPieces, drawPieces } from "./pieces.ts";
 import { cssColorToHex, readColors, watchTheme } from "./colors.ts";
 import type { Machine, NudgContract, Program, StateName } from "../core/types.ts";
@@ -213,7 +214,10 @@ export function play<C extends NudgContract = NudgContract>(program: Program, ro
   function applyTo(target: string, values: Record<string, Value>, els: Iterable<Element>) {
     const props = byTarget.get(target);
     if (!props) return;
-    for (const el of els) composeStyle(el, ownerOf(target), styleOf(target, props, values, el instanceof SVGElement), target);
+    for (const el of els) {
+      composeStyle(el, ownerOf(target), styleOf(target, props, values, el instanceof SVGElement), target);
+      drawText(el, target, values);
+    }
   }
 
   // State changes, settle and presence: the host keeps the element until the exit motion has played.

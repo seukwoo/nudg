@@ -165,6 +165,8 @@ export function audit(files: { path: string; text: string }[]): Audit {
     };
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+      // A comment describes code; it isn't code (a note that names navigator.vibrate plays nothing).
+      if (/^\s*(\/\/|\/\*|\*)/.test(line)) continue;
       const kf = /@(?:-webkit-)?keyframes\s+([\w-]+)/.exec(line);
       if (kf) {
         const k = keyframesUse(kf[1], blockAt(text, offsets[i] + kf.index));
@@ -173,7 +175,7 @@ export function audit(files: { path: string; text: string }[]): Audit {
       }
       // A transition of something that moves; colors and borders alone are left to CSS.
       const tr = /(?:^|[\s;{"'`])transition(?:-property)?\s*:\s*([^\s;}"'`][^;}"'`]*)/.exec(line) ?? /\btransition\s*:\s*["'`]([^"'`]+)/.exec(line);
-      if (tr && /\b(all|transform|opacity|translate|scale|rotate|top|left|right|bottom|width|height|max-height)\b/.test(tr[1]) && !/\bnone\b/.test(tr[1]))
+      if ((tr && MOVING.test(tr[1]) && !/\bnone\b/.test(tr[1])) || inlineTransitionMoves(line, text))
         add(i, "css-transition", `a nudg file on the element (a preset, or playEach for every match); on an element nudg moves, the adapter already turns this off${THEMED.test(text) ? "; tints from theme variables (var(--x)) are colors the app names: host.colors, { \"color\": \"x\" } (1.8)" : ""}`);
       if (/\.animate\(\s*[[{]/.test(line)) add(i, "web-animation", "playDoc(file, element) with entry keyframes or a transition");
       for (const [re, use, gap] of LIBRARIES) if (re.test(line) && /\b(import|require)\b/.test(line)) add(i, "motion-library", use, gap);
@@ -200,6 +202,25 @@ export function audit(files: { path: string; text: string }[]): Audit {
   }
   const total = onNudg + findings.length;
   return { files: files.length, onNudg, findings, custom, coverage: findings.length === 0 ? 100 : Math.min(99, Math.round((onNudg / total) * 100)) };
+}
+
+/** A transition of something that moves (colors and borders alone are left to CSS). */
+const MOVING = /\b(all|transform|opacity|translate|scale|rotate|top|left|right|bottom|width|height|max-height)\b/;
+
+/**
+ * A style object's transition whose value is an expression (`transition: reduced ? "none" : grow`): any branch
+ * that is a string naming a moving property, or a name the file sets to one (`const grow = "width 700ms …"`).
+ */
+function inlineTransitionMoves(line: string, text: string): boolean {
+  const m = /\btransition\s*:\s*([^,}\n]+)/.exec(line);
+  if (!m || /^\s*["'`]/.test(m[1])) return false; // a plain string is the CSS rule's case
+  const moves = (v: string) => MOVING.test(v) && !/^\s*none\s*$/.test(v);
+  for (const lit of m[1].matchAll(/["'`]([^"'`]*)["'`]/g)) if (moves(lit[1])) return true;
+  for (const id of m[1].replace(/["'`][^"'`]*["'`]/g, "").matchAll(/[A-Za-z_$][\w$]*/g)) {
+    const def = new RegExp(`\\b(?:const|let|var)\\s+${id[0].replace(/\$/g, "\\$")}\\s*=\\s*["'\`]([^"'\`]+)["'\`]`).exec(text);
+    if (def && moves(def[1])) return true;
+  }
+  return false;
 }
 
 const KIND_LABEL: Record<AuditKind, string> = {

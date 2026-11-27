@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Fixed: `nudg audit` read comments as code.** A comment that named `navigator.vibrate`, `new Audio` or `@keyframes` was counted as motion outside nudg. Comment lines are now skipped.
+- **`nudg audit` finds a style object's transition written as an expression.** `transition: reduced ? "none" : grow`, with `grow` a constant set to `"width 700ms …"`, was missed because the line said `none`. Each branch is now read, and a name is followed to the string the file sets it to. Both found auditing PlaySnack.
+
 ## 1.14.2
 
 Haptics on the web: a cue's intensity reaches Android browsers, and sound and haptics can follow the app's switch while a player runs. Files and APIs from 1.14.1 work as before.

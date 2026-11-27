@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.15.0
+
+A number that counts, drawn by the web adapter, and a sharper `nudg audit`. Files and APIs from 1.14 work as before.
 
 - **A number that counts, drawn by the web adapter.** An element bound to a target with `data-nudg-text="<name>"` shows `target.custom.<name>` as its text on every frame: a whole number in the element's language's format (`1,234`). A score counting up, or a place rolling down to 3rd, is a custom property moved like any value, with its ticks as cues on the same clock, and no frame loop in the app. Found planning PlaySnack's leaderboard count-ups.
 - **Fixed: `nudg audit` read comments as code.** A comment that named `navigator.vibrate`, `new Audio` or `@keyframes` was counted as motion outside nudg. Comment lines are now skipped.

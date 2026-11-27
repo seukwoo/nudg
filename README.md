@@ -34,7 +34,7 @@ claude mcp add nudg -- npx -y @nudg/core mcp   # gives your AI the nudg tools (a
 
 Then ask your AI: *"add a like button that pops, then make it bouncier."* It writes the file, checks it, and shows you before and after.
 
-**In production:** [PlaySnack](https://playsnack.app), a party-game web app built mostly by AI coding agents, runs 88% of its motion on nudg: confetti, haptics, count-ups, pull-to-pick. [How it moved →](docs/case-study-playsnack.md)
+**In production:** [PlaySnack](https://playsnack.app), a party-game web app built mostly by AI coding agents, runs 89% of its motion on nudg: confetti, haptics, count-ups, pull-to-pick. [How it moved →](docs/case-study-playsnack.md)
 
 nudg describes a UI interaction in a small JSON file next to your component: its states, the events that move between them, and the motion in between. Your AI coding tool edits the file, nudg checks the edit, and a tiny runtime plays it in your app.
 

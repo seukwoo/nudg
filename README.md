@@ -7,6 +7,7 @@
 [![npm](https://img.shields.io/npm/v/@nudg/core)](https://www.npmjs.com/package/@nudg/core)
 [![CI](https://github.com/seukwoo/nudg/actions/workflows/ci.yml/badge.svg)](https://github.com/seukwoo/nudg/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/seukwoo/nudg?style=social)](https://github.com/seukwoo/nudg)
 
 <a href="https://seukwoo.github.io/nudg/demo/">
   <picture>
@@ -16,6 +17,8 @@
 </a>
 
 **[Try all 53 examples in the live demo →](https://seukwoo.github.io/nudg/demo/)**
+
+If nudg helps you, a ⭐ on GitHub helps others find it.
 
 Motion, sound, haptics and particles in one file, on web, iOS and Android.<br>
 Already have CSS animations? `nudg from-css` moves each one and proves it moves the same.

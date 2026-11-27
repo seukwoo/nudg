@@ -9,12 +9,8 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/seukwoo/nudg?style=social)](https://github.com/seukwoo/nudg)
 
-<a href="https://seukwoo.github.io/nudg/demo/">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/hero-dark.svg">
-    <img alt="A toggle, a toggle that shrinks while pressed, and a like button, each played by nudg" src="docs/media/hero-light.svg" width="720">
-  </picture>
-</a>
+
+https://github.com/user-attachments/assets/a4f0a198-60df-45d9-85d0-a272f3b3746a
 
 **[Try all 53 examples in the live demo →](https://seukwoo.github.io/nudg/demo/)**
 

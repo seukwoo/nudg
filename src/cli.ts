@@ -26,7 +26,6 @@ import { formatComparison, formatCritique, formatDiagnostic, formatObservation, 
 import { comparePage, lastRuntimeInlined, readWithImports } from "./node/compare-page.ts";
 import { compilePath } from "./node/load.ts";
 import { serveMcp } from "./node/mcp.ts";
-import { showStarOnce } from "./node/star.ts";
 import { frameTimes, renderFrames } from "./node/render.ts";
 import { ACTIONS, checkAction, observe, type HostAction } from "./node/observe.ts";
 import { actionTarget, actionsToEvents, judgeHost } from "./core/observe.ts";
@@ -704,7 +703,6 @@ if (!command || args.flags.has("help") || command === "help") {
   process.stdout.write(USAGE + "\n");
   process.exit(0);
 }
-process.on("exit", (code) => showStarOnce(code, command, json));
 if (command === "validate") process.exit(validate(args, json));
 if (command === "simulate") process.exit(runSimulate(args, json));
 if (command === "plot") process.exit(runPlot(args, json));
